@@ -38,39 +38,58 @@
             <div class="space-y-4 text-sm">
                 <!-- 任務列表 -->
                 <div class="p-3 bg-gray-700 rounded border-l-4 border-red-500 hover:bg-gray-600 transition">
-                    <strong class="text-red-400">任務 01：</strong> 獲取本網頁的 <code>&lt;title&gt;</code> 文字。
+                    <div><strong class="text-red-400">任務 01：</strong> 獲取本網頁的 <code>&lt;title&gt;</code> 文字。</div>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：可以直接使用 <code>soup.title.text</code> 來快速獲取標題喔！</p>
                 </div>
+                
                 <div class="p-3 bg-gray-700 rounded border-l-4 border-orange-500 hover:bg-gray-600 transition">
-                    <strong class="text-orange-400">任務 02：</strong> 找到 ID 為 <code>secret-message</code> 的隱藏段落，並提取其文字。
+                    <div><strong class="text-orange-400">任務 02：</strong> 找到 ID 為 <code>secret-message</code> 的隱藏段落，並提取其文字。</div>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：使用 <code>soup.find(id="...")</code> 即可精準定位 ID 標籤。</p>
                 </div>
+                
                 <div class="p-3 bg-gray-700 rounded border-l-4 border-yellow-500 hover:bg-gray-600 transition">
-                    <strong class="text-yellow-400">任務 03：</strong> 獲取所有商品名稱 (class 為 <code>product-name</code>) 並存成列表。
+                    <div><strong class="text-yellow-400">任務 03：</strong> 獲取所有商品名稱 (class 為 <code>product-name</code>) 並存成列表。</div>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.find_all(class_="...")</code> 會回傳一個陣列，可以用 for 迴圈將每個項目的 <code>.text</code> 裝進 list。</p>
                 </div>
+                
                 <div class="p-3 bg-gray-700 rounded border-l-4 border-green-500 hover:bg-gray-600 transition">
-                    <strong class="text-green-400">任務 04：</strong> 計算表格中所有「銷售額」(class 為 <code>sales</code>) 的數字總和。
+                    <div><strong class="text-green-400">任務 04：</strong> 計算表格中所有「銷售額」(class 為 <code>sales</code>) 的數字總和。</div>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：爬下來的文字都是字串型態，記得用 <code>int()</code> 轉換成整數後才能相加。</p>
                 </div>
+                
                 <div class="p-3 bg-gray-700 rounded border-l-4 border-teal-500 hover:bg-gray-600 transition">
-                    <strong class="text-teal-400">任務 05：</strong> 找到聯絡管理員區塊，提取其自訂屬性 <code>data-email</code> 的信箱地址。
+                    <div><strong class="text-teal-400">任務 05：</strong> 找到聯絡管理員區塊，提取其自訂屬性 <code>data-email</code> 的信箱地址。</div>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：找到該標籤後，使用 <code>tag.get("屬性名稱")</code> 就能拿取裡面的屬性值。</p>
                 </div>
+                
                 <div class="p-3 bg-gray-700 rounded border-l-4 border-blue-500 hover:bg-gray-600 transition">
-                    <strong class="text-blue-400">任務 06：</strong> 找到 class 為 <code>target-link</code> 的標籤，並提取其 <code>href</code> 網址。
+                    <div><strong class="text-blue-400">任務 06：</strong> 找到 class 為 <code>target-link</code> 的標籤，並提取其 <code>href</code> 網址。</div>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：與任務 5 觀念相同，這次目標是抓取 <code>href</code> 裡面的連結字串。</p>
                 </div>
+                
                 <div class="p-3 bg-gray-700 rounded border-l-4 border-indigo-500 hover:bg-gray-600 transition">
-                    <strong class="text-indigo-400">任務 07：</strong> 在評論區中，獲取「第五個」評論者的名字 (class 為 <code>author</code>)。
+                    <div><strong class="text-indigo-400">任務 07：</strong> 在評論區中，獲取「第五個」評論者的名字 (class 為 <code>author</code>)。</div>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>find_all</code> 產生的列表索引是從 0 開始算起的，想想第五個元素的索引是多少？</p>
                 </div>
+                
                 <div class="p-3 bg-gray-700 rounded border-l-4 border-purple-500 hover:bg-gray-600 transition">
-                    <strong class="text-purple-400">任務 08：</strong> 找出被標記為售完 (class 包含 <code>sold-out</code>) 的商品，並提取其價格。
+                    <div><strong class="text-purple-400">任務 08：</strong> 找出被標記為售完 (class 包含 <code>sold-out</code>) 的商品，並提取其價格。</div>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：可以「接力」查詢！先用 <code>item = soup.find(...)</code> 找商品，再從該項目 <code>item.find(...)</code> 找價格。</p>
                 </div>
+                
                 <div class="p-3 bg-gray-700 rounded border-l-4 border-pink-500 hover:bg-gray-600 transition">
-                    <strong class="text-pink-400">任務 09：</strong> 獲取屬性為 <code>rel="next"</code> 的「下一頁」連結網址。
+                    <div><strong class="text-pink-400">任務 09：</strong> 獲取屬性為 <code>rel="next"</code> 的「下一頁」連結網址。</div>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：BeautifulSoup 允許直接用屬性作為搜尋條件，例如：<code>soup.find(rel="...")</code>。</p>
                 </div>
+                
                 <div class="p-3 bg-gray-700 rounded border-l-4 border-gray-400 hover:bg-gray-600 transition">
-                    <strong class="text-gray-200">任務 10：</strong> 統計 class 為 <code>article</code> 的段落中，包含 "Python" 關鍵字的文章數量。
+                    <div><strong class="text-gray-200">任務 10：</strong> 統計 class 為 <code>article</code> 的段落中，包含 "Python" 關鍵字的文章數量。</div>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：先抓出所有文章，再用 for 迴圈搭配 <code>if "Python" in text:</code> 來計算符合條件的數量。</p>
                 </div>
             </div>
             
             <button onclick="alert('提示：在瀏覽器按右鍵選擇「檢視網頁原始碼」，即可看到 BeautifulSoup 真正抓取到的 HTML 結構！')" class="mt-6 w-full py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded transition">
-                <i class="fa-solid fa-lightbulb mr-2"></i>獲取提示
+                <i class="fa-solid fa-lightbulb mr-2"></i>網頁結構提示
             </button>
         </section>
 
