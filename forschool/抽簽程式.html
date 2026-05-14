@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多班級動感點名器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 canvas-confetti 彩帶特效庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: #0f172a;
+            color: white;
+            overflow: hidden;
+        }
+        /* 滾動動畫效果 */
+        .slot-machine {
+            position: relative;
+            height: 250px;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.02) 100%);
+            border: 3px solid #3b82f6;
+            border-radius: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 30px rgba(59, 130, 246, 0.2);
+        }
+        .name-display {
+            font-size: 6rem;
+            font-weight: 900;
+            text-shadow: 0 0 25px rgba(59, 130, 246, 0.6);
+            transition: all 0.05s ease-out;
+        }
+        .class-card {
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+        }
+        .class-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            border-color: #60a5fa;
+            background: rgba(59, 130, 246, 0.2);
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4);
+        }
+        .glow-text {
+            animation: pulse 1s infinite alternate;
+        }
+        @keyframes pulse {
+            from { transform: scale(1); text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+            to { transform: scale(1.1); text-shadow: 0 0 30px rgba(59, 130, 246, 1); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 md:p-8">
+
+    <!-- 頂部導航 -->
+    <div class="w-full max-w-6xl flex justify-between items-center mb-10">
+        <div>
+            <h1 class="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-500">
+                CLASS PICKER Pro
+            </h1>
+            <p class="text-blue-300/60 text-sm font-medium tracking-widest uppercase">教師專用互動工具</p>
+        </div>
+        
+        <!-- 右上方控制群組 -->
+        <div class="flex items-center gap-3">
+            <!-- 新增：靜音切換按鈕 -->
+            <button id="mute-btn" onclick="toggleMute()" class="flex text-slate-300 hover:text-white border border-slate-600 hover:border-slate-400 bg-slate-800 px-4 py-3 rounded-xl transition-all items-center gap-2 shadow-lg font-bold">
+                <span id="mute-icon">🔊</span>
+            </button>
+            
+            <button id="export-btn" onclick="showAndCopyExport()" class="flex text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 hover:border-emerald-400 bg-emerald-500/10 px-5 py-3 rounded-xl transition-all items-center gap-2 shadow-lg font-bold relative">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+                匯出今天答對情況
+                <!-- 紅點提示未保存資料 -->
+                <span id="unsaved-badge" class="hidden absolute -top-1 -right-1 flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+            </button>
+            <button id="back-btn" class="hidden flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl border border-slate-600 transition-all shadow-lg font-bold">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                </svg>
+                切換班級
+            </button>
+        </div>
+    </div>
+
+    <!-- 班級選擇介面 -->
+    <div id="class-selection" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 w-full max-w-6xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <!-- 由 JS 生成 -->
+    </div>
+
+    <!-- 抽籤主介面 -->
+    <div id="lottery-ui" class="hidden w-full max-w-3xl text-center space-y-8">
+        <div class="inline-block px-6 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold text-lg" id="current-class-label">
+            正在點名: ---
+        </div>
+        
+        <div class="slot-machine shadow-2xl">
+            <div id="display-name" class="name-display">READY</div>
+        </div>
+
+        <div class="flex flex-col items-center gap-6">
+            <button id="spin-btn" class="group relative bg-blue-600 hover:bg-blue-500 text-white text-3xl font-black py-6 px-20 rounded-3xl shadow-[0_0_40px_rgba(37,99,235,0.4)] transform active:scale-95 transition-all">
+                <span class="relative z-10">開始抽籤</span>
+                <div class="absolute inset-0 rounded-3xl bg-blue-400 animate-ping opacity-0 group-hover:opacity-20"></div>
+            </button>
+            <div class="flex gap-4 text-slate-500 text-sm">
+                <kbd class="px-2 py-1 bg-slate-800 rounded border border-slate-700 text-slate-300">Space</kbd> 抽籤 / 加分
+                <kbd class="px-2 py-1 bg-slate-800 rounded border border-slate-700 text-slate-300">X</kbd> 換人
+                <kbd class="px-2 py-1 bg-slate-800 rounded border border-slate-700 text-slate-300">R</kbd> 重置
+            </div>
+        </div>
+    </div>
+
+    <!-- 結果彈窗 -->
+    <div id="modal" class="fixed inset-0 bg-slate-950/95 hidden items-center justify-center z-[100] backdrop-blur-xl">
+        <div class="bg-slate-900 p-12 rounded-[3.5rem] border-2 border-white/10 text-center max-w-lg w-full mx-4 shadow-2xl transform scale-0 transition-transform duration-500" id="modal-content">
+            <div class="text-indigo-400 text-lg font-black tracking-tighter uppercase mb-2">Selected Student</div>
+            <div id="winner-name" class="text-8xl font-black text-white mb-8 glow-text tracking-tight">姓名</div>
+            
+            <div class="grid grid-cols-2 gap-4 bg-white/5 p-6 rounded-3xl mb-10">
+                <div class="text-left">
+                    <p class="text-slate-500 text-xs uppercase">校園號</p>
+                    <p id="winner-sid" class="text-blue-300 font-mono text-xl">---</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-slate-500 text-xs uppercase">班級編號</p>
+                    <p id="winner-id" class="text-blue-300 font-mono text-xl">---</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button id="add-score-btn" onclick="addScore()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-2xl text-xl shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all active:scale-95">
+                    答對，多加 1 分 🌟 (Space)
+                </button>
+                <button onclick="drawAnother()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-2xl text-lg transition-all active:scale-95">
+                    不要緊，再抽另一位 (X)
+                </button>
+                <button onclick="closeModal()" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 font-bold py-4 rounded-2xl text-lg transition-all active:scale-95">
+                    結束抽籤 (Esc)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 匯出資料彈窗 -->
+    <div id="export-modal" class="fixed inset-0 bg-slate-950/95 hidden items-center justify-center z-[110] backdrop-blur-xl">
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-700 text-center max-w-2xl w-full mx-4 shadow-2xl">
+            <h2 class="text-2xl font-bold text-white mb-4 flex items-center justify-center gap-2">
+                📊 課堂答對情況表
+            </h2>
+            <p class="text-slate-400 text-sm mb-4">格式：校園號, 總加分, 班內號, 姓名</p>
+            
+            <textarea id="export-text" readonly class="w-full h-64 bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-300 font-mono text-sm focus:outline-none focus:border-blue-500 mb-6 resize-none"></textarea>
+            
+            <div class="flex gap-4 mb-4">
+                <button onclick="manualCopy()" id="copy-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all">
+                    手動複製
+                </button>
+                <button onclick="closeExport()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-all">
+                    關閉
+                </button>
+            </div>
+            
+            <!-- 新增：清除本地紀錄按鈕 -->
+            <div class="pt-4 border-t border-slate-800 text-right">
+                <button onclick="clearRecords()" class="text-red-400 hover:text-red-300 text-sm underline transition-all">
+                    ⚠️ 清除今天的加分紀錄 (開啟新課堂)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 【老師教學】如何建構名單：
+         */
+        const ALL_CLASSES = {
+            "高一6": [
+               {sid: "20132050",id:1,name: "毛嘉希"},
+{sid: "20142152",id:2,name: "方浩宇"},
+{sid: "20142154",id:3,name: "李苑珊"},
+{sid: "20230276",id:4,name: "李松洲"},
+{sid: "20132030",id:5,name: "呂梓民"},
+{sid: "20220128",id:6,name: "何思穎"},
+{sid: "20132100",id:7,name: "何俊健"},
+{sid: "20203056",id:8,name: "何梓樂"},
+{sid: "20163006",id:9,name: "余勁霖"},
+{sid: "20250247",id:10,name: "柯俊祺"},
+{sid: "20250199",id:11,name: "袁凱程"},
+{sid: "20250220",id:12,name: "高子琦"},
+{sid: "20210065",id:13,name: "陳柏霖"},
+{sid: "20250191",id:14,name: "陳嫻珍"},
+{sid: "20250198",id:15,name: "梁嵐熙"},
+{sid: "20132061",id:16,name: "梁樂心"},
+{sid: "20220122",id:17,name: "張洲銘"},
+{sid: "20142148",id:18,name: "張智源"},
+{sid: "20250221",id:19,name: "張灝錕"},
+{sid: "20163056",id:20,name: "黃子軒"},
+{sid: "20220003",id:21,name: "黃圳玥"},
+{sid: "20250244",id:22,name: "馮有城"},
+{sid: "20220049",id:23,name: "楊子謙"},
+{sid: "20213055",id:24,name: "雷雪兒"},
+{sid: "20132117",id:25,name: "趙銘麒"},
+{sid: "20220035",id:26,name: "鄭梓瑤"},
+{sid: "20240241",id:27,name: "劉嘉濠"},
+{sid: "20250246",id:28,name: "鍾凱珺"},
+{sid: "20132022",id:29,name: "應曉慧"},
+{sid: "20163067",id:30,name: "顏羨烜"},
+{sid: "20122089",id:31,name: "譚卓霖"},
+
+                // 這裡請繼續添加高一6的學生...
+            ],
+            "高二理": [
+                {sid: "20220109",id:3,name: "朱浩良"},
+{sid: "20240424",id:7,name: "周川淇"},
+{sid: "20240050",id:9,name: "祁慧妍"},
+{sid: "20240427",id:12,name: "翁可玥"},
+{sid: "20210129",id:26,name: "黃耀文"},
+{sid: "20122016",id:30,name: "趙貝兒"},
+{sid: "20210126",id:33,name: "嚴耀恒"},
+{sid: "20230110",id:4,name: "李梓雯"},
+{sid: "20240399",id:5,name: "言卓"},
+{sid: "20210018",id:7,name: "洪亦衡"},
+{sid: "20210203",id:11,name: "梁君卓"},
+{sid: "20210049",id:13,name: "梁景鋮"},
+{sid: "20210227",id:15,name: "梁嘉琪"},
+{sid: "20210146",id:16,name: "郭子筠"},
+{sid: "20220180",id:12,name: "林嘉琪"},
+{sid: "20230111",id:13,name: "侯嘉暉"},
+{sid: "20142161",id:18,name: "陳娉雯"},
+{sid: "20210132",id:23,name: "黃司瀚"},
+{sid: "20210150",id:29,name: "鄭璋璤"},
+{sid: "20210039",id:2,name: "王鋯然"},
+{sid: "20240277",id:6,name: "何灝龍"},
+{sid: "20240032",id:11,name: "周振威"},
+{sid: "20122098",id:13,name: "孫梓謙"},
+{sid: "20122079",id:23,name: "黃紫玲"},
+{sid: "20122003",id:28,name: "鄭鎧濠"},
+{sid: "20240036",id:31,name: "嚴浩軒"},
+{sid: "20210226",id:32,name: "蘇敏樺"},
+{sid: "20250338",id:33,name: "黎柏睿"},
+{sid: "20163054",id:14,name: "高淇恩"},
+{sid: "20240284",id:21,name: "梁熙雯"},
+{sid: "20240252",id:27,name: "黃敬恒"},
+{sid: "20210141",id:28,name: "黃鴻杰"},
+{sid: "20122080",id:31,name: "薛君婷"},
+
+            ],
+            "高二8": [
+             {sid: "20153116",id:1,name: "甘淇升"},
+{sid: "20180078",id:2,name: "何文輝"},
+{sid: "20210023",id:3,name: "呂睿茜"},
+{sid: "20200192",id:4,name: "李宇軒"},
+{sid: "20153040",id:5,name: "李家榮"},
+{sid: "20200031",id:6,name: "李軒樂"},
+{sid: "20102033",id:7,name: "李嘉敏"},
+{sid: "20210133",id:8,name: "汪芷姍"},
+{sid: "20163073",id:9,name: "林天賜"},
+{sid: "20210149",id:10,name: "林志穎"},
+{sid: "20102061",id:11,name: "林浩洋"},
+{sid: "20153029",id:12,name: "帥澳利"},
+{sid: "20240271",id:13,name: "胡俊毅"},
+{sid: "20132130",id:14,name: "范苡嘉"},
+{sid: "20210256",id:15,name: "高可欣"},
+{sid: "20240255",id:16,name: "高梓瀛"},
+{sid: "20112089",id:17,name: "梁子健"},
+{sid: "20210241",id:18,name: "梁其軒"},
+{sid: "20143030",id:19,name: "梁藹晴"},
+{sid: "20122068",id:20,name: "陳俊烽"},
+{sid: "20122100",id:21,name: "陳柏杰"},
+{sid: "20122095",id:22,name: "陳嘉濠"},
+{sid: "20122113",id:23,name: "馮健宇"},
+{sid: "20112095",id:24,name: "溫鎂柃"},
+{sid: "20240405",id:25,name: "廖紫涵"},
+{sid: "20122042",id:26,name: "趙熙蕾"},
+{sid: "20240282",id:27,name: "蔡雯琪"},
+{sid: "20122053",id:28,name: "鄭影雪"},
+{sid: "20183031",id:29,name: "龍峻熙"},
+{sid: "20122109",id:30,name: "繆明真"},
+{sid: "20240272",id:31,name: "嚴穎珩"},
+{sid: "20200091",id:32,name: "蘇子淇"},
+{sid: "20193044",id:33,name: "蘇迪朗"},
+{sid: "20200202",id:34,name: "蘇靖偉"},
+
+            ],
+            "高二9": [{sid: "20240349",id:1,name: "尹揚茜"},
+{sid: "20220222",id:2,name: "朱浠瑋"},
+{sid: "20153053",id:3,name: "余芷涵"},
+{sid: "20240247",id:4,name: "吳芊幸"},
+{sid: "20240281",id:5,name: "吳柏言"},
+{sid: "20240246",id:6,name: "呂盈萱"},
+{sid: "20240269",id:7,name: "岑海澄"},
+{sid: "20240253",id:8,name: "李佳誼"},
+{sid: "20122055",id:9,name: "李樂華"},
+{sid: "20230106",id:10,name: "段金泥"},
+{sid: "20210008",id:11,name: "胡新渙"},
+{sid: "20240406",id:12,name: "孫語李"},
+{sid: "20163030",id:13,name: "馬俊逸"},
+{sid: "20210042",id:14,name: "馬鈺禮"},
+{sid: "20210261",id:15,name: "崔煜軒"},
+{sid: "20122116",id:16,name: "張浚晞"},
+{sid: "20112091",id:17,name: "梁茗科"},
+{sid: "20210061",id:18,name: "梁靖林"},
+{sid: "20122020",id:19,name: "郭康磊"},
+{sid: "20122117",id:20,name: "郭梓浩"},
+{sid: "20240260",id:21,name: "陳玥琴"},
+{sid: "20220200",id:22,name: "陳冠樺"},
+{sid: "20132122",id:23,name: "陳澤軒"},
+{sid: "20122124",id:24,name: "黃晴恩"},
+{sid: "20210221",id:25,name: "黃鈺浠"},
+{sid: "20240041",id:26,name: "楊昊霖"},
+{sid: "20240248",id:27,name: "蒙港溱"},
+{sid: "20220105",id:28,name: "劉嘉睿"},
+{sid: "20193041",id:29,name: "劉嘉蔚"},
+{sid: "20200073",id:30,name: "薛麗盈"},
+{sid: "20153042",id:31,name: "顏鍵林"},
+{sid: "20220211",id:32,name: "羅韶俊"},
+{sid: "20240331",id:33,name: "關曉瑩"},
+{sid: "20122154",id:34,name: "嚴瑋"},
+],
+        };
+
+        let currentClassName = null;
+        let isSpinning = false;
+        let animationId = null;
+        let isMuted = false; // 音效開關狀態
+        let lastWinnerSid = null; // 記錄上一位得獎者，防止連抽
+        
+        // 核心優化：從 LocalStorage 讀取歷史資料，防止刷新遺失
+        let currentWinner = null; 
+        let sessionScores = JSON.parse(localStorage.getItem('classroom_scores')) || {}; 
+        let hasExported = true; // 初始設為 true，直到有新加分才變 false
+
+        // 檢查並更新未保存提示的小紅點
+        function updateUnsavedBadge() {
+            const badge = document.getElementById('unsaved-badge');
+            if (Object.keys(sessionScores).length > 0 && !hasExported) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // 音效開關切換
+        function toggleMute() {
+            isMuted = !isMuted;
+            const icon = document.getElementById('mute-icon');
+            icon.innerText = isMuted ? '🔇' : '🔊';
+            if (!isMuted && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // 粵語 TTS 語音功能
+        function speakCantonese(text) {
+            if (isMuted) return; // 靜音模式下不播放
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); 
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-HK'; 
+                utterance.rate = 0.9; 
+                
+                const voices = window.speechSynthesis.getVoices();
+                const hkVoice = voices.find(voice => voice.lang === 'zh-HK' || voice.lang === 'yue-HK');
+                if (hkVoice) utterance.voice = hkVoice;
+                
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 音效引擎
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(freq, type, duration, vol) {
+            if (isMuted) return; // 靜音模式下不播放
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e) {}
+        }
+
+        // 觸發彩帶特效
+        function fireConfetti() {
+            if (typeof confetti !== 'undefined') {
+                confetti({
+                    particleCount: 150,
+                    spread: 80,
+                    origin: { y: 0.6 },
+                    colors: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b']
+                });
+            }
+        }
+
+        const classSelectionDiv = document.getElementById('class-selection');
+        const lotteryUIDiv = document.getElementById('lottery-ui');
+        const backBtn = document.getElementById('back-btn');
+        const displayName = document.getElementById('display-name');
+
+        function initClassList() {
+            classSelectionDiv.innerHTML = '';
+            Object.keys(ALL_CLASSES).forEach(name => {
+                const card = document.createElement('div');
+                const count = ALL_CLASSES[name].length;
+                card.className = "class-card border border-slate-700 p-8 rounded-3xl text-center shadow-sm";
+                card.innerHTML = `
+                    <div class="text-2xl font-black text-white mb-2">${name}</div>
+                    <div class="text-blue-400/60 text-xs font-bold uppercase tracking-widest">${count} Students</div>
+                `;
+                card.onclick = () => selectClass(name);
+                classSelectionDiv.appendChild(card);
+            });
+            updateUnsavedBadge(); // 初始化時檢查是否有未保存資料
+        }
+
+        function selectClass(name) {
+            if (ALL_CLASSES[name].length === 0) {
+                alert('此班級目前沒有名單，請先在程式碼中添加學生資料。');
+                return;
+            }
+            currentClassName = name;
+            document.getElementById('current-class-label').innerText = `正在點名: ${name}`;
+            classSelectionDiv.classList.add('hidden');
+            lotteryUIDiv.classList.remove('hidden');
+            backBtn.classList.remove('hidden');
+            displayName.innerText = "READY";
+            displayName.classList.remove('glow-text');
+        }
+
+        backBtn.onclick = () => {
+            currentClassName = null;
+            classSelectionDiv.classList.remove('hidden');
+            lotteryUIDiv.classList.add('hidden');
+            backBtn.classList.add('hidden');
+            if(animationId) cancelAnimationFrame(animationId);
+            isSpinning = false;
+        };
+
+        function startSpin() {
+            if (isSpinning || !currentClassName) return;
+            if (!isMuted && audioCtx.state === 'suspended') audioCtx.resume();
+            
+            isSpinning = true;
+            const students = ALL_CLASSES[currentClassName];
+            const startTime = performance.now();
+            const duration = 2500; 
+            
+            function update(now) {
+                const elapsed = now - startTime;
+                const progress = elapsed / duration;
+                
+                if (progress < 1) {
+                    const randomIndex = Math.floor(Math.random() * students.length);
+                    displayName.innerText = students[randomIndex].name;
+                    
+                    if (Math.random() > progress * 0.8) {
+                        playSound(200 + (Math.random() * 300), 'sine', 0.1, 0.05);
+                    }
+                    animationId = requestAnimationFrame(update);
+                } else {
+                    finalize();
+                }
+            }
+            animationId = requestAnimationFrame(update);
+        }
+
+        function finalize() {
+            isSpinning = false;
+            const students = ALL_CLASSES[currentClassName];
+            let winnerIndex;
+            
+            // 核心優化：防連抽機制。如果班上大於1人，且抽中上一位，就重抽。
+            do {
+                winnerIndex = Math.floor(Math.random() * students.length);
+            } while (students.length > 1 && students[winnerIndex].sid === lastWinnerSid);
+            
+            const winner = students[winnerIndex];
+            lastWinnerSid = winner.sid; // 記錄本次中獎者
+            
+            displayName.innerText = winner.name;
+            displayName.classList.add('glow-text');
+            
+            [523.25, 659.25, 783.99].forEach((f, i) => {
+                setTimeout(() => playSound(f, 'square', 0.5, 0.05), i * 100);
+            });
+
+            setTimeout(() => showModal(winner), 500);
+        }
+
+        function showModal(winner) {
+            currentWinner = winner; 
+            
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            document.getElementById('winner-name').innerText = winner.name;
+            document.getElementById('winner-sid').innerText = winner.sid;
+            document.getElementById('winner-id').innerText = winner.id;
+            
+            const scoreBtn = document.getElementById('add-score-btn');
+            scoreBtn.innerText = "答對，多加 1 分 🌟 (Space)";
+            scoreBtn.disabled = false;
+            scoreBtn.className = "w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-2xl text-xl shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all active:scale-95";
+
+            modal.classList.replace('hidden', 'flex');
+            setTimeout(() => {
+                modalContent.classList.replace('scale-0', 'scale-100');
+                fireConfetti(); // 顯示彈窗時噴發彩帶
+            }, 50);
+
+            speakCantonese(`${winner.name}同學，請回答。`);
+        }
+
+        function addScore() {
+            const scoreBtn = document.getElementById('add-score-btn');
+            if (!currentWinner || scoreBtn.disabled) return;
+            
+            const sid = currentWinner.sid;
+            if (!sessionScores[sid]) {
+                sessionScores[sid] = {
+                    sid: currentWinner.sid,
+                    id: currentWinner.id,
+                    name: currentWinner.name,
+                    score: 0
+                };
+            }
+            
+            sessionScores[sid].score += 1;
+            hasExported = false; 
+            
+            // 核心優化：將紀錄寫入 LocalStorage
+            localStorage.setItem('classroom_scores', JSON.stringify(sessionScores));
+            updateUnsavedBadge();
+            
+            playSound(1000, 'sine', 0.1, 0.1);
+            setTimeout(() => playSound(1500, 'sine', 0.15, 0.1), 100);
+
+            scoreBtn.innerText = `已加分！(目前共 ${sessionScores[sid].score} 分) ✅`;
+            scoreBtn.disabled = true;
+            scoreBtn.className = "w-full bg-slate-800 text-emerald-400 font-bold py-4 rounded-2xl text-xl border border-emerald-500/30 cursor-not-allowed transition-all";
+        }
+
+        function showAndCopyExport() {
+            const exportModal = document.getElementById('export-modal');
+            const exportText = document.getElementById('export-text');
+            const copyBtn = document.getElementById('copy-btn');
+            
+            let resultText = "";
+            let count = 0;
+            
+            for (let sid in sessionScores) {
+                const student = sessionScores[sid];
+                resultText += `${student.sid}, ${student.score}, ${student.id}, ${student.name}\n`;
+                count++;
+            }
+            
+            if (count === 0) {
+                resultText = "目前還沒有學生加分記錄喔！";
+                copyBtn.innerText = "沒有資料可複製";
+                copyBtn.className = "flex-1 bg-slate-600 text-white font-bold py-3 rounded-xl cursor-not-allowed";
+            } else {
+                hasExported = true; 
+                updateUnsavedBadge(); // 消除紅點
+                copyBtn.innerText = "✅ 已自動複製 (點此可再複製)";
+                copyBtn.className = "flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all";
+            }
+            
+            exportText.value = resultText;
+            exportModal.classList.replace('hidden', 'flex'); 
+            
+            if (count > 0) {
+                exportText.select();
+                document.execCommand('copy');
+                exportText.blur();
+            }
+        }
+
+        function manualCopy() {
+            const exportText = document.getElementById('export-text');
+            if (exportText.value === "目前還沒有學生加分記錄喔！") return;
+            
+            exportText.select();
+            document.execCommand('copy');
+            document.getElementById('copy-btn').innerText = "✅ 已複製到剪貼簿！";
+        }
+
+        function closeExport() {
+            document.getElementById('export-modal').classList.replace('flex', 'hidden');
+        }
+
+        // 清除本地紀錄功能
+        function clearRecords() {
+            if(confirm("確定要清除今天的加分紀錄嗎？清除後無法復原。建議您先確定已經複製並匯出資料。")) {
+                localStorage.removeItem('classroom_scores');
+                sessionScores = {};
+                hasExported = true;
+                updateUnsavedBadge();
+                closeExport();
+                alert("紀錄已成功清除，您可以開始新的課堂了！");
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            modalContent.classList.replace('scale-100', 'scale-0');
+            setTimeout(() => {
+                modal.classList.replace('flex', 'hidden');
+                displayName.classList.remove('glow-text');
+                displayName.innerText = "NEXT?";
+            }, 300);
+        }
+
+        function drawAnother() {
+            closeModal();
+            setTimeout(() => {
+                startSpin();
+            }, 350); 
+        }
+
+        document.getElementById('spin-btn').onclick = startSpin;
+        
+        window.addEventListener('beforeunload', function (e) {
+            if (Object.keys(sessionScores).length > 0 && !hasExported) {
+                const confirmationMessage = '你好像未儲存複制今天回答情況，確定要離開嗎？';
+                e.returnValue = confirmationMessage; 
+                return confirmationMessage;
+            }
+        });
+
+        window.addEventListener('keydown', (e) => {
+            const modal = document.getElementById('modal');
+            const exportModal = document.getElementById('export-modal');
+            
+            // 如果匯出視窗開著，暫停快捷鍵功能避免誤觸
+            if (!exportModal.classList.contains('hidden')) {
+                if (e.key === 'Escape') closeExport();
+                return;
+            }
+
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (!currentClassName) return;
+                if (modal.classList.contains('hidden')) startSpin();
+                else addScore(); 
+            }
+            
+            if (e.key.toLowerCase() === 'x') {
+                if (!modal.classList.contains('hidden')) drawAnother(); 
+            }
+
+            if (e.key === 'Escape') {
+                if (!modal.classList.contains('hidden')) closeModal();
+            }
+
+            if (e.key.toLowerCase() === 'r') {
+                if (currentClassName) {
+                    displayName.innerText = "READY";
+                    displayName.classList.remove('glow-text');
+                } else {
+                    location.reload();
+                }
+            }
+        });
+
+        initClassList();
+    </script>
+</body>
+</html>
