@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小公主的魔法記憶卡 👑</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&display=swap');
+
+        body {
+            font-family: 'Nunito', 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #ffe6fa 0%, #e3f2fd 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        /* 魔法閃亮特效 */
+        @keyframes sparkle {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+        }
+
+        @keyframes bounce-win {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .card-container {
+            perspective: 1000px;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            max-width: 140px;
+            margin: 0 auto;
+        }
+
+        .card-inner {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .card-inner.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-inner.matched {
+            animation: sparkle 1s ease-in-out infinite;
+            cursor: default;
+        }
+
+        @keyframes fadeOutShrink {
+            0% { transform: rotateY(180deg) scale(1); opacity: 1; }
+            40% { transform: rotateY(180deg) scale(1.1); opacity: 1; }
+            100% { transform: rotateY(180deg) scale(0); opacity: 0; }
+        }
+
+        .card-inner.vanished {
+            animation: fadeOutShrink 0.8s forwards;
+            pointer-events: none;
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            box-shadow: 0 8px 16px rgba(255, 150, 200, 0.2);
+            font-size: 2rem;
+            border: 4px solid white;
+            user-select: none;
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            color: white;
+            font-size: 3rem;
+        }
+
+        .card-back {
+            background: white;
+            color: #ff6b81;
+            transform: rotateY(180deg);
+            flex-direction: column;
+            text-align: center;
+            padding: 10px;
+            word-break: break-word;
+        }
+
+        .pic-card .card-back { font-size: 4rem; }
+        .word-card .card-back { font-size: 2.2rem; font-weight: 800; }
+        .voice-card .card-back { font-size: 2.2rem; font-weight: 800; color: #9c27b0; }
+
+        .star-particle {
+            position: absolute;
+            pointer-events: none;
+            animation: float-up 1s ease-out forwards;
+            font-size: 1.5rem;
+        }
+
+        @keyframes float-up {
+            0% { transform: translateY(0) scale(0.5); opacity: 1; }
+            100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
+        }
+
+        /* 大大隻字彈出與震動特效 (8 秒) */
+        @keyframes popOutHuge {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+            4% { transform: translate(-50%, -50%) scale(1.05) rotate(-3deg); opacity: 1; filter: drop-shadow(0 0 30px #ff9a9e); }
+            6% { transform: translate(-50%, -50%) scale(0.95) rotate(3deg); opacity: 1; }
+            8% { transform: translate(-50%, -50%) scale(1.02) rotate(-1deg); opacity: 1; }
+            10% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+            95% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
+        }
+
+        @keyframes rainbowText {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .huge-word-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            pointer-events: auto; /* 攔截所有點擊 */
+            width: 90vw;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: popOutHuge 8s ease-out forwards;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 40px;
+            border: 8px solid #ff9a9e;
+            box-shadow: 0 20px 50px rgba(255, 107, 129, 0.5), inset 0 0 30px rgba(255, 154, 158, 0.4);
+            text-align: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .huge-word-text {
+            /* 字體大小改由 JS 根據字數動態計算，確保單行顯示 */
+            font-weight: 900;
+            white-space: nowrap; /* 強制單行顯示，不准換行 */
+            line-height: 1.2;
+            background: linear-gradient(90deg, #ff5e62, #ff9966, #ff5e62, #d136ff, #ff5e62);
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: rainbowText 2.5s linear infinite;
+        }
+
+        .listening-indicator {
+            margin-top: 20px;
+            font-size: 2rem;
+            color: #ff4081;
+            font-weight: bold;
+            animation: pulse 1.5s infinite;
+        }
+
+        /* --- 新增：手動通過按鈕樣式 --- */
+        .manual-pass-btn {
+            margin-top: 15px;
+            padding: 10px 30px;
+            background: linear-gradient(135deg, #42e695 0%, #3bb2b8 100%);
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 800;
+            border-radius: 30px;
+            border: 4px solid #fff;
+            box-shadow: 0 8px 15px rgba(66, 230, 149, 0.4);
+            cursor: pointer;
+            pointer-events: auto;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .manual-pass-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 4px 8px rgba(66, 230, 149, 0.4);
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #ffb8d1; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #d8b4e2; }
+    </style>
+</head>
+<body class="flex flex-col items-center py-8 px-4 text-gray-700">
+
+    <!-- 音效合成器 -->
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playTone(freq, type, duration, vol = 0.1) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        const sounds = {
+            click: () => playTone(800, 'sine', 0.1, 0.05),
+            pop: () => playTone(600, 'sine', 0.05, 0.05),
+            match: () => {
+                playTone(523.25, 'sine', 0.1, 0.1);
+                setTimeout(() => playTone(659.25, 'sine', 0.1, 0.1), 100);
+                setTimeout(() => playTone(783.99, 'sine', 0.2, 0.1), 200);
+                setTimeout(() => playTone(1046.50, 'sine', 0.4, 0.15), 300);
+            },
+            mismatch: () => {
+                playTone(300, 'triangle', 0.15, 0.05);
+                setTimeout(() => playTone(250, 'triangle', 0.2, 0.05), 150);
+            },
+            win: () => {
+                [0, 150, 300, 450].forEach((delay, i) => {
+                    setTimeout(() => playTone(400 + (i * 100), 'sine', 0.2, 0.1), delay);
+                });
+            }
+        };
+    </script>
+
+    <!-- 頁面 1: 首頁設定 -->
+    <div id="setup-screen" class="w-full max-w-md bg-white/80 backdrop-blur-md rounded-3xl p-8 shadow-xl text-center border-4 border-pink-200">
+        <h1 class="text-3xl font-extrabold text-pink-500 mb-2">👑 小公主的魔法卡片</h1>
+        
+        <div class="flex justify-between items-center mb-2 mt-6">
+            <p class="text-pink-400 font-bold">請輸入今天要學的單字：</p>
+            <div class="flex space-x-2">
+                <button onclick="toggleTTS()" id="tts-btn" class="text-sm bg-green-100 hover:bg-green-200 text-green-600 font-bold py-1 px-3 rounded-full flex items-center transition-colors shadow-sm active:scale-95">
+                    🔊 發音: 開
+                </button>
+                <button onclick="clearTextarea()" class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold py-1 px-3 rounded-full flex items-center transition-colors shadow-sm active:scale-95">
+                    🗑️ 清除
+                </button>
+                <button onclick="openLibrary()" class="text-sm bg-purple-100 hover:bg-purple-200 text-purple-600 font-bold py-1 px-3 rounded-full flex items-center transition-colors shadow-sm active:scale-95">
+                    📖 挑選詞庫
+                </button>
+            </div>
+        </div>
+        
+        <textarea id="word-list" rows="6" class="w-full border-2 border-pink-300 rounded-2xl p-4 text-lg focus:outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-100 transition-all resize-none mb-4" placeholder="例如：&#10;蘋果&#10;小貓&#10;公主&#10;太陽"></textarea>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button onclick="startGame(1)" class="w-full bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-bold py-4 rounded-2xl shadow-lg transform transition hover:scale-105 active:scale-95 text-lg">
+                ✨ 玩法一: 記憶配對
+            </button>
+            <button onclick="startGame(2)" class="w-full bg-gradient-to-r from-purple-400 to-indigo-400 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-4 rounded-2xl shadow-lg transform transition hover:scale-105 active:scale-95 text-lg">
+                🎤 玩法二: 魔法朗讀
+            </button>
+        </div>
+    </div>
+
+    <!-- 詞庫選擇彈出視窗 (Modal) -->
+    <div id="library-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-3xl w-11/12 max-w-6xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border-4 border-pink-300 transform transition-all">
+            <div class="p-4 bg-pink-50 flex justify-between items-center border-b border-pink-200 relative">
+                <h2 class="text-2xl font-bold text-pink-600 pl-2">📖 超級魔法圖書室 (1000+ 詞彙)</h2>
+                <button onclick="closeLibrary()" class="w-10 h-10 bg-white rounded-full text-pink-400 hover:text-pink-600 hover:bg-pink-100 text-3xl font-bold flex items-center justify-center shadow-sm transition-colors">&times;</button>
+            </div>
+
+            <div class="p-4 flex justify-center space-x-4 bg-white shadow-sm z-10 relative">
+                <span class="text-gray-500 font-bold self-center">我想加入：</span>
+                <button id="lib-lang-zh" onclick="setLibLang('zh')" class="px-6 py-2 rounded-full font-bold bg-pink-400 text-white shadow-md transition-colors transform active:scale-95">中文詞彙</button>
+                <button id="lib-lang-en" onclick="setLibLang('en')" class="px-6 py-2 rounded-full font-bold bg-gray-100 text-gray-500 hover:bg-pink-100 transition-colors transform active:scale-95">English</button>
+            </div>
+
+            <div id="library-content" class="p-4 md:p-6 overflow-y-auto custom-scroll flex-1 bg-gray-50 space-y-8 pb-10">
+                <!-- 內容由 JS 產生 -->
+            </div>
+            
+            <div class="bg-white p-3 text-center border-t border-pink-100 text-pink-400 font-bold text-sm shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)]">
+                點擊圖片就會自動加入到背後的清單中囉！👇
+            </div>
+        </div>
+    </div>
+
+    <!-- 頁面 2: 遊戲面板 -->
+    <div id="game-screen" class="hidden w-full max-w-[95vw] flex-col items-center">
+        <div class="w-full flex justify-between items-center mb-6 px-4">
+            <button onclick="backToSetup()" class="bg-white text-pink-500 font-bold py-2 px-6 rounded-full shadow hover:bg-pink-50 transition-colors border-2 border-pink-200">
+                ⬅️ 換單字
+            </button>
+            <div id="cheer-text" class="text-2xl font-extrabold text-purple-500 animate-pulse">
+                找找看一樣的！
+            </div>
+            <div class="bg-white text-yellow-500 font-bold py-2 px-6 rounded-full shadow border-2 border-yellow-200">
+                🌟 <span id="score">0</span> / <span id="total-score">0</span>
+            </div>
+        </div>
+
+        <div id="game-board" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3 sm:gap-4 lg:gap-6 w-full px-2">
+            <!-- 卡片由 JS 生成 -->
+        </div>
+    </div>
+
+    <!-- 頁面 3: 過關畫面 -->
+    <div id="win-screen" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-white/90 backdrop-blur-sm">
+        <div class="text-center p-8 bg-gradient-to-b from-pink-100 to-purple-100 rounded-3xl shadow-2xl border-4 border-pink-300 transform transition-all scale-110">
+            <div class="text-6xl mb-4">👸🎉🦄</div>
+            <h1 class="text-4xl font-extrabold text-pink-500 mb-4" style="animation: bounce-win 2s infinite;">小公主太棒了！</h1>
+            <p class="text-xl text-purple-600 mb-8 font-bold" id="win-message">全部都完成囉！好叻女！</p>
+            <button onclick="backToSetup()" class="bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-8 rounded-full shadow-lg text-xl transform hover:scale-105">
+                再玩一次 🪄
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 核心資料庫 (保留原本的超級魔法圖庫)
+        // ==========================================
+        const rawLibraryData = {
+            "👸 童話、人物與職業": ["👸|公主|princess", "🤴|王子|prince", "👑|國王,皇帝|king", "🧚‍♀️|仙女,精靈|fairy", "🧜‍♀️|美人魚,人魚|mermaid", "👼|天使|angel", "🦸‍♀️|女超人,英雄|superhero", "🦸‍♂️|超人|superman", "🦹‍♀️|壞人,女巫|villain,witch", "🧙‍♀️|巫婆|witch", "🧙‍♂️|巫師|wizard", "🧛‍♀️|吸血鬼|vampire", "🧟‍♀️|喪屍,殭屍|zombie", "🧞‍♀️|燈神|genie", "🧝‍♀️|精靈|elf", "👻|鬼,幽靈|ghost", "👽|外星人|alien", "🤖|機器人|robot", "👧|女孩,女仔|girl", "👦|男孩,男仔|boy", "👶|寶寶,嬰兒,bb|baby", "🧒|小孩,兒童|child", "👩|女人,媽媽,媽咪|woman,mother,mom", "👨|男人,爸爸,爹地|man,father,dad", "👵|奶奶,婆婆|grandmother,grandma", "👴|爺爺,公公|grandfather,grandpa", "👮|警察,差人|police,cop", "👨‍⚕️|醫生|doctor", "👩‍⚕️|女醫生|female doctor", "👩‍🏫|老師|teacher", "👨‍🍳|廚師|chef,cook", "👨‍🌾|農夫|farmer", "👨‍🎨|畫家|artist", "👨‍🎤|歌手|singer", "👨‍💻|程式設計師|programmer", "👨‍💼|上班族|office worker", "👨‍🔬|科學家|scientist", "👨‍🚒|消防員|firefighter", "👨‍🚀|太空人|astronaut", "👨‍✈️|機長,飛行員|pilot", "👨‍⚖️|法官|judge", "🕵️|偵探|detective", "💂|衛兵|guard", "🥷|忍者|ninja", "👷|建築工人|builder"],
+            "🐶 動物、昆蟲與海洋": ["🐶|狗,小狗|dog,puppy", "🐩|貴賓狗|poodle", "🐕|柴犬,黃狗|shiba", "🐱|貓,小貓|cat,kitty", "🐈|白貓|white cat", "🐭|老鼠,米奇|mouse,rat", "🐹|倉鼠|hamster", "🐰|兔子,小白兔|rabbit,bunny", "🦊|狐狸|fox", "🦝|浣熊|raccoon", "🐻|熊,熊仔|bear", "🐼|熊貓,貓熊|panda", "🐻‍❄️|北極熊|polar bear", "🐨|樹熊,無尾熊|koala", "🐯|老虎|tiger", "🦁|獅子|lion", "🐮|牛|cow", "🐷|豬,小豬|pig", "🐗|野豬|boar", "🐽|豬鼻子|pig nose", "🐸|青蛙|frog", "🐵|猴子,馬騮|monkey", "🦍|大猩猩|gorilla", "🦧|猩猩|orangutan", "🐔|雞,公雞|chicken,rooster", "🐥|小雞,雞仔|chick", "🐧|企鵝|penguin", "🐦|鳥,雀仔|bird", "🦆|鴨,鴨仔|duck", "🦢|天鵝|swan", "🦅|老鷹,鷹|eagle", "🦉|貓頭鷹|owl", "🦩|紅鶴|flamingo", "🦚|孔雀|peacock", "🦜|鸚鵡|parrot", "🦇|蝙蝠|bat", "🐺|狼|wolf", "🐴|馬|horse", "🦓|斑馬|zebra", "🦄|獨角獸|unicorn", "🐝|蜜蜂|bee", "🐛|毛毛蟲,蟲|caterpillar,bug", "🦋|蝴蝶|butterfly", "🐌|蝸牛|snail", "🐞|瓢蟲|ladybug", "🐜|螞蟻|ant", "🦟|蚊子,蚊|mosquito", "🕷️|蜘蛛|spider", "🕸️|蜘蛛網|spider web", "🦂|蠍子|scorpion", "🐢|烏龜|turtle", "🐍|蛇|snake", "🦎|蜥蜴|lizard", "🦖|恐龍,暴龍|dinosaur,t-rex", "🦕|雷龍|brontosaurus", "🐙|章魚,八爪魚|octopus", "🦑|烏賊,魷魚|squid", "🦐|蝦,蝦仔|shrimp", "🦞|龍蝦|lobster", "🦀|螃蟹,蟹|crab", "🐡|河豚|pufferfish", "🐠|熱帶魚|tropical fish", "🐟|魚|fish", "🐬|海豚|dolphin", "🐳|鯨魚|whale", "🦈|鯊魚|shark", "🦭|海豹|seal", "🐊|鱷魚|crocodile", "🐆|豹|leopard", "🐘|大象|elephant", "🦛|河馬|hippo", "🦏|犀牛|rhino", "🐪|駱駝|camel", "🦒|長頸鹿|giraffe", "🦘|袋鼠|kangaroo", "🦥|樹懶|sloth", "🦦|水獺|otter", "🦨|臭鼬|skunk", "🦡|獾|badger", "🐿️|松鼠|squirrel", "🦔|刺蝟|hedgehog", "🐾|動物腳印|paw prints"],
+            "🍎 水果、蔬菜與植物": ["🍎|蘋果|apple", "🍏|青蘋果|green apple", "🍐|梨,梨子|pear", "🍊|橙,橘子|orange", "🍋|檸檬|lemon", "🍌|香蕉|banana", "🍉|西瓜|watermelon", "🍇|葡萄,提子|grape,grapes", "🍓|草莓,士多啤梨|strawberry", "🍈|哈密瓜,瓜|melon", "🍒|櫻桃,車厘子|cherry", "🍑|桃,桃子|peach", "🥭|芒果|mango", "🍍|菠蘿,鳳梨|pineapple", "🥥|椰子|coconut", "🥝|奇異果|kiwi", "🍅|番茄|tomato", "🍆|茄子|eggplant", "🥑|酪梨,牛油果|avocado", "🥦|花椰菜,西蘭花|broccoli", "🥬|生菜,白菜|lettuce,cabbage", "🥒|黃瓜,青瓜|cucumber", "🌶️|辣椒|hot pepper,chili", "🫑|青椒|bell pepper", "🌽|粟米,玉米|corn", "🥕|胡蘿蔔,紅蘿蔔|carrot", "🧄|大蒜,蒜頭|garlic", "🧅|洋蔥|onion", "🥔|馬鈴薯,薯仔|potato", "🍠|番薯,地瓜|sweet potato", "🥜|花生|peanut", "🌰|栗子|chestnut", "🍄|蘑菇|mushroom", "🫘|豆子|beans", "🌳|樹,大樹|tree", "🌲|松樹|pine tree", "🌴|棕櫚樹|palm tree", "🌵|仙人掌|cactus", "🌿|草|grass", "🍀|幸運草,四葉草|clover", "🍁|楓葉|maple leaf", "🍃|葉,葉子,樹葉|leaf,leaves", "🌸|櫻花|cherry blossom", "🌹|玫瑰|rose", "🌻|向日葵|sunflower", "🌼|花,花朵|flower", "🌷|鬱金香|tulip", "🌺|扶桑花|hibiscus"],
+            "🍔 食物、飲料與甜點": ["🍞|麵包|bread", "🥐|牛角包|croissant", "🥖|長棍麵包|baguette", "🥨|蝴蝶餅|pretzel", "🥞|鬆餅|pancake", "🧇|窩夫|waffle", "🧀|芝士,起司|cheese", "🍖|肉|meat", "🍗|雞腿|chicken leg", "🥩|牛排|steak", "🥓|煙肉,培根|bacon", "🍔|漢堡,漢堡包|hamburger,burger", "🍟|薯條|fries", "🍕|披薩,薄餅|pizza", "🌭|熱狗|hot dog", "🥪|三明治,三文治|sandwich", "🌮|塔可|taco", "🌯|捲餅|burrito", "🥚|蛋,雞蛋|egg", "🍳|煎蛋|fried egg", "🍲|火鍋,湯|soup", "🥗|沙拉,沙律|salad", "🍿|爆米花,爆谷|popcorn", "🧈|牛油,奶油|butter", "🧂|鹽|salt", "🍱|便當|bento", "🍙|飯糰|rice ball", "🍚|飯,白飯|rice", "🍛|咖哩飯|curry", "🍜|麵,拉麵|noodles,ramen", "🍝|意大利麵,意粉|spaghetti", "🍣|壽司|sushi", "🍤|炸蝦|fried shrimp", "🥟|餃子|dumpling", "🥠|幸運餅乾|fortune cookie", "🦪|牡蠣,生蠔|oyster", "🍦|雪糕,冰淇淋|ice cream", "🍧|刨冰|shaved ice", "🍨|冰淇淋杯|ice cream cup", "🍩|甜甜圈,冬甩|donut", "🍪|餅乾,曲奇|cookie", "🎂|蛋糕,生日蛋糕|cake", "🍰|切片蛋糕|shortcake", "🧁|杯子蛋糕|cupcake", "🥧|派,批|pie", "🍫|朱古力,巧克力|chocolate", "🍬|糖果|candy", "🍭|棒棒糖,波板糖|lollipop", "🍮|布丁|pudding", "🍯|蜂蜜|honey", "🍼|奶瓶,BB奶|baby bottle", "🥛|牛奶,奶|milk", "☕|咖啡|coffee", "🍵|茶,綠茶|tea", "🧃|果汁|juice", "🥤|汽水|soda", "🧋|珍珠奶茶|bubble tea", "🧊|冰塊,冰|ice,ice cube", "🥢|筷子|chopsticks", "🍴|刀叉|fork and knife"],
+            "☀️ 自然、天氣與太空": ["🌍|地球|earth", "🌕|滿月|moon", "🌙|彎月|crescent moon", "☀️|太陽|sun", "⭐|星星|star", "🌟|閃亮的星|glowing star", "☁️|雲|cloud", "⛅|多雲|partly cloudy", "⛈️|雷雨|thunderstorm", "🌧️|雨,落雨|rain", "🌨️|下雪|snowing", "🌩️|閃電|lightning", "🌪️|龍捲風|tornado", "🌈|彩虹|rainbow", "☂️|傘,雨傘|umbrella", "☔|雨傘帶水滴|umbrella with rain drops", "❄️|雪,落雪|snow,snowflake", "☃️|雪人|snowman", "🔥|火|fire", "💧|水,水滴|water,drop", "🌊|海,海浪|sea,ocean", "☄️|彗星|comet", "🪐|帶星環的行星,土星|saturn,planet", "🌌|銀河|milky way", "🌑|新月|new moon"],
+            "🚗 交通、工具與建築": ["🚗|車,汽車|car", "🚕|的士,計程車|taxi", "🚙|休旅車|suv", "🚌|巴士,公車|bus", "🏎️|賽車|racing car", "🚓|警車|police car", "🚑|救護車|ambulance", "🚒|消防車|fire engine", "🚚|貨車,卡車|truck", "🚜|拖拉機|tractor", "🛴|滑板車|scooter", "🚲|單車,自行車|bicycle,bike", "🛵|電單車,機車|motorcycle", "🚂|火車|train", "🚄|高鐵|high-speed train", "🚇|地鐵,捷運|subway,metro", "🚁|直升機|helicopter", "🚠|纜車|cableway", "🚀|火箭|rocket", "🛸|飛碟,UFO|ufo", "⚓|船錨|anchor", "⛵|帆船|sailboat", "🚢|船,輪船|ship", "⛴️|渡輪|ferry", "✈️|飛機|airplane,plane", "🪂|降落傘|parachute", "⛽|加油站|gas station", "🚥|紅綠燈|traffic light", "🛑|停車標誌|stop sign", "🏠|房子,屋企|house,home", "🏫|學校|school", "🏥|醫院|hospital", "🏦|銀行|bank", "🏪|便利店|convenience store", "🛒|超市,超級市場|supermarket", "🏟️|體育館|stadium", "🏞️|公園|park", "🎡|遊樂場|amusement park", "🎪|馬戲團|circus", "🏖️|沙灘,海灘|beach", "🏕️|露營|camping", "🏰|城堡|castle", "🎢|過山車,雲霄飛車|roller coaster", "🎠|旋轉木馬|carousel", "🏭|工廠|factory", "🗼|鐵塔|tower", "🗽|自由女神|statue of liberty", "⛺|帳篷|tent", "🌉|橋|bridge"],
+            "🧸 日常物品與玩具": ["💎|鑽石,寶石|diamond,gem", "🎈|氣球|balloon", "🎁|禮物|gift,present", "🎀|蝴蝶結|ribbon", "🪄|魔法棒|magic wand", "📱|電話,手機|phone,mobile", "☎️|家用電話|telephone", "💻|電腦|computer,laptop", "🖥️|桌上型電腦|desktop computer", "⌨️|鍵盤|keyboard", "🖱️|滑鼠|mouse", "📷|相機|camera", "📺|電視|tv,television", "📻|收音機|radio", "🎙️|麥克風,咪|microphone", "⏰|鬧鐘|alarm clock", "⏱️|計時器|stopwatch", "🔋|電池|battery", "💡|燈泡|light bulb", "🔦|手電筒|flashlight", "🕯️|蠟燭|candle", "💵|鈔票,錢|money,dollar", "💰|錢袋|money bag", "💳|信用卡|credit card", "🪙|硬幣|coin", "✉️|信封,信|envelope,letter", "📦|包裹,紙箱|package,box", "📮|郵筒|mailbox", "✏️|筆,鉛筆|pencil", "✒️|鋼筆|fountain pen", "🖍️|蠟筆|crayon", "💼|公事包|briefcase", "📅|日曆|calendar", "📌|圖釘|pushpin", "📎|迴紋針|paperclip", "📏|直尺,尺|ruler", "✂️|鉸剪,剪刀|scissors", "🗑️|垃圾桶|wastebasket", "🔑|鎖匙,鑰匙|key", "🔨|錘子|hammer", "🪓|斧頭|axe", "🔧|扳手|wrench", "🪛|螺絲起子|screwdriver", "🛡️|盾牌|shield", "🧲|磁鐵|magnet", "🔬|顯微鏡|microscope", "🔭|望遠鏡|telescope", "💊|藥丸,藥|pill,medicine", "💉|針筒|syringe", "🩹|OK繃|bandage", "🩺|聽診器|stethoscope", "🚪|門|door", "🪞|鏡子|mirror", "🪟|窗戶|window", "🛏️|床|bed", "🛋️|沙發|couch", "🪑|椅子,凳|chair", "🚽|馬桶|toilet", "🚿|蓮蓬頭|shower", "🛁|浴缸|bathtub", "🧹|掃把|broom", "🧻|衛生紙|toilet paper", "🧼|肥皂|soap", "🫧|泡泡|bubbles", "🪥|牙刷|toothbrush", "🧽|海綿|sponge", "🪣|水桶|bucket", "🧸|玩具熊,熊仔|teddy bear,toy", "🪀|搖搖,溜溜球|yoyo", "🪁|風箏|kite"],
+            "👗 服飾、配件與身體": ["👗|裙,裙子|dress", "👕|衫,衣服|shirt,t-shirt", "👖|褲,褲子|pants,jeans", "🧥|外套,大衣|coat", "🧦|襪,襪子|socks", "👘|和服|kimono", "👙|比基尼|bikini", "🩳|短褲|shorts", "👔|領帶|necktie", "🧣|圍巾|scarf", "🧤|手套|gloves", "👠|高跟鞋|high-heeled shoe", "👟|鞋,鞋子|sneaker,shoes", "🥾|靴子|boots", "🎒|書包,背包|backpack", "👜|手提包|handbag", "👛|錢包|purse", "👒|帽子,女帽|hat", "🧢|鴨舌帽|cap", "👑|皇冠|crown", "💄|口紅|lipstick", "💍|戒指|ring", "👓|眼鏡|glasses", "🕶️|墨鏡|sunglasses", "🧳|行李箱|luggage", "👁️|眼睛,眼|eye,eyes", "👂|耳朵,耳|ear,ears", "👃|鼻子,鼻|nose", "👄|嘴巴,嘴|mouth", "👅|舌頭|tongue", "🦷|牙齒,牙|tooth,teeth", "🦴|骨頭|bone", "🖐️|手,手掌|hand", "👏|拍手|clap", "👍|讚|thumbs up", "🦶|腳,腳丫|foot,feet", "🦵|腿|leg", "💪|肌肉,手臂|muscle", "🧠|大腦,腦|brain", "🫀|心臟|anatomical heart"],
+            "⚽ 運動、音樂與藝術": ["⚽|足球|soccer,football", "🏀|籃球|basketball", "🎾|網球|tennis", "🏐|排球|volleyball", "⚾|棒球|baseball", "🏓|乒乓球|ping pong", "🏸|羽毛球|badminton", "⛸️|溜冰|skating", "🎿|滑雪|skiing", "🏊‍♀️|游泳|swimming", "🚴‍♀️|騎單車,踩單車|cycling", "🎯|飛鏢|darts", "🧩|拼圖|puzzle", "🎮|遊戲機,打機|video game", "🎲|骰子|dice", "🎳|保齡球|bowling", "🥊|拳擊手套|boxing glove", "🥋|武術服|martial arts uniform", "🏆|獎盃|trophy", "🥇|金牌|gold medal", "🎸|結他,吉他|guitar", "🎹|鋼琴|piano", "🎻|小提琴|violin", "🥁|鼓|drum", "🎺|小號|trumpet", "🎷|薩克斯風|saxophone", "🎧|耳機|headphones", "🎨|調色盤,畫畫|palette,paint", "🖌️|畫筆|paintbrush", "📸|攝影,影相|photography"],
+            "🟢 顏色、形狀與符號": ["🔴|紅色,紅|red", "🟠|橙色,橙|orange", "🟡|黃色,黃|yellow", "🟢|綠色,綠|green", "🔵|藍色,藍|blue", "🟣|紫色,紫|purple", "⚫|黑色,黑|black", "⚪|白色,白|white", "🟤|啡色,棕色|brown", "⭕|圓形,圓圈|circle", "🟥|正方形|square", "🔺|三角形|triangle", "⭐|星形|star shape", "❤️|愛心,心形|heart", "💔|心碎|broken heart", "💘|丘比特之箭|heart with arrow", "💖|閃亮的心|sparkling heart", "✅|打勾,正確|check mark", "❌|打叉,錯誤|cross mark", "💯|一百分|hundred points", "❓|問號|question mark", "❗|驚嘆號|exclamation mark", "⬆️|向上|up arrow", "⬇️|向下|down arrow", "⬅️|向左|left arrow", "➡️|向右|right arrow"]
+        };
+
+        const imageDictionary = {};
+        const libraryForUI = [];
+
+        for (const [category, items] of Object.entries(rawLibraryData)) {
+            const catData = { name: category, words: [] };
+            items.forEach(item => {
+                const parts = item.split('|');
+                if (parts.length >= 3) {
+                    const emoji = parts[0];
+                    const zhWords = parts[1].split(',');
+                    const enWords = parts[2].split(',');
+                    zhWords.forEach(w => imageDictionary[w.toLowerCase()] = emoji);
+                    enWords.forEach(w => imageDictionary[w.toLowerCase()] = emoji);
+                    catData.words.push({ emoji: emoji, zh: zhWords[0], en: enWords[0] });
+                }
+            });
+            libraryForUI.push(catData);
+        }
+
+        document.getElementById('word-list').value = "蘋果\n小貓\n香蕉\n巴士";
+
+        let currentLibLang = 'zh';
+        let isTtsEnabled = true;
+
+        function toggleTTS() {
+            isTtsEnabled = !isTtsEnabled;
+            const btn = document.getElementById('tts-btn');
+            sounds.click();
+            if (isTtsEnabled) {
+                btn.innerHTML = '🔊 發音: 開';
+                btn.className = 'text-sm bg-green-100 hover:bg-green-200 text-green-600 font-bold py-1 px-3 rounded-full flex items-center transition-colors shadow-sm active:scale-95';
+            } else {
+                btn.innerHTML = '🔇 發音: 關';
+                btn.className = 'text-sm bg-red-100 hover:bg-red-200 text-red-600 font-bold py-1 px-3 rounded-full flex items-center transition-colors shadow-sm active:scale-95';
+            }
+        }
+
+        function clearTextarea() {
+            document.getElementById('word-list').value = '';
+            sounds.click();
+        }
+
+        function openLibrary() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            document.getElementById('library-modal').classList.remove('hidden');
+            renderLibrary();
+        }
+
+        function closeLibrary() {
+            sounds.click();
+            document.getElementById('library-modal').classList.add('hidden');
+        }
+
+        function setLibLang(lang) {
+            sounds.click();
+            currentLibLang = lang;
+            const btnZh = document.getElementById('lib-lang-zh');
+            const btnEn = document.getElementById('lib-lang-en');
+            if (lang === 'zh') {
+                btnZh.className = 'px-6 py-2 rounded-full font-bold bg-pink-400 text-white shadow-md transition-colors transform active:scale-95';
+                btnEn.className = 'px-6 py-2 rounded-full font-bold bg-gray-100 text-gray-500 hover:bg-pink-100 transition-colors transform active:scale-95';
+            } else {
+                btnEn.className = 'px-6 py-2 rounded-full font-bold bg-pink-400 text-white shadow-md transition-colors transform active:scale-95';
+                btnZh.className = 'px-6 py-2 rounded-full font-bold bg-gray-100 text-gray-500 hover:bg-pink-100 transition-colors transform active:scale-95';
+            }
+            renderLibrary();
+        }
+
+        function renderLibrary() {
+            const container = document.getElementById('library-content');
+            container.innerHTML = '';
+            libraryForUI.forEach(cat => {
+                const catDiv = document.createElement('div');
+                catDiv.className = 'mb-8';
+                const title = document.createElement('h3');
+                title.className = 'text-xl font-extrabold text-pink-500 border-b-2 border-pink-200 pb-2 mb-4 sticky top-0 bg-gray-50/95 backdrop-blur-sm z-10';
+                title.innerText = cat.name;
+                catDiv.appendChild(title);
+
+                const grid = document.createElement('div');
+                grid.className = 'grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-3';
+                cat.words.forEach(wordObj => {
+                    const btn = document.createElement('button');
+                    btn.className = 'flex flex-col items-center justify-center p-3 bg-white border-2 border-pink-100 rounded-2xl hover:bg-pink-50 hover:border-pink-300 transition-all transform active:scale-90 shadow-sm';
+                    const displayWord = currentLibLang === 'zh' ? wordObj.zh : wordObj.en;
+                    btn.innerHTML = `<span class="text-4xl mb-2 drop-shadow-sm">${wordObj.emoji}</span><span class="text-sm font-bold text-gray-600 truncate w-full text-center">${displayWord}</span>`;
+                    btn.onclick = () => {
+                        addWordToTextarea(displayWord);
+                        playLibraryTTS(displayWord);
+                        const origBg = btn.style.backgroundColor;
+                        const origBorder = btn.style.borderColor;
+                        btn.style.backgroundColor = '#dcfce3';
+                        btn.style.borderColor = '#86efac';
+                        setTimeout(() => { btn.style.backgroundColor = origBg; btn.style.borderColor = origBorder; }, 200);
+                    };
+                    grid.appendChild(btn);
+                });
+                catDiv.appendChild(grid);
+                container.appendChild(catDiv);
+            });
+        }
+
+        let voices = [];
+        window.speechSynthesis.onvoiceschanged = () => { voices = window.speechSynthesis.getVoices(); };
+
+        function playLibraryTTS(word) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(word);
+            if (currentLibLang === 'zh') {
+                utterance.lang = 'zh-HK'; 
+                let hkVoice = voices.find(v => (v.lang.includes('zh-HK') || v.name.includes('Hong Kong')) && (/female|tracy|sin-ji|女|google/i.test(v.name)));
+                if (!hkVoice) hkVoice = voices.find(v => v.lang.includes('zh-HK') || v.name.includes('Hong Kong'));
+                if (hkVoice) utterance.voice = hkVoice;
+            } else {
+                utterance.lang = 'en-US'; 
+                const femaleVoice = voices.find(v => v.lang.includes('en') && (/female|samantha|zira|victoria/i.test(v.name)));
+                if (femaleVoice) utterance.voice = femaleVoice;
+            }
+            utterance.rate = 0.95; utterance.pitch = 1.1;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function addWordToTextarea(word) {
+            const textarea = document.getElementById('word-list');
+            const lines = textarea.value.split('\n').map(w => w.trim()).filter(w => w.length > 0);
+            if (lines.length === 0 || lines[lines.length - 1] !== word) {
+                textarea.value += (textarea.value.length > 0 && !textarea.value.endsWith('\n') ? '\n' : '') + word + '\n';
+                sounds.pop();
+                textarea.scrollTop = textarea.scrollHeight;
+            }
+        }
+
+        // ==========================================
+        // 遊戲核心狀態與邏輯
+        // ==========================================
+        let gameMode = 1; // 1: 配對模式, 2: 發音朗讀模式
+        let currentLang = 'zh';
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let totalPairs = 0;
+        let isProcessing = false;
+        let activeHugeOverlay = null;
+
+        // 語音辨識 API 初始化
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+        }
+
+        function detectLanguage(word) { return /[\u4e00-\u9fa5]/.test(word) ? 'zh' : 'en'; }
+
+        function speakWord3Times(word) {
+            if (!isTtsEnabled) return;
+            window.speechSynthesis.cancel();
+            let playCount = 0;
+            const maxPlays = 3;
+            function playSingle() {
+                if (playCount >= maxPlays) return;
+                const utterance = new SpeechSynthesisUtterance(word);
+                if (currentLang === 'zh') {
+                    utterance.lang = 'zh-HK';
+                    let hkVoice = voices.find(v => (v.lang.includes('zh-HK') || v.name.includes('Hong Kong')) && (/female|tracy|sin-ji|女|google/i.test(v.name)));
+                    if (!hkVoice) hkVoice = voices.find(v => v.lang.includes('zh-HK') || v.name.includes('Hong Kong'));
+                    if (hkVoice) utterance.voice = hkVoice;
+                } else {
+                    utterance.lang = 'en-US';
+                    const femaleVoice = voices.find(v => v.lang.includes('en') && (/female|samantha|zira|victoria/i.test(v.name)));
+                    if (femaleVoice) utterance.voice = femaleVoice;
+                }
+                utterance.rate = 0.9; utterance.pitch = 1.2;
+                utterance.onend = () => { playCount++; if (playCount < maxPlays) setTimeout(playSingle, 600); };
+                window.speechSynthesis.speak(utterance);
+            }
+            playSingle();
+        }
+
+        async function getFallbackImageURL(word) {
+            try {
+                let enWord = word.toLowerCase();
+                if (/[\u4e00-\u9fa5]/.test(word)) {
+                    const trRes = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=zh|en`);
+                    const trData = await trRes.json();
+                    if (trData && trData.responseData && trData.responseData.translatedText) {
+                        let translated = trData.responseData.translatedText.toLowerCase();
+                        if (!translated.includes("mymemory") && !translated.includes("warning")) { enWord = translated; }
+                    }
+                }
+                let searchWord = enWord.replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-');
+                let imgUrl = await fetchIconify(searchWord);
+                if (!imgUrl && searchWord.includes('-')) {
+                    const parts = searchWord.split('-');
+                    imgUrl = await fetchIconify(parts[parts.length - 1]);
+                }
+                return imgUrl;
+            } catch(e) { console.error("搜尋失敗:", e); return null; }
+        }
+
+        async function fetchIconify(keyword) {
+            if (!keyword) return null;
+            try {
+                const iconRes = await fetch(`https://api.iconify.design/search?query=${encodeURIComponent(keyword)}&limit=30`);
+                const iconData = await iconRes.json();
+                if (iconData.icons && iconData.icons.length > 0) {
+                    const colorfulPrefixes = ['fluent-emoji', 'twemoji', 'noto', 'emojione', 'fxemoji', 'streamline-emojis', 'flat-color-icons', 'color'];
+                    let chosenIcon = null;
+                    for (let icon of iconData.icons) {
+                        if (colorfulPrefixes.some(prefix => icon.startsWith(prefix))) { chosenIcon = icon; break; }
+                    }
+                    if (!chosenIcon) chosenIcon = iconData.icons[0];
+                    const parts = chosenIcon.split(':');
+                    if (parts.length === 2) return `https://api.iconify.design/${parts[0]}/${parts[1]}.svg?width=120&height=120`;
+                }
+            } catch(e) { console.error("Iconify 搜尋失敗:", e); }
+            return null;
+        }
+
+        async function startGame(mode) {
+            gameMode = mode;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const text = document.getElementById('word-list').value;
+            const rawWords = text.split('\n').map(w => w.trim()).filter(w => w.length > 0);
+            
+            if (rawWords.length === 0) { alert("媽咪，忘記輸入單字囉！"); return; }
+            if (gameMode === 2 && !SpeechRecognition) {
+                alert("哎呀！您的瀏覽器不支援語音裁判魔法，建議使用 Google Chrome 瀏覽器來遊玩發音模式喔！");
+                return;
+            }
+
+            if (gameMode === 2 && window.location.protocol === 'file:') {
+                alert("溫馨提示：您目前是直接點擊檔案開啟 (file://)。\n基於 Chrome 瀏覽器的安全隱私限制，這個環境下每次翻卡都會重新詢問麥克風權限喔！\n\n建議將此檔案上傳到免費網頁空間 (如 tiiny.host)，或使用本機伺服器 (如 VS Code 的 Live Server) 來獲得順暢的遊玩體驗！");
+            }
+
+            const buttons = document.querySelectorAll('#setup-screen button');
+            buttons.forEach(b => b.disabled = true);
+            const statusBtn = gameMode === 1 ? buttons[3] : buttons[4];
+            const originalText = statusBtn.innerText;
+            statusBtn.innerHTML = '✨ 魔法精靈正在準備卡片... ✨';
+            statusBtn.classList.add('animate-pulse');
+
+            const words = rawWords.slice(0, 16);
+            currentLang = detectLanguage(words[0]);
+
+            cards = [];
+            
+            if (gameMode === 1) {
+                for (let index = 0; index < words.length; index++) {
+                    const word = words[index];
+                    const key = word.toLowerCase();
+                    let pic = imageDictionary[key];
+                    let isUrl = false;
+                    if (!pic) {
+                        const onlinePic = await getFallbackImageURL(word);
+                        if (onlinePic) { pic = onlinePic; isUrl = true; } else { pic = '🎁'; }
+                    }
+                    const id = `pair_${index}`;
+                    // 修正：為文字卡加上 wordText 屬性，防止出現 undefined
+                    cards.push({ id: id, type: 'word', content: word, wordText: word, isUrl: false });
+                    cards.push({ id: id, type: 'pic', content: pic, wordText: word, isUrl: isUrl });
+                }
+                totalPairs = words.length;
+            } else {
+                for (let index = 0; index < words.length; index++) {
+                    cards.push({ id: `voice_${index}`, type: 'voice', content: words[index], wordText: words[index], isUrl: false });
+                }
+                totalPairs = words.length;
+            }
+
+            cards.sort(() => Math.random() - 0.5);
+            matchedPairs = 0;
+            document.getElementById('score').innerText = '0';
+            document.getElementById('total-score').innerText = totalPairs;
+            
+            if (gameMode === 1) {
+                document.getElementById('cheer-text').innerText = currentLang === 'zh' ? '找找看一樣的！' : 'Find the match!';
+            } else {
+                document.getElementById('cheer-text').innerText = currentLang === 'zh' ? '大聲讀出來！' : 'Read it out loud!';
+            }
+            
+            renderBoard();
+
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            document.getElementById('win-screen').classList.add('hidden');
+
+            buttons.forEach(b => b.disabled = false);
+            statusBtn.innerHTML = originalText;
+            statusBtn.classList.remove('animate-pulse');
+        }
+
+        function renderBoard() {
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+            
+            cards.forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card-container';
+                
+                const inner = document.createElement('div');
+                inner.className = `card-inner ${card.type}-card`;
+                inner.dataset.id = card.id;
+                inner.dataset.index = index;
+                // 修正：增加防呆機制，如果找不到 wordText 就使用 content
+                inner.dataset.word = card.wordText || card.content;
+
+                const front = document.createElement('div');
+                front.className = 'card-face card-front';
+                front.innerHTML = '✨';
+
+                const back = document.createElement('div');
+                back.className = 'card-face card-back';
+                if (card.isUrl) {
+                    back.innerHTML = `<img src="${card.content}" alt="${card.wordText}" style="width: 80%; height: 80%; object-fit: contain;">`;
+                } else {
+                    back.innerText = card.content;
+                }
+
+                inner.appendChild(front);
+                inner.appendChild(back);
+                cardEl.appendChild(inner);
+
+                inner.addEventListener('click', () => {
+                    if (gameMode === 1) handleMatchCardClick(inner);
+                    else handleVoiceCardClick(inner);
+                });
+                board.appendChild(cardEl);
+            });
+        }
+
+        function showHugeWordEffect(word) {
+            const overlay = document.createElement('div');
+            overlay.className = 'huge-word-overlay';
+            
+            const textSpan = document.createElement('span');
+            textSpan.className = 'huge-word-text';
+            textSpan.innerText = word;
+            
+            // 【關鍵修改】：根據字數動態調整視窗寬度佔比 (vw)
+            // 假設最大佔比不超過 25vw，如果字數變多，就把寬度除以字數來縮小字體
+            const wordLen = word.length;
+            const vwSize = Math.min(25, 75 / wordLen); 
+            textSpan.style.fontSize = `clamp(2rem, ${vwSize}vw, 15rem)`;
+            
+            overlay.appendChild(textSpan);
+            document.body.appendChild(overlay);
+            
+            activeHugeOverlay = overlay;
+            
+            overlay.removeTimer = setTimeout(() => {
+                if (document.body.contains(overlay)) overlay.remove();
+                if (activeHugeOverlay === overlay) activeHugeOverlay = null;
+            }, 8000); 
+            
+            return overlay;
+        }
+
+        function handleMatchCardClick(cardInner) {
+            if (isProcessing) return;
+            if (cardInner.classList.contains('flipped') || cardInner.classList.contains('matched')) return;
+
+            sounds.click();
+            cardInner.classList.add('flipped');
+            flippedCards.push(cardInner);
+
+            if (cardInner.classList.contains('word-card')) {
+                const word = cardInner.dataset.word;
+                speakWord3Times(word);
+                showHugeWordEffect(word);
+            }
+
+            if (flippedCards.length === 2) {
+                isProcessing = true;
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+            const isMatch = card1.dataset.id === card2.dataset.id;
+
+            if (isMatch) {
+                sounds.match();
+                matchedPairs++;
+                document.getElementById('score').innerText = matchedPairs;
+                
+                const cheersZh = ['好叻女！', '太棒了！', '小公主真聰明！', '哇喔！'];
+                const cheersEn = ['Great Job!', 'Excellent!', 'Smart Girl!', 'Wow!'];
+                const cheers = currentLang === 'zh' ? cheersZh : cheersEn;
+                document.getElementById('cheer-text').innerText = cheers[Math.floor(Math.random() * cheers.length)];
+
+                setTimeout(() => {
+                    card1.classList.add('matched');
+                    card2.classList.add('matched');
+                    createStars(card1);
+                    createStars(card2);
+                }, 300);
+
+                const wordToSpeak = card1.dataset.word;
+                speakWord3Times(wordToSpeak);
+
+                flippedCards = [];
+                isProcessing = false;
+
+                setTimeout(() => {
+                    card1.classList.remove('matched');
+                    card1.classList.add('vanished');
+                    card2.classList.remove('matched');
+                    card2.classList.add('vanished');
+                    if (matchedPairs === totalPairs) setTimeout(showWinScreen, 800);
+                }, 1500);
+            } else {
+                sounds.mismatch();
+                setTimeout(() => {
+                    card1.classList.remove('flipped');
+                    card2.classList.remove('flipped');
+                    flippedCards = [];
+                    isProcessing = false;
+                }, 1000);
+            }
+        }
+
+        function handleVoiceCardClick(cardInner) {
+            if (isProcessing) return;
+            if (cardInner.classList.contains('flipped') || cardInner.classList.contains('vanished')) return;
+
+            sounds.click();
+            cardInner.classList.add('flipped');
+            isProcessing = true;
+
+            const targetWord = cardInner.dataset.word;
+            const overlay = showHugeWordEffect(targetWord);
+            
+            const micIndicator = document.createElement('div');
+            micIndicator.className = 'listening-indicator';
+            micIndicator.innerText = '🎤 聽緊你讀...';
+            overlay.appendChild(micIndicator);
+
+            // 新增：手動通過按鈕
+            const manualBtn = document.createElement('button');
+            manualBtn.className = 'manual-pass-btn';
+            manualBtn.innerText = '✅ 手動通過';
+            overlay.appendChild(manualBtn);
+
+            startListening(targetWord, cardInner, overlay, manualBtn);
+        }
+
+        function startListening(targetWord, cardInner, overlay, manualBtn) {
+            if (!recognition) {
+                setTimeout(() => handleVoiceSuccess(cardInner, overlay), 2000);
+                return;
+            }
+
+            recognition.lang = currentLang === 'zh' ? 'zh-HK' : 'en-US';
+            let handled = false;
+
+            // 綁定手動通過按鈕事件
+            if (manualBtn) {
+                manualBtn.onclick = () => {
+                    if (handled) return;
+                    handled = true;
+                    try { recognition.stop(); } catch(e) {}
+                    handleVoiceSuccess(cardInner, overlay);
+                };
+            }
+
+            recognition.onresult = (event) => {
+                if (handled) return;
+                const transcript = event.results[0][0].transcript.toLowerCase().trim();
+                const cleanTranscript = transcript.replace(/[.,!?。，！？]/g, '');
+                const cleanWord = targetWord.toLowerCase().trim();
+
+                if (cleanTranscript.includes(cleanWord) || (cleanWord.includes(cleanTranscript) && cleanTranscript.length > 0)) {
+                    handled = true;
+                    recognition.stop();
+                    handleVoiceSuccess(cardInner, overlay);
+                }
+            };
+
+            recognition.onerror = (event) => {
+                if (handled) return;
+                handled = true;
+                handleVoiceFail(cardInner, overlay, targetWord);
+            };
+
+            recognition.onend = () => {
+                if (handled) return;
+                handled = true;
+                handleVoiceFail(cardInner, overlay, targetWord);
+            };
+
+            try {
+                recognition.start();
+            } catch (e) {
+                console.error(e);
+                handleVoiceFail(cardInner, overlay, targetWord);
+            }
+        }
+
+        function handleVoiceSuccess(cardInner, overlay) {
+            sounds.match();
+            matchedPairs++;
+            document.getElementById('score').innerText = matchedPairs;
+            
+            const cheersZh = ['答對！'];
+            const cheersEn = ['Correct!'];
+            const cheers = currentLang === 'zh' ? cheersZh : cheersEn;
+            document.getElementById('cheer-text').innerText = cheers[0];
+
+            createStars(cardInner);
+            
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(cheers[0]);
+            if (currentLang === 'zh') {
+                utterance.lang = 'zh-HK';
+                let hkVoice = voices.find(v => (v.lang.includes('zh-HK') || v.name.includes('Hong Kong')) && (/female|tracy|sin-ji|女|google/i.test(v.name)));
+                if (!hkVoice) hkVoice = voices.find(v => v.lang.includes('zh-HK') || v.name.includes('Hong Kong'));
+                if (hkVoice) utterance.voice = hkVoice;
+            } else {
+                utterance.lang = 'en-US';
+                const femaleVoice = voices.find(v => v.lang.includes('en') && (/female|samantha|zira|victoria/i.test(v.name)));
+                if (femaleVoice) utterance.voice = femaleVoice;
+            }
+            window.speechSynthesis.speak(utterance);
+
+            if (overlay && document.body.contains(overlay)) {
+                overlay.remove();
+            }
+
+            cardInner.classList.add('matched');
+            setTimeout(() => {
+                cardInner.classList.remove('matched');
+                cardInner.classList.add('vanished');
+                isProcessing = false;
+                if (matchedPairs === totalPairs) setTimeout(showWinScreen, 800);
+            }, 1000);
+        }
+
+        function handleVoiceFail(cardInner, overlay, targetWord) {
+            sounds.mismatch();
+            document.getElementById('cheer-text').innerText = currentLang === 'zh' ? '聽聽正確發音！' : 'Listen and learn!';
+            
+            // 刪除冗長的前奏發音，直接呼叫核心函數重讀單字 3 次！
+            speakWord3Times(targetWord);
+
+            if (overlay && document.body.contains(overlay)) {
+                clearTimeout(overlay.removeTimer);
+                
+                overlay.style.animation = 'none';
+                void overlay.offsetHeight;
+                overlay.style.animation = 'popOutHuge 8s ease-out forwards';
+                
+                overlay.removeTimer = setTimeout(() => {
+                    if (document.body.contains(overlay)) overlay.remove();
+                    if (activeHugeOverlay === overlay) activeHugeOverlay = null;
+                }, 8000);
+            }
+
+            setTimeout(() => {
+                cardInner.classList.remove('flipped');
+                isProcessing = false;
+            }, 8000);
+        }
+
+        function createStars(element) {
+            const rect = element.getBoundingClientRect();
+            for(let i=0; i<3; i++) {
+                const star = document.createElement('div');
+                star.className = 'star-particle';
+                star.innerText = '⭐';
+                star.style.left = (rect.left + Math.random() * rect.width) + 'px';
+                star.style.top = (rect.top + Math.random() * rect.height) + 'px';
+                document.body.appendChild(star);
+                setTimeout(() => star.remove(), 1000);
+            }
+        }
+
+        function showWinScreen() {
+            sounds.win();
+            window.speechSynthesis.cancel(); 
+            
+            const msg = gameMode === 1 ? "全部配對成功囉！" : "全部都讀對囉！發音好標準！";
+            document.getElementById('win-message').innerText = msg;
+
+            const cheerSpeech = new SpeechSynthesisUtterance(currentLang === 'zh' ? `小公主太棒了！${msg}` : "You did it! Great job princess!");
+            cheerSpeech.lang = currentLang === 'zh' ? 'zh-HK' : 'en-US';
+            window.speechSynthesis.speak(cheerSpeech);
+
+            document.getElementById('win-screen').classList.remove('hidden');
+            
+            for(let i=0; i<20; i++) {
+                setTimeout(() => {
+                    const star = document.createElement('div');
+                    star.className = 'star-particle';
+                    star.innerText = ['🌸','✨','💖','👑'][Math.floor(Math.random()*4)];
+                    star.style.left = (Math.random() * window.innerWidth) + 'px';
+                    star.style.top = (window.innerHeight) + 'px';
+                    document.body.appendChild(star);
+                    setTimeout(() => star.remove(), 1000);
+                }, i * 100);
+            }
+        }
+
+        function backToSetup() {
+            window.speechSynthesis.cancel();
+            if (activeHugeOverlay && document.body.contains(activeHugeOverlay)) {
+                activeHugeOverlay.remove();
+            }
+            if (recognition) {
+                try { recognition.stop(); } catch(e){}
+            }
+            isProcessing = false;
+            document.getElementById('setup-screen').classList.remove('hidden');
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('win-screen').classList.add('hidden');
+        }
+
+    </script>
+</body>
+</html>
