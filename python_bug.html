@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python 爬蟲特訓營 - Gemini 任務網站</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Courier New', Courier, monospace; }
+        /* 隱藏的元素，瀏覽器上看不到，但源始碼裡有 */
+        .visually-hidden { display: none; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+
+    <!-- 頂部導航 -->
+    <header class="bg-gray-800 p-4 shadow-lg border-b border-green-500">
+        <div class="container mx-auto flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-green-400">
+                <i class="fa-brands fa-python mr-2"></i>Python 爬蟲實戰特訓營
+            </h1>
+            <span class="text-sm text-gray-400">Target Server: ONLINE (Status: 200 OK)</span>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- 左側：任務清單 (UI 顯示用) -->
+        <section class="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-xl">
+            <h2 class="text-xl font-bold text-blue-400 mb-4 border-b border-gray-700 pb-2">
+                <i class="fa-solid fa-list-check mr-2"></i>你的任務清單
+            </h2>
+            <p class="text-sm text-gray-300 mb-6">
+                特工，請使用 <code class="text-yellow-400 bg-gray-700 px-1 rounded">requests</code> 與 <code class="text-yellow-400 bg-gray-700 px-1 rounded">BeautifulSoup</code> 向本網頁發送 GET 請求。你的目標是從右側的「模擬資料區」中提取以下 10 個目標資訊：
+            </p>
+
+            <div class="space-y-4 text-sm">
+                <!-- 任務列表 -->
+                <div class="p-3 bg-gray-700 rounded border-l-4 border-red-500 hover:bg-gray-600 transition">
+                    <strong class="text-red-400">任務 01：</strong> 獲取本網頁的 <code>&lt;title&gt;</code> 文字。
+                </div>
+                <div class="p-3 bg-gray-700 rounded border-l-4 border-orange-500 hover:bg-gray-600 transition">
+                    <strong class="text-orange-400">任務 02：</strong> 找到 ID 為 <code>secret-message</code> 的隱藏段落，並提取其文字。
+                </div>
+                <div class="p-3 bg-gray-700 rounded border-l-4 border-yellow-500 hover:bg-gray-600 transition">
+                    <strong class="text-yellow-400">任務 03：</strong> 獲取所有商品名稱 (class 為 <code>product-name</code>) 並存成列表。
+                </div>
+                <div class="p-3 bg-gray-700 rounded border-l-4 border-green-500 hover:bg-gray-600 transition">
+                    <strong class="text-green-400">任務 04：</strong> 計算表格中所有「銷售額」(class 為 <code>sales</code>) 的數字總和。
+                </div>
+                <div class="p-3 bg-gray-700 rounded border-l-4 border-teal-500 hover:bg-gray-600 transition">
+                    <strong class="text-teal-400">任務 05：</strong> 找到聯絡管理員區塊，提取其自訂屬性 <code>data-email</code> 的信箱地址。
+                </div>
+                <div class="p-3 bg-gray-700 rounded border-l-4 border-blue-500 hover:bg-gray-600 transition">
+                    <strong class="text-blue-400">任務 06：</strong> 找到 class 為 <code>target-link</code> 的標籤，並提取其 <code>href</code> 網址。
+                </div>
+                <div class="p-3 bg-gray-700 rounded border-l-4 border-indigo-500 hover:bg-gray-600 transition">
+                    <strong class="text-indigo-400">任務 07：</strong> 在評論區中，獲取「第五個」評論者的名字 (class 為 <code>author</code>)。
+                </div>
+                <div class="p-3 bg-gray-700 rounded border-l-4 border-purple-500 hover:bg-gray-600 transition">
+                    <strong class="text-purple-400">任務 08：</strong> 找出被標記為售完 (class 包含 <code>sold-out</code>) 的商品，並提取其價格。
+                </div>
+                <div class="p-3 bg-gray-700 rounded border-l-4 border-pink-500 hover:bg-gray-600 transition">
+                    <strong class="text-pink-400">任務 09：</strong> 獲取屬性為 <code>rel="next"</code> 的「下一頁」連結網址。
+                </div>
+                <div class="p-3 bg-gray-700 rounded border-l-4 border-gray-400 hover:bg-gray-600 transition">
+                    <strong class="text-gray-200">任務 10：</strong> 統計 class 為 <code>article</code> 的段落中，包含 "Python" 關鍵字的文章數量。
+                </div>
+            </div>
+            
+            <button onclick="alert('提示：在瀏覽器按右鍵選擇「檢視網頁原始碼」，即可看到 BeautifulSoup 真正抓取到的 HTML 結構！')" class="mt-6 w-full py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded transition">
+                <i class="fa-solid fa-lightbulb mr-2"></i>獲取提示
+            </button>
+        </section>
+
+        <!-- 右側：模擬資料區 (供爬蟲解析的目標 HTML) -->
+        <section id="target-zone" class="bg-white text-gray-800 p-6 rounded-lg shadow-xl relative overflow-hidden font-sans">
+            <div class="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg shadow">
+                TARGET DATA
+            </div>
+            
+            <h2 class="text-2xl font-black text-gray-800 mb-6 border-b-2 border-gray-300 pb-2">
+                🛒 虛擬電商資料庫
+            </h2>
+
+            <!-- 任務2 目標 -->
+            <p id="secret-message" class="visually-hidden">Gemini_Mission_Passed_998877</p>
+
+            <div class="space-y-8">
+                
+                <!-- 任務3 & 任務8 目標 -->
+                <div>
+                    <h3 class="text-lg font-bold mb-3"><i class="fa-solid fa-box mr-2"></i>最新商品</h3>
+                    <div class="product-list grid grid-cols-2 gap-4">
+                        <div class="product-item p-4 border border-gray-300 rounded bg-gray-50">
+                            <h4 class="product-name font-bold text-blue-600">機械鍵盤 Pro</h4>
+                            <p class="text-sm text-gray-500">價格：$<span class="price">2500</span></p>
+                        </div>
+                        <!-- 帶有 sold-out class -->
+                        <div class="product-item p-4 border border-red-300 rounded bg-red-50 sold-out opacity-60">
+                            <h4 class="product-name font-bold text-red-600">無線滑鼠 (已售完)</h4>
+                            <p class="text-sm text-gray-500">價格：$<span class="price">800</span></p>
+                            <span class="text-xs text-red-500 font-bold">缺貨中</span>
+                        </div>
+                        <div class="product-item p-4 border border-gray-300 rounded bg-gray-50">
+                            <h4 class="product-name font-bold text-blue-600">27吋 4K 螢幕</h4>
+                            <p class="text-sm text-gray-500">價格：$<span class="price">6000</span></p>
+                        </div>
+                        <div class="product-item p-4 border border-gray-300 rounded bg-gray-50">
+                            <h4 class="product-name font-bold text-blue-600">降噪耳機</h4>
+                            <p class="text-sm text-gray-500">價格：$<span class="price">3200</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 任務4 目標 -->
+                <div>
+                    <h3 class="text-lg font-bold mb-3"><i class="fa-solid fa-chart-line mr-2"></i>各部門銷售數據</h3>
+                    <table class="w-full text-left border-collapse border border-gray-300">
+                        <thead class="bg-gray-200">
+                            <tr><th class="border border-gray-300 p-2">部門名稱</th><th class="border border-gray-300 p-2">銷售額 (USD)</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="border border-gray-300 p-2">資訊部</td><td class="border border-gray-300 p-2 sales">1500</td></tr>
+                            <tr><td class="border border-gray-300 p-2">業務部</td><td class="border border-gray-300 p-2 sales">3200</td></tr>
+                            <tr><td class="border border-gray-300 p-2">行銷部</td><td class="border border-gray-300 p-2 sales">2800</td></tr>
+                            <tr><td class="border border-gray-300 p-2">客服部</td><td class="border border-gray-300 p-2 sales">950</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 任務5 & 任務6 目標 -->
+                <div class="bg-blue-50 p-4 rounded border border-blue-200 flex justify-between items-center">
+                    <!-- 隱藏在屬性中的 Email -->
+                    <div id="contact-info" data-email="admin_scraper@python.edu.tw">
+                        <i class="fa-solid fa-envelope mr-2 text-blue-500"></i>聯絡管理員
+                        <span class="text-xs text-gray-500 ml-2">(Email隱藏在 HTML 屬性中)</span>
+                    </div>
+                    <!-- 目標網址 -->
+                    <a href="https://api.hidden-data.com/v1/secret_token_123" class="target-link text-blue-600 hover:underline text-sm font-bold">
+                        <i class="fa-solid fa-link mr-1"></i>系統 API 介面
+                    </a>
+                </div>
+
+                <!-- 任務7 目標 -->
+                <div>
+                    <h3 class="text-lg font-bold mb-3"><i class="fa-solid fa-comments mr-2"></i>顧客評論</h3>
+                    <div class="comments space-y-2 text-sm bg-gray-100 p-4 rounded">
+                        <div class="comment border-b pb-2"><span class="author font-bold text-green-700">Alice_01</span>: 出貨速度超快！</div>
+                        <div class="comment border-b pb-2"><span class="author font-bold text-green-700">Bob_Hacker</span>: 網頁寫得不錯，適合練習。</div>
+                        <div class="comment border-b pb-2"><span class="author font-bold text-green-700">Charlie_C</span>: 品質優良，推推。</div>
+                        <div class="comment border-b pb-2"><span class="author font-bold text-green-700">Dave_Dev</span>: BeautifulSoup 真的很好用。</div>
+                        <div class="comment border-b pb-2"><span class="author font-bold text-green-700 bg-yellow-200 px-1 rounded">Eve_Target_Found</span>: 這就是你要找的第五個評論者！</div>
+                        <div class="comment"><span class="author font-bold text-green-700">Frank_007</span>: 任務快完成了，加油！</div>
+                    </div>
+                </div>
+
+                <!-- 任務10 目標 -->
+                <div>
+                    <h3 class="text-lg font-bold mb-3"><i class="fa-solid fa-newspaper mr-2"></i>最新動態</h3>
+                    <div class="articles space-y-2 text-sm text-gray-600">
+                        <p class="article">1. 今天天氣真好，是個適合寫程式的日子。</p>
+                        <p class="article">2. Python 是一個強大的程式語言，特別適合用來寫網路爬蟲。</p>
+                        <p class="article">3. 學習網頁前端知識，可以讓你更容易解析 HTML 標籤結構。</p>
+                        <p class="article">4. 我喜歡用 Python 自動化我的工作，像是抓取股市資料。</p>
+                        <p class="article">5. 保持學習的心，技術每天都在更新。</p>
+                    </div>
+                </div>
+
+                <!-- 任務9 目標 -->
+                <div class="pagination mt-6 flex justify-center space-x-2">
+                    <a href="#" class="px-3 py-1 bg-gray-300 text-gray-600 rounded cursor-not-allowed">上一頁</a>
+                    <a href="/page/1" class="px-3 py-1 bg-blue-600 text-white rounded font-bold">1</a>
+                    <!-- rel="next" 是目標 -->
+                    <a href="/missions/page_2_secret.html" rel="next" class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition">下一頁</a>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <footer class="text-center p-6 text-gray-500 text-sm mt-8 border-t border-gray-800">
+        &copy; 2026 Gemini AI 爬蟲特訓營. Designed for Python Education.
+    </footer>
+
+</body>
+</html>
