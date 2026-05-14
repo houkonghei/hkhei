@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>魔法動詞大冒險</title>
+  
+  <!-- 載入 Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 載入 React 核心庫 -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- 載入 Babel 以便在瀏覽器中編譯 JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- 載入 Lucide Icons (以 SVG 方式) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-15px) rotate(-5deg); }
+      50% { transform: translateX(15px) rotate(5deg); }
+      75% { transform: translateX(-15px) rotate(-5deg); }
+    }
+    .animate-shake { animation: shake 0.4s ease-in-out; }
+    .monster-hit { filter: drop-shadow(0 0 30px white) brightness(1.5); transform: scale(0.9); transition: all 0.2s; }
+    .monster-hurt { filter: drop-shadow(0 0 30px red); }
+    /* 簡單的淡入動畫 */
+    .animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    /* 慢速脈衝 */
+    .animate-pulse-slow { animation: pulseSlow 3s infinite; }
+    @keyframes pulseSlow { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  </style>
+</head>
+<body class="bg-gradient-to-b from-blue-100 to-indigo-200 min-h-screen">
+  <div id="root"></div>
+
+  <!-- 由於不能在瀏覽器端直接用 import lucide-react，我們用簡單的 SVG 替代品來實作圖示元件 -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo } = React;
+
+    // --- 圖示元件替代方案 ---
+    const Icon = ({ name, size = 24, className = '', title, fill, strokeWidth }) => {
+      const spanRef = useRef(null);
+
+      useEffect(() => {
+        if (spanRef.current && window.lucide) {
+          spanRef.current.innerHTML = `<i data-lucide="${name}"></i>`;
+          const attrs = { width: size, height: size };
+          if (fill) attrs.fill = fill;
+          if (strokeWidth !== undefined) attrs['stroke-width'] = strokeWidth;
+          window.lucide.createIcons({ root: spanRef.current, attrs: attrs });
+        }
+      }, [name, size, fill, strokeWidth]);
+
+      return <span ref={spanRef} title={title} className={`inline-flex items-center justify-center ${className}`}></span>;
+    };
+    
+    // 將 Lucide 圖示對應為元件
+    const Play = (props) => <Icon name="play" {...props} />;
+    const BookOpen = (props) => <Icon name="book-open" {...props} />;
+    const Star = (props) => <Icon name="star" {...props} />;
+    const Heart = (props) => <Icon name="heart" {...props} />;
+    const ArrowLeft = (props) => <Icon name="arrow-left" {...props} />;
+    const Trophy = (props) => <Icon name="trophy" {...props} />;
+    const X = (props) => <Icon name="x" {...props} />;
+    const Shield = (props) => <Icon name="shield" {...props} />;
+    const Zap = (props) => <Icon name="zap" {...props} />;
+    const Keyboard = (props) => <Icon name="keyboard" {...props} />;
+    const PlusCircle = (props) => <Icon name="plus-circle" {...props} />;
+    const Settings = (props) => <Icon name="settings" {...props} />;
+    const Trash2 = (props) => <Icon name="trash-2" {...props} />;
+    const Volume2 = (props) => <Icon name="volume-2" {...props} />;
+
+    // ================= 預設 120 個動詞資料庫 =================
+    const RAW_VERBS = [
+      "cut cut cut cutting 切/剪", "put put put putting 放置", "read read read reading 閱讀", "hit hit hit hitting 打擊", "let let let letting 讓",
+      "cost cost cost costing 花費", "hurt hurt hurt hurting 傷害", "shut shut shut shutting 關閉", "set set set setting 設定", "quit quit quit quitting 放棄",
+      "beat beat beat beating 擊敗", "burst burst burst bursting 爆裂", "cast cast cast casting 投擲", "split split split splitting 分裂", "spread spread spread spreading 散佈",
+      "upset upset upset upsetting 使煩惱",
+      
+      "buy bought bought buying 買", "catch caught caught catching 抓", "think thought thought thinking 想/認為", "make made made making 製作", "have had had having 有",
+      "sit sat sat sitting 坐", "sleep slept slept sleeping 睡覺", "tell told told telling 告訴", "find found found finding 找到", "bring brought brought bringing 帶來",
+      "build built built building 建造", "burn burnt burnt burning 燃燒", "dig dug dug digging 挖", "dream dreamt dreamt dreaming 夢想", "feel felt felt feeling 感覺",
+      "fight fought fought fighting 打架", "get got got getting 得到", "hang hung hung hanging 懸掛", "hear heard heard hearing 聽見", "hold held held holding 握住",
+      "keep kept kept keeping 保持", "lay laid laid laying 放置/產卵", "lead led led leading 引導", "leave left left leaving 離開", "lend lent lent lending 借出",
+      "lose lost lost losing 失去", "mean meant meant meaning 意味著", "meet met met meeting 遇見", "pay paid paid paying 支付", "say said said saying 說",
+      "sell sold sold selling 賣", "send sent sent sending 發送", "shine shone shone shining 照耀", "shoot shot shot shooting 射擊", "smell smelt smelt smelling 聞",
+      "spell spelt spelt spelling 拼寫", "spend spent spent spending 花費", "stand stood stood standing 站立", "sweep swept swept sweeping 打掃", "teach taught taught teaching 教",
+      "understand understood understood understanding 明白", "win won won winning 贏得", "bend bent bent bending 彎曲", "bind bound bound binding 綁", "bleed bled bled bleeding 流血",
+      "feed fed fed feeding 餵食", "light lit lit lighting 點亮", "slide slid slid sliding 滑動", "stick stuck stuck sticking 黏貼",
+      "strike struck struck striking 打擊", "weep wept wept weeping 哭泣",
+      
+      "come came come coming 來", "run ran run running 跑", "become became become becoming 變成", "overcome overcame overcome overcoming 克服",
+      
+      "be was/were been being 是", "go went gone going 去", "do did done doing 做", "eat ate eaten eating 吃", "see saw seen seeing 看見",
+      "take took taken taking 拿/帶走", "swim swam swum swimming 游泳", "sing sang sung singing 唱歌", "drink drank drunk drinking 喝", "write wrote written writing 寫",
+      "begin began begun beginning 開始", "bite bit bitten biting 咬", "blow blew blown blowing 吹", "break broke broken breaking 打破", "choose chose chosen choosing 選擇",
+      "draw drew drawn drawing 畫", "drive drove driven driving 駕駛", "fall fell fallen falling 掉落", "fly flew flown flying 飛", "forget forgot forgotten forgetting 忘記",
+      "forgive forgave forgiven forgiving 原諒", "freeze froze frozen freezing 結冰", "give gave given giving 給", "grow grew grown growing 成長", "hide hid hidden hiding 隱藏",
+      "know knew known knowing 知道", "lie lay lain lying 躺", "mistake mistook mistaken mistaking 弄錯", "ride rode ridden riding 騎", "ring rang rung ringing 響",
+      "rise rose risen rising 升起", "shake shook shaken shaking 搖晃", "show showed shown showing 展示", "shrink shrank shrunk shrinking 縮水", "sink sank sunk sinking 下沉",
+      "speak spoke spoken speaking 說話", "spring sprang sprung springing 跳躍", "steal stole stolen stealing 偷", "swear swore sworn swearing 發誓", "tear tore torn tearing 撕裂",
+      "throw threw thrown throwing 丟", "wake woke woken waking 醒來", "wear wore worn wearing 穿戴", "bear bore born bearing 忍受/生育"
+    ];
+
+    const parseVerbString = (str, isCustom = false) => {
+      const parts = str.trim().split(/\s+/);
+      const base = parts[0];
+      const past = parts[1];
+      const pp = parts[2];
+      const ing = parts[3];
+      const zh = parts.slice(4).join(' ') || '自訂單字';
+
+      let pattern = 'ABC';
+      let patternName = '變形金剛家族 (A-B-C)';
+      if (base === past && past === pp) { pattern = 'AAA'; patternName = '三胞胎家族 (A-A-A)'; }
+      else if (past === pp) { pattern = 'ABB'; patternName = '雙胞胎家族 (A-B-B)'; }
+      else if (base === pp) { pattern = 'ABA'; patternName = '迴力鏢家族 (A-B-A)'; }
+
+      return { base, past, pp, ing, zh, pattern, patternName, isCustom };
+    };
+
+    const DEFAULT_VERBS = RAW_VERBS.map(s => parseVerbString(s));
+
+    // ================= 音效與 TTS =================
+    const playSound = (type) => {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        if (type === 'hit') {
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+          gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.1);
+        } else if (type === 'hurt') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.2);
+          gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.2);
+        }
+      } catch(e) { }
+    };
+
+    // 原本的題目宣讀
+    const playTTS = (verb, targetForm) => {
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+
+      const formNameMap = { 'past': '過去式', 'pp': '完成式', 'ing': '進行式' };
+      const formName = targetForm ? formNameMap[targetForm.key] : '';
+
+      const zhUtterance1 = new SpeechSynthesisUtterance(verb.zh);
+      zhUtterance1.lang = 'zh-HK';
+      
+      const enUtterance = new SpeechSynthesisUtterance(`${verb.base}, ${verb.base}, ${verb.base}`);
+      enUtterance.lang = 'en-US';
+      enUtterance.rate = 0.9;
+
+      window.speechSynthesis.speak(zhUtterance1);
+      window.speechSynthesis.speak(enUtterance);
+
+      if (formName) {
+        const zhUtterance2 = new SpeechSynthesisUtterance(`，它的${formName}是？`);
+        zhUtterance2.lang = 'zh-HK';
+        window.speechSynthesis.speak(zhUtterance2);
+      }
+    };
+
+    // 新增：僅朗讀答案 3 次
+    const playAnswerTTS = (answer) => {
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      
+      const enUtterance = new SpeechSynthesisUtterance(`${answer}, ${answer}, ${answer}`);
+      enUtterance.lang = 'en-US';
+      enUtterance.rate = 0.85; // 稍微放慢一點點讓孩子聽清楚
+      
+      window.speechSynthesis.speak(enUtterance);
+    };
+
+    // ================= 元件區 =================
+    function HomeScreen({ setScreen, allVerbsCount, questionCount, setQuestionCount }) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[80vh] text-center space-y-6 animate-fade-in">
+          <div className="w-full flex justify-end">
+            <button onClick={() => setScreen('dictionary')} className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md transition-all">
+              <Settings size={18} /> 管理自訂詞庫
+            </button>
+          </div>
+
+          <div className="bg-white p-8 md:p-12 rounded-3xl shadow-xl transform transition border-4 border-yellow-400 relative overflow-hidden w-full max-w-3xl">
+            <div className="absolute top-[-20px] left-[-20px] text-6xl opacity-20">🧙‍♂️</div>
+            <div className="absolute bottom-[-20px] right-[-20px] text-6xl opacity-20">✨</div>
+            <h1 className="text-4xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-500 mb-4 drop-shadow-sm">
+              魔法動詞大冒險
+            </h1>
+            
+            <p className="text-lg md:text-xl text-gray-600 font-medium mb-6">
+              打敗不規則動詞怪獸，成為英語魔法師！<br/>
+              <span className="text-sm text-blue-500">目前詞庫總量：{allVerbsCount} 個字</span>
+            </p>
+
+            <div className="bg-yellow-50 px-6 py-3 rounded-2xl mb-8 inline-flex items-center gap-3 shadow-inner border border-yellow-200">
+              <label className="font-bold text-yellow-800 text-lg">🎯 選擇探險題數：</label>
+              <select
+                  value={questionCount}
+                  onChange={(e) => setQuestionCount(Number(e.target.value))}
+                  className="p-2 rounded-xl border-2 border-yellow-400 bg-white shadow-sm outline-none text-xl font-bold text-yellow-700 cursor-pointer"
+              >
+                  {[10, 20, 30, 40, 50, 60, 70].map(n => <option key={n} value={n}>{n} 關</option>)}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 justify-center">
+              <button onClick={() => setScreen('study')} className="flex flex-col items-center justify-center gap-2 p-6 bg-green-500 hover:bg-green-600 text-white rounded-2xl font-bold transition-all shadow-lg hover:-translate-y-1">
+                <BookOpen size={36} />
+                <span className="text-xl">魔法圖書室</span>
+                <span className="text-xs font-normal opacity-80">查看重點與表格</span>
+              </button>
+              
+              <button onClick={() => setScreen('gameChoice')} className="flex flex-col items-center justify-center gap-2 p-6 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-bold transition-all shadow-lg hover:-translate-y-1">
+                <Play size={36} />
+                <span className="text-xl">選擇探險</span>
+                <span className="text-xs font-normal opacity-80">4選1 適合新手</span>
+              </button>
+
+              <button onClick={() => setScreen('gameTyping')} className="flex flex-col items-center justify-center gap-2 p-6 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-bold transition-all shadow-lg hover:-translate-y-1">
+                <Keyboard size={36} />
+                <span className="text-xl">打字試煉</span>
+                <span className="text-xs font-normal opacity-80">手動輸入 適合高手</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function CustomDictionary({ setScreen, customVerbs, saveCustomVerbs, focusedVerbs, toggleFocus }) {
+      const [inputText, setInputText] = useState("");
+
+      const handleAdd = () => {
+        if (!inputText.trim()) return;
+        const lines = inputText.split('\n');
+        const newVerbs = [];
+        lines.forEach(line => {
+          if (line.trim().length > 3) {
+            try { newVerbs.push(parseVerbString(line, true)); } catch(e) { }
+          }
+        });
+        saveCustomVerbs([...customVerbs, ...newVerbs]);
+        setInputText("");
+        alert(`成功加入 ${newVerbs.length} 個單字！`);
+      };
+
+      const clearAll = () => { if(window.confirm('確定要清空所有自訂單字嗎？')) saveCustomVerbs([]); };
+      const handleDeleteSingle = (idx) => { if(window.confirm('確定要刪除這個單字嗎？')) saveCustomVerbs(customVerbs.filter((_, i) => i !== idx)); };
+
+      return (
+        <div className="bg-white rounded-3xl shadow-xl p-4 md:p-8 animate-fade-in max-w-4xl mx-auto mt-6">
+          <button onClick={() => setScreen('home')} className="flex items-center gap-2 text-gray-500 hover:text-purple-600 font-bold mb-6 transition-colors">
+            <ArrowLeft /> 返回基地
+          </button>
+          <h2 className="text-3xl font-bold text-center text-gray-800 mb-6 flex justify-center items-center gap-2">
+            <Settings className="text-gray-500" /> 自訂詞庫管理
+          </h2>
+          <div className="bg-blue-50 p-6 rounded-2xl mb-8 border border-blue-200">
+            <h3 className="font-bold text-lg mb-2 text-blue-800">批次新增單字</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              一行一筆，空格分隔。格式：<strong className="text-blue-600">原式 過去式 完成式 進行式 中文意思</strong>
+            </p>
+            <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} className="w-full h-32 p-4 rounded-xl border-2 border-blue-200 outline-none font-mono text-sm mb-4" />
+            <button onClick={handleAdd} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2">
+              <PlusCircle size={20} /> 批次加入詞庫
+            </button>
+          </div>
+          <div>
+            <div className="flex justify-between items-end mb-4">
+              <h3 className="font-bold text-lg text-gray-800">您新增的單字 ({customVerbs.length})</h3>
+              {customVerbs.length > 0 && <button onClick={clearAll} className="text-red-500 text-sm flex items-center gap-1 hover:underline"><Trash2 size={16} /> 清空</button>}
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead><tr className="bg-gray-100"><th className="p-2">中文</th><th className="p-2">Base</th><th className="p-2">Past</th><th className="p-2">P.P.</th><th className="p-2">V-ing</th><th className="p-2 text-center text-yellow-600 font-black">重點題</th><th className="p-2 text-center">操作</th></tr></thead>
+                <tbody>
+                  {customVerbs.map((v, i) => {
+                    const isFocused = focusedVerbs.includes(v.base);
+                    return (
+                      <tr key={i} className={`border-b hover:bg-gray-50 ${isFocused ? 'bg-yellow-50/50' : ''}`}>
+                        <td className="p-2 font-bold">{v.zh}</td><td className="p-2">{v.base}</td><td className="p-2">{v.past}</td><td className="p-2">{v.pp}</td><td className="p-2">{v.ing}</td>
+                        <td className="p-2 text-center">
+                          <button onClick={() => toggleFocus(v.base)} className={`text-xl transition-transform hover:scale-125 ${isFocused ? 'text-yellow-400 drop-shadow-sm' : 'grayscale opacity-30'}`} title={isFocused ? "取消重點" : "設為重點題"}>⭐</button>
+                        </td>
+                        <td className="p-2 text-center"><button onClick={() => handleDeleteSingle(i)} className="text-red-400 hover:text-red-600"><Trash2 size={16} /></button></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function StudyRoom({ setScreen, allVerbs, focusedVerbs, toggleFocus }) {
+      const groupedVerbs = allVerbs.reduce((acc, verb) => {
+        if (!acc[verb.patternName]) acc[verb.patternName] = [];
+        acc[verb.patternName].push(verb);
+        return acc;
+      }, {});
+
+      return (
+        <div className="bg-white rounded-3xl shadow-xl p-4 md:p-8 animate-fade-in max-h-[90vh] overflow-y-auto mt-6 max-w-5xl mx-auto">
+          <div className="sticky top-0 bg-white/90 backdrop-blur-sm pb-4 pt-2 z-10 flex justify-between items-center border-b mb-6">
+            <button onClick={() => setScreen('home')} className="flex items-center gap-2 text-gray-500 hover:text-purple-600 font-bold"><ArrowLeft /> 返回基地</button>
+            <h2 className="text-2xl font-bold text-purple-700">📖 魔法圖書室</h2>
+          </div>
+          
+          <div className="bg-yellow-50 p-4 rounded-xl mb-6 border border-yellow-200 shadow-sm flex items-center gap-3">
+            <span className="text-3xl">⭐</span>
+            <p className="text-yellow-800 font-medium">點擊右側的星星將單字設為<strong>「重點題」</strong>，在探險中將會有高達 80% 的機率優先出現喔！</p>
+          </div>
+
+          <div className="space-y-10">
+            {['三胞胎家族 (A-A-A)', '雙胞胎家族 (A-B-B)', '迴力鏢家族 (A-B-A)', '變形金剛家族 (A-B-C)'].map(patternName => {
+              const verbs = groupedVerbs[patternName];
+              if (!verbs) return null;
+              return (
+                <div key={patternName} className="bg-white rounded-2xl p-4 border border-blue-100 shadow-sm">
+                  <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center gap-2"><Star className="text-yellow-500" fill="currentColor" size={24} /> {patternName}</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[600px]">
+                      <thead>
+                        <tr className="bg-blue-100 text-blue-900">
+                          <th className="p-3 rounded-tl-xl">中文</th>
+                          <th className="p-3">原式</th>
+                          <th className="p-3">過去式</th>
+                          <th className="p-3">完成式</th>
+                          <th className="p-3">進行式</th>
+                          <th className="p-3 rounded-tr-xl text-center text-yellow-700 font-black">重點題</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {verbs.map((verb, idx) => {
+                          const isFocused = focusedVerbs.includes(verb.base);
+                          return (
+                            <tr key={idx} className={`border-b border-blue-50 transition-colors ${isFocused ? 'bg-yellow-50/50' : 'hover:bg-gray-50'}`}>
+                              <td className="p-3 font-bold text-gray-700">{verb.zh} {verb.isCustom && <span className="text-[10px] bg-green-200 text-green-800 px-1 rounded ml-1">自訂</span>}</td>
+                              <td className="p-3 text-blue-700 font-medium">{verb.base}</td>
+                              <td className="p-3 text-purple-700 font-medium">{verb.past}</td>
+                              <td className="p-3 text-pink-600 font-medium">{verb.pp}</td>
+                              <td className="p-3 text-green-700 font-medium">{verb.ing}</td>
+                              <td className="p-3 text-center">
+                                <button 
+                                  onClick={() => toggleFocus(verb.base)} 
+                                  className={`text-2xl transition-transform hover:scale-125 ${isFocused ? 'text-yellow-400 drop-shadow-sm' : 'grayscale opacity-30'}`} 
+                                  title={isFocused ? "取消重點" : "設為重點題"}
+                                >
+                                  ⭐
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    function AdventureGame({ setScreen, setScore, allVerbs, focusedVerbs, mode, questionCount, setWrongVerbs }) {
+      const [questions, setQuestions] = useState([]);
+      const [currentIndex, setCurrentIndex] = useState(0);
+      
+      const maxLives = Math.max(1, Math.floor(questionCount / 10));
+      const [lives, setLives] = useState(maxLives);
+      
+      const [feedback, setFeedback] = useState(null);
+      const [monsterHp, setMonsterHp] = useState(100);
+      const [monsterEffect, setMonsterEffect] = useState('');
+      const [typeInput, setTypeInput] = useState('');
+      const inputRef = useRef(null);
+
+      const formTypes = [
+        { key: 'past', name: '<-- 過去式 (Past)', color: 'text-purple-600' },
+        { key: 'pp', name: '!!! 完成式 (P.P.)', color: 'text-pink-600' },
+        { key: 'ing', name: '進行式 (V-ing) ...', color: 'text-green-600' }
+      ];
+
+      const damagePerHit = 100 / questionCount;
+
+      useEffect(() => {
+        const normalList = allVerbs.filter(v => !focusedVerbs.includes(v.base));
+        const focusedList = allVerbs.filter(v => focusedVerbs.includes(v.base));
+        
+        let availableNormal = [...normalList].sort(() => 0.5 - Math.random());
+        let availableFocused = [...focusedList].sort(() => 0.5 - Math.random());
+
+        const newQuestions = [];
+        
+        for (let i = 0; i < questionCount; i++) {
+          let useFocus = false;
+          
+          if (availableFocused.length > 0 && availableNormal.length > 0) {
+            useFocus = Math.random() < 0.8;
+          } else if (availableFocused.length > 0) {
+            useFocus = true;
+          } else if (availableNormal.length > 0) {
+            useFocus = false;
+          } else {
+            availableNormal = [...normalList].sort(() => 0.5 - Math.random());
+            availableFocused = [...focusedList].sort(() => 0.5 - Math.random());
+            useFocus = availableFocused.length > 0 ? (Math.random() < 0.8) : false;
+          }
+
+          let verb = useFocus ? availableFocused.pop() : availableNormal.pop();
+          
+          if (!verb) {
+            verb = useFocus ? availableNormal.pop() : availableFocused.pop();
+          }
+
+          const targetForm = formTypes[Math.floor(Math.random() * formTypes.length)];
+          const correctAnswer = verb[targetForm.key];
+          let options = [correctAnswer];
+          
+          if (mode === 'choice') {
+            let fakeEd = verb.base + (verb.base.endsWith('e') ? 'd' : 'ed');
+            if (fakeEd !== correctAnswer) options.push(fakeEd);
+            const otherForms = ['past', 'pp', 'ing', 'base'].filter(k => k !== targetForm.key);
+            options.push(verb[otherForms[0]]);
+            if (options.length < 4) options.push(verb.base);
+            if (options.length < 4) options.push(verb[otherForms[1]]);
+            options = [...new Set(options)].sort(() => 0.5 - Math.random()).slice(0, 4);
+
+            while(options.length < 4) {
+              const randomVerb = allVerbs[Math.floor(Math.random() * allVerbs.length)];
+              const randomOption = randomVerb[targetForm.key];
+              if (!options.includes(randomOption)) options.push(randomOption);
+            }
+          }
+          newQuestions.push({ verb, targetForm, options: mode === 'choice' ? options.sort(() => 0.5 - Math.random()) : [], correctAnswer, isFocused: focusedList.some(v => v.base === verb.base) });
+        }
+        
+        setQuestions(newQuestions);
+        setScore(0);
+        setCurrentIndex(0);
+        setMonsterHp(100);
+        setLives(maxLives);
+        setWrongVerbs([]); // 每次新遊戲開始時清空錯題記錄
+      }, [mode, questionCount, maxLives]);
+
+      useEffect(() => {
+        if (questions.length > 0 && currentIndex < questions.length && feedback === null) {
+          playTTS(questions[currentIndex].verb, questions[currentIndex].targetForm);
+          if (mode === 'typing' && inputRef.current) inputRef.current.focus();
+        }
+      }, [currentIndex, questions]);
+
+      const handleAnswer = (userAnswer) => {
+        if (feedback !== null) return;
+        const currentQ = questions[currentIndex];
+        const normalizedAnswer = String(userAnswer).trim().toLowerCase();
+        const isCorrect = normalizedAnswer === currentQ.correctAnswer.toLowerCase();
+
+        if (isCorrect) {
+          setFeedback('correct'); 
+          playSound('hit'); 
+          setMonsterEffect('monster-hit');
+          setMonsterHp(prev => Math.max(0, prev - damagePerHit)); 
+          setScore(prev => prev + 10);
+        } else {
+          setFeedback('wrong'); 
+          playSound('hurt'); 
+          setMonsterEffect('monster-hurt animate-shake');
+          setLives(prev => prev - 1);
+          
+          // 將答錯的動詞加入錯題名單，並防止重複記錄同一題
+          setWrongVerbs(prev => {
+            if (!prev.some(v => v.base === currentQ.verb.base)) {
+              return [...prev, currentQ.verb];
+            }
+            return prev;
+          });
+        }
+
+        playAnswerTTS(currentQ.correctAnswer);
+
+        setTimeout(() => {
+          setFeedback(null); 
+          setMonsterEffect(''); 
+          setTypeInput('');
+          
+          if (lives <= 1 && !isCorrect) {
+            setScreen('result');
+          } else if (currentIndex < questions.length - 1) {
+            setCurrentIndex(prev => prev + 1);
+          } else {
+            setScreen('result');
+          }
+        }, 2500);
+      };
+
+      if (questions.length === 0) return <div className="text-center p-10 text-xl font-bold">召喚魔法中...</div>;
+
+      const currentQ = questions[currentIndex];
+      return (
+        <div className="bg-white rounded-3xl shadow-xl p-4 md:p-8 relative overflow-hidden mt-6 max-w-4xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <button onClick={() => setScreen('home')} className="text-gray-400 hover:text-red-500 bg-gray-100 p-2 rounded-full"><X size={24} /></button>
+            <div className="text-lg font-bold text-gray-500 bg-gray-100 px-4 py-1 rounded-full">{mode === 'typing' ? '鍵盤打字試煉' : '選擇探險'}</div>
+            
+            <div className="flex gap-1 text-red-500 bg-red-50 px-3 py-1 rounded-full items-center">
+              {maxLives <= 5 ? (
+                [...Array(maxLives)].map((_, i) => (<Heart key={i} fill={i < lives ? "currentColor" : "none"} strokeWidth={i < lives ? 0 : 2} size={24} />))
+              ) : (
+                <div className="flex items-center gap-2 font-bold text-xl"><Heart fill="currentColor" size={24} /> <span>x {lives}</span></div>
+              )}
+            </div>
+          </div>
+
+          <div className="w-full bg-gray-200 rounded-full h-3 mb-8">
+            <div className="bg-yellow-400 h-3 rounded-full transition-all duration-500" style={{ width: `${(currentIndex / questions.length) * 100}%` }}></div>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-8 items-center justify-center">
+            <div className="flex flex-col items-center w-full md:w-1/4">
+               <div className={`text-[100px] mb-4 transition-all duration-300 ${monsterEffect}`}>👾</div>
+               <div className="w-full bg-gray-200 rounded-full h-5 border-2 border-gray-300 relative overflow-hidden">
+                 <div className="bg-gradient-to-r from-red-600 to-red-400 h-full transition-all duration-500" style={{ width: `${monsterHp}%` }}></div>
+                 <div className="absolute inset-0 flex items-center justify-center text-xs font-black text-white">怪獸 HP {Math.ceil(monsterHp)}%</div>
+               </div>
+            </div>
+
+            <div className="w-full md:w-3/4 bg-blue-50/80 p-6 md:p-10 rounded-3xl border-2 border-blue-200 relative">
+               {feedback === 'correct' && (
+                 <div className="absolute inset-0 z-10 bg-green-500/95 rounded-3xl flex flex-col items-center justify-center text-white">
+                   <Zap size={80} className="mb-2 animate-bounce text-yellow-300" fill="currentColor" />
+                   <h2 className="text-4xl md:text-5xl font-black">會心一擊！</h2>
+                 </div>
+               )}
+               {feedback === 'wrong' && (
+                 <div className="absolute inset-0 z-10 bg-red-600/95 rounded-3xl flex flex-col items-center justify-center text-white">
+                   <Shield size={80} className="mb-4 text-gray-200" />
+                   <h2 className="text-3xl font-black">被怪獸擋下了...</h2>
+                   <p className="mt-4 text-2xl bg-black/30 px-6 py-2 rounded-xl">正確答案: <span className="font-bold text-yellow-300">{currentQ.correctAnswer}</span></p>
+                 </div>
+               )}
+
+               <div className="text-center mb-8 relative">
+                 <button onClick={() => playTTS(currentQ.verb, currentQ.targetForm)} className="absolute right-0 top-0 text-blue-500 hover:bg-blue-100 p-2 rounded-full"><Volume2 size={24} /></button>
+                 <span className="inline-block bg-white px-4 py-1 rounded-full text-sm font-bold text-blue-600 mb-4">第 {currentIndex + 1} / {questionCount} 題</span>
+                 
+                 {currentQ.isFocused && <div className="absolute left-0 top-0 text-yellow-500 animate-pulse" title="重點題出現啦！"><Star fill="currentColor" size={32} /></div>}
+
+                 <h3 className="text-2xl md:text-3xl font-bold text-gray-700 mt-2">
+                   動詞 <span className="text-blue-600 font-black text-4xl mx-2 underline decoration-blue-300 decoration-4 underline-offset-4">"{currentQ.verb.base}"</span>
+                   <span className="text-xl text-gray-500 ml-2">({currentQ.verb.zh})</span>
+                 </h3>
+                 <p className="text-xl mt-6 font-medium text-gray-600">請回答它的 <span className={`font-black text-3xl px-3 py-1 bg-white rounded-lg shadow-sm border ${currentQ.targetForm.color}`}>{currentQ.targetForm.name}</span></p>
+               </div>
+
+               {mode === 'choice' ? (
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   {currentQ.options.map((option, idx) => (
+                     <button key={idx} onClick={() => handleAnswer(option)} disabled={feedback !== null} className="p-5 bg-white border-2 border-gray-200 rounded-2xl text-2xl font-bold text-gray-700 hover:border-purple-500 hover:bg-purple-50 hover:-translate-y-1 transition-all">{option}</button>
+                   ))}
+                 </div>
+               ) : (
+                 <form onSubmit={(e) => { e.preventDefault(); if(typeInput.trim()) handleAnswer(typeInput); }} className="flex flex-col items-center gap-4">
+                   <input ref={inputRef} type="text" value={typeInput} onChange={(e) => setTypeInput(e.target.value)} disabled={feedback !== null} placeholder="請在此輸入英文..." className="w-full text-center text-3xl p-4 rounded-2xl border-4 border-orange-200 focus:border-orange-500 outline-none" autoComplete="off" spellCheck="false" />
+                   <button type="submit" disabled={feedback !== null || !typeInput.trim()} className="w-full md:w-1/2 py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl text-xl font-bold transition-all">發射魔法攻擊！</button>
+                 </form>
+               )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ResultScreen({ setScreen, score, questionCount, wrongVerbs }) {
+      const maxScore = questionCount * 10;
+      const isWin = score >= maxScore * 0.6; 
+
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[70vh] animate-fade-in mt-6">
+          <div className="bg-white p-8 md:p-12 rounded-3xl shadow-2xl text-center max-w-xl w-full border-4 border-yellow-400 relative overflow-hidden">
+            <div className="text-[100px] mb-2 leading-none relative z-10">{isWin ? '🏆' : '🩹'}</div>
+            <h2 className={`text-4xl font-black mb-2 relative z-10 ${isWin ? 'text-yellow-500' : 'text-blue-500'}`}>{isWin ? '探險大成功！' : '探險失敗了'}</h2>
+            
+            <div className="bg-gray-50 rounded-2xl p-6 mb-8 border-2 border-gray-100 relative z-10">
+              <div className="text-gray-500 font-bold mb-1">本次得分</div>
+              <div className="text-6xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 whitespace-nowrap">
+                {score} <span className="text-2xl md:text-3xl text-gray-400">/ {maxScore}</span>
+              </div>
+            </div>
+
+            {/* 新增：錯題回顧區塊 */}
+            {wrongVerbs && wrongVerbs.length > 0 && (
+              <div className="bg-red-50 rounded-2xl p-4 md:p-6 mb-8 border border-red-200 text-left relative z-10 max-h-64 overflow-y-auto">
+                <div className="text-red-700 font-bold mb-4 flex items-center gap-2 text-lg">
+                  <Shield size={24} /> 錯題回顧 (需要加強的魔法)
+                </div>
+                <div className="space-y-3">
+                  {wrongVerbs.map((verb, idx) => (
+                    <div key={idx} className="bg-white p-3 rounded-xl border border-red-100 shadow-sm text-gray-700 text-sm md:text-base flex flex-wrap gap-x-3 gap-y-1 items-center font-mono">
+                      <span className="font-black text-blue-600 text-lg">{verb.base}</span>
+                      <span className="text-purple-600 font-bold">{verb.past}</span>
+                      <span className="text-pink-600 font-bold">{verb.pp}</span>
+                      <span className="text-green-600 font-bold">{verb.ing}</span>
+                      <span className="text-gray-500 text-xs md:text-sm bg-gray-100 px-2 py-1 rounded ml-auto font-sans font-medium">{verb.zh}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3 relative z-10">
+              <button onClick={() => setScreen('gameChoice')} className="w-full py-4 bg-purple-600 text-white rounded-xl text-lg font-bold hover:-translate-y-1 transition-all">重玩「選擇探險」</button>
+              <button onClick={() => setScreen('gameTyping')} className="w-full py-4 bg-orange-500 text-white rounded-xl text-lg font-bold hover:-translate-y-1 transition-all">挑戰「打字試煉」</button>
+              <button onClick={() => setScreen('home')} className="w-full py-3 text-gray-500 hover:bg-gray-100 rounded-xl font-bold mt-2">回到主畫面</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [currentScreen, setCurrentScreen] = useState('home');
+      const [score, setScore] = useState(0);
+      const [customVerbs, setCustomVerbs] = useState([]);
+      
+      const [questionCount, setQuestionCount] = useState(10);
+      const [focusedVerbs, setFocusedVerbs] = useState([]);
+      const [wrongVerbs, setWrongVerbs] = useState([]); // 新增錯題追蹤狀態
+
+      useEffect(() => {
+        const savedCustom = localStorage.getItem('magicVerbsCustom');
+        if (savedCustom) { try { setCustomVerbs(JSON.parse(savedCustom)); } catch (e) { } }
+        
+        const savedFocused = localStorage.getItem('magicVerbsFocused');
+        if (savedFocused) { try { setFocusedVerbs(JSON.parse(savedFocused)); } catch (e) { } }
+      }, []);
+
+      const saveCustomVerbs = (verbs) => { 
+        setCustomVerbs(verbs); 
+        localStorage.setItem('magicVerbsCustom', JSON.stringify(verbs)); 
+      };
+
+      const toggleFocus = (base) => {
+        let newFocusList;
+        if (focusedVerbs.includes(base)) {
+          newFocusList = focusedVerbs.filter(v => v !== base);
+        } else {
+          newFocusList = [...focusedVerbs, base];
+        }
+        setFocusedVerbs(newFocusList);
+        localStorage.setItem('magicVerbsFocused', JSON.stringify(newFocusList));
+      };
+
+      const allVerbs = useMemo(() => {
+        return [...DEFAULT_VERBS, ...customVerbs];
+      }, [customVerbs]);
+
+      return (
+        <div className="font-sans text-gray-800 p-4 md:p-6 pb-20">
+          {currentScreen === 'home' && <HomeScreen setScreen={setCurrentScreen} allVerbsCount={allVerbs.length} questionCount={questionCount} setQuestionCount={setQuestionCount} />}
+          {currentScreen === 'study' && <StudyRoom setScreen={setCurrentScreen} allVerbs={allVerbs} focusedVerbs={focusedVerbs} toggleFocus={toggleFocus} />}
+          {currentScreen === 'gameChoice' && <AdventureGame setScreen={setCurrentScreen} setScore={setScore} allVerbs={allVerbs} focusedVerbs={focusedVerbs} mode="choice" questionCount={questionCount} setWrongVerbs={setWrongVerbs} />}
+          {currentScreen === 'gameTyping' && <AdventureGame setScreen={setCurrentScreen} setScore={setScore} allVerbs={allVerbs} focusedVerbs={focusedVerbs} mode="typing" questionCount={questionCount} setWrongVerbs={setWrongVerbs} />}
+          {currentScreen === 'result' && <ResultScreen setScreen={setCurrentScreen} score={score} questionCount={questionCount} wrongVerbs={wrongVerbs} />}
+          {currentScreen === 'dictionary' && <CustomDictionary setScreen={setCurrentScreen} customVerbs={customVerbs} saveCustomVerbs={saveCustomVerbs} focusedVerbs={focusedVerbs} toggleFocus={toggleFocus} />}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

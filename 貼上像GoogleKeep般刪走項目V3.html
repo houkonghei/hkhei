@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>單詞篩選大師 - 鍵盤增強版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif;
+            letter-spacing: 0.05em;
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            overflow-x: hidden;
+        }
+        
+        .item-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 6px solid #3b82f6;
+            outline: none;
+        }
+
+        /* 關注狀態 (Hover 或 Keyboard Focus) */
+        .item-card:hover, .item-card.focused {
+            transform: scale(1.1); /* 放大效果 */
+            background-color: #eff6ff; /* 淺藍色背景 */
+            border-left-color: #2563eb;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            z-index: 10;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .item-card.focused .content {
+            color: #1e40af;
+        }
+
+        /* 消失動畫 */
+        .removing {
+            transform: scale(0.5) translateX(100px);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* 救回時的高亮動畫 */
+        @keyframes highlight-in {
+            0% { background-color: #dcfce7; transform: translateY(-20px); opacity: 0; }
+            100% { background-color: white; transform: translateY(0); opacity: 1; }
+        }
+        .undo-highlight {
+            animation: highlight-in 0.6s ease-out;
+        }
+
+        .top-btn {
+            transition: all 0.2s;
+            opacity: 0.3;
+        }
+        .item-card:hover .top-btn, .item-card.focused .top-btn {
+            opacity: 1;
+        }
+
+        #picking-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        #picking-list::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+        }
+        #picking-list::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 md:p-10">
+
+    <div class="w-full max-w-3xl bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-8 md:p-10 border border-white">
+        <h1 class="text-4xl font-black text-slate-800 mb-10 text-center tracking-tighter">
+            ✨ 單詞篩選大師
+        </h1>
+
+        <!-- 第一階段：輸入模式 -->
+        <div id="step-1" class="space-y-6">
+            <div>
+                <label class="block text-base font-bold text-slate-500 mb-3 ml-1">請貼上內容（Enter 分隔）：</label>
+                <textarea id="input-text" class="w-full h-80 p-6 border-2 border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 outline-none resize-none text-xl font-bold leading-relaxed shadow-inner transition-all" placeholder="在此貼上多個單詞..."></textarea>
+            </div>
+            <button onclick="startPicking()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-2xl shadow-xl hover:shadow-2xl transition-all transform active:scale-95 text-2xl tracking-widest">
+                開始挑選內容 ➔
+            </button>
+        </div>
+
+        <!-- 第二階段：挑選模式 -->
+        <div id="step-2" class="hidden space-y-6">
+            <div class="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <div class="flex items-center gap-4">
+                    <button id="undo-btn" onclick="undoLastDelete()" class="bg-amber-100 hover:bg-amber-200 text-amber-700 px-4 py-2 rounded-lg font-bold text-sm shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed border border-amber-200" title="鍵盤快速鍵: Ctrl+Z">
+                        ↩ 反悔 (救回)
+                    </button>
+                    <div class="text-sm">
+                        <h2 class="font-bold text-slate-700">操作：↑↓ 移動 / Space 刪除</h2>
+                        <p class="text-slate-400">剩餘 <span id="count-total">0</span> 項</p>
+                    </div>
+                </div>
+                <button onclick="backToInput()" class="text-md font-bold text-blue-600 hover:underline transition">← 修改原文</button>
+            </div>
+            
+            <div id="picking-list" class="space-y-4 max-h-[600px] overflow-y-auto p-4">
+                <!-- 動態生成 -->
+            </div>
+
+            <button onclick="generateResult()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-5 rounded-2xl shadow-xl hover:shadow-2xl transition-all transform active:scale-95 text-2xl tracking-widest">
+                確認留下內容 (Enter)
+            </button>
+        </div>
+
+        <!-- 第三階段：結果模式 -->
+        <div id="step-3" class="hidden space-y-6">
+            <h2 class="text-xl font-bold text-slate-700">最終篩選結果：</h2>
+            <textarea id="result-text" class="w-full h-80 p-6 border-2 border-slate-200 rounded-2xl bg-slate-50 text-slate-800 font-bold outline-none resize-none text-2xl leading-relaxed" readonly></textarea>
+            <div class="grid grid-cols-2 gap-6">
+                <button onclick="copyToClipboard()" class="bg-slate-800 hover:bg-black text-white font-black py-5 rounded-2xl transition-all shadow-lg active:scale-95 text-xl">
+                    📋 複製全部
+                </button>
+                <button onclick="resetApp()" class="bg-white border-2 border-slate-200 hover:bg-slate-100 text-slate-600 font-bold py-5 rounded-2xl transition-all active:scale-95 text-xl">
+                    🔄 重新開始
+                </button>
+            </div>
+            <p id="copy-msg" class="text-center text-emerald-600 font-black text-lg opacity-0 transition-opacity">✅ 已成功複製！</p>
+        </div>
+    </div>
+
+    <script>
+        const step1 = document.getElementById('step-1');
+        const step2 = document.getElementById('step-2');
+        const step3 = document.getElementById('step-3');
+        const inputText = document.getElementById('input-text');
+        const pickingList = document.getElementById('picking-list');
+        const resultText = document.getElementById('result-text');
+        const copyMsg = document.getElementById('copy-msg');
+        const undoBtn = document.getElementById('undo-btn');
+        const countTotal = document.getElementById('count-total');
+
+        let deletedStack = []; 
+        let focusedIndex = -1; // 追蹤鍵盤選取的索引
+
+        function updateCounter() {
+            const items = pickingList.children;
+            countTotal.innerText = items.length;
+            undoBtn.disabled = deletedStack.length === 0;
+            
+            // 如果當前沒有聚焦且列表不為空，自動聚焦第一個
+            if (focusedIndex === -1 && items.length > 0) {
+                setFocus(0);
+            } else if (items.length === 0) {
+                focusedIndex = -1;
+            } else if (focusedIndex >= items.length) {
+                setFocus(items.length - 1);
+            }
+        }
+
+        function setFocus(index) {
+            const items = pickingList.querySelectorAll('.item-card');
+            if (items.length === 0) return;
+            
+            // 移除舊焦點
+            items.forEach(item => item.classList.remove('focused'));
+            
+            // 修正索引範圍
+            focusedIndex = Math.max(0, Math.min(index, items.length - 1));
+            
+            // 加入新焦點
+            const target = items[focusedIndex];
+            target.classList.add('focused');
+            target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // 鍵盤監聽
+        document.addEventListener('keydown', (e) => {
+            if (step2.classList.contains('hidden')) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setFocus(focusedIndex + 1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setFocus(focusedIndex - 1);
+            } else if (e.key === ' ') { // 空白鍵刪除
+                e.preventDefault();
+                const items = pickingList.querySelectorAll('.item-card');
+                if (items[focusedIndex]) {
+                    deleteItem(items[focusedIndex]);
+                }
+            } else if (e.key === 'Enter' && e.ctrlKey) {
+                generateResult();
+            } else if (e.key === 'z' && e.ctrlKey) {
+                undoLastDelete();
+            }
+        });
+
+        function startPicking() {
+            const rawText = inputText.value;
+            if (!rawText.trim()) return;
+
+            const lines = rawText.split('\n')
+                            .map(line => line.trim())
+                            .filter(line => line !== "");
+
+            pickingList.innerHTML = '';
+            deletedStack = [];
+            focusedIndex = -1;
+
+            lines.forEach((line) => {
+                createItemCard(line);
+            });
+
+            step1.classList.add('hidden');
+            step2.classList.remove('hidden');
+            updateCounter();
+            setFocus(0);
+        }
+
+        function createItemCard(text, isNew = false) {
+            const div = document.createElement('div');
+            div.className = 'item-card bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4 select-none cursor-pointer';
+            if (isNew) div.classList.add('undo-highlight');
+            
+            div.innerHTML = `
+                <div class="content flex-1 text-2xl font-bold text-slate-800 break-all tracking-wide">${escapeHtml(text)}</div>
+                <button class="top-btn p-3 rounded-full bg-blue-50 text-blue-600 hover:shadow-md" title="移至頂部">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 15l7-7 7 7" />
+                    </svg>
+                </button>
+            `;
+
+            // 滑鼠懸停同步鍵盤焦點
+            div.onmouseenter = () => {
+                const items = Array.from(pickingList.children);
+                setFocus(items.indexOf(div));
+            };
+
+            div.onclick = (e) => {
+                if (e.target.closest('.top-btn')) return;
+                deleteItem(div);
+            };
+
+            div.querySelector('.top-btn').onclick = (e) => {
+                e.stopPropagation();
+                moveItemToTop(div);
+            };
+
+            if (isNew) {
+                pickingList.prepend(div);
+                setFocus(0);
+            } else {
+                pickingList.appendChild(div);
+            }
+        }
+
+        function deleteItem(element) {
+            const contentText = element.querySelector('.content').innerText;
+            deletedStack.push(contentText);
+            
+            element.classList.add('removing');
+            setTimeout(() => {
+                element.remove();
+                updateCounter();
+                // 刪除後自動聚焦到當前索引的下一個（即現在占據該索引的項目）
+                setFocus(focusedIndex);
+            }, 200);
+        }
+
+        function undoLastDelete() {
+            if (deletedStack.length === 0) return;
+            const textToRestore = deletedStack.pop();
+            createItemCard(textToRestore, true);
+            updateCounter();
+        }
+
+        function moveItemToTop(element) {
+            element.style.transform = "scale(1.1) rotate(2deg)";
+            setTimeout(() => {
+                pickingList.prepend(element);
+                element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                element.style.transform = "";
+                setFocus(0);
+            }, 200);
+        }
+
+        function generateResult() {
+            const rows = pickingList.querySelectorAll('.item-card');
+            const keptItems = [];
+            rows.forEach(row => {
+                keptItems.push(row.querySelector('.content').innerText);
+            });
+            resultText.value = keptItems.join('\n');
+            step2.classList.add('hidden');
+            step3.classList.remove('hidden');
+        }
+
+        function backToInput() {
+            step2.classList.add('hidden');
+            step1.classList.remove('hidden');
+        }
+
+        function resetApp() {
+            inputText.value = '';
+            step3.classList.add('hidden');
+            step1.classList.remove('hidden');
+        }
+
+        function copyToClipboard() {
+            resultText.select();
+            document.execCommand('copy');
+            copyMsg.style.opacity = '1';
+            setTimeout(() => copyMsg.style.opacity = '0', 2000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
