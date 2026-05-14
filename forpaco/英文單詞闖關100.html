@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英語默寫闖關遊戲 v10.0 - 終極黑科技版</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --container-bg: rgba(30, 30, 30, 0.85);
+            --text-main: #e0e0e0;
+            --text-sec: #aaaaaa;
+            --primary: #3498db;
+            --primary-glow: rgba(52, 152, 219, 0.4);
+            --success: #2ecc71;
+            --success-glow: rgba(46, 204, 113, 0.4);
+            --error: #e74c3c;
+            --error-glow: rgba(231, 76, 60, 0.4);
+            --accent: #e67e22;
+            --accent-glow: rgba(230, 126, 34, 0.4);
+            --highlight: #f1c40f;
+            --boss-glow: rgba(155, 89, 182, 0.6);
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* 圖片聯想背景層 */
+        #bg-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -2;
+            background-size: cover;
+            background-position: center;
+            filter: brightness(0.25) blur(5px);
+            transition: background-image 1.5s ease;
+            background-color: #121212;
+        }
+
+        .container {
+            background-color: var(--container-bg);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+            width: 650px;
+            max-width: 95%;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+            transition: all 0.5s ease;
+        }
+
+        /* 魔王關卡特效 */
+        .boss-mode {
+            border: 2px solid #9b59b6;
+            box-shadow: 0 0 40px var(--boss-glow), inset 0 0 20px var(--boss-glow);
+            animation: bossPulse 2s infinite;
+        }
+
+        @keyframes bossPulse {
+            0% { box-shadow: 0 0 30px var(--boss-glow), inset 0 0 10px var(--boss-glow); }
+            50% { box-shadow: 0 0 60px rgba(231, 76, 60, 0.6), inset 0 0 30px rgba(231, 76, 60, 0.4); border-color: #e74c3c; }
+            100% { box-shadow: 0 0 30px var(--boss-glow), inset 0 0 10px var(--boss-glow); }
+        }
+
+        h1 { color: var(--primary); margin-bottom: 20px; font-weight: 700; letter-spacing: 2px; text-shadow: 0 0 10px var(--primary-glow); }
+        .setup-area, .game-area { display: block; }
+        .game-area { display: none; }
+        .setup-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px; }
+        .instruction { font-size: 14px; color: var(--text-sec); text-align: left; line-height: 1.6; margin: 0; }
+        .tool-btns { display: flex; gap: 10px; }
+        .icon-btn { background: #2c2c2c; border: 1px solid rgba(255,255,255,0.2); font-size: 24px; cursor: pointer; padding: 8px 15px; border-radius: 8px; transition: all 0.3s ease; color: white; display: flex; align-items: center; justify-content: center; }
+        .icon-btn:hover { transform: scale(1.05); border-color: var(--highlight); box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); }
+        .icon-btn.danger-btn:hover { border-color: var(--error); box-shadow: 0 0 10px rgba(231, 76, 60, 0.4); color: var(--error); }
+
+        textarea {
+            width: 100%; height: 250px; padding: 15px; border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px; font-size: 18px; resize: vertical; box-sizing: border-box;
+            background-color: rgba(20, 20, 20, 0.8); color: var(--text-main); line-height: 1.5; letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+        textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
+        
+        .settings-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 15px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; }
+        .settings-row input[type="number"] { width: 80px; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: #2c2c2c; color: white; font-size: 16px; text-align: center; }
+
+        button.action-btn { background-color: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 18px; cursor: pointer; transition: all 0.2s ease; margin-top: 15px; font-weight: bold; letter-spacing: 1px; width: 100%; }
+        button.action-btn:hover { background-color: #2980b9; box-shadow: 0 0 15px var(--primary-glow); }
+        button.action-btn:active { transform: scale(0.96); }
+        button.hint-btn { background-color: #f39c12; margin-right: 10px; }
+        button.hint-btn:hover { background-color: #d68910; box-shadow: 0 0 15px rgba(243, 156, 18, 0.4); }
+
+        #stats-info { display: flex; justify-content: space-between; font-size: 16px; margin-bottom: 15px; color: var(--text-sec); font-weight: bold; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px; }
+        #score-display { color: var(--highlight); text-shadow: 0 0 5px rgba(241, 196, 15, 0.3); }
+        #level-count { color: var(--accent); }
+        #lives-count { letter-spacing: 2px; }
+
+        .progress-container { width: 100%; height: 14px; background-color: rgba(255,255,255,0.1); border-radius: 7px; margin-bottom: 25px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.4); }
+        .progress-bar { height: 100%; width: 0%; background-color: var(--primary); box-shadow: 0 0 10px var(--primary-glow); transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        #hint { font-size: 38px; font-weight: bold; color: var(--text-main); margin-bottom: 5px; text-shadow: 0 0 10px rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; gap: 15px; }
+        #hint-text-helper { font-size: 18px; color: var(--highlight); letter-spacing: 4px; min-height: 28px; margin-bottom: 20px; font-family: monospace; }
+        
+        .replay-btn { font-size: 28px; cursor: pointer; opacity: 0.7; transition: all 0.2s ease; background: rgba(255,255,255,0.1); border-radius: 50%; padding: 5px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+        .replay-btn:hover { opacity: 1; transform: scale(1.1); background: rgba(255,255,255,0.2); }
+
+        .input-wrapper { position: relative; min-height: 100px; margin-bottom: 20px; }
+        input[type="text"] { width: 90%; padding: 20px; font-size: 42px; font-weight: 800; letter-spacing: 4px; border: 3px solid rgba(255,255,255,0.3); border-radius: 16px; text-align: center; background-color: rgba(20,20,20,0.9); color: var(--primary); transition: all 0.3s ease; box-shadow: inset 0 4px 10px rgba(0,0,0,0.5); }
+        input[type="text"]:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 20px var(--primary-glow), inset 0 4px 10px rgba(0,0,0,0.5); }
+
+        /* 錯字糾正區塊 */
+        #correction-box { display: none; width: 90%; margin: 0 auto; padding: 20px; border-radius: 16px; background: rgba(20,20,20,0.95); border: 2px solid var(--error); box-shadow: 0 0 25px var(--error-glow); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .diff-row { margin-bottom: 10px; font-size: 24px; font-weight: 700; letter-spacing: 4px; }
+        .diff-label { font-size: 14px; color: var(--text-sec); display: block; margin-bottom: 5px; letter-spacing: 1px; text-transform: uppercase; }
+        .char-correct { color: var(--success); }
+        .char-wrong { color: var(--error); text-decoration: line-through; opacity: 0.8; }
+        .char-missing { color: var(--error); border-bottom: 3px solid var(--error); }
+
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        #message { margin-top: 15px; font-weight: bold; height: 24px; font-size: 18px; letter-spacing: 1px; }
+        .success { color: var(--success); text-shadow: 0 0 8px var(--success-glow); }
+        .error { color: var(--error); text-shadow: 0 0 8px var(--error-glow); }
+        .warning { color: var(--highlight); text-shadow: 0 0 8px rgba(241, 196, 15, 0.5); }
+        .boss-msg { color: #9b59b6; text-shadow: 0 0 10px var(--boss-glow); }
+
+        /* 打字機爆炸特效 */
+        #explosion-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; justify-content: center; align-items: center; }
+        .explode-char {
+            position: absolute; font-size: 42px; font-weight: 900; color: var(--success); text-shadow: 0 0 15px var(--success);
+            animation: explodeAnim 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+        }
+        @keyframes explodeAnim {
+            0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; filter: brightness(2); }
+            100% { transform: translate(var(--dx), var(--dy)) scale(1.5) rotate(var(--rot)); opacity: 0; filter: brightness(1); }
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="bg-overlay"></div>
+
+<div class="container" id="game-container">
+    <h1>英語默寫闖關</h1>
+
+    <div id="setup-area" class="setup-area">
+        <div class="setup-header">
+            <p class="instruction">
+                輸入生詞庫 (支援逗號或空格) :<br>
+                <span style="color:var(--highlight);">★ 自動存檔中！只輸入英文點擊 ✨ 可翻譯</span>
+            </p>
+            <div class="tool-btns">
+                <button class="icon-btn" id="translate-btn" onclick="autoTranslate()" title="自動翻譯純英文單字">✨</button>
+                <button class="icon-btn" onclick="rollDice()" title="隨機抽取 50 個單字">🎲</button>
+                <button class="icon-btn danger-btn" onclick="clearList()" title="清空生詞清單">🗑️</button>
+            </div>
+        </div>
+        
+        <textarea id="word-list" placeholder="請在此輸入單字..."></textarea>
+        
+        <div class="settings-row">
+            <label for="question-limit">本次挑戰題數：</label>
+            <input type="number" id="question-limit" placeholder="全部" min="1">
+            <span style="font-size: 13px; color: var(--text-sec);">(留空代表考完全部單字)</span>
+        </div>
+
+        <button class="action-btn" onclick="startGame()">🚀 開始闖關</button>
+    </div>
+
+    <div id="game-area" class="game-area">
+        <div id="stats-info">
+            <span id="score-display">🏆 分數: <span id="score-count">0</span></span>
+            <span>生命值: <span id="lives-count">🍀🍀🍀</span></span>
+            <span>第 <span id="level-count">1</span> 關 / 共 <span id="total-count">?</span> 關</span>
+        </div>
+        
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <div id="hint">中文提示</div>
+        <div id="hint-text-helper"></div>
+        
+        <div class="input-wrapper">
+            <input type="text" id="answer-input" placeholder="輸入英文..." autocomplete="off">
+            <div id="explosion-container"></div>
+            
+            <div id="correction-box">
+                <div class="diff-row">
+                    <span class="diff-label">❌ 你的拼寫</span>
+                    <div id="user-typo-display"></div>
+                </div>
+                <div class="diff-row" style="margin-top: 15px;">
+                    <span class="diff-label">✅ 正確答案</span>
+                    <div id="correct-word-display"></div>
+                </div>
+            </div>
+        </div>
+        
+        <br>
+        <button class="action-btn hint-btn" style="width:auto;" onclick="useHint()">💡 提示</button>
+        <button class="action-btn" style="width:auto;" onclick="checkAnswer()">送出答案</button>
+        <button class="action-btn" style="width:auto; background-color: #555; margin-left: 10px;" onclick="returnToSetup()">回到設定</button>
+        <div id="message"></div>
+    </div>
+</div>
+
+<script>
+    const builtInWordsRaw = "apple,蘋果|banana,香蕉|cat,貓|dog,狗|elephant,大象|fish,魚|giraffe,長頸鹿|horse,馬|ice,冰|juice,果汁|kite,風箏|lion,獅子|monkey,猴子|nest,鳥巢|orange,橘子|pig,豬|queen,皇后|rabbit,兔子|snake,蛇|tiger,老虎|umbrella,雨傘|van,廂型車|water,水|xylophone,木琴|yellow,黃色|zebra,斑馬|ant,螞蟻|bear,熊|cow,牛|duck,鴨子|eagle,老鷹|frog,青蛙|goat,山羊|hen,母雞|insect,昆蟲|jellyfish,水母|kangaroo,袋鼠|lizard,蜥蜴|mouse,老鼠|night,夜晚|owl,貓頭鷹|panda,熊貓|quail,鵪鶉|rat,大老鼠|sheep,綿羊|turtle,烏龜|unicorn,獨角獸|vulture,禿鷹|whale,鯨魚|fox,狐狸|yak,犛牛";
+
+    let vocabulary = [];
+    let currentLevel = 0;
+    let targetLevels = 0; 
+    let lives = 3;
+    const MAX_LIVES = 3;
+    let score = 0;
+    let hintUsed = false;
+    let isBossLevel = false;
+    
+    let mistakes = new Set();
+    let originalText = "";
+    let audioCtx;
+    let isChecking = false; 
+
+    // === 瀏覽器自動存檔 (LocalStorage) ===
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedList = localStorage.getItem('vocabHeroList');
+        if (savedList) {
+            document.getElementById('word-list').value = savedList;
+        } else {
+            // 預設內容
+            document.getElementById('word-list').value = "apple,蘋果\nbanana,香蕉\nuniversity,大學\ncomfortable,舒服的\nocean,海洋\nchallenge,挑戰\nsalary,薪水";
+        }
+    });
+
+    document.getElementById('word-list').addEventListener('input', () => {
+        localStorage.setItem('vocabHeroList', document.getElementById('word-list').value);
+    });
+    // ===================================
+
+    function clearList() {
+        if (confirm("確定要清空所有的生詞嗎？")) {
+            const textArea = document.getElementById('word-list');
+            textArea.value = '';
+            localStorage.setItem('vocabHeroList', ''); // 同步清空存檔
+            textArea.focus();
+        }
+    }
+
+    async function autoTranslate() {
+        const textArea = document.getElementById('word-list');
+        const translateBtn = document.getElementById('translate-btn');
+        const lines = textArea.value.split('\n');
+        
+        translateBtn.innerHTML = '⏳';
+        translateBtn.disabled = true;
+        textArea.style.borderColor = "var(--highlight)";
+
+        let updatedLines = [];
+        
+        for (let line of lines) {
+            let trimmed = line.trim();
+            if (!trimmed) { updatedLines.push(""); continue; }
+            if (trimmed.includes(',') || trimmed.includes('，') || /[\u4e00-\u9fa5]/.test(trimmed)) {
+                updatedLines.push(trimmed); continue;
+            }
+
+            try {
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&dt=bd&q=${encodeURIComponent(trimmed)}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                let translations = new Set();
+                if (data[0] && data[0][0] && data[0][0][0]) translations.add(data[0][0][0]);
+                if (data[1]) {
+                    data[1].forEach(posGroup => {
+                        if (posGroup[2]) posGroup[2].forEach(term => translations.add(term[0]));
+                        else if (posGroup[1]) posGroup[1].forEach(term => translations.add(term));
+                    });
+                }
+                
+                let zhTranslations = Array.from(translations).filter(t => /[\u4e00-\u9fa5]/.test(t));
+                let finalTranslation = zhTranslations.slice(0, 3).join(' / ');
+                
+                if (finalTranslation) updatedLines.push(`${trimmed}, ${finalTranslation}`);
+                else updatedLines.push(trimmed); 
+            } catch (error) { updatedLines.push(trimmed); }
+        }
+
+        textArea.value = updatedLines.join('\n');
+        localStorage.setItem('vocabHeroList', textArea.value); // 翻譯完自動存檔
+        translateBtn.innerHTML = '✨';
+        translateBtn.disabled = false;
+        setTimeout(() => textArea.style.borderColor = "rgba(255,255,255,0.2)", 800);
+    }
+
+    document.getElementById("answer-input").addEventListener("keypress", function(event) {
+        if (event.key === "Enter" && !isChecking) {
+            event.preventDefault();
+            checkAnswer();
+        }
+    });
+
+    function speakWord(word) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance1 = new SpeechSynthesisUtterance(word);
+            utterance1.lang = 'en-US'; utterance1.rate = 0.9;
+            window.speechSynthesis.speak(utterance1);
+        }
+    }
+
+    function replayAudio() {
+        if (vocabulary.length > 0 && currentLevel < targetLevels) {
+            speakWord(vocabulary[currentLevel].english);
+            document.getElementById('answer-input').focus();
+        }
+    }
+
+    function rollDice() {
+        let allWords = builtInWordsRaw.split('|');
+        for (let i = allWords.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [allWords[i], allWords[j]] = [allWords[j], allWords[i]];
+        }
+        const textArea = document.getElementById('word-list');
+        textArea.value = allWords.slice(0, 50).join('\n');
+        localStorage.setItem('vocabHeroList', textArea.value); // 存檔
+        textArea.style.borderColor = "var(--highlight)";
+        setTimeout(() => textArea.style.borderColor = "rgba(255,255,255,0.2)", 500);
+    }
+
+    function playCorrectSound() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator(); const gainNode = audioCtx.createGain();
+        osc.type = 'sine'; osc.frequency.setValueAtTime(600, audioCtx.currentTime); 
+        osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1); 
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.05);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+        osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+    }
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    function startGame() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if ('speechSynthesis' in window) window.speechSynthesis.resume();
+        
+        const textArea = document.getElementById('word-list');
+        originalText = textArea.value; 
+        const lines = originalText.split('\n');
+        
+        vocabulary = []; mistakes.clear(); isChecking = false;
+
+        for (let line of lines) {
+            line = line.trim(); if (!line) continue;
+            line = line.replace(/，/g, ',');
+            let eng = "", chi = "";
+            if (line.includes(',')) {
+                let parts = line.split(',');
+                eng = parts[0].trim().toLowerCase(); chi = parts.slice(1).join(',').trim(); 
+            } else {
+                let parts = line.split(/\s+/);
+                if (parts.length >= 2) {
+                    eng = parts[0].trim().toLowerCase(); chi = parts.slice(1).join(' ').trim();
+                }
+            }
+            if (eng && chi) vocabulary.push({ english: eng, chinese: chi, originalLine: line });
+        }
+
+        if (vocabulary.length === 0) {
+            alert('請至少輸入一個包含中英文的單字！或者輸入英文後點擊「✨ 自動翻譯」！');
+            return;
+        }
+
+        shuffleArray(vocabulary);
+        
+        const limitInput = document.getElementById('question-limit').value;
+        const parsedLimit = parseInt(limitInput);
+        targetLevels = (!isNaN(parsedLimit) && parsedLimit > 0) ? Math.min(parsedLimit, vocabulary.length) : vocabulary.length; 
+
+        // === Boss 魔王關卡邏輯：把最長的單字移到每 10 關的位置 ===
+        for (let i = 9; i < targetLevels; i += 10) {
+            let maxIdx = i;
+            for (let j = i; j < targetLevels; j++) {
+                if (vocabulary[j].english.length > vocabulary[maxIdx].english.length) maxIdx = j;
+            }
+            [vocabulary[i], vocabulary[maxIdx]] = [vocabulary[maxIdx], vocabulary[i]]; // 交換位置
+        }
+        // ==========================================================
+
+        currentLevel = 0; lives = MAX_LIVES; score = 0; 
+        
+        document.getElementById('setup-area').style.display = 'none';
+        document.getElementById('game-area').style.display = 'block';
+        document.getElementById('message').innerText = '';
+        document.getElementById('total-count').innerText = targetLevels;
+        document.getElementById('score-count').innerText = score;
+        
+        updateLivesDisplay(); updateProgressBar(); loadLevel();
+    }
+
+    function loadLevel() {
+        let currentWord = vocabulary[currentLevel];
+        
+        // 判斷是否為 Boss 關卡 (每 10 題)
+        isBossLevel = ((currentLevel + 1) % 10 === 0);
+        const container = document.getElementById('game-container');
+        const levelCountEl = document.getElementById('level-count');
+        
+        if (isBossLevel) {
+            container.classList.add('boss-mode');
+            levelCountEl.innerHTML = `${currentLevel + 1} <span style="color:#e74c3c">👿魔王題</span>`;
+        } else {
+            container.classList.remove('boss-mode');
+            levelCountEl.innerText = currentLevel + 1;
+        }
+
+        // === 圖片聯想記憶法 (動態更換背景) ===
+        // 使用免費的 loremflickr API，根據單字載入相關圖片
+        document.getElementById('bg-overlay').style.backgroundImage = `url('https://loremflickr.com/1280/720/${encodeURIComponent(currentWord.english)},object/all')`;
+        // ====================================
+        
+        document.getElementById('hint').innerHTML = `
+            <span>${currentWord.chinese}</span>
+            <div class="replay-btn" onclick="replayAudio()" title="重聽發音">🔊</div>
+        `;
+        
+        hintUsed = false;
+        document.getElementById('hint-text-helper').innerText = '';
+        
+        const inputElement = document.getElementById('answer-input');
+        inputElement.style.opacity = '1';
+        document.getElementById('correction-box').style.display = 'none';
+        document.getElementById('explosion-container').innerHTML = ''; // 清除特效
+        
+        inputElement.value = '';
+        inputElement.style.borderColor = 'rgba(255,255,255,0.3)';
+        inputElement.style.color = 'var(--primary)';
+        inputElement.focus();
+        isChecking = false;
+
+        speakWord(currentWord.english);
+    }
+
+    function updateLivesDisplay() {
+        let clovers = '';
+        for (let i = 0; i < lives; i++) clovers += '🍀';
+        for (let i = lives; i < MAX_LIVES; i++) clovers += '❌'; 
+        document.getElementById('lives-count').innerText = clovers;
+    }
+
+    function updateProgressBar() {
+        const percentage = (currentLevel / targetLevels) * 100;
+        document.getElementById('progress-bar').style.width = percentage + '%';
+    }
+
+    function useHint() {
+        if (hintUsed || isChecking) return;
+        const currentWord = vocabulary[currentLevel].english;
+        const firstLetter = currentWord.charAt(0);
+        const length = currentWord.length;
+        
+        let hintStr = firstLetter + ' ';
+        for(let i = 1; i < length; i++) hintStr += '_ ';
+        
+        document.getElementById('hint-text-helper').innerText = `💡 ${hintStr} (共 ${length} 個字母)`;
+        score -= 5; hintUsed = true;
+        document.getElementById('score-count').innerText = score;
+        
+        const messageBox = document.getElementById('message');
+        messageBox.className = 'warning'; messageBox.innerText = '使用提示，扣除 5 分！';
+        document.getElementById('answer-input').focus();
+    }
+
+    function updateWordListForNextRound() {
+        let nextRoundWords = vocabulary.filter((v, index) => mistakes.has(v.english) || index >= currentLevel);
+        const textArea = document.getElementById('word-list');
+        if (nextRoundWords.length > 0) {
+            textArea.value = nextRoundWords.map(v => v.originalLine.includes(',') ? `${v.english},${v.chinese}` : `${v.english} ${v.chinese}`).join('\n');
+        } else {
+            textArea.value = originalText;
+        }
+        localStorage.setItem('vocabHeroList', textArea.value); // 結算後存檔
+    }
+
+    // === 錯字高亮比對系統 ===
+  function showCorrection(userInput, correctAnswer, isGameOver) {
+        const inputElement = document.getElementById('answer-input');
+        const correctionBox = document.getElementById('correction-box');
+        const userDisplay = document.getElementById('user-typo-display');
+        const correctDisplay = document.getElementById('correct-word-display');
+        const messageBox = document.getElementById('message');
+
+        inputElement.style.opacity = '0'; // 隱藏輸入框
+        correctionBox.style.display = 'block'; 
+
+        let userHTML = "";
+        let correctHTML = "";
+        const maxLen = Math.max(userInput.length, correctAnswer.length);
+        
+        // 逐字元比對
+        for(let i = 0; i < maxLen; i++) {
+            let uChar = userInput[i] || "_";
+            let cChar = correctAnswer[i] || "_";
+            
+            if (uChar === cChar) {
+                userHTML += `<span class="char-correct">${uChar}</span>`;
+                correctHTML += `<span class="char-correct">${cChar}</span>`;
+            } else {
+                userHTML += `<span class="char-wrong">${uChar}</span>`;
+                correctHTML += `<span class="char-missing">${cChar}</span>`;
+            }
+        }
+
+        userDisplay.innerHTML = userHTML;
+        correctDisplay.innerHTML = correctHTML;
+
+        speakWord(correctAnswer);
+
+        if (isGameOver) {
+            messageBox.className = 'error';
+            messageBox.innerText = '三葉草用光了！結算錯題中... (10秒後返回)';
+            updateWordListForNextRound();
+            // ★ 這裡改成 10000 毫秒 (10秒)
+            setTimeout(returnToSetup, 10000); 
+        } else {
+            messageBox.className = 'error';
+            messageBox.innerText = '答錯了！失去一葉 🍀 仔細看錯在哪裡！ (10秒後下一題)';
+            // ★ 這裡改成 10000 毫秒 (10秒)
+            setTimeout(loadLevel, 10000); 
+        }
+    }
+
+    // === 打字機爆炸視覺特效 ===
+    function triggerExplosion(word) {
+        const inputElement = document.getElementById('answer-input');
+        const container = document.getElementById('explosion-container');
+        inputElement.style.opacity = '0'; // 瞬間隱藏輸入框
+        
+        for(let i = 0; i < word.length; i++) {
+            let charSpan = document.createElement('span');
+            charSpan.innerText = word[i];
+            charSpan.className = 'explode-char';
+            
+            // 隨機爆炸軌跡
+            let angle = Math.random() * Math.PI * 2;
+            let distance = Math.random() * 80 + 40;
+            charSpan.style.setProperty('--dx', `${Math.cos(angle) * distance}px`);
+            charSpan.style.setProperty('--dy', `${Math.sin(angle) * distance}px`);
+            charSpan.style.setProperty('--rot', `${Math.random() * 360 - 180}deg`);
+            
+            container.appendChild(charSpan);
+        }
+    }
+
+    function checkAnswer() {
+        if (currentLevel >= targetLevels || lives <= 0 || isChecking) return;
+        isChecking = true; 
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+        const inputElement = document.getElementById('answer-input');
+        const userInput = inputElement.value.trim().toLowerCase();
+        const correctAnswer = vocabulary[currentLevel].english;
+        const messageBox = document.getElementById('message');
+
+        if (userInput === correctAnswer) {
+            playCorrectSound(); 
+            triggerExplosion(correctAnswer); // 觸發爆炸特效
+            
+            currentLevel++;
+            
+            // 魔王關卡獎勵
+            if (isBossLevel) {
+                score += 30;
+                if(lives < MAX_LIVES) lives++; 
+                messageBox.className = 'boss-msg';
+                messageBox.innerText = '⚔️ 擊敗魔王！+30分，生命回復！';
+            } else {
+                score += 10; 
+                messageBox.className = 'success';
+                messageBox.innerText = '正確！ +10 分';
+            }
+            
+            document.getElementById('score-count').innerText = score;
+            updateProgressBar(); updateLivesDisplay();
+            
+            if (currentLevel >= targetLevels) {
+                document.getElementById('hint').innerHTML = '🎉 挑戰完成！';
+                document.getElementById('hint-text-helper').innerText = '';
+                document.getElementById('level-count').innerText = targetLevels;
+                
+                updateWordListForNextRound(); 
+                
+                if (mistakes.size > 0) {
+                    messageBox.className = 'warning';
+                    messageBox.innerText = `挑戰結束！總分：${score}。錯誤單字已保留。`;
+                } else {
+                    messageBox.innerText = `完美過關！💯 總分：${score}`;
+                }
+                setTimeout(returnToSetup, 4000);
+            } else {
+                setTimeout(loadLevel, 1200); // 延長一點時間讓爆炸動畫播完
+            }
+        } else {
+            mistakes.add(correctAnswer); 
+            lives--; 
+            updateLivesDisplay();
+            showCorrection(userInput, correctAnswer, lives <= 0); // 使用新的錯題比對畫面
+        }
+    }
+
+    function returnToSetup() {
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        document.getElementById('setup-area').style.display = 'block';
+        document.getElementById('game-area').style.display = 'none';
+        document.getElementById('bg-overlay').style.backgroundImage = 'none'; // 清除背景圖
+        document.getElementById('game-container').classList.remove('boss-mode');
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anagram 終極學習版 (記憶迴圈 & 狂熱模式)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;500;700&display=swap');
+
+        :root {
+            --bg-color: #f4f1ea;        
+            --primary-dark: #1a3a32;   
+            --accent-green: #4a7c59;   
+            --text-color: #2c3e50;
+            --block-bg: #ffffff;
+            --block-text: #000000;
+            --block-border: #000000;
+        }
+
+        body {
+            font-family: 'Lexend', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* 狂熱模式特效 (Fever Overlay) */
+        #fever-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            box-shadow: inset 0 0 0px transparent;
+            transition: box-shadow 0.3s ease;
+            z-index: 50;
+        }
+        #fever-overlay.active {
+            animation: feverPulse 0.8s infinite alternate;
+        }
+        @keyframes feverPulse {
+            0% { box-shadow: inset 0 0 30px rgba(245, 158, 11, 0.4); }
+            100% { box-shadow: inset 0 0 80px rgba(239, 68, 68, 0.7); border: 2px solid rgba(239,68,68,0.3); }
+        }
+
+        .game-card {
+            background: #ffffff;
+            border-radius: 40px;
+            box-shadow: 0 20px 50px rgba(26, 58, 50, 0.1);
+            padding: 3.5rem 2rem;
+            width: 98%; 
+            max-width: 1050px; 
+            text-align: center;
+            border: 1px solid rgba(0,0,0,0.03);
+            position: relative;
+            z-index: 10;
+        }
+
+        .container-area {
+            background: #fdfcf9;
+            border-radius: 24px;
+            padding: 40px 20px;
+            min-height: 200px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #eee;
+            margin-bottom: 4.5rem;
+        }
+
+        .letter-block {
+            width: 95px;
+            height: 120px;
+            background: var(--block-bg);
+            color: var(--block-text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 4.2rem; 
+            font-weight: 900;
+            border-radius: 12px;
+            cursor: grab;
+            user-select: none;
+            border: 5px solid var(--block-border); 
+            box-shadow: 0 8px 0 var(--block-border); 
+            transition: transform 0.1s, box-shadow 0.1s, opacity 0.2s;
+            font-family: "Courier New", Courier, monospace; 
+            white-space: pre; 
+        }
+
+        .letter-block:active { 
+            transform: translateY(4px); 
+            box-shadow: 0 4px 0 var(--block-border); 
+        }
+
+        #answer-slots {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2px; 
+            padding: 45px 10px;
+            background: #fdfcf9;
+            border-radius: 32px;
+            border: 1px solid #eee;
+        }
+
+        .slot {
+            width: 95px; 
+            height: 120px;
+            background: #efece4; 
+            border: none; 
+            border-radius: 4px; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: background 0.2s ease;
+        }
+
+        .slot.locked {
+            background: #ffffff;
+            box-shadow: none; 
+        }
+
+        .letter-block.correct {
+            width: 100%;
+            height: 100%;
+            border: none; 
+            box-shadow: none; 
+            cursor: default;
+            background: transparent;
+            font-size: 4.8rem; 
+            animation: letterSlideIn 0.3s ease-out;
+        }
+
+        @keyframes letterSlideIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .syllable-0 { color: #e53935; } 
+        .syllable-1 { color: #1e88e5; } 
+        .syllable-2 { color: #43a047; } 
+        .syllable-3 { color: #fb8c00; } 
+        .syllable-4 { color: #8e24aa; }
+
+        #win-overlay, #summary-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(26, 58, 50, 0.98);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            color: white;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .big-word {
+            font-size: 7rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: #fff;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            font-family: "Courier New", Courier, monospace;
+        }
+
+        .translation-text {
+            font-size: 3.2rem;
+            color: #a7d7c5;
+            margin-bottom: 2.5rem;
+            font-weight: 500;
+        }
+
+        .enter-hint {
+            font-size: 1.2rem;
+            color: #7a9e91;
+            margin-top: 1.5rem;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+        .hidden { display: none !important; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+        .shake { animation: shake 0.3s ease-in-out; }
+        
+        .error-vibrate { animation: vibrate 0.2s linear infinite; border-color: rgba(239, 68, 68, 0.5) !important; }
+        @keyframes vibrate {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(3px, 3px); }
+            50% { transform: translate(0, 0); }
+            75% { transform: translate(-3px, -3px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        /* 自定義 Toggle 開關 */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #68D391;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #68D391;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 狂熱模式全螢幕特效遮罩 -->
+    <div id="fever-overlay"></div>
+
+    <!-- 首頁設定 -->
+    <div id="setup-screen" class="game-card">
+        <h1 class="text-4xl font-bold text-[#1a3a32] mb-2">Anagram Pro</h1>
+        <p class="text-gray-500 mb-6 text-lg">打字拼字雙效合一的學習神器</p>
+        
+        <textarea id="word-input" 
+            placeholder="例如：&#10;apple&#10;banana&#10;good at"
+            class="w-full h-40 p-5 border-2 border-stone-200 rounded-3xl focus:border-[#4a7c59] focus:outline-none text-xl mb-4 bg-[#faf9f6]" 
+            spellcheck="false"></textarea>
+
+        <!-- 地獄模式開關 -->
+        <div class="flex items-center justify-center mb-6 gap-3">
+            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                <input type="checkbox" name="toggle" id="hard-mode-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-200 ease-in-out" style="top: 2px; left: 2px; border-color: #e2e8f0;"/>
+                <label for="hard-mode-toggle" class="toggle-label block overflow-hidden h-7 rounded-full bg-gray-300 cursor-pointer transition-colors duration-200 ease-in-out"></label>
+            </div>
+            <span class="text-stone-600 font-bold text-lg">地獄干擾模式 😈</span>
+        </div>
+
+        <button id="start-btn" onclick="startGame()" class="w-full bg-[#1a3a32] hover:bg-[#2d5a4c] text-white font-bold py-5 rounded-3xl shadow-xl transition-all duration-300 text-2xl mb-4">
+            開始挑戰
+        </button>
+
+        <!-- 錯題本區域 -->
+        <div id="mistake-area" class="hidden">
+            <button onclick="startReview()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-3xl shadow-md transition-all duration-300 text-xl">
+                複習錯題本 (<span id="mistake-count">0</span>)
+            </button>
+            <button onclick="clearMistakes()" class="text-stone-400 hover:text-red-500 text-sm mt-3 underline decoration-dotted">
+                清除錯題紀錄
+            </button>
+        </div>
+
+        <p id="error-msg" class="text-red-500 mt-2 font-medium opacity-0 transition-opacity">請至少輸入一個單詞！</p>
+    </div>
+
+    <!-- 遊戲畫面 -->
+    <div id="game-screen" class="game-card hidden">
+        <div class="flex justify-between items-center mb-10">
+            <button onclick="backToSetup()" class="text-stone-400 hover:text-[#4a7c59] font-medium flex items-center gap-2 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                返回
+            </button>
+            <div id="level-display" class="bg-[#1a3a32] text-white px-6 py-2 rounded-full font-bold tracking-wider">LEVEL 01</div>
+            
+            <div class="flex gap-3">
+                <!-- 魔法提示按鈕 -->
+                <button onclick="useHint()" id="hint-btn" class="bg-yellow-100 p-3 rounded-full hover:bg-yellow-200 text-yellow-600 transition shadow-sm relative group">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 256 256"><path d="M176,232a8,8,0,0,1-8,8H88a8,8,0,0,1,0-16h80A8,8,0,0,1,176,232Zm40-104a87.55,87.55,0,0,1-33.64,69.21A16.24,16.24,0,0,0,176,208.5v5.5a16,16,0,0,1-16,16H96a16,16,0,0,1-16-16v-5.5a16.24,16.24,0,0,0-6.36-11.29A88,88,0,1,1,216,128Zm-16,0a72,72,0,1,0-123.75,50c6.85,6.17,11.75,13.75,11.75,25v5.5H168v-5.5c0-11.25,4.9-18.83,11.75-25A71.55,71.55,0,0,0,200,128Z"></path></svg>
+                    <span id="hint-count" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">3</span>
+                </button>
+                <!-- 朗讀按鈕 -->
+                <button onclick="speakCurrentWordTimes(3)" class="bg-stone-100 p-3 rounded-full hover:bg-stone-200 text-[#1a3a32] transition shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 256 256"><path d="M160,32V224a8,8,0,0,1-12.91,6.31L77.25,176H32a16,16,0,0,1-16-16V96A16,16,0,0,1,32,80H77.25l69.84-54.31A8,8,0,0,1,160,32Zm32,64a8,8,0,0,1,8,8v48a8,8,0,0,1-16,0V104A8,8,0,0,1,192,96Zm32-16a8,8,0,0,1,8,8v80a8,8,0,0,1-16,0V88A8,8,0,0,1,224,80Z"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <div id="letter-pool" class="container-area"></div>
+        <div id="answer-slots"></div>
+    </div>
+
+    <!-- 過關彈窗 -->
+    <div id="win-overlay">
+        <div class="text-accent-green mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="#a7d7c5" viewBox="0 0 256 256"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path></svg>
+        </div>
+        <div class="text-xl uppercase tracking-[0.3em] opacity-60 mb-2">Well Done</div>
+        <div id="win-big-word" class="big-word">apple</div>
+        <div id="win-translation" class="translation-text">蘋果</div>
+        <button id="next-btn" onclick="nextLevel()" class="bg-white text-[#1a3a32] px-14 py-4 rounded-full font-bold text-xl hover:bg-stone-100 transition shadow-2xl">
+            下一關 (8s)
+        </button>
+        <p class="enter-hint">按 "Enter" 鍵繼續</p>
+    </div>
+
+    <!-- 學習結算成績單 -->
+    <div id="summary-screen">
+        <h2 class="text-5xl font-bold text-[#a7d7c5] mb-4 tracking-widest font-[Courier_New]">Mission Complete!</h2>
+        <p class="text-xl text-white opacity-80 mb-8">你已完成所有單詞，以下是本次學習紀錄：</p>
+        
+        <div class="bg-white rounded-3xl p-6 w-[90%] max-w-2xl max-h-[50vh] overflow-y-auto mb-8 text-[#1a3a32] shadow-2xl">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b-2 border-stone-200">
+                        <th class="py-4 px-6 text-xl font-bold">Vocabulary</th>
+                        <th class="py-4 px-6 text-xl font-bold">Translation</th>
+                    </tr>
+                </thead>
+                <tbody id="summary-table-body" class="text-lg">
+                    <!-- 動態載入單字 -->
+                </tbody>
+            </table>
+        </div>
+
+        <button onclick="restartGame()" class="bg-[#a7d7c5] text-[#1a3a32] px-14 py-4 rounded-full font-bold text-2xl hover:bg-white transition shadow-2xl">
+            回首頁 (Home)
+        </button>
+    </div>
+
+    <script>
+        let wordsList = [];
+        let currentLevel = 0;
+        let originalWord = "";
+        let currentTranslation = "";
+        let syllableMap = []; 
+        let slotsData = [];
+        let autoNextTimer = null;
+        let countdownSeconds = 8;
+        let isGameActive = false; 
+        
+        let isHardMode = false;
+        let hintsLeft = 3;
+        let comboCount = 0;
+        let lastCorrectTime = 0;
+        let learnedWordsCache = []; 
+        
+        let mistakesDict = {}; // 錯題本字典 { "apple": 2, "banana": 1 }
+        let currentLevelMistakes = 0; // 記錄當前關卡的失誤次數
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        const setupScreen = document.getElementById('setup-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const wordInput = document.getElementById('word-input');
+        const answerSlotsContainer = document.getElementById('answer-slots');
+        const letterPoolContainer = document.getElementById('letter-pool');
+        const winOverlay = document.getElementById('win-overlay');
+        const summaryScreen = document.getElementById('summary-screen');
+        const winBigWord = document.getElementById('win-big-word');
+        const winTranslation = document.getElementById('win-translation');
+        const levelDisplay = document.getElementById('level-display');
+        const errorMsg = document.getElementById('error-msg');
+        const nextBtn = document.getElementById('next-btn');
+        const hintBtn = document.getElementById('hint-btn');
+        const hintCountDisplay = document.getElementById('hint-count');
+        const hardModeToggle = document.getElementById('hard-mode-toggle');
+        const feverOverlay = document.getElementById('fever-overlay');
+
+        // 頁面載入時：讀取本地存檔 (長期記憶迴圈)
+        window.onload = () => {
+            const savedHardMode = localStorage.getItem('anagramHardMode');
+            if (savedHardMode !== null) hardModeToggle.checked = savedHardMode === 'true';
+            
+            const savedMistakes = localStorage.getItem('anagramMistakes');
+            if (savedMistakes) {
+                try {
+                    mistakesDict = JSON.parse(savedMistakes);
+                } catch(e) {}
+            }
+            updateMistakeUI();
+            
+            // 監聽硬核模式開關，自動保存
+            hardModeToggle.addEventListener('change', (e) => {
+                localStorage.setItem('anagramHardMode', e.target.checked);
+            });
+        };
+
+        // 音效系統 (改為低刺激柔和音效)
+        function playTone(freq, type, duration, vol=0.03) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            // 加入漸入漸出效果，消除刺耳的爆音(Clicking sound)
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        // Combo 音調提升 (柔和版)
+        function playCorrectSound(combo = 1) { 
+            const baseFreq = 440; // 降低基準音高 (A4)
+            const multiplier = Math.pow(1.05946, Math.min(combo - 1, 12)); 
+            playTone(baseFreq * multiplier, 'sine', 0.4, 0.03); 
+        }
+        function playErrorSound() { playTone(150, 'triangle', 0.2, 0.03); } // 改用柔和的三角波
+        function playSlotErrorSound() { playTone(200, 'triangle', 0.2, 0.03); } 
+        function playLevelCompleteSound() { [440, 554, 659].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.6, 0.03), i * 150)); }
+
+        // 錯題本相關邏輯
+        function recordMistake(word) {
+            if (!mistakesDict[word]) mistakesDict[word] = 0;
+            mistakesDict[word]++;
+            currentLevelMistakes++; // 標記這關有錯
+            localStorage.setItem('anagramMistakes', JSON.stringify(mistakesDict));
+            updateMistakeUI();
+        }
+
+        function updateMistakeUI() {
+            const mistakeArea = document.getElementById('mistake-area');
+            const countDisplay = document.getElementById('mistake-count');
+            const keys = Object.keys(mistakesDict);
+            if (keys.length > 0) {
+                mistakeArea.classList.remove('hidden');
+                countDisplay.textContent = keys.length;
+            } else {
+                mistakeArea.classList.add('hidden');
+            }
+        }
+
+        function clearMistakes() {
+            if(confirm("確定要清除所有錯題紀錄嗎？")) {
+                mistakesDict = {};
+                localStorage.removeItem('anagramMistakes');
+                updateMistakeUI();
+            }
+        }
+
+        function startReview() {
+            const words = Object.keys(mistakesDict).sort((a, b) => mistakesDict[b] - mistakesDict[a]);
+            if(words.length === 0) return;
+            
+            isHardMode = hardModeToggle.checked;
+            learnedWordsCache = [];
+            // 取最多前 15 個錯最多的單字進行複習
+            wordsList = words.slice(0, 15).sort((a,b) => a.length - b.length);
+            currentLevel = 0;
+            
+            setupScreen.classList.add('hidden');
+            summaryScreen.style.display = 'none';
+            gameScreen.classList.remove('hidden');
+            isGameActive = true;
+            loadLevel();
+        }
+
+        async function fetchWordData(word) {
+            try {
+                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|zh-TW`;
+                const response = await fetch(url);
+                const data = await response.json();
+                let translation = data.responseData.translatedText || "查無翻譯";
+                if (translation.includes("MYMEMORY WARNING")) translation = "翻譯中";
+                return { translation: translation, syllables: word };
+            } catch (error) {
+                return { translation: "翻譯失敗", syllables: word };
+            }
+        }
+
+        function parseSyllables(word) {
+            syllableMap = [];
+            for (let i = 0; i < word.length; i++) {
+                syllableMap.push(Math.floor(i / 2)); 
+            }
+        }
+
+        async function startGame() {
+            const input = wordInput.value.trim();
+            if (!input) {
+                wordInput.classList.add('shake');
+                errorMsg.style.opacity = "1";
+                playSlotErrorSound();
+                setTimeout(() => {
+                    wordInput.classList.remove('shake');
+                    errorMsg.style.opacity = "0";
+                }, 1500);
+                return;
+            }
+            
+            isHardMode = hardModeToggle.checked;
+            learnedWordsCache = [];
+            wordsList = input.split('\n').map(w => w.trim().toLowerCase()).filter(w => w.length > 0).sort((a,b) => a.length - b.length);
+            currentLevel = 0;
+            
+            setupScreen.classList.add('hidden');
+            summaryScreen.style.display = 'none';
+            gameScreen.classList.remove('hidden');
+            isGameActive = true;
+            loadLevel();
+        }
+
+        async function loadLevel() {
+            clearTimeout(autoNextTimer);
+            feverOverlay.classList.remove('active'); // 確保關卡開始時關閉 Fever
+            
+            if (currentLevel >= wordsList.length) {
+                showSummaryScreen();
+                return;
+            }
+            
+            winOverlay.style.display = 'none';
+            originalWord = wordsList[currentLevel];
+            isGameActive = true;
+            comboCount = 0; 
+            currentLevelMistakes = 0; // 重置本關失誤次數
+            
+            hintsLeft = 3;
+            hintCountDisplay.textContent = hintsLeft;
+            hintBtn.style.opacity = "1";
+            
+            levelDisplay.textContent = "Loading...";
+            const wordData = await fetchWordData(originalWord);
+            currentTranslation = wordData.translation;
+            
+            if (!learnedWordsCache.some(item => item.word === originalWord)) {
+                learnedWordsCache.push({ word: originalWord, translation: currentTranslation });
+            }
+            parseSyllables(originalWord);
+
+            let poolArr = originalWord.split('');
+            
+            if (isHardMode) {
+                const numDistractors = Math.max(2, Math.floor(originalWord.length * 0.4));
+                const alphabet = "abcdefghijklmnopqrstuvwxyz";
+                for(let i=0; i<numDistractors; i++) {
+                    poolArr.push(alphabet[Math.floor(Math.random() * alphabet.length)]);
+                }
+            }
+
+            poolArr = shuffleArray(poolArr);
+            while(poolArr.join('') === originalWord && originalWord.length > 1 && !isHardMode) {
+                poolArr = shuffleArray(poolArr);
+            }
+
+            slotsData = new Array(originalWord.length).fill(null);
+            levelDisplay.textContent = `LEVEL ${String(currentLevel + 1).padStart(2, '0')}`;
+            
+            renderSlots();
+            renderPool(poolArr);
+            speakCurrentWordTimes(3);
+        }
+
+        function renderSlots() {
+            answerSlotsContainer.innerHTML = "";
+            for (let i = 0; i < originalWord.length; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'slot';
+                slot.dataset.index = i;
+                slot.addEventListener('dragover', e => e.preventDefault());
+                slot.addEventListener('drop', handleDrop);
+                answerSlotsContainer.appendChild(slot);
+            }
+        }
+
+        function renderPool(arr) {
+            letterPoolContainer.innerHTML = "";
+            arr.forEach((char) => {
+                const block = document.createElement('div');
+                block.className = 'letter-block';
+                block.textContent = char === ' ' ? '␣' : char;
+                block.draggable = true;
+                block.dataset.char = char;
+
+                let touchStartTime = 0;
+                block.addEventListener('mousedown', () => touchStartTime = Date.now());
+                block.addEventListener('click', (e) => {
+                    if (Date.now() - touchStartTime < 200) handleQuickPlace(char, block);
+                });
+
+                block.addEventListener('dragstart', e => { 
+                    e.dataTransfer.setData('text/plain', char); 
+                    block.classList.add('opacity-40'); 
+                    block.id = 'dragging-block'; // 用於修正拖拉時刪錯積木的問題
+                });
+                block.addEventListener('dragend', () => {
+                    block.classList.remove('opacity-40');
+                    block.removeAttribute('id');
+                });
+                
+                block.addEventListener('touchstart', (e) => {
+                    touchStartTime = Date.now();
+                    handleTouchStart(e);
+                }, {passive: false});
+
+                block.addEventListener('touchend', (e) => {
+                    if (Date.now() - touchStartTime < 200) {
+                        handleQuickPlace(char, block);
+                    } else {
+                        handleTouchEnd(e);
+                    }
+                });
+
+                letterPoolContainer.appendChild(block);
+            });
+        }
+
+        function handleQuickPlace(char, blockElement) {
+            const slots = Array.from(document.querySelectorAll('.slot'));
+            const firstEmptySlot = slots.find(slot => !slot.classList.contains('locked'));
+            if (firstEmptySlot) processMove(firstEmptySlot, char, blockElement);
+            else {
+                playSlotErrorSound();
+                recordMistake(originalWord);
+            }
+        }
+
+        function handleDrop(e) { 
+            e.preventDefault(); 
+            const char = e.dataTransfer.getData('text/plain'); 
+            const draggingBlock = document.getElementById('dragging-block');
+            processMove(this, char, draggingBlock); 
+        }
+
+        // 無限次數的自動填寫 (提供給 Tab 鍵使用)
+        function autoFillNext() {
+            if (!isGameActive) return;
+            const slots = Array.from(document.querySelectorAll('.slot'));
+            const firstEmptySlot = slots.find(slot => !slot.classList.contains('locked'));
+            if (!firstEmptySlot) return;
+
+            const idx = parseInt(firstEmptySlot.dataset.index);
+            const neededChar = originalWord[idx];
+            const targetBlock = Array.from(letterPoolContainer.children).find(b => b.dataset.char === neededChar && b.style.opacity !== '0');
+            
+            if (targetBlock) {
+                recordMistake(originalWord); // 使用自動填寫視同對單字不熟悉
+                processMove(firstEmptySlot, neededChar, targetBlock, true);
+            }
+        }
+
+        function useHint() {
+            if (hintsLeft <= 0 || !isGameActive) return;
+            const slots = Array.from(document.querySelectorAll('.slot'));
+            const firstEmptySlot = slots.find(slot => !slot.classList.contains('locked'));
+            if (!firstEmptySlot) return;
+
+            const idx = parseInt(firstEmptySlot.dataset.index);
+            const neededChar = originalWord[idx];
+            const targetBlock = Array.from(letterPoolContainer.children).find(b => b.dataset.char === neededChar && b.style.opacity !== '0');
+            
+            if (targetBlock) {
+                hintsLeft--;
+                hintCountDisplay.textContent = hintsLeft;
+                if (hintsLeft === 0) hintBtn.style.opacity = "0.5";
+                recordMistake(originalWord); // 使用提示也算作對該單字不熟練
+                processMove(firstEmptySlot, neededChar, targetBlock, true);
+            }
+        }
+
+        function processMove(slot, char, blockElementFromPool = null, isHint = false) {
+            const idx = parseInt(slot.dataset.index);
+            if (slot.classList.contains('locked')) return;
+            
+            if (originalWord[idx] === char) {
+                const now = Date.now();
+                if (!isHint && now - lastCorrectTime < 2500) {
+                    comboCount++;
+                } else {
+                    comboCount = 1;
+                }
+                lastCorrectTime = now;
+
+                playCorrectSound(comboCount);
+                
+                // Fever 狂熱模式判定 (>= 5 連擊)
+                if (comboCount >= 5) {
+                    feverOverlay.classList.add('active');
+                }
+                
+                const sIdx = syllableMap[idx];
+                const colorClass = `syllable-${sIdx % 5}`;
+                
+                slot.classList.add('locked');
+                const displayChar = char === ' ' ? ' ' : char; 
+                slot.innerHTML = `<div class="letter-block correct ${colorClass}">${displayChar}</div>`;
+                slotsData[idx] = char;
+                
+                // 正確時將池中的積木移除
+                const toRemove = blockElementFromPool || Array.from(letterPoolContainer.children).find(b => b.dataset.char === char);
+                if (toRemove) toRemove.remove();
+                
+                checkWin();
+            } else {
+                // 斷 Combo 且取消 Fever
+                comboCount = 0; 
+                feverOverlay.classList.remove('active');
+                recordMistake(originalWord);
+                
+                playSlotErrorSound();
+                slot.classList.add('shake');
+
+                // --- 錯誤時的積木動畫回饋 (飛過去又退回) ---
+                if (blockElementFromPool) {
+                    blockElementFromPool.style.opacity = '0'; // 暫時隱藏原積木
+                    blockElementFromPool.style.pointerEvents = 'none'; // 避免動畫期間被重複點擊
+                }
+
+                const displayChar = char === ' ' ? '␣' : char;
+                slot.innerHTML = `<div class="letter-block" style="width:100%; height:100%; background:transparent; border:none; box-shadow:none; color:#e53935;">${displayChar}</div>`;
+
+                setTimeout(() => {
+                    slot.classList.remove('shake');
+                    if (!slot.classList.contains('locked')) {
+                        slot.innerHTML = ''; // 清空錯誤顯示
+                    }
+                    if (blockElementFromPool) {
+                        blockElementFromPool.style.opacity = '1';
+                        blockElementFromPool.style.pointerEvents = 'auto';
+                    }
+                }, 400);
+            }
+        }
+
+        let activeTouchBlock = null;
+        function handleTouchStart(e) { activeTouchBlock = e.target.closest('.letter-block'); }
+        function handleTouchEnd(e) {
+            if (!activeTouchBlock) return;
+            const touch = e.changedTouches[0];
+            const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+            const slot = dropTarget ? dropTarget.closest('.slot') : null;
+            if (slot) processMove(slot, activeTouchBlock.dataset.char, activeTouchBlock);
+            activeTouchBlock = null;
+        }
+
+        function checkWin() { 
+            if (slotsData.join('') === originalWord) {
+                // 如果本關 0 失誤且存在於錯題本中，則將其移出售題本 (形成正向學習迴圈)
+                if (currentLevelMistakes === 0 && mistakesDict[originalWord]) {
+                    mistakesDict[originalWord]--;
+                    if (mistakesDict[originalWord] <= 0) delete mistakesDict[originalWord];
+                    localStorage.setItem('anagramMistakes', JSON.stringify(mistakesDict));
+                    updateMistakeUI();
+                }
+                
+                setTimeout(showWinScreen, 600);
+            } 
+        }
+
+        function showWinScreen() {
+            isGameActive = false;
+            feverOverlay.classList.remove('active'); // 過關解除 Fever
+            playLevelCompleteSound();
+            winBigWord.textContent = originalWord;
+            winTranslation.textContent = currentTranslation;
+            winOverlay.style.display = 'flex';
+            speakCurrentWordTimes(3);
+            startAutoNextTimer();
+        }
+
+        function startAutoNextTimer() {
+            countdownSeconds = 8;
+            nextBtn.textContent = `下一關 (${countdownSeconds}s)`;
+            
+            if (autoNextTimer) clearInterval(autoNextTimer);
+            
+            autoNextTimer = setInterval(() => {
+                countdownSeconds--;
+                if (countdownSeconds <= 0) {
+                    clearInterval(autoNextTimer);
+                    nextLevel();
+                } else {
+                    nextBtn.textContent = `下一關 (${countdownSeconds}s)`;
+                }
+            }, 1000);
+        }
+
+        function nextLevel() { 
+            clearInterval(autoNextTimer);
+            currentLevel++; 
+            loadLevel(); 
+        }
+
+        function showSummaryScreen() {
+            isGameActive = false;
+            feverOverlay.classList.remove('active');
+            gameScreen.classList.add('hidden');
+            winOverlay.style.display = 'none';
+            summaryScreen.style.display = 'flex';
+            
+            const tbody = document.getElementById('summary-table-body');
+            tbody.innerHTML = '';
+            
+            learnedWordsCache.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = index % 2 === 0 ? 'bg-stone-50' : 'bg-white';
+                tr.innerHTML = `
+                    <td class="py-3 px-6 font-[Courier_New] font-bold text-xl">${item.word}</td>
+                    <td class="py-3 px-6 text-stone-600">${item.translation}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function restartGame() {
+            summaryScreen.style.display = 'none';
+            setupScreen.classList.remove('hidden');
+            wordInput.value = "";
+        }
+
+        function backToSetup() { 
+            isGameActive = false;
+            feverOverlay.classList.remove('active');
+            clearInterval(autoNextTimer);
+            gameScreen.classList.add('hidden'); 
+            setupScreen.classList.remove('hidden'); 
+            winOverlay.style.display = 'none'; 
+            window.speechSynthesis.cancel(); 
+        }
+
+        function speakCurrentWordTimes(times) {
+            window.speechSynthesis.cancel();
+            let count = 0;
+            const speakEN = () => {
+                if (count < times) {
+                    const utterEN = new SpeechSynthesisUtterance(originalWord);
+                    utterEN.lang = 'en-US';
+                    utterEN.rate = 0.85;
+                    utterEN.onend = () => { count++; count < times ? setTimeout(speakEN, 400) : setTimeout(speakCantonese, 500); };
+                    window.speechSynthesis.speak(utterEN);
+                }
+            };
+            const speakCantonese = () => {
+                const utterHK = new SpeechSynthesisUtterance(currentTranslation);
+                utterHK.lang = 'zh-HK';
+                utterHK.rate = 0.9;
+                window.speechSynthesis.speak(utterHK);
+            };
+            speakEN();
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            // Tab 鍵自動填寫
+            if (e.key === 'Tab') {
+                e.preventDefault(); // 防止畫面焦點跳動
+                if (winOverlay.style.display !== 'flex') {
+                    autoFillNext();
+                }
+                return;
+            }
+
+            if (e.key === 'Enter' && winOverlay.style.display === 'flex') {
+                nextLevel();
+                return;
+            }
+
+            if (isGameActive && e.key.length === 1 && e.key.match(/[a-z \-']/i)) {
+                if (e.key === ' ') e.preventDefault(); 
+                
+                const pressedChar = e.key.toLowerCase();
+                const availableBlocks = Array.from(letterPoolContainer.children);
+                // 排除正在播放錯誤動畫的積木 (opacity !== '0')
+                const targetBlock = availableBlocks.find(b => b.dataset.char === pressedChar && b.style.opacity !== '0');
+
+                if (targetBlock) {
+                    handleQuickPlace(pressedChar, targetBlock);
+                } else {
+                    recordMistake(originalWord);
+                    playErrorSound();
+                    const screen = document.getElementById('game-screen');
+                    screen.classList.add('error-vibrate');
+                    setTimeout(() => screen.classList.remove('error-vibrate'), 300);
+                    comboCount = 0; 
+                    feverOverlay.classList.remove('active');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
