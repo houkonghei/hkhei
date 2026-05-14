@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勇者之塔 - 登頂挑戰</title>
+    <!-- 載入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 載入 React 與 Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        
+        @keyframes hero-bounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-5px) scale(1.1); }
+        }
+        .animate-hero { animation: hero-bounce 1s infinite ease-in-out; }
+
+        @keyframes celebrate-bg {
+            0%, 100% { background-color: #0f172a; }
+            50% { background-color: #1e1b4b; }
+        }
+        .animate-victory { animation: celebrate-bg 2s infinite ease-in-out; }
+
+        @keyframes reward-pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-reward { animation: reward-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .animate-shake { animation: shake 0.2s infinite; }
+    </style>
+</head>
+<body class="bg-slate-950">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        const shuffleArray = (array) => {
+            const newArr = [...array];
+            for (let i = newArr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+            }
+            return newArr;
+        };
+
+        const generateDailyCode = () => {
+            const now = new Date();
+            return now.getFullYear() * (now.getMonth() + 1) * now.getDate();
+        };
+
+        const parseCSV = (text) => {
+            const result = [];
+            let row = [];
+            let col = '';
+            let inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const nextChar = text[i + 1];
+                if (inQuotes) {
+                    if (char === '"' && nextChar === '"') { col += '"'; i++; }
+                    else if (char === '"') { inQuotes = false; }
+                    else { col += char; }
+                } else {
+                    if (char === '"') { inQuotes = true; }
+                    else if (char === ',') { row.push(col); col = ''; }
+                    else if (char === '\r' || char === '\n') {
+                        row.push(col);
+                        if (row.some(f => f.trim() !== '')) result.push(row);
+                        row = []; col = '';
+                        if (char === '\r' && nextChar === '\n') i++;
+                    } else { col += char; }
+                }
+            }
+            if (col !== '' || row.length > 0) {
+                row.push(col);
+                if (row.some(f => f.trim() !== '')) result.push(row);
+            }
+            return result;
+        };
+
+        function App() {
+            const [gameState, setGameState] = useState('intro');
+            const [playerName, setPlayerName] = useState('paco'); 
+            const [level, setLevel] = useState(1);
+            const [questions, setQuestions] = useState([]);
+            const [statusMsg, setStatusMsg] = useState({ text: '', isError: false });
+            const [victoryCode, setVictoryCode] = useState(generateDailyCode());
+            const [userAnswer, setUserAnswer] = useState('');
+            const [hideOptions, setHideOptions] = useState(false); 
+            const [feedback, setFeedback] = useState({ show: false, type: '', correctAns: '', countdown: 8, isTimeout: false, learningMode: false });
+            
+            // 加入抽獎動畫所需的狀態
+            const [showReward, setShowReward] = useState({ 
+                show: false, 
+                type: '', 
+                isGacha: false,
+                gachaPhase: '', // 'rollingType', 'typeResult', 'rollingQty', 'finalResult'
+                displayType: '',
+                displayQty: 1,
+                finalQty: 1
+            });
+            
+            const [hintCount, setHintCount] = useState(1);
+            const [reviveCount, setReviveCount] = useState(0);
+            const [almostCount, setAlmostCount] = useState(0);
+            const [jetpackCount, setJetpackCount] = useState(0);
+
+            const [gameTimer, setGameTimer] = useState(30); 
+            const [hintActive, setHintActive] = useState({ show: false, countdown: 8 });
+
+            const [isEnglishMode, setIsEnglishMode] = useState(false);
+            const [wordInput, setWordInput] = useState('');
+            const [isTranslating, setIsTranslating] = useState(false);
+            const [isPlayingNoise, setIsPlayingNoise] = useState(false);
+
+            const answerInputRef = useRef(null);
+            const fileInputRef = useRef(null);
+            const timerRef = useRef(null);
+            const hintTimerRef = useRef(null);
+            const floorContainerRef = useRef(null);
+            const globalTimerRef = useRef(null);
+            const audioCtxRef = useRef(null);
+            const noiseNodeRef = useRef(null);
+
+            const dotPlaceholder = useMemo(() => {
+                const currentQ = questions[level - 1];
+                if (!currentQ || !currentQ.answer) return "..";
+                return currentQ.answer.replace(/[^\s]/g, '.');
+            }, [level, questions]);
+
+            // 新增：初始化語音庫，確保一開始就載入
+            useEffect(() => {
+                if (window.speechSynthesis) {
+                    window.speechSynthesis.getVoices();
+                    window.speechSynthesis.onvoiceschanged = () => {
+                        window.speechSynthesis.getVoices();
+                    };
+                }
+            }, []);
+
+            // 修改：連續發音功能 (中文 1 次 -> 英文 3 次，優先尋找粵語)
+            const speakSequence = (zhText, enText) => {
+                if (!window.speechSynthesis) return;
+                window.speechSynthesis.cancel(); 
+
+                const voices = window.speechSynthesis.getVoices();
+                
+                // 優先尋找粵語 (包含 HK 或 yue) -> 退而求其次尋找普通話 (包含 zh)
+                let zhVoice = voices.find(v => v.lang === 'zh-HK' || v.lang.includes('HK') || v.lang.includes('yue'));
+                if (!zhVoice) zhVoice = voices.find(v => v.lang.includes('zh-TW') || v.lang.includes('zh-CN') || v.lang.includes('zh'));
+                
+                // 尋找英文發音
+                let enVoice = voices.find(v => v.lang.includes('en-US'));
+                if (!enVoice) enVoice = voices.find(v => v.lang.includes('en'));
+
+                // 1. 發音中文題目 (1次)
+                if (zhText) {
+                    const cleanZhText = zhText.replace(/\?/g, '').trim(); // 去除結尾問號讓發音更自然
+                    const zhMsg = new SpeechSynthesisUtterance(cleanZhText);
+                    if (zhVoice) zhMsg.voice = zhVoice;
+                    zhMsg.lang = zhVoice ? zhVoice.lang : 'zh-HK';
+                    zhMsg.rate = 0.95;
+                    window.speechSynthesis.speak(zhMsg);
+                }
+
+                // 2. 發音英文答案 (3次)
+                if (enText) {
+                    for (let i = 0; i < 3; i++) {
+                        const enMsg = new SpeechSynthesisUtterance(enText);
+                        if (enVoice) enMsg.voice = enVoice;
+                        enMsg.lang = enVoice ? enVoice.lang : 'en-US';
+                        enMsg.rate = 0.85; // 稍微放慢一點，更適合學習
+                        window.speechSynthesis.speak(enMsg);
+                    }
+                }
+            };
+
+            // 抽寶物機制（設定初始狀態與機率）
+            const triggerGacha = () => {
+                const rType = Math.random();
+                let gachaType = '';
+                if (rType < 0.4) gachaType = 'hint';          
+                else if (rType < 0.7) gachaType = 'almost';   
+                else if (rType < 0.9) gachaType = 'revive';   
+                else gachaType = 'jetpack';               
+
+                const rQty = Math.random();
+                let finalQty = 1;
+                if (rQty < 0.4) finalQty = 1;
+                else if (rQty < 0.7) finalQty = 2;
+                else if (rQty < 0.9) finalQty = 3;
+                else finalQty = 5;
+                
+                setShowReward({ 
+                    show: true, 
+                    type: gachaType, // 作為最終 Type
+                    isGacha: true,
+                    gachaPhase: 'rollingType', // 開始第一階段動畫
+                    displayType: 'hint',
+                    displayQty: 1,
+                    finalQty: finalQty
+                });
+            };
+
+            // 老虎機動畫控制 Hook
+            useEffect(() => {
+                if (!showReward.show || !showReward.isGacha) return;
+
+                let interval;
+                let timeout;
+                const types = ['hint', 'almost', 'revive', 'jetpack'];
+                const qtys = [1, 2, 3, 5];
+
+                if (showReward.gachaPhase === 'rollingType') {
+                    let i = 0;
+                    interval = setInterval(() => {
+                        setShowReward(prev => ({ ...prev, displayType: types[i % types.length] }));
+                        playSound('tick'); // 搭搭搭的聲音
+                        i++;
+                    }, 100);
+                    timeout = setTimeout(() => {
+                        clearInterval(interval);
+                        setShowReward(prev => ({ ...prev, gachaPhase: 'typeResult', displayType: prev.type }));
+                        playSound('reward');
+                    }, 1500); // 1.5秒後出寶物
+                } else if (showReward.gachaPhase === 'typeResult') {
+                    timeout = setTimeout(() => {
+                        setShowReward(prev => ({ ...prev, gachaPhase: 'rollingQty' }));
+                    }, 1000); // 停頓1秒後進入數量抽獎
+                } else if (showReward.gachaPhase === 'rollingQty') {
+                    let i = 0;
+                    interval = setInterval(() => {
+                        setShowReward(prev => ({ ...prev, displayQty: qtys[i % qtys.length] }));
+                        playSound('tick');
+                        i++;
+                    }, 100);
+                    timeout = setTimeout(() => {
+                        clearInterval(interval);
+                        setShowReward(prev => ({ ...prev, gachaPhase: 'finalResult', displayQty: prev.finalQty }));
+                        playSound('victory'); // 登登登~ 音效
+                    }, 1500); // 1.5秒後出數量
+                }
+
+                return () => {
+                    clearInterval(interval);
+                    clearTimeout(timeout);
+                };
+            }, [showReward.show, showReward.isGacha, showReward.gachaPhase]);
+
+            // 修改：移除 isEnglishMode 限制，並改用 speakSequence 來播放「中文1次+英文3次」
+            useEffect(() => {
+                if (gameState === 'playing' && questions[level - 1] && !feedback.show && !showReward.show && !hintActive.show) {
+                    const timer = setTimeout(() => {
+                        speakSequence(questions[level - 1].question, questions[level - 1].answer);
+                    }, 400);
+                    return () => clearTimeout(timer);
+                }
+            }, [level, gameState, questions, feedback.show, showReward.show, hintActive.show]);
+
+            useEffect(() => {
+                if (gameState === 'playing' && floorContainerRef.current) {
+                    const currentFloor = floorContainerRef.current.querySelector('.current-floor');
+                    if (currentFloor) {
+                        currentFloor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            }, [level, gameState]);
+
+            useEffect(() => {
+                if (gameState === 'playing' && !feedback.show && !showReward.show && !hintActive.show) {
+                    if (gameTimer > 0) {
+                        globalTimerRef.current = setTimeout(() => setGameTimer(prev => prev - 1), 1000);
+                    } else {
+                        handleTimeout();
+                    }
+                }
+                return () => clearTimeout(globalTimerRef.current);
+            }, [gameState, gameTimer, feedback.show, showReward.show, hintActive.show]);
+
+            const handleTimeout = () => {
+                playSound('error');
+                setFeedback({ 
+                    show: true, 
+                    type: 'error', 
+                    correctAns: questions[level - 1]?.answer, 
+                    countdown: 8,
+                    isTimeout: true,
+                    learningMode: false 
+                });
+            };
+
+            const toggleNoise = () => {
+                if (isPlayingNoise) {
+                    if (noiseNodeRef.current) {
+                        noiseNodeRef.current.source.stop();
+                        noiseNodeRef.current.source.disconnect();
+                        noiseNodeRef.current = null;
+                    }
+                    setIsPlayingNoise(false);
+                } else {
+                    if (!audioCtxRef.current) {
+                        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+                    if (audioCtxRef.current.state === 'suspended') {
+                        audioCtxRef.current.resume();
+                    }
+                    const ctx = audioCtxRef.current;
+                    const bufferSize = ctx.sampleRate * 2; 
+                    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    let lastOut = 0;
+                    for (let i = 0; i < bufferSize; i++) {
+                        const white = Math.random() * 2 - 1;
+                        lastOut = (lastOut + (0.02 * white)) / 1.02;
+                        data[i] = lastOut * 3.5; 
+                    }
+                    const noiseSource = ctx.createBufferSource();
+                    noiseSource.buffer = buffer;
+                    noiseSource.loop = true;
+                    const gainNode = ctx.createGain();
+                    gainNode.gain.value = 0.1; 
+                    noiseSource.connect(gainNode);
+                    gainNode.connect(ctx.destination);
+                    noiseSource.start();
+                    noiseNodeRef.current = { source: noiseSource, gain: gainNode };
+                    setIsPlayingNoise(true);
+                }
+            };
+
+            useEffect(() => {
+                return () => {
+                    if (noiseNodeRef.current) {
+                        noiseNodeRef.current.source.stop();
+                        noiseNodeRef.current.source.disconnect();
+                    }
+                };
+            }, []);
+
+            const playSound = (type) => {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    
+                    if (type === 'tick') {
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(800, ctx.currentTime);
+                        osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.05);
+                        gain.gain.setValueAtTime(0.01, ctx.currentTime);
+                        osc.start(); osc.stop(ctx.currentTime + 0.05);
+                        return;
+                    } else if (type === 'success') {
+                        osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+                        osc.frequency.exponentialRampToValueAtTime(1046.50, ctx.currentTime + 0.4);
+                        gain.gain.setValueAtTime(0.05, ctx.currentTime);
+                    } else if (type === 'item' || type === 'reward') {
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(440, ctx.currentTime);
+                        osc.frequency.linearRampToValueAtTime(880, ctx.currentTime + 0.1);
+                        osc.frequency.linearRampToValueAtTime(1320, ctx.currentTime + 0.2);
+                        gain.gain.setValueAtTime(0.05, ctx.currentTime);
+                    } else if (type === 'jet') {
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(100, ctx.currentTime);
+                        osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.5);
+                        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    } else if (type === 'error') {
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(150, ctx.currentTime);
+                        gain.gain.setValueAtTime(0.05, ctx.currentTime);
+                    } else if (type === 'victory') {
+                        const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50, 1318.51];
+                        notes.forEach((freq, index) => {
+                            const o = ctx.createOscillator();
+                            const g = ctx.createGain();
+                            o.type = 'triangle';
+                            o.connect(g);
+                            g.connect(ctx.destination);
+                            const startTime = ctx.currentTime + (index * 0.15);
+                            o.frequency.setValueAtTime(freq, startTime);
+                            g.gain.setValueAtTime(0, startTime);
+                            g.gain.linearRampToValueAtTime(0.15, startTime + 0.05);
+                            g.gain.exponentialRampToValueAtTime(0.01, startTime + 0.4);
+                            o.start(startTime); o.stop(startTime + 0.5);
+                        });
+                        return;
+                    }
+                    osc.start(); osc.stop(ctx.currentTime + 0.4);
+                } catch (e) {}
+            };
+
+            const useHint = () => {
+                if (hintCount <= 0 || hintActive.show || feedback.show || showReward.show) return;
+                setHintCount(prev => prev - 1);
+                setHintActive({ show: true, countdown: 8 });
+                playSound('item');
+            };
+
+            const useRevive = () => {
+                if (reviveCount <= 0) return;
+                setReviveCount(prev => prev - 1);
+                setFeedback(prev => ({ ...prev, learningMode: true, countdown: 8 }));
+                // 修改：免死金牌復活時也觸發新的學習發音序列
+                speakSequence(questions[level-1].question, questions[level-1].answer);
+            };
+
+            const useAlmost = () => {
+                if (almostCount <= 0 || hintActive.show || feedback.show || showReward.show) return;
+                const correct = questions[level - 1].answer;
+                const vowels = ['a', 'e', 'i', 'o', 'u'];
+                const indices = [];
+                for (let i = 0; i < correct.length; i++) {
+                    if (vowels.includes(correct[i].toLowerCase())) indices.push(i);
+                }
+
+                if (indices.length === 0) {
+                    const randIdx = Math.floor(Math.random() * correct.length);
+                    const currentLetter = correct[randIdx].toLowerCase();
+                    const nextLetter = String.fromCharCode(((currentLetter.charCodeAt(0) - 97 + 1) % 26) + 97);
+                    setUserAnswer(correct.substring(0, randIdx) + nextLetter + correct.substring(randIdx + 1));
+                } else {
+                    const randIdx = indices[Math.floor(Math.random() * indices.length)];
+                    const currentVowel = correct[randIdx].toLowerCase();
+                    const otherVowels = vowels.filter(v => v !== currentVowel);
+                    const newVowel = otherVowels[Math.floor(Math.random() * otherVowels.length)];
+                    setUserAnswer(correct.substring(0, randIdx) + newVowel + correct.substring(randIdx + 1));
+                }
+                setAlmostCount(prev => prev - 1);
+                playSound('item');
+                setTimeout(() => answerInputRef.current?.focus(), 100);
+            };
+
+            const useJetpack = () => {
+                if (jetpackCount <= 0 || hintActive.show || feedback.show || showReward.show) return;
+                setJetpackCount(prev => prev - 1);
+                playSound('jet');
+                setFeedback({ show: true, type: 'success', correctAns: questions[level - 1].answer, countdown: 3, isTimeout: false, learningMode: false });
+            };
+
+            useEffect(() => {
+                if (hintActive.show && hintActive.countdown > 0) {
+                    hintTimerRef.current = setTimeout(() => setHintActive(prev => ({ ...prev, countdown: prev.countdown - 1 })), 1000);
+                } else if (hintActive.show && hintActive.countdown === 0) {
+                    setHintActive({ show: false, countdown: 8 });
+                    answerInputRef.current?.focus();
+                }
+                return () => clearTimeout(hintTimerRef.current);
+            }, [hintActive.show, hintActive.countdown]);
+
+            const handleFeedbackClose = () => {
+                clearTimeout(timerRef.current);
+                const isCorrect = feedback.type === 'success';
+                const isLearning = feedback.learningMode;
+                const currentLevel = level;
+                
+                setFeedback({ show: false, type: '', correctAns: '', countdown: 8, isTimeout: false, learningMode: false });
+                setUserAnswer('');
+
+                if (isLearning) {
+                    setGameTimer(30);
+                    setTimeout(() => answerInputRef.current?.focus(), 100);
+                    return;
+                }
+
+                if (isCorrect) {
+                    if (currentLevel >= questions.length) {
+                        setGameState('won');
+                        playSound('victory');
+                    } else {
+                        const jetpackLevels = [17, 47, 77];
+                        const hintLevels = [5, 13, 24, 36, 49, 61, 74, 88];
+                        
+                        if (currentLevel % 12 === 0) {
+                            setShowReward({ show: true, type: 'revive', isGacha: false });
+                            playSound('reward');
+                        } else if (jetpackLevels.includes(currentLevel)) {
+                            setShowReward({ show: true, type: 'jetpack', isGacha: false });
+                            playSound('reward');
+                        } else if (currentLevel % 9 === 0) {
+                            setShowReward({ show: true, type: 'almost', isGacha: false });
+                            playSound('reward');
+                        } else if (hintLevels.includes(currentLevel)) {
+                            setShowReward({ show: true, type: 'hint', isGacha: false });
+                            playSound('reward');
+                        } else {
+                            setLevel(prev => prev + 1);
+                            setGameTimer(30);
+                        }
+                    }
+                } else {
+                    setLevel(1);
+                    setHintCount(1);
+                    setReviveCount(0);
+                    setAlmostCount(0);
+                    setJetpackCount(0);
+                    setGameTimer(30);
+                    setQuestions(prev => shuffleArray(prev).map((q, i) => ({ ...q, level: i + 1 })));
+                    triggerGacha();
+                }
+                setHideOptions(false);
+                setTimeout(() => answerInputRef.current?.focus(), 100);
+            };
+
+            const collectReward = () => {
+                const { type, isGacha, finalQty, gachaPhase } = showReward;
+                
+                // 動畫還沒跑完前，防止玩家按太快領取
+                if (isGacha && gachaPhase !== 'finalResult') return;
+
+                const qtyToAdd = isGacha ? finalQty : 1;
+                
+                setShowReward({ show: false, type: '', isGacha: false, gachaPhase: '', displayType: '', displayQty: 1, finalQty: 1 });
+                
+                if (type === 'revive') setReviveCount(prev => prev + qtyToAdd);
+                else if (type === 'jetpack') setJetpackCount(prev => prev + qtyToAdd);
+                else if (type === 'almost') setAlmostCount(prev => prev + qtyToAdd);
+                else setHintCount(prev => prev + qtyToAdd);
+                
+                if (!isGacha) {
+                    setLevel(prev => prev + 1);
+                }
+                setGameTimer(30);
+                setTimeout(() => answerInputRef.current?.focus(), 100);
+            };
+
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (feedback.show && e.key === 'Enter') {
+                        if (feedback.type === 'error' && !feedback.learningMode) {
+                            if (reviveCount === 0) { e.preventDefault(); handleFeedbackClose(); }
+                            return;
+                        }
+                        e.preventDefault(); handleFeedbackClose();
+                    } else if (showReward.show && e.key === 'Enter') {
+                        // 如果是抽獎且動畫還沒到最後階段，禁止 Enter 跳過
+                        if (showReward.isGacha && showReward.gachaPhase !== 'finalResult') {
+                            e.preventDefault();
+                            return;
+                        }
+                        e.preventDefault(); collectReward();
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [feedback.show, feedback.learningMode, showReward.show, reviveCount, showReward.gachaPhase]);
+
+            useEffect(() => {
+                if (feedback.show && feedback.countdown > 0) {
+                    timerRef.current = setTimeout(() => setFeedback(prev => ({ ...prev, countdown: prev.countdown - 1 })), 1000);
+                } else if (feedback.show && feedback.countdown === 0) {
+                    handleFeedbackClose();
+                }
+                return () => clearTimeout(timerRef.current);
+            }, [feedback.show, feedback.countdown]);
+
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const text = event.target.result;
+                    const allRows = parseCSV(text);
+                    const dataRows = allRows.slice(1);
+                    const qs = shuffleArray(dataRows.map((r, i) => ({
+                        question: (r[0] || '').replace(/\\n/g, '\n'),
+                        answer: (r[1] || '').trim(),
+                        optA: r[2] || '', optB: r[3] || '', optC: r[4] || '', optD: r[5] || '',
+                    }))).map((q, i) => ({ ...q, level: i + 1 }));
+                    if (qs.length === 0) { setStatusMsg({ text: `❌ 找不到有效題目`, isError: true }); return; }
+                    setIsEnglishMode(false);
+                    setQuestions(qs);
+                    setStatusMsg({ text: `✅ CSV 載入成功！共 ${qs.length} 題`, isError: false });
+                };
+                reader.readAsText(file);
+            };
+
+            const handleEnglishMode = async () => {
+                if (!wordInput.trim()) { setStatusMsg({ text: `❌ 請輸入英文內容`, isError: true }); return; }
+                setIsTranslating(true);
+                const lines = wordInput.split(/\n+/).map(w => w.trim()).filter(w => w !== "");
+                const uniqueLines = [...new Set(lines)];
+                if (uniqueLines.length < 2) { setStatusMsg({ text: `❌ 請至少輸入 2 個詞組`, isError: false }); setIsTranslating(false); return; }
+                try {
+                    const newQuestions = [];
+                    for (const term of uniqueLines) {
+                        const apiUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q=${encodeURIComponent(term)}`;
+                        const response = await fetch(apiUrl);
+                        const data = await response.json();
+                        newQuestions.push({ question: `${data[0][0][0]} ?`, answer: term, optA: '', optB: '', optC: '', optD: '' });
+                    }
+                    const finalQs = shuffleArray(newQuestions).map((q, i) => ({ ...q, level: i + 1 }));
+                    setIsEnglishMode(true);
+                    setQuestions(finalQs);
+                    setStatusMsg({ text: `✅ 英文題庫已就緒！`, isError: false });
+                } catch (error) { setStatusMsg({ text: `❌ 翻譯服務出錯`, isError: true }); }
+                finally { setIsTranslating(false); }
+            };
+
+            const submitAnswer = (e) => {
+                e.preventDefault();
+                const rawInput = userAnswer.trim().toLowerCase();
+                const currentQ = questions[level - 1];
+                if (!currentQ || hintActive.show || feedback.show || showReward.show) return;
+                
+                const formattedInput = rawInput.replace(/\s+/g, '');
+                const formattedAnswer = currentQ.answer.toLowerCase().replace(/\s+/g, '');
+                
+                const isCorrect = formattedInput === formattedAnswer;
+                playSound(isCorrect ? 'success' : 'error');
+                setFeedback({ show: true, type: isCorrect ? 'success' : 'error', correctAns: currentQ.answer, countdown: 8, isTimeout: false, learningMode: false });
+            };
+
+            // 輔助函式：取得對應 Icon 與顏色
+            const getIcon = (type) => type === 'revive' ? '🏅' : (type === 'jetpack' ? '🚀' : (type === 'almost' ? '🥴' : '😇'));
+            const getTypeName = (type) => type === 'revive' ? '免死金牌' : (type === 'jetpack' ? '火箭跳關' : (type === 'almost' ? '差不多先生' : '天神助力'));
+            const getBorderColor = (type) => type === 'revive' ? 'border-orange-500' : (type === 'jetpack' ? 'border-cyan-500' : (type === 'almost' ? 'border-indigo-500' : 'border-yellow-500'));
+
+            if (gameState === 'intro') {
+                const canStart = playerName.trim() !== '' && questions.length > 0;
+                return (
+                    <div className="min-h-screen text-white flex flex-col items-center justify-center p-4">
+                        <div className="max-w-xl w-full bg-slate-900 p-8 rounded-[2.5rem] border border-slate-800 shadow-2xl space-y-8">
+                            <div className="text-center">
+                                <h1 className="text-5xl font-black text-yellow-400">勇者之塔</h1>
+                                <p className="text-slate-500 mt-2 font-bold tracking-widest">TOWER OF CHALLENGE</p>
+                            </div>
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div className="bg-slate-800/40 p-6 rounded-3xl border border-slate-700/50">
+                                    <h2 className="text-xs font-black text-slate-500 mb-4 uppercase tracking-widest">📁 題庫上傳</h2>
+                                    <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" ref={fileInputRef} />
+                                    <button onClick={() => fileInputRef.current.click()} className="w-full bg-slate-700 hover:bg-slate-600 py-4 rounded-xl transition font-bold text-sm">選擇 CSV</button>
+                                    {statusMsg.text && <p className={`mt-2 text-[10px] text-center ${statusMsg.isError ? 'text-red-400' : 'text-emerald-400'}`}>{statusMsg.text}</p>}
+                                </div>
+                                <div className="bg-slate-800/40 p-6 rounded-3xl border border-slate-700/50">
+                                    <h2 className="text-xs font-black text-emerald-500 mb-4 uppercase tracking-widest">📖 英文模式</h2>
+                                    <textarea className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs font-mono h-20 mb-3" placeholder="例如: apple" value={wordInput} onChange={(e) => setWordInput(e.target.value)}></textarea>
+                                    <button onClick={handleEnglishMode} disabled={isTranslating} className={`w-full py-3 rounded-xl transition text-sm font-bold ${isTranslating ? 'bg-slate-700' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}>{isTranslating ? '⏳ 生成中...' : '自動生成關卡'}</button>
+                                </div>
+                            </div>
+                            <form onSubmit={(e) => { 
+                                e.preventDefault(); 
+                                if(canStart) {
+                                    setGameState('playing'); 
+                                    setHintCount(1);
+                                    setReviveCount(0);
+                                    setAlmostCount(0);
+                                    setJetpackCount(0);
+                                    triggerGacha();
+                                }
+                            }} className="space-y-4 pt-4 border-t border-slate-800">
+                                <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value)} className="w-full px-4 py-4 bg-slate-800 border-2 border-slate-700 rounded-2xl text-center text-2xl font-black focus:border-yellow-500 outline-none" placeholder="英雄請留名" required />
+                                <button type="submit" disabled={!canStart} className={`w-full font-black py-5 rounded-2xl transition text-2xl shadow-xl ${!canStart ? 'bg-slate-800 text-slate-600' : 'bg-yellow-500 text-slate-950 hover:bg-yellow-400'}`}>開始挑戰</button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameState === 'won') {
+                return (
+                    <div className="min-h-screen animate-victory text-white flex flex-col items-center justify-center p-4 text-center">
+                        <div className="text-9xl mb-4 animate-bounce">🏆</div>
+                        <h1 className="text-6xl font-black text-yellow-400">傳說誕生！</h1>
+                        <p className="text-2xl mt-4">{playerName} 已征服 {questions.length} 層樓！</p>
+                        <div className="mt-8 bg-white p-8 rounded-3xl text-slate-950 font-black text-7xl font-mono">{victoryCode}</div>
+                        <button onClick={() => location.reload()} className="mt-8 bg-yellow-500 py-5 px-16 rounded-2xl text-2xl text-slate-950 font-black">返回首頁</button>
+                    </div>
+                );
+            }
+
+            const floorHeight = questions.length > 30 ? 'min-h-[40px]' : 'flex-grow';
+
+            return (
+                <div className="min-h-screen flex flex-col p-4 bg-slate-950 text-slate-200">
+                    <div className="w-full max-w-7xl mx-auto flex justify-between items-center mb-4 shrink-0">
+                        <div className="flex gap-4 items-center">
+                            <button onClick={() => location.reload()} className="text-slate-600 font-bold hover:text-white transition">放棄</button>
+                            <button onClick={toggleNoise} className={`px-3 py-1.5 rounded-xl border text-xs font-black transition-colors ${isPlayingNoise ? 'bg-indigo-600/20 border-indigo-500 text-indigo-400' : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-300'}`}>
+                                {isPlayingNoise ? '🎧 關閉白噪音' : '🎧 專注白噪音'}
+                            </button>
+                        </div>
+                        <div className="flex gap-3 items-center">
+                            <div className="flex gap-2">
+                                <div className={`bg-slate-900 px-3 py-1.5 rounded-xl border flex items-center gap-2 ${hintCount > 0 ? 'border-yellow-500' : 'border-slate-800 opacity-40'}`}>
+                                    <span className="text-lg">😇</span><span className="text-yellow-500 font-black text-xs">{hintCount}</span>
+                                    {hintCount > 0 && <button onClick={useHint} className="ml-1 bg-yellow-500 text-slate-950 px-1.5 py-0.5 rounded text-[9px] font-black">用</button>}
+                                </div>
+                                <div className={`bg-slate-900 px-3 py-1.5 rounded-xl border flex items-center gap-2 ${almostCount > 0 ? 'border-indigo-400' : 'border-slate-800 opacity-40'}`}>
+                                    <span className="text-lg">🥴</span><span className="text-indigo-400 font-black text-xs">{almostCount}</span>
+                                    {almostCount > 0 && <button onClick={useAlmost} className="ml-1 bg-indigo-500 text-white px-1.5 py-0.5 rounded text-[9px] font-black">用</button>}
+                                </div>
+                                <div className={`bg-slate-900 px-3 py-1.5 rounded-xl border flex items-center gap-2 ${jetpackCount > 0 ? 'border-cyan-400' : 'border-slate-800 opacity-40'}`}>
+                                    <span className="text-lg">🚀</span><span className="text-cyan-400 font-black text-xs">{jetpackCount}</span>
+                                    {jetpackCount > 0 && <button onClick={useJetpack} className="ml-1 bg-cyan-500 text-white px-1.5 py-0.5 rounded text-[9px] font-black">跳</button>}
+                                </div>
+                                <div className={`bg-slate-900 px-3 py-1.5 rounded-xl border flex items-center gap-2 ${reviveCount > 0 ? 'border-orange-500' : 'border-slate-800 opacity-40'}`}>
+                                    <span className="text-lg">🏅</span><span className="text-orange-500 font-black text-xs">{reviveCount}</span>
+                                </div>
+                            </div>
+                            <div className="bg-slate-900 px-6 py-2 rounded-xl border border-slate-800 text-sm">
+                                <span className="text-slate-500 mr-4 font-bold">👨‍🎤 {playerName}</span>
+                                <span>F <span className="text-yellow-500 font-black">{level}</span> / {questions.length}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="w-full max-w-7xl mx-auto flex flex-grow gap-6 overflow-hidden">
+                        <div className="w-24 md:w-28 bg-slate-900/60 rounded-3xl p-1 flex flex-col border border-slate-800 shrink-0">
+                            <div ref={floorContainerRef} className="w-full flex flex-col-reverse overflow-y-auto custom-scrollbar h-full rounded-2xl relative">
+                                {(() => {
+                                    const chunkSize = Math.max(1, Math.ceil(questions.length / 12));
+                                    const groups = [];
+                                    for (let i = 0; i < questions.length; i += chunkSize) {
+                                        groups.push({
+                                            start: i + 1,
+                                            end: Math.min(i + chunkSize, questions.length)
+                                        });
+                                    }
+                                    const groupHeight = groups.length > 10 ? 'min-h-[32px]' : 'flex-grow';
+                                    
+                                    return groups.map((group, index) => {
+                                        const isCurrent = level >= group.start && level <= group.end;
+                                        const isPast = level > group.end;
+                                        const label = group.start === group.end ? `${group.start}F` : `${group.start}-${group.end}F`;
+                                        return (
+                                            <div key={index} className={`w-full ${groupHeight} border-b border-white/5 flex flex-row items-center justify-center gap-1 md:gap-2 px-1 ${isCurrent ? 'bg-yellow-500/20 current-floor' : (isPast ? 'bg-emerald-500/10' : '')}`}>
+                                                {isCurrent && <div className="animate-hero text-base md:text-lg">👨‍🎤</div>}
+                                                <span className={`text-[9px] md:text-[11px] font-black whitespace-nowrap ${isCurrent ? 'text-yellow-500' : 'text-slate-700'}`}>{label}</span>
+                                            </div>
+                                        );
+                                    });
+                                })()}
+                            </div>
+                        </div>
+
+                        <div className="flex-grow flex flex-col gap-4 overflow-hidden relative">
+                            <div className="w-full bg-slate-900 h-5 rounded-full overflow-hidden border border-slate-800 relative">
+                                <div className={`h-full transition-all duration-1000 ease-linear ${gameTimer <= 5 ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} style={{ width: `${(gameTimer / 30) * 100}%` }}></div>
+                                <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white mix-blend-difference">TIME: {gameTimer}S</div>
+                            </div>
+
+                            {hintActive.show && (
+                                <div className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm rounded-[2.5rem] p-8 animate-in zoom-in">
+                                    <div className="bg-white rounded-3xl p-10 text-center shadow-2xl border-4 border-yellow-500 max-w-md w-full">
+                                        <div className="text-6xl mb-4 animate-bounce">😇</div>
+                                        <h4 className="text-slate-400 font-black uppercase text-sm mb-2">天神正在助力...</h4>
+                                        {/* 防作弊：禁止選中文字、禁止右鍵、禁止複製 */}
+                                        <div 
+                                            className="text-6xl font-black text-slate-800 mb-6 lowercase select-none"
+                                            onContextMenu={(e) => e.preventDefault()}
+                                            onCopy={(e) => e.preventDefault()}
+                                        >
+                                            {questions[level-1]?.answer}
+                                        </div>
+                                        <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+                                            <div className="bg-yellow-500 h-full" style={{ width: `${(hintActive.countdown / 8) * 100}%` }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="bg-white rounded-[2.5rem] flex flex-col border border-slate-300 flex-grow overflow-hidden shadow-2xl relative">
+                                <div className={`flex-grow p-8 md:p-12 bg-amber-50/50 flex flex-col justify-center items-center text-center ${gameTimer <= 5 ? 'animate-shake' : ''}`}>
+                                    <div className="text-slate-800 text-3xl md:text-6xl font-black whitespace-pre-wrap leading-relaxed z-10">{questions[level-1]?.question}</div>
+                                    {/* 修改：讓語音按鈕永遠顯示（支援CSV），並綁定新的發音序列 */}
+                                    <button onClick={() => speakSequence(questions[level-1].question, questions[level-1].answer)} className="mt-6 bg-slate-100 hover:bg-slate-200 transition-colors p-4 rounded-full text-3xl shadow-sm active:scale-95">🔊</button>
+                                </div>
+                                
+                                {!isEnglishMode && !hideOptions && (
+                                    <div className="px-8 py-4 bg-slate-50 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        {['optA', 'optB', 'optC', 'optD'].map((k, i) => (
+                                            <div key={k} className="bg-white p-3 rounded-xl border border-slate-200 flex items-center gap-2 text-sm">
+                                                <span className="bg-slate-200 text-slate-500 px-2 rounded font-black">{i+1}</span>
+                                                <span className="text-slate-600 font-bold truncate">{questions[level-1]?.[k] || '---'}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className="p-8 bg-slate-900 flex items-stretch gap-6 min-h-[120px]">
+                                    {!isEnglishMode && (
+                                        <button onClick={() => setHideOptions(!hideOptions)} className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all ${hideOptions ? 'bg-yellow-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}><span className="text-3xl">{hideOptions ? '🙈' : '👁️'}</span></button>
+                                    )}
+                                    <form onSubmit={submitAnswer} className="flex-grow flex gap-4">
+                                        <input 
+                                            ref={answerInputRef} 
+                                            type="text" 
+                                            value={userAnswer} 
+                                            onChange={e => setUserAnswer(e.target.value)} 
+                                            onPaste={e => e.preventDefault()} /* 防作弊：禁止貼上文字到輸入框 */
+                                            className="flex-grow pl-10 md:pl-24 px-8 bg-slate-800 border-2 border-slate-700 rounded-3xl text-4xl font-black text-white outline-none focus:border-yellow-500 transition-colors tracking-widest font-mono" 
+                                            placeholder={dotPlaceholder} 
+                                            autoFocus 
+                                            autoComplete="off" 
+                                        />
+                                        <button type="submit" disabled={hintActive.show || showReward.show} className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black px-12 rounded-3xl text-2xl shadow-lg border-b-4 border-yellow-700 active:border-b-0 active:translate-y-1 transition-all">提交</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {feedback.show && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-xl">
+                            <div className={`bg-white rounded-[3rem] p-10 max-w-xl w-full text-center border-t-[16px] ${feedback.type === 'success' ? 'border-emerald-500' : 'border-red-600'}`}>
+                                <div className="text-8xl mb-4">{feedback.type === 'success' ? '✨' : '💥'}</div>
+                                <h3 className={`text-4xl font-black mb-6 ${feedback.type === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>
+                                    {feedback.type === 'success' ? '回答正確！' : (feedback.isTimeout ? '時間終了！' : '不幸答錯！')}
+                                </h3>
+                                
+                                <div className="bg-slate-50 p-8 rounded-3xl mb-8 border-2 border-slate-100">
+                                    <p className="text-slate-400 text-xs font-black mb-2 uppercase select-none">正確答案 ANSWER</p>
+                                    {/* 防作弊：死亡回饋畫面也一併禁止複製 */}
+                                    <div 
+                                        className="text-5xl font-black text-slate-800 lowercase select-none"
+                                        onContextMenu={(e) => e.preventDefault()}
+                                        onCopy={(e) => e.preventDefault()}
+                                    >
+                                        {feedback.correctAns}
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-3">
+                                    {feedback.type === 'error' && reviveCount > 0 && !feedback.learningMode ? (
+                                        <button onClick={useRevive} className="bg-orange-500 py-5 rounded-2xl text-2xl font-black text-white shadow-lg shadow-orange-900/50">🏅 使用免死金牌</button>
+                                    ) : (
+                                        <button onClick={handleFeedbackClose} className={`py-5 rounded-2xl text-2xl font-black ${feedback.type === 'success' ? 'bg-yellow-500 text-slate-950' : 'bg-slate-200 text-slate-700'}`}>
+                                            {feedback.type === 'success' ? '🚀 下一層 (Enter)' : '🔄 重來 (Enter)'}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {showReward.show && (
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+                            <div className={`bg-slate-900 border-4 rounded-[3rem] p-12 max-w-md w-full text-center transition-colors duration-300 ${showReward.gachaPhase === 'finalResult' || !showReward.isGacha ? 'animate-reward' : ''} ${showReward.isGacha && showReward.gachaPhase === 'rollingType' ? 'border-slate-500' : getBorderColor(showReward.isGacha ? showReward.displayType : showReward.type)}`}>
+                                
+                                {showReward.isGacha ? (
+                                    <>
+                                        {/* 階段 1: 滾動寶物種類 */}
+                                        {showReward.gachaPhase === 'rollingType' && (
+                                            <>
+                                                <div className="text-9xl mb-6">{getIcon(showReward.displayType)}</div>
+                                                <h2 className="text-3xl font-black text-white mb-8">抽取寶物中...</h2>
+                                            </>
+                                        )}
+                                        {/* 階段 2: 顯示抽中的寶物 */}
+                                        {showReward.gachaPhase === 'typeResult' && (
+                                            <>
+                                                <div className="text-9xl mb-6 animate-reward">{getIcon(showReward.displayType)}</div>
+                                                <h2 className="text-4xl font-black text-yellow-400 mb-8">抽中：{getTypeName(showReward.displayType)}！</h2>
+                                            </>
+                                        )}
+                                        {/* 階段 3: 滾動寶物數量 */}
+                                        {showReward.gachaPhase === 'rollingQty' && (
+                                            <>
+                                                <div className="text-8xl mb-6 flex justify-center items-center gap-6">
+                                                    <span>{getIcon(showReward.displayType)}</span>
+                                                    <span className="text-6xl text-white font-mono">x {showReward.displayQty}</span>
+                                                </div>
+                                                <h2 className="text-3xl font-black text-white mb-8">決定數量中...</h2>
+                                            </>
+                                        )}
+                                        {/* 階段 4: 最終結果與按鈕 */}
+                                        {showReward.gachaPhase === 'finalResult' && (
+                                            <>
+                                                <div className="text-8xl mb-6 flex justify-center items-center gap-6 animate-reward">
+                                                    <span>{getIcon(showReward.displayType)}</span>
+                                                    <span className="text-7xl text-yellow-400 font-black font-mono">x {showReward.displayQty}</span>
+                                                </div>
+                                                <h2 className="text-4xl font-black text-yellow-400 mb-8">
+                                                    {showReward.displayQty >= 3 ? '🎉 運氣爆棚！' : '✨ 開局順利！'}
+                                                </h2>
+                                                <button onClick={collectReward} className="w-full bg-yellow-500 py-5 rounded-2xl text-2xl text-slate-950 font-black hover:bg-yellow-400 transition-colors">收下寶物 (Enter)</button>
+                                            </>
+                                        )}
+                                    </>
+                                ) : (
+                                    /* 非抽獎狀態 (過關途中給的固定獎勵) 的原本 UI */
+                                    <>
+                                        <div className="text-9xl mb-6">{getIcon(showReward.type)}</div>
+                                        <h2 className="text-4xl font-black text-white mb-8">取得新寶物！</h2>
+                                        <button onClick={collectReward} className="w-full bg-yellow-500 py-5 rounded-2xl text-2xl text-slate-950 font-black">收下寶物 (Enter)</button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

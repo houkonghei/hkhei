@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英文默寫助手 Pro+ (Ultimate Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap');
+        
+        :root {
+            --primary: #3b82f6;
+            --bg-main: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-main);
+            transition: all 0.3s ease;
+        }
+
+        .card { background-color: var(--card-bg); }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        .cursor-blink { border-right: 3px solid #3b82f6; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        .word-correct { color: #10b981; text-shadow: 0 0 10px rgba(16, 185, 129, 0.2); }
+        .word-current { color: #3b82f6; position: relative; }
+        .word-current::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 2px; background: #3b82f6; }
+        .word-pending { color: var(--text-muted); opacity: 0.4; }
+
+        .shake-impact { animation: shake-impact 0.2s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake-impact { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } }
+
+        .letter-pop { display: inline-block; animation: pop-animation 0.15s ease-out; }
+        @keyframes pop-animation { 0% { transform: scale(1.4); color: #60a5fa; } 100% { transform: scale(1); } }
+
+        .particle { position: absolute; pointer-events: none; background: #3b82f6; border-radius: 50%; animation: particle-fade 0.6s ease-out forwards; z-index: 100; }
+        @keyframes particle-fade { to { transform: translate(var(--tw-x), var(--tw-y)) scale(0); opacity: 0; } }
+
+        .celebrate-text { animation: bounce-in 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        @keyframes bounce-in { 0% { transform: scale(0); } 70% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+
+        .combo-high { color: #f59e0b; text-shadow: 0 0 20px rgba(245, 158, 11, 0.8); animation: pulse-combo 0.8s infinite; }
+        @keyframes pulse-combo { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 overflow-x-hidden">
+    <div id="app-container" class="max-w-4xl mx-auto card rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-700/50">
+        
+        <!-- 頂部工具列 -->
+        <div class="px-8 py-4 flex justify-between items-center border-b border-slate-700/50 bg-slate-900/30">
+            <div class="flex gap-4">
+                <div class="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-xl border border-slate-700">
+                    <span class="text-[10px] font-bold uppercase opacity-50">音效</span>
+                    <button id="bgm-toggle" onclick="toggleBGM()" class="text-slate-400 hover:text-blue-500 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div id="combo-badge" class="hidden flex items-center gap-2">
+                <span id="combo-count" class="text-3xl font-black italic text-slate-500">0</span>
+                <span class="text-xs font-black italic opacity-40">COMBO</span>
+            </div>
+        </div>
+
+        <div id="main-content">
+            <!-- 設定介面 -->
+            <div id="view-setup" class="p-8 space-y-8">
+                <div class="space-y-4">
+                    <div class="flex justify-between items-end">
+                        <h2 class="text-2xl font-black tracking-tight">1. 準備默寫內容</h2>
+                        <button onclick="document.getElementById('text-input').value=''" class="text-xs text-rose-400 hover:underline">清空文字</button>
+                    </div>
+                    <textarea id="text-input" class="w-full h-56 p-6 bg-slate-800/50 border-2 border-slate-700 rounded-3xl focus:border-blue-500 outline-none transition-all text-lg font-mono leading-relaxed" placeholder="在此輸入或貼上英文文章..."></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black uppercase opacity-50 ml-2">難度提示</label>
+                        <select id="hint-mode" class="w-full p-4 bg-slate-800 border border-slate-700 rounded-2xl outline-none cursor-pointer">
+                            <option value="all" selected>顯示完整灰字</option>
+                            <option value="first">僅顯示首字母</option>
+                            <option value="none">完全隱藏內容</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="handleStartNew()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-95">
+                            開始挑戰 →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 練習介面 -->
+            <div id="view-practice" class="hidden p-8 space-y-8">
+                <div class="flex items-center gap-6">
+                    <div class="flex-1 bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="bg-blue-500 h-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <span id="progress-text" class="text-sm font-mono font-bold text-blue-500">0%</span>
+                </div>
+
+                <div id="display-area" class="relative min-h-[300px] p-10 bg-slate-900/80 rounded-[2.5rem] text-3xl leading-[1.8] font-mono border border-slate-700/50 overflow-y-auto max-h-[450px]"></div>
+
+                <div class="flex justify-center">
+                    <button onclick="speakCurrentWord()" class="flex items-center gap-3 bg-slate-800 border border-slate-700 px-10 py-4 rounded-2xl font-black hover:border-blue-500 transition-all group">
+                        <span class="group-hover:scale-125 transition-transform">🔊</span> 
+                        <span>聽發音 (Enter / Space)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 結算視圖 -->
+            <div id="view-result" class="hidden p-10 space-y-10">
+                <div class="text-center space-y-2">
+                    <div class="celebrate-text text-6xl">🏆</div>
+                    <h2 class="text-4xl font-black">完成默寫！</h2>
+                    <p id="final-accuracy" class="text-blue-500 font-bold text-xl tracking-tighter"></p>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700/50 text-center">
+                        <div class="text-[10px] font-black opacity-40 mb-1 uppercase">最高連擊</div>
+                        <div id="res-combo" class="text-3xl font-black text-amber-500">0</div>
+                    </div>
+                    <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700/50 text-center">
+                        <div class="text-[10px] font-black opacity-40 mb-1 uppercase">錯誤次數</div>
+                        <div id="res-errors" class="text-3xl font-black text-rose-500">0</div>
+                    </div>
+                    <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700/50 text-center">
+                        <div class="text-[10px] font-black opacity-40 mb-1 uppercase">總單字數</div>
+                        <div id="res-words" class="text-3xl font-black text-emerald-500">0</div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-black text-rose-500 flex items-center gap-2">🧠 智慧糾錯專區</h3>
+                        <button id="btn-smart-fix" onclick="startSmartFix()" class="hidden text-xs bg-rose-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-rose-500 transition-all shadow-lg shadow-rose-900/20">
+                            進行糾錯練習 (重複 3 次)
+                        </button>
+                    </div>
+                    <div id="result-mistakes" class="flex flex-wrap gap-2 min-h-[40px]"></div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <button onclick="startPractice(state.originalText)" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-3xl shadow-xl transition-all active:scale-95">
+                        再練一次原文章
+                    </button>
+                    <button onclick="resetToSetup()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-black py-5 rounded-3xl border border-slate-700 transition-all">
+                        返回首頁設定
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="text" id="hidden-input" class="fixed opacity-0 pointer-events-none" autocomplete="off" spellcheck="false">
+
+    <script>
+        // 核心狀態
+        let state = {
+            originalText: "", // 新增變量存儲用戶貼上的原始文本
+            words: [],
+            currentIndex: 0,
+            typedInWord: "",
+            errors: 0,
+            keys: 0,
+            combo: 0,
+            maxCombo: 0,
+            mistakes: new Set(),
+            isFinished: false
+        };
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let bgmNode = null;
+        let isBGMPlaying = false;
+
+        function createParticles(x, y) {
+            for(let i = 0; i < 8; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                const size = Math.random() * 6 + 4;
+                p.style.width = size + 'px';
+                p.style.height = size + 'px';
+                p.style.left = x + 'px';
+                p.style.top = y + 'px';
+                const tx = (Math.random() - 0.5) * 120;
+                const ty = (Math.random() - 0.5) * 120;
+                p.style.setProperty('--tw-x', `${tx}px`);
+                p.style.setProperty('--tw-y', `${ty}px`);
+                document.body.appendChild(p);
+                setTimeout(() => p.remove(), 600);
+            }
+        }
+
+        const playSound = (freq, type = 'sine', dur = 0.1, vol = 0.05) => {
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            g.gain.setValueAtTime(vol, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+            osc.connect(g); g.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + dur);
+        };
+
+        // 處理從設定頁面點擊開始
+        function handleStartNew() {
+            const raw = document.getElementById('text-input').value.trim();
+            if (!raw) return;
+            state.originalText = raw; // 備份原始文章
+            startPractice(raw);
+        }
+
+        // 核心練習啟動函數
+        function startPractice(textToUse) {
+            state.words = textToUse.split(/\s+/).filter(w => w.length > 0);
+            if (state.words.length === 0) return;
+
+            state.currentIndex = 0;
+            state.typedInWord = "";
+            state.errors = 0;
+            state.keys = 0;
+            state.combo = 0;
+            state.maxCombo = 0;
+            state.mistakes.clear();
+            state.isFinished = false;
+
+            document.getElementById('view-setup').classList.add('hidden');
+            document.getElementById('view-result').classList.add('hidden');
+            document.getElementById('view-practice').classList.remove('hidden');
+            document.getElementById('combo-badge').classList.remove('hidden');
+            
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            autoSkip();
+            render();
+            document.getElementById('hidden-input').focus();
+        }
+
+        function autoSkip() {
+            if (state.isFinished || state.currentIndex >= state.words.length) return;
+            const target = state.words[state.currentIndex];
+            if (!target) return;
+
+            while (state.typedInWord.length < target.length) {
+                if (/[^a-zA-Z0-9]/.test(target[state.typedInWord.length])) {
+                    state.typedInWord += target[state.typedInWord.length];
+                } else break;
+            }
+            if (state.typedInWord.length === target.length) nextWord();
+        }
+
+        function nextWord() {
+            playSound(880, 'triangle', 0.2, 0.04);
+            setTimeout(() => playSound(1320, 'triangle', 0.3, 0.02), 50);
+            state.currentIndex++;
+            state.typedInWord = "";
+            if (state.currentIndex >= state.words.length) {
+                state.isFinished = true;
+                setTimeout(showResults, 400);
+            } else {
+                autoSkip();
+            }
+        }
+
+        function render() {
+            const area = document.getElementById('display-area');
+            const hint = document.getElementById('hint-mode').value;
+            area.innerHTML = "";
+
+            state.words.forEach((word, i) => {
+                const span = document.createElement('span');
+                span.className = "mr-5 mb-3 inline-block transition-all duration-300";
+                if (i < state.currentIndex) {
+                    span.className += " word-correct";
+                    span.innerText = word;
+                } else if (i === state.currentIndex) {
+                    span.className += " word-current";
+                    const typed = word.substring(0, state.typedInWord.length);
+                    const rest = word.substring(state.typedInWord.length);
+                    let h = (hint === 'all') ? rest : rest.replace(/\w/g, '·');
+                    span.innerHTML = `<span class="letter-pop">${typed}</span><span class="opacity-20">${h}</span><span class="cursor-blink"></span>`;
+                } else {
+                    span.className += " word-pending";
+                    if (hint === 'all') span.innerText = word;
+                    else if (hint === 'first') span.innerText = (word[0] || "") + word.slice(1).replace(/\w/g, '·');
+                    else span.innerText = word.replace(/\w/g, '·');
+                }
+                area.appendChild(span);
+            });
+
+            const curr = area.querySelector('.word-current');
+            if (curr) curr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            const p = state.words.length > 0 ? Math.round((state.currentIndex / state.words.length) * 100) : 0;
+            document.getElementById('progress-bar').style.width = p + '%';
+            document.getElementById('progress-text').innerText = p + '%';
+        }
+
+        document.getElementById('hidden-input').addEventListener('input', (e) => {
+            if (state.isFinished || state.currentIndex >= state.words.length) {
+                e.target.value = "";
+                return;
+            }
+
+            const char = e.target.value.slice(-1);
+            e.target.value = "";
+            if (!char || char === " ") return;
+
+            const target = state.words[state.currentIndex];
+            if (!target) return;
+
+            state.keys++;
+            const expected = target[state.typedInWord.length];
+
+            if (expected && char.toLowerCase() === expected.toLowerCase()) {
+                state.typedInWord += expected;
+                state.combo++;
+                if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+                updateComboUI();
+                
+                const currSpan = document.querySelector('.word-current');
+                if (currSpan) {
+                    const rect = currSpan.getBoundingClientRect();
+                    createParticles(rect.left + (state.typedInWord.length * 15), rect.top + 20);
+                }
+                
+                playSound(400 + Math.random() * 100, 'sine', 0.08, 0.04);
+                autoSkip();
+            } else {
+                state.errors++;
+                state.combo = 0;
+                updateComboUI();
+                state.mistakes.add(target.replace(/[^\w]/g, ''));
+                playSound(120, 'sawtooth', 0.2, 0.06);
+                
+                document.getElementById('app-container').classList.add('shake-impact');
+                setTimeout(() => document.getElementById('app-container').classList.remove('shake-impact'), 200);
+            }
+            render();
+        });
+
+        function updateComboUI() {
+            const el = document.getElementById('combo-count');
+            el.innerText = state.combo;
+            if (state.combo >= 20) el.className = "text-3xl font-black italic combo-high";
+            else if (state.combo >= 10) el.className = "text-3xl font-black italic text-blue-400";
+            else el.className = "text-3xl font-black italic text-slate-500";
+        }
+
+        function showResults() {
+            document.getElementById('view-practice').classList.add('hidden');
+            document.getElementById('view-result').classList.remove('hidden');
+            document.getElementById('combo-badge').classList.add('hidden');
+
+            const acc = state.keys > 0 ? Math.round(((state.keys - state.errors) / state.keys) * 100) : 0;
+            document.getElementById('final-accuracy').innerText = `準確率 ${acc}%`;
+            document.getElementById('res-combo').innerText = state.maxCombo;
+            document.getElementById('res-errors').innerText = state.errors;
+            document.getElementById('res-words').innerText = state.words.length;
+
+            const list = document.getElementById('result-mistakes');
+            const btnFix = document.getElementById('btn-smart-fix');
+            list.innerHTML = "";
+            if (state.mistakes.size > 0) {
+                btnFix.classList.remove('hidden');
+                state.mistakes.forEach(m => {
+                    const s = document.createElement('span');
+                    s.className = "bg-rose-900/20 text-rose-400 px-3 py-1 rounded-lg border border-rose-800/30 text-sm font-mono cursor-pointer hover:bg-rose-800/40";
+                    s.innerText = m;
+                    s.onclick = () => speakWord(m);
+                    list.appendChild(s);
+                });
+            } else {
+                btnFix.classList.add('hidden');
+                list.innerHTML = "<p class='text-emerald-500 text-sm font-bold'>恭喜！完美默寫！</p>";
+            }
+        }
+
+        // 智慧糾錯：生成針對性練習文本，不改動原始備份
+        function startSmartFix() {
+            const fixText = Array.from(state.mistakes).map(w => `${w} ${w} ${w}`).join(" ");
+            startPractice(fixText);
+        }
+
+        function resetToSetup() {
+            document.getElementById('view-result').classList.add('hidden');
+            document.getElementById('view-setup').classList.remove('hidden');
+            // 回到設定時，恢復用戶最初輸入的文章
+            document.getElementById('text-input').value = state.originalText;
+        }
+
+        function speakWord(w) {
+            const u = new SpeechSynthesisUtterance(w);
+            u.lang = 'en-US';
+            window.speechSynthesis.speak(u);
+        }
+
+        function speakCurrentWord() {
+            if (!state.isFinished && state.currentIndex < state.words.length) {
+                const target = state.words[state.currentIndex];
+                if (target) speakWord(target.replace(/[^\w]/g, ''));
+            }
+            document.getElementById('hidden-input').focus();
+        }
+
+        function toggleBGM() {
+            if (isBGMPlaying) {
+                if (bgmNode) bgmNode.stop();
+                isBGMPlaying = false;
+                document.getElementById('bgm-toggle').classList.remove('text-blue-500');
+            } else {
+                const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+                const d = buf.getChannelData(0);
+                for(let i=0; i<buf.length; i++) d[i] = Math.random() * 2 - 1;
+                bgmNode = audioCtx.createBufferSource();
+                bgmNode.buffer = buf; bgmNode.loop = true;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass'; filter.frequency.value = 400;
+                const g = audioCtx.createGain(); g.gain.value = 0.02;
+                bgmNode.connect(filter); filter.connect(g); g.connect(audioCtx.destination);
+                bgmNode.start();
+                isBGMPlaying = true;
+                document.getElementById('bgm-toggle').classList.add('text-blue-500');
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (document.getElementById('view-practice').classList.contains('hidden')) return;
+            if (e.code === 'Enter' || e.code === 'Space') {
+                speakCurrentWord();
+                if (e.code === 'Space') e.preventDefault();
+            }
+            document.getElementById('hidden-input').focus();
+        });
+
+        document.addEventListener('click', () => {
+            if (!document.getElementById('view-practice').classList.contains('hidden')) {
+                document.getElementById('hidden-input').focus();
+            }
+        });
+    </script>
+</body>
+</html>
