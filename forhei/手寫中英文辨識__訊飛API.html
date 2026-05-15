@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手寫文字識別 (訊飛 API)</title>
+    <!-- 引入 Tailwind CSS 進行快速樣式佈局 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 CryptoJS 用於前端的 MD5 和 Base64 加密 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col items-center py-10 px-4">
+
+    <div class="max-w-3xl w-full bg-white rounded-2xl shadow-xl overflow-hidden">
+        <!-- 標題區 -->
+        <div class="bg-blue-600 text-white p-6">
+            <h1 class="text-2xl font-bold">手寫文字識別 (OCR)</h1>
+            <p class="text-sm text-blue-100 mt-2">基於科大訊飛 WebAPI - 支援上傳圖片並識別手寫內容</p>
+        </div>
+
+        <div class="p-8 space-y-6">
+            <!-- 配置區 -->
+            <details class="bg-gray-50 p-4 rounded-lg border border-gray-200" open>
+                <summary class="font-medium text-gray-700 cursor-pointer outline-none">
+                    API 配置 (已預填)
+                </summary>
+                <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">AppID</label>
+                        <input type="text" id="appid" value="be3aae9c" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">API Key</label>
+                        <input type="password" id="apikey" value="29033ac15e3111862d3eb44b538c27aa" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">識別語言</label>
+                        <select id="language" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="en">英文 (en)</option>
+                            <option value="cn|en">中英文混合 (cn|en)</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700">CORS 代理 (解決 Failed to fetch 跨域問題)</label>
+                        <select id="corsProxy" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="https://cors-anywhere.herokuapp.com/">CORS Anywhere (最穩定支援自定義 Headers，需先啟用)</option>
+                            <option value="https://corsproxy.io/?">corsproxy.io (備用)</option>
+                            <option value="">不使用代理 (直連，瀏覽器中通常會失敗)</option>
+                        </select>
+                        
+                        <!-- 專屬提示區塊 (當選擇 CORS Anywhere 時顯示) -->
+                        <div id="corsHint" class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                            <p class="text-sm text-blue-800 font-medium">⚠️ 必作步驟 (非常重要)：</p>
+                            <p class="text-sm text-blue-700 mt-1">使用前請務必先點擊右方連結前往解鎖頁面，並按下 <strong>"Request temporary access to the demo server"</strong> 按鈕，否則將無法連線。解鎖後即可關閉該分頁並返回這裡開始識別。</p>
+                            <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank" class="mt-2 inline-block px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded shadow hover:bg-blue-700 transition">
+                                前往解鎖 CORS Anywhere
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <!-- 圖片上傳區 -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">上傳圖片 (支援 jpg/png/bmp)</label>
+                <div class="flex items-center justify-center w-full">
+                    <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6 text-gray-500">
+                            <svg class="w-10 h-10 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                            <p class="mb-2 text-sm"><span class="font-semibold">點擊上傳</span> 或將圖片拖曳至此處</p>
+                            <p class="text-xs">前端會自動壓縮圖片大小</p>
+                        </div>
+                        <input id="dropzone-file" type="file" class="hidden" accept="image/jpeg, image/png, image/bmp" />
+                    </label>
+                </div>
+            </div>
+
+            <!-- 圖片預覽 -->
+            <div id="previewContainer" class="hidden flex flex-col items-center">
+                <p class="text-sm font-medium text-gray-700 self-start mb-2">圖片預覽：</p>
+                <img id="imagePreview" class="max-h-64 rounded-lg shadow-md" src="" alt="預覽圖片">
+                <button id="startBtn" class="mt-6 w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition">
+                    <span id="btnText">開始識別</span>
+                    <div id="btnLoader" class="loader ml-2 hidden"></div>
+                </button>
+            </div>
+
+            <!-- 識別結果區 -->
+            <div id="resultContainer" class="hidden">
+                <label class="block text-sm font-medium text-gray-700 mb-2">識別結果：</label>
+                <textarea id="resultText" rows="6" class="w-full rounded-md border-gray-300 shadow-sm border p-4 text-gray-800 focus:ring-blue-500 focus:border-blue-500" readonly></textarea>
+                <div id="errorMsg" class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mt-2 hidden text-sm whitespace-pre-line"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('dropzone-file');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewContainer = document.getElementById('previewContainer');
+        const startBtn = document.getElementById('startBtn');
+        const btnText = document.getElementById('btnText');
+        const btnLoader = document.getElementById('btnLoader');
+        const resultContainer = document.getElementById('resultContainer');
+        const resultText = document.getElementById('resultText');
+        const errorMsg = document.getElementById('errorMsg');
+        const corsProxySelect = document.getElementById('corsProxy');
+        const corsHint = document.getElementById('corsHint');
+
+        let currentBase64Image = null;
+        const hostUrl = "https://webapi.xfyun.cn/v1/service/v1/ocr/handwriting";
+
+        // 動態顯示/隱藏 CORS 啟用提示
+        corsProxySelect.addEventListener('change', (e) => {
+            if (e.target.value.includes('cors-anywhere')) {
+                corsHint.classList.remove('hidden');
+            } else {
+                corsHint.classList.add('hidden');
+            }
+        });
+
+        // 監聽檔案上傳並在前端深度壓縮圖片
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    // 使用 Canvas 壓縮圖片 (最大邊長 800px)
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxSize = 800; 
+
+                    if (width > height) {
+                        if (width > maxSize) {
+                            height = Math.round(height * (maxSize / width));
+                            width = maxSize;
+                        }
+                    } else {
+                        if (height > maxSize) {
+                            width = Math.round(width * (maxSize / height));
+                            height = maxSize;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // 輸出壓縮後的圖片 (品質 0.7)，大幅減小 Payload 以保證穩定性
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    imagePreview.src = dataUrl;
+                    previewContainer.classList.remove('hidden');
+                    resultContainer.classList.add('hidden');
+                    
+                    // 提取純 Base64 字串
+                    currentBase64Image = dataUrl.split(',')[1];
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 組合業務參數 (X-Param)
+        function getXParamStr() {
+            const lang = document.getElementById('language').value;
+            const xParam = { language: lang };
+            const jsonStr = JSON.stringify(xParam);
+            const words = CryptoJS.enc.Utf8.parse(jsonStr);
+            return CryptoJS.enc.Base64.stringify(words);
+        }
+
+        // 執行 OCR API 請求
+        async function doOCR() {
+            if (!currentBase64Image) return;
+
+            const appid = document.getElementById('appid').value.trim();
+            const apikey = document.getElementById('apikey').value.trim();
+            const proxy = document.getElementById('corsProxy').value;
+
+            if (!appid || !apikey) {
+                alert("請填寫 AppID 和 API Key");
+                return;
+            }
+
+            // UI 狀態切換
+            startBtn.disabled = true;
+            btnText.innerText = "正在識別中...";
+            btnLoader.classList.remove('hidden');
+            resultContainer.classList.add('hidden');
+            errorMsg.classList.add('hidden');
+            resultText.value = "";
+
+            try {
+                // 1. 準備鑑權數據
+                const ts = Math.floor(new Date().getTime() / 1000).toString();
+                const xParamStr = getXParamStr();
+                const xCheckSum = CryptoJS.MD5(apikey + ts + xParamStr).toString();
+
+                // 2. 準備 Headers
+                const headers = {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+                    'X-Appid': appid,
+                    'X-CurTime': ts,
+                    'X-Param': xParamStr,
+                    'X-CheckSum': xCheckSum
+                };
+
+                // 3. 準備 Body (使用 URL Encoded 傳輸 Base64)
+                const body = "image=" + encodeURIComponent(currentBase64Image);
+
+                // 4. 發送請求
+                let fetchUrl = hostUrl;
+                if (proxy) {
+                    fetchUrl = proxy + hostUrl; 
+                }
+                
+                const response = await fetch(fetchUrl, {
+                    method: 'POST',
+                    headers: headers,
+                    body: body
+                });
+
+                if (!response.ok) {
+                    // 如果代理伺服器回傳 403，很可能是尚未解鎖 CORS Anywhere
+                    if (response.status === 403 && proxy.includes('cors-anywhere')) {
+                        throw new Error(`請先點擊上方的「前往解鎖 CORS Anywhere」按鈕以獲取權限，解鎖後即可正常識別！`);
+                    }
+                    throw new Error(`HTTP Error: ${response.status} (請求被拒絕，請檢查代理伺服器狀態)`);
+                }
+
+                const resData = await response.json();
+                console.log("API 返回結果:", resData);
+
+                // 5. 解析結果
+                if (resData.code === "0" && resData.data && resData.data.block) {
+                    let extractedText = "";
+                    const blocks = resData.data.block;
+                    
+                    // 遍歷所有文字塊
+                    blocks.forEach(block => {
+                        if (block.type === "text" && block.line) {
+                            block.line.forEach(line => {
+                                if (line.word) {
+                                    // 提取這一行裡所有的詞彙內容
+                                    const wordsArr = line.word.map(w => w.content);
+                                    
+                                    // 先將所有詞彙用「空格」連接，解決英文單字黏在一起的問題
+                                    let lineText = wordsArr.join(' ');
+                                    
+                                    // 智慧處理：移除「中文字與中文字」之間多出來的空格，但保留英文單字間的空格
+                                    lineText = lineText.replace(/([\u4e00-\u9fa5])\s+([\u4e00-\u9fa5])/g, '$1$2');
+                                    
+                                    extractedText += lineText;
+                                }
+                                extractedText += "\n"; // 換行
+                            });
+                        }
+                    });
+
+                    resultText.value = extractedText.trim();
+                    resultContainer.classList.remove('hidden');
+                } else {
+                    throw new Error(`API 錯誤: [${resData.code}] ${resData.desc}\n請確保您的 IP 已在訊飛控制台加入白名單 (或設置為 0.0.0.0)。`);
+                }
+
+            } catch (error) {
+                console.error(error);
+                
+                // 針對 Failed to fetch (CORS / 代理阻斷預檢請求) 進行精確提示
+                if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+                    if (proxy.includes('cors-anywhere')) {
+                        errorMsg.innerHTML = "❌ 網路請求失敗 (Failed to fetch)。<br><br>這表示您尚未解鎖 CORS 代理權限。<strong>請點擊畫面上方的「前往解鎖 CORS Anywhere」藍色按鈕</strong>，在新頁面中按下解鎖後，再回來重試一次！";
+                    } else {
+                        errorMsg.innerText = "❌ 網路請求失敗 (Failed to fetch)。\n目前選擇的代理伺服器無法處理自定義標頭 (Headers)。請將代理切換為「CORS Anywhere」並按照提示啟用。";
+                    }
+                } else {
+                    errorMsg.innerText = "❌ 識別失敗：" + error.message;
+                }
+                
+                errorMsg.classList.remove('hidden');
+                resultContainer.classList.remove('hidden');
+            } finally {
+                // 恢復 UI 狀態
+                startBtn.disabled = false;
+                btnText.innerText = "開始識別";
+                btnLoader.classList.add('hidden');
+            }
+        }
+
+        // 綁定按鈕事件
+        startBtn.addEventListener('click', doOCR);
+    </script>
+</body>
+</html>
