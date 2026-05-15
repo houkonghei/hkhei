@@ -57,15 +57,17 @@
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700">CORS 代理 (解決 Failed to fetch 跨域問題)</label>
                         <select id="corsProxy" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="https://cors-anywhere.herokuapp.com/">CORS Anywhere (最穩定支援自定義 Headers，需先啟用)</option>
-                            <option value="https://corsproxy.io/?">corsproxy.io (備用)</option>
+                            <option value="auto">🤖 自動切換代理 (推薦，遇到錯誤會自動換線路)</option>
+                            <option value="https://cors-anywhere.herokuapp.com/">CORS Anywhere (最穩定，需先解鎖)</option>
+                            <option value="https://corsproxy.io/?">corsproxy.io (備用 1)</option>
+                            <option value="https://thingproxy.freeboard.io/fetch/">ThingProxy (備用 2)</option>
                             <option value="">不使用代理 (直連，瀏覽器中通常會失敗)</option>
                         </select>
                         
-                        <!-- 專屬提示區塊 (當選擇 CORS Anywhere 時顯示) -->
+                        <!-- 專屬提示區塊 -->
                         <div id="corsHint" class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                            <p class="text-sm text-blue-800 font-medium">⚠️ 必作步驟 (非常重要)：</p>
-                            <p class="text-sm text-blue-700 mt-1">使用前請務必先點擊右方連結前往解鎖頁面，並按下 <strong>"Request temporary access to the demo server"</strong> 按鈕，否則將無法連線。解鎖後即可關閉該分頁並返回這裡開始識別。</p>
+                            <p class="text-sm text-blue-800 font-medium">💡 為了確保最高成功率：</p>
+                            <p class="text-sm text-blue-700 mt-1">因為訊飛 API 需要安全驗證標頭，絕多數免費代理會將其阻擋。<strong>CORS Anywhere</strong> 是唯一穩定支援的線路，請務必點擊下方按鈕解鎖：</p>
                             <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank" class="mt-2 inline-block px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded shadow hover:bg-blue-700 transition">
                                 前往解鎖 CORS Anywhere
                             </a>
@@ -103,7 +105,7 @@
             <div id="resultContainer" class="hidden">
                 <label class="block text-sm font-medium text-gray-700 mb-2">識別結果：</label>
                 <textarea id="resultText" rows="6" class="w-full rounded-md border-gray-300 shadow-sm border p-4 text-gray-800 focus:ring-blue-500 focus:border-blue-500" readonly></textarea>
-                <div id="errorMsg" class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mt-2 hidden text-sm whitespace-pre-line"></div>
+                <div id="errorMsg" class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mt-2 hidden text-sm whitespace-pre-line leading-relaxed"></div>
             </div>
         </div>
     </div>
@@ -126,7 +128,7 @@
 
         // 動態顯示/隱藏 CORS 啟用提示
         corsProxySelect.addEventListener('change', (e) => {
-            if (e.target.value.includes('cors-anywhere')) {
+            if (e.target.value.includes('cors-anywhere') || e.target.value === 'auto') {
                 corsHint.classList.remove('hidden');
             } else {
                 corsHint.classList.add('hidden');
@@ -165,7 +167,7 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // 輸出壓縮後的圖片 (品質 0.7)，大幅減小 Payload 以保證穩定性
+                    // 輸出壓縮後的圖片 (品質 0.7)
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
                     imagePreview.src = dataUrl;
                     previewContainer.classList.remove('hidden');
@@ -224,30 +226,74 @@
                     'X-CheckSum': xCheckSum
                 };
 
-                // 3. 準備 Body (使用 URL Encoded 傳輸 Base64)
+                // 3. 準備 Body
                 const body = "image=" + encodeURIComponent(currentBase64Image);
 
-                // 4. 發送請求
-                let fetchUrl = hostUrl;
-                if (proxy) {
-                    fetchUrl = proxy + hostUrl; 
-                }
+                // 4. 發送請求 (自動切換代理機制)
+                const autoProxies = [
+                    "https://cors-anywhere.herokuapp.com/", // 首選：唯一完美支援自定義 Headers 的服務
+                    "https://corsproxy.io/?", 
+                    "https://thingproxy.freeboard.io/fetch/"
+                ];
+                let proxiesToTry = proxy === "auto" ? autoProxies : (proxy ? [proxy] : [""]);
                 
-                const response = await fetch(fetchUrl, {
-                    method: 'POST',
-                    headers: headers,
-                    body: body
-                });
+                let resData = null;
+                let lastError = null;
 
-                if (!response.ok) {
-                    // 如果代理伺服器回傳 403，很可能是尚未解鎖 CORS Anywhere
-                    if (response.status === 403 && proxy.includes('cors-anywhere')) {
-                        throw new Error(`請先點擊上方的「前往解鎖 CORS Anywhere」按鈕以獲取權限，解鎖後即可正常識別！`);
+                // 遍歷代理清單
+                for (let currentProxy of proxiesToTry) {
+                    try {
+                        console.log("正在嘗試連線: " + (currentProxy || "直連"));
+                        let fetchUrl = currentProxy ? currentProxy + hostUrl : hostUrl;
+                        
+                        const response = await fetch(fetchUrl, {
+                            method: 'POST',
+                            headers: headers,
+                            body: body
+                        });
+
+                        if (!response.ok) {
+                            // 判斷是否為 CORS Anywhere 的未解鎖錯誤 (403)
+                            if (response.status === 403 && currentProxy.includes('cors-anywhere')) {
+                                const err = new Error('CORS_ANYWHERE_403');
+                                err.isUnlockRequired = true;
+                                throw err;
+                            }
+                            throw new Error(`HTTP Error: ${response.status}`);
+                        }
+
+                        resData = await response.json();
+                        break; // 成功！跳出迴圈
+                    } catch (e) {
+                        console.warn(`代理 ${currentProxy} 失敗，錯誤:`, e.message);
+                        lastError = e;
+                        
+                        // 關鍵修復：如果是需要解鎖 CORS Anywhere，因為其他代理必定會失敗，所以直接中斷迴圈！
+                        if (e.isUnlockRequired) {
+                            break; 
+                        }
                     }
-                    throw new Error(`HTTP Error: ${response.status} (請求被拒絕，請檢查代理伺服器狀態)`);
                 }
 
-                const resData = await response.json();
+                // 如果跑完迴圈依然沒有取得資料，處理報錯
+                if (!resData) {
+                    if (lastError && lastError.isUnlockRequired) {
+                        // 在 UI 直接顯示可以點擊的解鎖按鈕
+                        errorMsg.innerHTML = `❌ <strong>必須解鎖 CORS Anywhere 權限</strong><br><br>
+                        因為訊飛 API 需要傳輸高安全性的自定義標頭 (X-Appid 等)，一般的免費代理伺服器會將其阻擋。<br>
+                        目前唯一穩定支援的線路需要您手動啟用：<br><br>
+                        <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank" class="inline-block px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded shadow hover:bg-blue-700 transition mb-2">
+                            👉 點我前往解鎖頁面
+                        </a><br>
+                        <span class="text-sm text-gray-600">（請在新分頁點擊 <strong>Request temporary access to the demo server</strong>，完成後回到此頁再次點擊「開始識別」即可！）</span>`;
+                        
+                        errorMsg.classList.remove('hidden');
+                        resultContainer.classList.remove('hidden');
+                        throw new Error("SILENT_ABORT"); // 發送靜默錯誤，避免下方的 catch 覆蓋掉上面的按鈕 HTML
+                    }
+                    throw new Error(`❌ 所有代理伺服器目前皆無法連線 (或網路異常)。\n\n💡 請確保您的網路連線正常，或者稍後再試。`);
+                }
+
                 console.log("API 返回結果:", resData);
 
                 // 5. 解析結果
@@ -260,18 +306,13 @@
                         if (block.type === "text" && block.line) {
                             block.line.forEach(line => {
                                 if (line.word) {
-                                    // 提取這一行裡所有的詞彙內容
                                     const wordsArr = line.word.map(w => w.content);
-                                    
-                                    // 先將所有詞彙用「空格」連接，解決英文單字黏在一起的問題
                                     let lineText = wordsArr.join(' ');
-                                    
                                     // 智慧處理：移除「中文字與中文字」之間多出來的空格，但保留英文單字間的空格
                                     lineText = lineText.replace(/([\u4e00-\u9fa5])\s+([\u4e00-\u9fa5])/g, '$1$2');
-                                    
                                     extractedText += lineText;
                                 }
-                                extractedText += "\n"; // 換行
+                                extractedText += "\n";
                             });
                         }
                     });
@@ -283,21 +324,12 @@
                 }
 
             } catch (error) {
-                console.error(error);
-                
-                // 針對 Failed to fetch (CORS / 代理阻斷預檢請求) 進行精確提示
-                if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-                    if (proxy.includes('cors-anywhere')) {
-                        errorMsg.innerHTML = "❌ 網路請求失敗 (Failed to fetch)。<br><br>這表示您尚未解鎖 CORS 代理權限。<strong>請點擊畫面上方的「前往解鎖 CORS Anywhere」藍色按鈕</strong>，在新頁面中按下解鎖後，再回來重試一次！";
-                    } else {
-                        errorMsg.innerText = "❌ 網路請求失敗 (Failed to fetch)。\n目前選擇的代理伺服器無法處理自定義標頭 (Headers)。請將代理切換為「CORS Anywhere」並按照提示啟用。";
-                    }
-                } else {
-                    errorMsg.innerText = "❌ 識別失敗：" + error.message;
+                if (error.message !== "SILENT_ABORT") {
+                    console.error(error);
+                    errorMsg.innerText = error.message;
+                    errorMsg.classList.remove('hidden');
+                    resultContainer.classList.remove('hidden');
                 }
-                
-                errorMsg.classList.remove('hidden');
-                resultContainer.classList.remove('hidden');
             } finally {
                 // 恢復 UI 狀態
                 startBtn.disabled = false;
