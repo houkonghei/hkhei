@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科技作品展 - 現場打分系統</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        select, button {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .submit-btn {
+            background-color: #e74c3c;
+            font-size: 18px;
+            padding: 15px;
+        }
+        .submit-btn:hover {
+            background-color: #c0392b;
+        }
+        /* 隱藏打分區域，直到確認身分 */
+        #scoring-section {
+            display: none;
+        }
+        
+        /* 打分行的樣式 */
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 10px;
+            border-bottom: 1px solid #eee;
+            border-left: 4px solid transparent; /* 為高亮邊框預留空間 */
+            border-radius: 4px;
+            margin-bottom: 5px;
+            transition: all 0.3s ease; /* 讓顏色變化有平滑的動畫感 */
+        }
+        .score-row label {
+            margin: 0;
+            flex: 1;
+        }
+        .score-row select {
+            flex: 1;
+            max-width: 150px;
+        }
+
+        /* 當選取非零分時的高亮反饋樣式 */
+        .score-row.scored {
+            background-color: #e8f8f5; /* 淺薄荷綠背景 */
+            border-left: 4px solid #1abc9c; /* 左側高亮邊框 */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 身分確認區塊 -->
+    <div id="login-section">
+        <h1>科技作品展評分系統</h1>
+        <div class="form-group">
+            <label for="viewer-name">請選擇您的姓名：</label>
+            <select id="viewer-name">
+                <option value="" disabled selected>-- 請選擇 --</option>
+                <option value="民俊">民俊</option>
+                <option value="詩震">詩震</option>
+                <option value="少熙">少熙</option>
+                <option value="東">東</option>
+                <option value="堅">堅</option>
+                <option value="施">施</option>
+                <option value="JASON">JASON</option>
+                <option value="華">華</option>
+                <option value="曉晴">曉晴</option>
+                <option value="港">港</option>
+                <option value="輝">輝</option>
+            </select>
+        </div>
+        <button type="button" onclick="enterScoring()">確定</button>
+    </div>
+
+    <!-- 打分區塊 -->
+    <div id="scoring-section">
+        <h2>請為各組打分</h2>
+        <h3 id="display-name" style="text-align: center; color: #7f8c8d;"></h3>
+        
+        <form id="score-form">
+            <input type="hidden" id="form-name" name="name" value="">
+            
+            <div id="groups-container">
+                <!-- 這裡的30組選項會由 JavaScript 動態生成 -->
+            </div>
+
+            <div class="form-group" style="margin-top: 30px;">
+                <button type="submit" class="submit-btn" id="submit-btn">確認並送出成績</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // 定義分數選項
+    const scoreOptions = [0, 50, 60, 65, 70, 75, 80, 85, 90, 95, 100];
+    const totalGroups = 30;
+
+    // 動態生成 30 組的打分下拉清單
+    function generateGroups() {
+        const container = document.getElementById('groups-container');
+        let html = '';
+        
+        for (let i = 1; i <= totalGroups; i++) {
+            // 加入 onchange 事件來監聽數值變化
+            html += `<div class="score-row">
+                        <label for="group${i}">第 ${i} 組分數：</label>
+                        <select id="group${i}" name="group${i}" onchange="checkScoreStatus(this)">`;
+            
+            scoreOptions.forEach(score => {
+                html += `<option value="${score}">${score}</option>`;
+            });
+            
+            html += `   </select>
+                     </div>`;
+        }
+        container.innerHTML = html;
+    }
+
+    // 初始化生成清單
+    generateGroups();
+
+    // 檢查分數狀態，決定是否變色
+    function checkScoreStatus(selectElement) {
+        // 找到包含這個 select 的那一行 (div.score-row)
+        const row = selectElement.parentElement;
+        
+        if (selectElement.value !== "0") {
+            // 分數不為 0，加上高亮樣式
+            row.classList.add('scored');
+        } else {
+            // 分數為 0 (預設值或改回 0)，移除高亮樣式
+            row.classList.remove('scored');
+        }
+    }
+
+    // 進入打分頁面的邏輯
+    function enterScoring() {
+        const nameSelect = document.getElementById('viewer-name');
+        const selectedName = nameSelect.value;
+        
+        if (!selectedName) {
+            alert('請先選擇您的姓名！');
+            return;
+        }
+
+        document.getElementById('form-name').value = selectedName;
+        document.getElementById('display-name').innerText = `評審：${selectedName}`;
+
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('scoring-section').style.display = 'block';
+        window.scrollTo(0, 0); // 進入打分頁時，自動捲動到最上方
+    }
+
+    // 處理表單送出
+    const form = document.getElementById('score-form');
+    form.addEventListener('submit', e => {
+        e.preventDefault(); 
+        
+        const btn = document.getElementById('submit-btn');
+        btn.innerText = '成績送出中...';
+        btn.disabled = true;
+
+        // 【重要】請將下方 URL 替換為您的 Google Apps Script Web App URL
+        const scriptURL ='https://script.google.com/macros/s/AKfycbygq6-lXOgSXM7494gznnqqUTx3PSW1jbX4Cd3T5ISIqFF5GXAAKNYV1dkmdPyB1hO5iw/exec';
+
+        
+        fetch(scriptURL, { 
+            method: 'POST', 
+            body: new FormData(form)
+        })
+        .then(response => {
+            alert('成績已成功送出！感謝您的評分。');
+            
+            // 重置表單和介面
+            form.reset();
+            
+            // 移除所有行的高亮變色狀態
+            const allRows = document.querySelectorAll('.score-row');
+            allRows.forEach(row => row.classList.remove('scored'));
+
+            document.getElementById('login-section').style.display = 'block';
+            document.getElementById('scoring-section').style.display = 'none';
+            window.scrollTo(0, 0); // 捲動回最上方
+
+            btn.innerText = '確認並送出成績';
+            btn.disabled = false;
+        })
+        .catch(error => {
+            console.error('Error!', error.message);
+            alert('發生錯誤，請檢查網路連線或重試！');
+            btn.innerText = '確認並送出成績';
+            btn.disabled = false;
+        });
+    });
+</script>
+
+</body>
+</html>
