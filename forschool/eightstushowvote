@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學生科技作品展 - 現場投票系統</title>
+    <!-- 使用 Tailwind CSS 快速生成美觀且具響應式的介面 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 SweetAlert2 用於美觀的彈出提示框 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* 輕淺科技感背景網格 (電子藍圖風格) */
+        body {
+            background-color: #f8fafc;
+            background-image: 
+                linear-gradient(rgba(6, 182, 212, 0.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(6, 182, 212, 0.15) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        /* 隱藏捲軸但保持可滾動，增加美觀 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #06b6d4; }
+        
+        /* 卡片選中時的動畫過渡 */
+        .team-card { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        .selected-card {
+            border-color: #06b6d4 !important; /* Tailwind Cyan 500 */
+            background-color: #ffffff !important;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(6, 182, 212, 0.2), inset 0 0 0 1px rgba(6, 182, 212, 0.1) !important;
+        }
+        
+        /* 輕度螢光文字效果 */
+        .neon-text {
+            text-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
+        }
+        
+        /* 針對行動裝置觸控點擊的優化效果 */
+        button, .team-card {
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+</head>
+<body class="text-slate-700 font-sans min-h-screen flex flex-col">
+
+    <!-- 頂部導航列 -->
+    <header class="bg-white border-b border-cyan-200 shadow-sm text-slate-800 p-3 md:p-4 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <h1 class="text-lg md:text-2xl font-black tracking-wider text-cyan-600 flex items-center gap-1.5">
+                <span>🚀</span> 科技作品展 <span class="font-light text-slate-400">|</span> 投票系統
+            </h1>
+            <div id="header-status" class="hidden text-xs md:text-sm font-medium bg-cyan-50 border border-cyan-200 px-3 py-1 rounded-full text-slate-600 shadow-sm">
+                系統授權餘額: <span id="votes-left-display" class="text-cyan-600 font-bold text-base md:text-xl ml-1">5</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 頁面一：登入/密碼驗證區 -->
+    <main id="page-login" class="flex-grow flex items-center justify-center p-4 transition-opacity duration-500">
+        <div class="bg-white border border-cyan-100 rounded-2xl shadow-xl p-6 md:p-8 max-w-md w-full relative overflow-hidden">
+            <!-- 裝飾用光暈 -->
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-cyan-200 rounded-full mix-blend-multiply filter blur-3xl opacity-40"></div>
+            
+            <div class="text-center mb-6 md:mb-8 relative z-10">
+                <div class="inline-block p-3.5 bg-cyan-50 border border-cyan-200 shadow-sm rounded-full mb-4">
+                    <svg class="w-10 h-10 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+                <h2 class="text-xl md:text-2xl font-bold text-slate-800 mb-2 tracking-widest">身分驗證程序</h2>
+                <p class="text-slate-500 text-xs md:text-sm">請輸入您的 5 位數存取金鑰</p>
+            </div>
+            
+            <div class="space-y-4 md:space-y-5 relative z-10">
+                <div>
+                    <!-- 將限制改為 6 位，並調整提示詞與樣式 -->
+                    <input type="text" id="password-input" maxlength="6" placeholder="輸入 6 位金鑰" class="w-full text-center text-xl md:text-2xl tracking-[0.4em] md:tracking-[0.5em] px-3 py-3 md:py-4 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:bg-white focus:ring-0 text-cyan-700 transition-all uppercase outline-none placeholder-slate-400 font-mono shadow-inner">
+                </div>
+                <button id="btn-verify" onclick="verifyPassword()" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-[0_4px_14px_0_rgba(6,182,212,0.39)] hover:shadow-[0_6px_20px_rgba(6,182,212,0.5)] flex justify-center items-center tracking-widest text-sm md:text-base">
+                    <span>初始化驗證並登入</span>
+                </button>
+            </div>
+            <div class="mt-6 md:mt-8 text-center text-[10px] md:text-xs text-slate-400 flex items-center justify-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                安全連線已建立 | 終端記錄啟用中
+            </div>
+        </div>
+    </main>
+
+    <!-- 頁面二：隊伍投票區 (預設隱藏) -->
+    <main id="page-voting" class="hidden flex-grow max-w-6xl mx-auto p-4 md:p-6 w-full pb-36 md:pb-32 transition-opacity duration-500">
+        <div class="mb-5 md:mb-6 bg-white border-l-4 border-cyan-500 p-4 rounded-r-lg shadow-sm">
+            <div class="flex items-center gap-2 mb-1.5">
+                <svg class="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <p class="font-bold text-cyan-600 text-sm md:text-base tracking-wider">操作指令：</p>
+            </div>
+            <p class="text-xs md:text-sm text-slate-600 leading-relaxed">您的授權額度為 <span id="instruction-max-votes" class="font-black text-cyan-600 text-sm md:text-base mx-1"></span> 票。請點擊隊伍卡片右上角的「載入」進行分配。每票比重相同。分配完畢後請點擊下方按鈕進行最終資料庫鎖定。</p>
+        </div>
+
+        <!-- 隊伍網格：在手機端為 1 欄，平板端 2 欄，桌機端 3 欄 -->
+        <div id="teams-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <!-- 隊伍卡片生成位置 -->
+        </div>
+    </main>
+
+    <!-- 底部固定送出欄位 (頁面二顯示) -->
+    <div id="bottom-submit-bar" class="hidden fixed bottom-0 left-0 right-0 bg-white/95 border-t border-slate-200 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] p-3 md:p-4 z-50 backdrop-blur-md">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="text-slate-600 font-medium flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
+                <div class="bg-cyan-50 px-3 py-1.5 md:py-2 rounded-lg border border-cyan-100 flex items-center shadow-sm">
+                    已授權: <span id="selected-count" class="text-cyan-600 font-bold text-xl md:text-2xl mx-1.5">0</span> 模組
+                </div>
+                <div class="text-xs md:text-sm text-slate-400">
+                    (剩餘額度: <span id="bottom-votes-left" class="text-cyan-500 font-bold">5</span>)
+                </div>
+            </div>
+            <button id="btn-submit-votes" onclick="submitVotes()" disabled class="bg-slate-200 cursor-not-allowed text-slate-400 font-bold py-2.5 md:py-3 px-6 md:px-8 rounded-xl transition-all w-full sm:w-auto text-sm md:text-base tracking-widest border border-transparent">
+                鎖定資料庫並送出
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        // ==========================================
+        // 老師您好！請在這裡修改您的核心變數設定：
+        // ==========================================
+
+        // 1. 設置每位觀眾可以投的票數
+        const MAX_VOTES = 5; 
+
+        // 2. 貼上您剛剛部署好的 Google Apps Script Web App URL
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3MhI6axtOZv38viowTQHoI7H57ejb06ZcHsWhXufNeGyazcGFkf6lhEqAWTAPxH4oFw/exec"; 
+
+        // 3. 隊伍資料陣列 (已徹底移除組別名稱，只保留編號與作品)
+        const teamsData = [
+            { id: 1, project: "遙控動力小車" },
+            { id: 2, project: "智能桌面小助手" },
+            { id: 3, project: "簡易澆花器" },
+            { id: 4, project: "模擬智能課室" },
+            { id: 5, project: "懶人舒適衛生艙" },
+            { id: 6, project: "農場檢測灑水器" },
+            { id: 7, project: "智能晾衣架" },
+            { id: 8, project: "浴室守護檢測器" },            
+        ];
+
+        // ==========================================
+        // 系統運作邏輯
+        // ==========================================
+        
+        let validPassword = "";
+        let selectedTeams = []; // 存放已選擇的隊伍 ID
+        let deviceInfo = ""; // 存放 IP + UUID
+
+        // 網頁載入時初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化 UI 文字
+            document.getElementById('instruction-max-votes').textContent = MAX_VOTES;
+            updateVoteCounters();
+            
+            // 獲取設備識別資訊 (IP + 生成UUID)
+            initDeviceTracking();
+            
+            // 生成隊伍列表
+            renderTeams();
+        });
+
+        // 獲取 IP 並生成 UUID (替代 MAC 地址的最佳方案)
+        async function initDeviceTracking() {
+            // 生成一個存儲在瀏覽器的 UUID 作為設備指紋
+            let uuid = localStorage.getItem('voter_uuid');
+            if (!uuid) {
+                uuid = crypto.randomUUID ? crypto.randomUUID() : 'uuid-' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('voter_uuid', uuid);
+            }
+            
+            try {
+                // 調用免費的 IP 查詢 API
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                deviceInfo = `IP:${data.ip} | ID:${uuid.substring(0,8)}`;
+            } catch (e) {
+                console.log("獲取IP失敗，將僅使用UUID");
+                deviceInfo = `ID:${uuid}`;
+            }
+        }
+
+        // 生成隊伍卡片 UI (輕淺主題、移除姓名與組別、放大編號並置中)
+        function renderTeams() {
+            const grid = document.getElementById('teams-grid');
+            grid.innerHTML = ''; // 清空
+            
+            teamsData.forEach(team => {
+                const card = document.createElement('div');
+                card.id = `card-${team.id}`;
+                card.className = "team-card bg-white border border-slate-200 rounded-xl p-5 md:p-6 shadow-sm hover:shadow-md hover:border-cyan-300 relative overflow-hidden flex flex-col justify-center items-center";
+                
+                card.innerHTML = `
+                    <div class="w-full flex flex-col items-center relative pt-2 pb-1">
+                        <!-- 觸控按鈕：絕對定位至右上角 -->
+                        <div class="absolute -top-3 -right-3 md:-top-4 md:-right-4">
+                            <button id="btn-vote-${team.id}" onclick="toggleVote(${team.id})" class="flex items-center gap-1 border border-slate-300 bg-slate-50 text-slate-600 hover:border-cyan-500 hover:text-cyan-600 px-3.5 py-1.5 rounded-lg font-bold transition-all text-xs tracking-wider shadow-sm">
+                                <span class="btn-icon font-mono">+</span>
+                                <span class="btn-text">載入</span>
+                            </button>
+                        </div>
+                        
+                        <!-- 將編號改為「第 XX 組」並置中 -->
+                        <div class="text-3xl md:text-4xl font-black text-cyan-500 tracking-wide leading-none neon-text mb-4 text-center mt-2">
+                            第 ${team.id.toString().padStart(2, '0')} 組
+                        </div>
+                        
+                        <!-- 作品名置中 -->
+                        <h3 class="text-base md:text-lg font-black text-slate-800 leading-snug tracking-wide text-center">${team.project}</h3>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // 第一頁：驗證密碼
+        async function verifyPassword() {
+            const pwdInput = document.getElementById('password-input').value.trim();
+            if (pwdInput.length < 1) {
+                Swal.fire({title: '提示', text: '請輸入金鑰', icon: 'warning'});
+                return;
+            }
+
+            const btn = document.getElementById('btn-verify');
+            const originalBtnText = btn.innerHTML;
+            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 驗證中...`;
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'verify',
+                        password: pwdInput,
+                        ip: deviceInfo
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    validPassword = pwdInput;
+                    Swal.fire({
+                        icon: 'success',
+                        title: '存取核准',
+                        text: '歡迎進入系統！',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        document.getElementById('page-login').classList.add('hidden');
+                        document.getElementById('page-voting').classList.remove('hidden');
+                        document.getElementById('header-status').classList.remove('hidden');
+                        document.getElementById('bottom-submit-bar').classList.remove('hidden');
+                    });
+                } else {
+                    Swal.fire({title: '驗證失敗', text: result.message, icon: 'error'});
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({title: '連線錯誤', text: '無法連接到伺服器，請確認網路連線。', icon: 'error'});
+            } finally {
+                btn.innerHTML = originalBtnText;
+                btn.disabled = false;
+            }
+        }
+
+        // 處理單一隊伍的投票切換
+        function toggleVote(teamId) {
+            const index = selectedTeams.indexOf(teamId);
+            
+            if (index > -1) {
+                selectedTeams.splice(index, 1);
+                updateCardUI(teamId, false);
+            } 
+            else {
+                if (selectedTeams.length >= MAX_VOTES) {
+                    Swal.fire({title: '提示', text: `授權額度已滿，您最多只能載入 ${MAX_VOTES} 個模組！`, icon: 'info'});
+                    return;
+                }
+                selectedTeams.push(teamId);
+                updateCardUI(teamId, true);
+            }
+            
+            updateVoteCounters();
+            checkSubmitButton();
+        }
+
+        // 更新單張卡片的視覺狀態 (適應明亮主題)
+        function updateCardUI(teamId, isSelected) {
+            const card = document.getElementById(`card-${teamId}`);
+            const btn = document.getElementById(`btn-vote-${teamId}`);
+            const icon = btn.querySelector('.btn-icon');
+            const text = btn.querySelector('.btn-text');
+
+            if (isSelected) {
+                card.classList.add('selected-card');
+                btn.classList.remove('border-slate-300', 'bg-slate-50', 'text-slate-600', 'hover:border-cyan-500', 'hover:text-cyan-600');
+                btn.classList.add('bg-cyan-500', 'border-cyan-500', 'text-white', 'shadow-md');
+                icon.textContent = '■';
+                text.textContent = '已載入';
+            } else {
+                card.classList.remove('selected-card');
+                btn.classList.remove('bg-cyan-500', 'border-cyan-500', 'text-white', 'shadow-md');
+                btn.classList.add('border-slate-300', 'bg-slate-50', 'text-slate-600', 'hover:border-cyan-500', 'hover:text-cyan-600');
+                icon.textContent = '+';
+                text.textContent = '載入';
+            }
+        }
+
+        // 更新票數文字與變量
+        function updateVoteCounters() {
+            const votesLeft = MAX_VOTES - selectedTeams.length;
+            
+            document.getElementById('votes-left-display').textContent = votesLeft;
+            document.getElementById('selected-count').textContent = selectedTeams.length;
+            document.getElementById('bottom-votes-left').textContent = votesLeft;
+        }
+
+        // 檢查最終送出按鈕的狀態 (適應明亮主題)
+        function checkSubmitButton() {
+            const submitBtn = document.getElementById('btn-submit-votes');
+            if (selectedTeams.length > 0) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('bg-slate-200', 'cursor-not-allowed', 'text-slate-400');
+                submitBtn.classList.add('bg-cyan-500', 'hover:bg-cyan-600', 'cursor-pointer', 'text-white', 'shadow-[0_4px_14px_0_rgba(6,182,212,0.39)]');
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('bg-slate-200', 'cursor-not-allowed', 'text-slate-400');
+                submitBtn.classList.remove('bg-cyan-500', 'hover:bg-cyan-600', 'cursor-pointer', 'text-white', 'shadow-[0_4px_14px_0_rgba(6,182,212,0.39)]');
+            }
+        }
+
+        // 最終送出鎖定
+        async function submitVotes() {
+            const result = await Swal.fire({
+                title: '確認鎖定資料庫？',
+                text: `已配置 ${selectedTeams.length} 個模組 (#${selectedTeams.sort((a,b)=>a-b).join(', ')})。資料寫入後將無法覆寫！`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#0ea5e9',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: '執行鎖定',
+                cancelButtonText: '終止操作'
+            });
+
+            if (!result.isConfirmed) return;
+
+            const submitBtn = document.getElementById('btn-submit-votes');
+            const originalBtnText = submitBtn.innerHTML;
+            submitBtn.innerHTML = "傳輸中 [///...]";
+            submitBtn.disabled = true;
+
+            try {
+                const sortedVotes = [...selectedTeams].sort((a, b) => a - b);
+
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'submit',
+                        password: validPassword,
+                        votes: sortedVotes,
+                        ip: deviceInfo
+                    })
+                });
+
+                const resData = await response.json();
+
+                if (resData.success) {
+                    Swal.fire({
+                        title: '寫入成功！',
+                        text: '資料庫已鎖定，感謝您的參與。',
+                        icon: 'success',
+                        confirmButtonColor: '#0ea5e9',
+                        confirmButtonText: '結束連線',
+                        allowOutsideClick: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({title: '寫入失敗', text: resData.message, icon: 'error'});
+                    submitBtn.innerHTML = originalBtnText;
+                    submitBtn.disabled = false;
+                }
+
+            } catch (error) {
+                console.error('Submit Error:', error);
+                Swal.fire({title: '傳輸錯誤', text: '連線中斷，請確認網路狀態。', icon: 'error'});
+                submitBtn.innerHTML = originalBtnText;
+                submitBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
