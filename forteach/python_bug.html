@@ -8,11 +8,21 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         body { font-family: 'Courier New', Courier, monospace; }
-        /* 隱藏的元素，瀏覽器上看不到，但源始碼裡有 */
         .visually-hidden { display: none; }
+        /* 自訂滾動條美化 */
+        textarea::-webkit-scrollbar {
+            width: 6px;
+        }
+        textarea::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 3px;
+        }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen">
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col justify-between">
 
     <!-- 頂部導航 -->
     <header class="bg-gray-800 p-4 shadow-lg border-b border-green-500">
@@ -20,83 +30,135 @@
             <h1 class="text-2xl font-bold text-green-400">
                 <i class="fa-brands fa-python mr-2"></i>Python 爬蟲實戰特訓營
             </h1>
-            <span class="text-sm text-gray-400">Target Server: ONLINE (Status: 200 OK)</span>
+            <span class="text-sm text-gray-400 flex items-center">
+                <span class="h-2 w-2 bg-green-500 rounded-full inline-block mr-2 animate-pulse"></span>
+                Target Server: ONLINE (Status: 200 OK)
+            </span>
         </div>
     </header>
 
-    <main class="container mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <main class="container mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-8 flex-grow">
         
-        <!-- 左側：任務清單 (UI 顯示用) -->
-        <section class="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-xl">
-            <h2 class="text-xl font-bold text-blue-400 mb-4 border-b border-gray-700 pb-2">
-                <i class="fa-solid fa-list-check mr-2"></i>你的任務清單
+        <!-- 左側：任務清單與代碼提交區 -->
+        <section class="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-xl flex flex-col h-full">
+            <h2 class="text-xl font-bold text-blue-400 mb-4 border-b border-gray-700 pb-2 flex justify-between items-center">
+                <span><i class="fa-solid fa-list-check mr-2"></i>任務與代碼提交</span>
+                <button onclick="toggleSetupModal()" class="text-xs text-gray-400 hover:text-yellow-400 transition">
+                    <i class="fa-solid fa-gear mr-1"></i>後端設定
+                </button>
             </h2>
+            
+            <!-- 學生基本資料填寫 -->
+            <div class="mb-6 p-4 bg-gray-900 rounded border border-blue-500/30">
+                <label class="block text-sm font-bold text-blue-300 mb-2" for="leader-name">
+                    <i class="fa-solid fa-user-group mr-1"></i> 組長姓名 / 組別名稱：
+                </label>
+                <input type="text" id="leader-name" placeholder="請輸入組長姓名 (例如：第一組 王小明)" 
+                       class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded text-sm text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+            </div>
+
             <p class="text-sm text-gray-300 mb-6">
-                特工，請使用 <code class="text-yellow-400 bg-gray-700 px-1 rounded">requests</code> 與 <code class="text-yellow-400 bg-gray-700 px-1 rounded">BeautifulSoup</code> 向本網頁發送 GET 請求。你的目標是從右側的「模擬資料區」中提取以下 10 個目標資訊：
+                特工，請使用 <code class="text-yellow-400 bg-gray-700 px-1 rounded">soup.select()</code> 解析右側模擬資料。請將你們成功獲取目標的<strong>核心 Python 代碼</strong>貼在每個任務下方的輸入框中，完成後點擊最下方的「提交小組代碼」按鈕送出！
             </p>
 
-            <div class="space-y-4 text-sm">
+            <form id="submission-form" class="space-y-6">
                 <!-- 任務列表 -->
-                <div class="p-3 bg-gray-700 rounded border-l-4 border-red-500 hover:bg-gray-600 transition">
-                    <div><strong class="text-red-400">任務 01：</strong> 獲取本網頁的 <code>&lt;title&gt;</code> 文字。</div>
-                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：使用 <code>soup.select("title")</code> 會回傳一個列表，記得用 <code>[0]</code> 取出第一個元素後再加上 <code>.text</code>！</p>
+                
+                <!-- 任務 01 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-red-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-red-400 text-sm">任務 01：獲取本網頁的 &lt;title&gt; 文字。</div>
+                    <p class="mt-1 text-xs text-gray-300"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：使用 <code>soup.select("title")</code> 會回傳一個列表，記得用 <code>[0]</code> 取出第一個元素後再加上 <code>.text</code>！</p>
+                    <textarea id="code-01" placeholder="# 貼上任務 01 的實作代碼..." 
+                              class="w-full h-24 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-red-400 focus:outline-none"></textarea>
                 </div>
                 
-                <div class="p-3 bg-gray-700 rounded border-l-4 border-orange-500 hover:bg-gray-600 transition">
-                    <div><strong class="text-orange-400">任務 02：</strong> 找到 ID 為 <code>secret-message</code> 的隱藏段落，並提取其文字。</div>
-                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：在 CSS 選擇器中，ID 前面要加井字號，試試 <code>soup.select("#secret-message")</code>。</p>
+                <!-- 任務 02 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-orange-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-orange-400 text-sm">任務 02：找到 ID 為 secret-message 的隱藏段落，並提取其文字。</div>
+                    <p class="mt-1 text-xs text-gray-300"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：在 CSS 選擇器中，ID 前面要加井字號，試試 <code>soup.select("#secret-message")</code>。</p>
+                    <textarea id="code-02" placeholder="# 貼上任務 02 的實作代碼..." 
+                              class="w-full h-24 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-orange-400 focus:outline-none"></textarea>
                 </div>
                 
-                <div class="p-3 bg-gray-700 rounded border-l-4 border-yellow-500 hover:bg-gray-600 transition">
-                    <div><strong class="text-yellow-400">任務 03：</strong> 獲取所有商品名稱 (class 為 <code>product-name</code>) 並存成列表。</div>
-                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：class 前面要加小數點。使用 <code>soup.select(".product-name")</code> 抓出列表後，可以用 for 迴圈將 <code>.text</code> 裝進 list。</p>
+                <!-- 任務 03 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-yellow-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-yellow-400 text-sm">任務 03：獲取所有商品名稱 (class 為 product-name) 並存成列表。</div>
+                    <p class="mt-1 text-xs text-gray-300"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：class 前面要加小數點。使用 <code>soup.select(".product-name")</code> 抓出列表後，可以用 for 迴圈將 <code>.text</code> 裝進 list。</p>
+                    <textarea id="code-03" placeholder="# 貼上任務 03 的實作代碼..." 
+                              class="w-full h-24 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-yellow-400 focus:outline-none"></textarea>
                 </div>
                 
-                <div class="p-3 bg-gray-700 rounded border-l-4 border-green-500 hover:bg-gray-600 transition">
-                    <div><strong class="text-green-400">任務 04：</strong> 計算表格中所有「銷售額」(class 為 <code>sales</code>) 的數字總和。</div>
-                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：用 <code>soup.select(".sales")</code> 抓取後，記得將每個項目的 <code>.text</code> 透過 <code>int()</code> 轉換成整數才能相加。</p>
+                <!-- 任務 04 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-green-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-green-400 text-sm">任務 04：計算表格中所有「銷售額」(class 為 sales) 的數字總和。</div>
+                    <p class="mt-1 text-xs text-gray-300"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：用 <code>soup.select(".sales")</code> 抓取後，記得將每個項目的 <code>.text</code> 透過 <code>int()</code> 轉換成整數才能相加。</p>
+                    <textarea id="code-04" placeholder="# 貼上任務 04 的實作代碼..." 
+                              class="w-full h-24 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-green-400 focus:outline-none"></textarea>
                 </div>
                 
-                <div class="p-3 bg-gray-700 rounded border-l-4 border-teal-500 hover:bg-gray-600 transition">
-                    <div><strong class="text-teal-400">任務 05：</strong> 找到聯絡管理員區塊，提取其自訂屬性 <code>data-email</code> 的信箱地址。</div>
-                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：可以用 <code>soup.select("div#contact-info")</code> 找到標籤，然後像查字典一樣用 <code>[0]["data-email"]</code> 取出屬性。</p>
+                <!-- 任務 05 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-teal-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-teal-400 text-sm">任務 05：找到聯絡管理員區塊，提取其自訂屬性 data-email 的信箱地址。</div>
+                    <p class="mt-1 text-xs text-gray-300"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：可以用 <code>soup.select("div#contact-info")</code> 找到標籤，然後像查字典一樣用 <code>[0]["data-email"]</code> 取出屬性。</p>
+                    <textarea id="code-05" placeholder="# 貼上任務 05 的實作代碼..." 
+                              class="w-full h-24 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-teal-400 focus:outline-none"></textarea>
                 </div>
                 
-                <div class="p-3 bg-gray-700 rounded border-l-4 border-blue-500 hover:bg-gray-600 transition">
-                    <div><strong class="text-blue-400">任務 06：</strong> 找到 class 為 <code>target-link</code> 的標籤，並提取其 <code>href</code> 網址。</div>
-                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：與任務 5 觀念相同，先 <code>soup.select(".target-link")</code> 取出第 0 個元素，再用 <code>["href"]</code> 拿取網址。</p>
+                <!-- 任務 06 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-blue-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-blue-400 text-sm">任務 06：找到 class 為 target-link 的標籤，並提取其 href 網址。</div>
+                    <p class="mt-1 text-xs text-gray-300"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：與任務 5 觀念相同，先 <code>soup.select(".target-link")</code> 取出第 0 個元素，再用 <code>["href"]</code> 拿取網址。</p>
+                    <textarea id="code-06" placeholder="# 貼上任務 06 的實作代碼..." 
+                              class="w-full h-24 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-blue-400 focus:outline-none"></textarea>
                 </div>
                 
-                <div class="p-3 bg-gray-700 rounded border-l-4 border-indigo-500 hover:bg-gray-600 transition">
-                    <div><strong class="text-indigo-400">任務 07：</strong> 在評論區中，獲取「第五個」評論者的名字 (class 為 <code>author</code>)。</div>
-                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select(".author")</code> 產生的列表索引是從 0 開始算起的，想想第五個元素的索引是 [?]。</p>
+                <!-- 任務 07 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-indigo-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-indigo-400 text-sm">任務 07：在評論區中，獲取「第五個」評論者的名字 (class 為 author)。</div>
+                    <p class="mt-1 text-xs text-gray-300"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select(".author")</code> 產生的列表索引是從 0 開始算起的，想想第五個元素的索引是 [?]。</p>
+                    <textarea id="code-07" placeholder="# 貼上任務 07 的實作代碼..." 
+                              class="w-full h-24 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-indigo-400 focus:outline-none"></textarea>
                 </div>
                 
-                <div class="p-3 bg-gray-700 rounded border-l-4 border-purple-500 hover:bg-gray-600 transition">
-                    <div><strong class="text-purple-400">任務 08：</strong> 找出被標記為售完 (class 包含 <code>sold-out</code>) 的商品，並提取其價格。</div>
-                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：可以利用屬性選擇器的模糊比對，例如 <code>soup.select("[class*=sold-out]")</code> 來精準鎖定標籤。</p>
+                <!-- 任務 08 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-purple-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-purple-400 text-sm">任務 08：找出被標記為售完 (class 包含 sold-out) 的商品，並提取其價格。</div>
+                    <p class="mt-1 text-xs text-gray-300"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：可以利用屬性選擇器的模糊比對，例如 <code>soup.select("[class*=sold-out]")</code> 來精準鎖定標籤。</p>
+                    <textarea id="code-08" placeholder="# 貼上任務 08 的實作代碼..." 
+                              class="w-full h-24 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-purple-400 focus:outline-none"></textarea>
                 </div>
                 
-                <div class="p-3 bg-gray-700 rounded border-l-4 border-pink-500 hover:bg-gray-600 transition">
-                    <div><strong class="text-pink-400">任務 09：</strong> 獲取屬性為 <code>rel="next"</code> 的「下一頁」連結網址。</div>
-                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>select</code> 完全支援中括號屬性選擇器，直接試試 <code>soup.select('a[rel="next"]')</code>。</p>
+                <!-- 任務 09 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-pink-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-pink-400 text-sm">任務 09：獲取屬性為 rel="next" 的「下一頁」連結網址。</div>
+                    <p class="mt-1 text-xs text-gray-300"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>select</code> 完全支援中括號屬性選擇器，直接試試 <code>soup.select('a[rel="next"]')</code>。</p>
+                    <textarea id="code-09" placeholder="# 貼上任務 09 的實作代碼..." 
+                              class="w-full h-24 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-pink-400 focus:outline-none"></textarea>
                 </div>
                 
-                <div class="p-3 bg-gray-700 rounded border-l-4 border-gray-400 hover:bg-gray-600 transition">
-                    <div><strong class="text-gray-200">任務 10：</strong> 統計 class 為 <code>article</code> 的段落中，包含 "Python" 關鍵字的文章數量。</div>
-                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：用 <code>soup.select('p.article')</code> 抓出所有文章，用 for 迴圈搭配 <code>if "Python" in x.text:</code> 來計數。</p>
+                <!-- 任務 10 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-gray-400 hover:bg-gray-650 transition">
+                    <div class="font-bold text-gray-200 text-sm">任務 10：統計 class 為 article 的段落中，包含 "Python" 關鍵字的文章數量。</div>
+                    <p class="mt-1 text-xs text-gray-300"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：用 <code>soup.select('p.article')</code> 抓出所有文章，用 for 迴圈搭配 <code>if "Python" in x.text:</code> 來計數。</p>
+                    <textarea id="code-10" placeholder="# 貼上任務 10 的實作代碼..." 
+                              class="w-full h-24 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-gray-400 focus:outline-none"></textarea>
                 </div>
-            </div>
-            
-            <button onclick="alert('提示：在瀏覽器按右鍵選擇「檢視網頁原始碼」，即可看到 BeautifulSoup 真正抓取到的 HTML 結構！')" class="mt-6 w-full py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded transition">
-                <i class="fa-solid fa-lightbulb mr-2"></i>網頁結構提示
-            </button>
+
+                <!-- 提交按鈕 -->
+                <div class="pt-4">
+                    <button type="button" onclick="submitCodes()" id="submit-btn" 
+                            class="w-full py-4 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-extrabold text-lg rounded-lg shadow-lg transition-all flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span id="btn-text">提交小組代碼 (Submit Code)</span>
+                    </button>
+                </div>
+            </form>
         </section>
 
         <!-- 右側：模擬資料區 (供爬蟲解析的目標 HTML) -->
-        <section id="target-zone" class="bg-white text-gray-800 p-6 rounded-lg shadow-xl relative overflow-hidden font-sans">
-            <div class="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg shadow">
-                TARGET DATA
+        <section id="target-zone" class="bg-white text-gray-800 p-6 rounded-lg shadow-xl relative overflow-y-auto h-[100vh] lg:h-[calc(100vh-140px)] sticky top-6 font-sans">
+            <div class="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg shadow z-10">
+                TARGET DATA (請解析此區域)
             </div>
             
             <h2 class="text-2xl font-black text-gray-800 mb-6 border-b-2 border-gray-300 pb-2">
@@ -110,14 +172,14 @@
                 
                 <!-- 任務3 & 任務8 目標 -->
                 <div>
-                    <h3 class="text-lg font-bold mb-3"><i class="fa-solid fa-box mr-2"></i>最新商品</h3>
+                    <h3 class="text-lg font-bold mb-3 text-gray-700"><i class="fa-solid fa-box mr-2 text-indigo-500"></i>最新商品</h3>
                     <div class="product-list grid grid-cols-2 gap-4">
                         <div class="product-item p-4 border border-gray-300 rounded bg-gray-50">
                             <h4 class="product-name font-bold text-blue-600">機械鍵盤 Pro</h4>
                             <p class="text-sm text-gray-500">價格：$<span class="price">2500</span></p>
                         </div>
                         <!-- 帶有 sold-out class -->
-                        <div class="product-item p-4 border border-red-300 rounded bg-red-50 sold-out opacity-60">
+                        <div class="product-item p-4 border border-red-300 rounded bg-red-50 sold-out opacity-85">
                             <h4 class="product-name font-bold text-red-600">無線滑鼠 (已售完)</h4>
                             <p class="text-sm text-gray-500">價格：$<span class="price">800</span></p>
                             <span class="text-xs text-red-500 font-bold">缺貨中</span>
@@ -135,36 +197,36 @@
 
                 <!-- 任務4 目標 -->
                 <div>
-                    <h3 class="text-lg font-bold mb-3"><i class="fa-solid fa-chart-line mr-2"></i>各部門銷售數據</h3>
+                    <h3 class="text-lg font-bold mb-3 text-gray-700"><i class="fa-solid fa-chart-line mr-2 text-indigo-500"></i>各部門銷售數據</h3>
                     <table class="w-full text-left border-collapse border border-gray-300">
                         <thead class="bg-gray-200">
-                            <tr><th class="border border-gray-300 p-2">部門名稱</th><th class="border border-gray-300 p-2">銷售額 (USD)</th></tr>
+                            <tr><th class="border border-gray-300 p-2 text-gray-700">部門名稱</th><th class="border border-gray-300 p-2 text-gray-700">銷售額 (USD)</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td class="border border-gray-300 p-2">資訊部</td><td class="border border-gray-300 p-2 sales">1500</td></tr>
-                            <tr><td class="border border-gray-300 p-2">業務部</td><td class="border border-gray-300 p-2 sales">3200</td></tr>
-                            <tr><td class="border border-gray-300 p-2">行銷部</td><td class="border border-gray-300 p-2 sales">2800</td></tr>
-                            <tr><td class="border border-gray-300 p-2">客服部</td><td class="border border-gray-300 p-2 sales">950</td></tr>
+                            <tr><td class="border border-gray-300 p-2">資訊部</td><td class="border border-gray-300 p-2 sales font-semibold">1500</td></tr>
+                            <tr><td class="border border-gray-300 p-2">業務部</td><td class="border border-gray-300 p-2 sales font-semibold">3200</td></tr>
+                            <tr><td class="border border-gray-300 p-2">行銷部</td><td class="border border-gray-300 p-2 sales font-semibold">2800</td></tr>
+                            <tr><td class="border border-gray-300 p-2">客服部</td><td class="border border-gray-300 p-2 sales font-semibold">950</td></tr>
                         </tbody>
                     </table>
                 </div>
 
                 <!-- 任務5 & 任務6 目標 -->
-                <div class="bg-blue-50 p-4 rounded border border-blue-200 flex justify-between items-center">
+                <div class="bg-blue-50 p-4 rounded border border-blue-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <!-- 隱藏在屬性中的 Email -->
-                    <div id="contact-info" data-email="admin_scraper@python.edu.tw">
+                    <div id="contact-info" data-email="admin_scraper@python.edu.tw" class="text-gray-700 font-medium">
                         <i class="fa-solid fa-envelope mr-2 text-blue-500"></i>聯絡管理員
-                        <span class="text-xs text-gray-500 ml-2">(Email隱藏在 HTML 屬性中)</span>
+                        <span class="text-xs text-gray-500 ml-1 block sm:inline">(Email隱藏在 HTML 屬性中)</span>
                     </div>
                     <!-- 目標網址 -->
-                    <a href="https://api.hidden-data.com/v1/secret_token_123" class="target-link text-blue-600 hover:underline text-sm font-bold">
+                    <a href="https://api.hidden-data.com/v1/secret_token_123" class="target-link text-blue-600 hover:underline text-sm font-bold flex items-center">
                         <i class="fa-solid fa-link mr-1"></i>系統 API 介面
                     </a>
                 </div>
 
                 <!-- 任務7 目標 -->
                 <div>
-                    <h3 class="text-lg font-bold mb-3"><i class="fa-solid fa-comments mr-2"></i>顧客評論</h3>
+                    <h3 class="text-lg font-bold mb-3 text-gray-700"><i class="fa-solid fa-comments mr-2 text-indigo-500"></i>顧客評論</h3>
                     <div class="comments space-y-2 text-sm bg-gray-100 p-4 rounded">
                         <div class="comment border-b pb-2"><span class="author font-bold text-green-700">Alice_01</span>: 出貨速度超快！</div>
                         <div class="comment border-b pb-2"><span class="author font-bold text-green-700">Bob_Hacker</span>: 網頁寫得不錯，適合練習。</div>
@@ -177,7 +239,7 @@
 
                 <!-- 任務10 目標 -->
                 <div>
-                    <h3 class="text-lg font-bold mb-3"><i class="fa-solid fa-newspaper mr-2"></i>最新動態</h3>
+                    <h3 class="text-lg font-bold mb-3 text-gray-700"><i class="fa-solid fa-newspaper mr-2 text-indigo-500"></i>最新動態</h3>
                     <div class="articles space-y-2 text-sm text-gray-600">
                         <p class="article">1. 今天天氣真好，是個適合寫程式的日子。</p>
                         <p class="article">2. Python 是一個強大的程式語言，特別適合用來寫網路爬蟲。</p>
@@ -188,7 +250,7 @@
                 </div>
 
                 <!-- 任務9 目標 -->
-                <div class="pagination mt-6 flex justify-center space-x-2">
+                <div class="pagination mt-6 flex justify-center space-x-2 pb-6">
                     <a href="#" class="px-3 py-1 bg-gray-300 text-gray-600 rounded cursor-not-allowed">上一頁</a>
                     <a href="/page/1" class="px-3 py-1 bg-blue-600 text-white rounded font-bold">1</a>
                     <!-- rel="next" 是目標 -->
@@ -199,9 +261,230 @@
         </section>
     </main>
 
-    <footer class="text-center p-6 text-gray-500 text-sm mt-8 border-t border-gray-800">
-        &copy; 2026 Gemini AI 爬蟲特訓營. Designed for Python Education.
+    <!-- 彈出式模態視窗：自訂提示/通知 (取代原 alert) -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-md w-full shadow-2xl">
+            <h3 class="text-xl font-bold text-green-400 mb-3 flex items-center" id="modal-title">
+                <i class="fa-solid fa-circle-info mr-2"></i>系統提示
+            </h3>
+            <p class="text-sm text-gray-300 mb-6 whitespace-pre-line" id="modal-body">提示內容</p>
+            <button onclick="closeModal()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded transition">
+                確定 (OK)
+            </button>
+        </div>
+    </div>
+
+    <!-- 老師專用：後端 API 與 Google 試算表設定 Modal -->
+    <div id="setup-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden overflow-y-auto">
+        <div class="bg-gray-800 border-2 border-yellow-500 rounded-lg p-6 max-w-2xl w-full my-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-yellow-400 flex items-center">
+                    <i class="fa-solid fa-gears mr-2"></i>老師後端設定 (Google Sheet API)
+                </h3>
+                <button onclick="toggleSetupModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            
+            <p class="text-xs text-gray-300 mb-4 leading-relaxed">
+                此處設定會直接保存在這台電腦的瀏覽器 (LocalStorage) 中，學生開啟網頁時預設不會看到。請在此貼上您的 Google Apps Script Web App 網址以接收學生的代碼。
+            </p>
+
+            <!-- 網址設定 -->
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-blue-300 mb-2" for="web-app-url">
+                    Google Apps Script 網頁應用程式 URL：
+                </label>
+                <input type="text" id="web-app-url" value="https://script.google.com/macros/s/AKfycbwvrlyFsVBbbO-Ist4DNK7YIn_wuS4EMVxbLiZTiV333HGEjopyKJHdqthc63VP57A/exec" placeholder="https://script.google.com/macros/s/.../exec" 
+                       class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded text-xs text-white focus:ring-1 focus:ring-yellow-400 focus:outline-none">
+                <p class="text-xs text-yellow-500/80 mt-1">※ 已經為您預設綁定好了，如非必要無需更改！</p>
+            </div>
+
+            <!-- 教學說明 -->
+            <div class="bg-gray-900 p-4 rounded border border-gray-700 text-xs text-gray-300 space-y-3">
+                <p class="font-bold text-sm text-green-400 border-b border-gray-700 pb-1"><i class="fa-solid fa-graduation-cap mr-1"></i> 5分鐘建置 Google 試算表後端教學：</p>
+                <ol class="list-decimal list-inside space-y-1 text-gray-400">
+                    <li>建立一個新的 <strong class="text-white">Google 試算表</strong>。</li>
+                    <li>點選上方選單的 <strong class="text-white">「擴充功能」 -> 「Apps Script」</strong>。</li>
+                    <li>將裡面的程式碼清空，並完整貼上下方的 <strong class="text-white">GAS 範例代碼</strong>。</li>
+                    <li>點選右上角的 <strong class="text-white">「部署」 -> 「新增部署」</strong>。</li>
+                    <li>選取類型為 <strong class="text-white">「網頁應用程式」</strong>：
+                        <ul class="list-disc list-inside ml-4 mt-1">
+                            <li>專案負責人：<span class="text-yellow-400">「您自己」</span></li>
+                            <li>誰有權限存取：選擇 <span class="text-yellow-400">「任何人 (Anyone)」</span> (關鍵設定！)</li>
+                        </ul>
+                    </li>
+                    <li>點擊部署，並授權存取權限。複製產生的 <strong class="text-green-400">「網頁應用程式網址」</strong> 並貼到上方欄位即可！</li>
+                </ol>
+
+                <div class="mt-4">
+                    <p class="font-bold text-gray-200 mb-1">📋 GAS 範例代碼 (可直接複製)：</p>
+                    <pre class="bg-black p-3 rounded text-green-400 font-mono text-[10px] select-all overflow-x-auto">
+function doPost(e) {
+  try {
+    var params = JSON.parse(e.postData.contents);
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    
+    // 寫入資料：時間戳記、組長姓名、任務1 ~ 任務10 的代碼
+    sheet.appendRow([
+      new Date(),
+      params.leaderName,
+      params.code01,
+      params.code02,
+      params.code03,
+      params.code04,
+      params.code05,
+      params.code06,
+      params.code07,
+      params.code08,
+      params.code09,
+      params.code10
+    ]);
+    
+    return ContentService.createTextOutput(JSON.stringify({ "status": "success", "message": "提交成功！" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ "status": "error", "message": err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}</pre>
+                </div>
+            </div>
+
+            <div class="mt-6 flex space-x-2">
+                <button onclick="saveSetup()" class="flex-1 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-gray-900 font-extrabold rounded transition">
+                    儲存設定 (Save)
+                </button>
+                <button onclick="toggleSetupModal()" class="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded transition">
+                    關閉 (Close)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center p-6 text-gray-500 text-sm mt-8 border-t border-gray-800 bg-gray-950">
+        <p>&copy; 2026 Gemini AI 爬蟲特訓營. Designed for Python Education.</p>
+        <p class="text-xs text-gray-600 mt-1">若要設定 Google Sheet 接收端，請點選上方任務清單旁的「後端設定」齒輪。</p>
     </footer>
 
+    <!-- 邏輯 Script 控制 -->
+    <script>
+        // 預設的 Google Sheet API 網址
+        const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbwvrlyFsVBbbO-Ist4DNK7YIn_wuS4EMVxbLiZTiV333HGEjopyKJHdqthc63VP57A/exec";
+
+        // 初始化載入 LocalStorage 中的 API 網址，若無則使用預設值
+        window.onload = function() {
+            const savedUrl = localStorage.getItem('google_sheet_api_url');
+            if (savedUrl) {
+                document.getElementById('web-app-url').value = savedUrl;
+            } else {
+                document.getElementById('web-app-url').value = DEFAULT_API_URL;
+            }
+        };
+
+        // 開關後端設定視窗
+        function toggleSetupModal() {
+            const modal = document.getElementById('setup-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        // 儲存後端設定
+        function saveSetup() {
+            const urlValue = document.getElementById('web-app-url').value.trim();
+            localStorage.setItem('google_sheet_api_url', urlValue);
+            showModal("設定成功", "Google Apps Script 網址已儲存至本地瀏覽器中！\n現在網頁已具備向此位址發送代碼的功能。");
+            toggleSetupModal();
+        }
+
+        // 開啟自訂 Modal 提示
+        function showModal(title, body) {
+            document.getElementById('modal-title').innerHTML = title;
+            document.getElementById('modal-body').innerText = body;
+            document.getElementById('custom-modal').classList.remove('hidden');
+        }
+
+        // 關閉自訂 Modal
+        function closeModal() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        }
+
+        // 核心提交代碼邏輯
+        async function submitCodes() {
+            const leaderName = document.getElementById('leader-name').value.trim();
+            const webAppUrl = document.getElementById('web-app-url').value.trim() || DEFAULT_API_URL;
+
+            // 1. 防呆檢查：必須填寫組長姓名
+            if (!leaderName) {
+                showModal("<i class='fa-solid fa-triangle-exclamation text-yellow-400 mr-2'></i>欄位未填寫", "請先在上方填寫「組長姓名 / 組別名稱」，否則無法辨識是哪一組提交的喔！");
+                document.getElementById('leader-name').focus();
+                return;
+            }
+
+            // 2. 防呆檢查：必須設定 API 網址
+            if (!webAppUrl) {
+                showModal("<i class='fa-solid fa-circle-exclamation text-red-500 mr-2'></i>後端未設定", "檢測到尚未配置 Google 試算表 API 接收端！\n\n請老師或管理者點選右上角「後端設定」齒輪，將 Google Apps Script 的網址貼上並點擊儲存，再行提交。");
+                return;
+            }
+
+            // 3. 收集資料
+            const payload = {
+                leaderName: leaderName,
+                code01: document.getElementById('code-01').value,
+                code02: document.getElementById('code-02').value,
+                code03: document.getElementById('code-03').value,
+                code04: document.getElementById('code-04').value,
+                code05: document.getElementById('code-05').value,
+                code06: document.getElementById('code-06').value,
+                code07: document.getElementById('code-07').value,
+                code08: document.getElementById('code-08').value,
+                code09: document.getElementById('code-09').value,
+                code10: document.getElementById('code-10').value
+            };
+
+            // 改變按鈕狀態為提交中
+            const submitBtn = document.getElementById('submit-btn');
+            const btnText = document.getElementById('btn-text');
+            submitBtn.disabled = true;
+            submitBtn.classList.remove('bg-green-600', 'hover:bg-green-500');
+            submitBtn.classList.add('bg-gray-600', 'cursor-not-allowed');
+            btnText.innerText = "正在傳送代碼至 Google 試算表...";
+
+            try {
+                // 發送 POST 請求至 Google Sheets API
+                // 這裡採用 no-cors 是因為 Google Apps Script 在跳轉(redirect)時常在 iframe 內阻擋 CORS，使用 no-cors 可成功投遞資料
+                await fetch(webAppUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                // 因 no-cors 模式無法讀取回傳值，只要沒 throw error 就代表傳送動作已完成
+                showModal(
+                    "<i class='fa-solid fa-circle-check text-green-400 mr-2'></i>提交成功！", 
+                    "太棒了，" + leaderName + "！\n你們組的 10 個任務代碼已成功發送至老師的 Google 試算表中！\n請靜待老師批核。"
+                );
+                
+                // 提交完成後，清空輸入框（保留組長姓名，方便他們萬一需要二次提交）
+                for(let i=1; i<=10; i++) {
+                    const padIndex = i.toString().padStart(2, '0');
+                    document.getElementById(`code-${padIndex}`).value = "";
+                }
+
+            } catch (error) {
+                console.error(error);
+                showModal(
+                    "<i class='fa-solid fa-circle-xmark text-red-500 mr-2'></i>發送失敗", 
+                    "傳送過程中發生錯誤，請檢查您的網路連線，或確認老師配置的 API 網址是否正確。\n錯誤訊息：" + error.message
+                );
+            } finally {
+                // 恢復按鈕狀態
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('bg-gray-600', 'cursor-not-allowed');
+                submitBtn.classList.add('bg-green-600', 'hover:bg-green-500');
+                btnText.innerText = "提交小組代碼 (Submit Code)";
+            }
+        }
+    </script>
 </body>
 </html>
