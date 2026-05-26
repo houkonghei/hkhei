@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python 爬蟲特訓營 - 校園生活情報網</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Courier New', Courier, monospace; }
+        .visually-hidden { display: none; }
+        /* 自訂滾動條美化 */
+        textarea::-webkit-scrollbar {
+            width: 6px;
+        }
+        textarea::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col justify-between">
+
+    <!-- 頂部導航 -->
+    <header class="bg-gray-800 p-4 shadow-lg border-b border-green-500">
+        <div class="container mx-auto flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-green-400">
+                <i class="fa-solid fa-school mr-2"></i>校園情報爬蟲特訓營
+            </h1>
+            <span class="text-sm text-gray-400 flex items-center">
+                <span class="h-2 w-2 bg-green-500 rounded-full inline-block mr-2 animate-pulse"></span>
+                濠江中學 Server: 200 OK
+            </span>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-8 flex-grow">
+        
+        <!-- 左側：任務清單與代碼提交區 -->
+        <section class="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-xl flex flex-col h-full">
+            <h2 class="text-xl font-bold text-blue-400 mb-4 border-b border-gray-700 pb-2 flex justify-between items-center">
+                <span><i class="fa-solid fa-list-check mr-2"></i>任務與代碼提交</span>
+                <button onclick="toggleSetupModal()" class="text-xs text-gray-400 hover:text-yellow-400 transition">
+                    <i class="fa-solid fa-gear mr-1"></i>後端設定
+                </button>
+            </h2>
+            
+            <!-- 學生基本資料填寫 -->
+            <div class="mb-6 p-4 bg-gray-900 rounded border border-blue-500/30">
+                <label class="block text-sm font-bold text-blue-300 mb-2" for="leader-name">
+                    <i class="fa-solid fa-user-group mr-1"></i> 組長姓名 / 組別名稱：
+                </label>
+                <input type="text" id="leader-name" placeholder="請輸入組長姓名 (例如：第一組 王小明)" 
+                       class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded text-sm text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+            </div>
+
+            <p class="text-sm text-gray-300 mb-6">
+                同學你好，請使用 <code class="text-yellow-400 bg-gray-700 px-1 rounded">soup.select()</code> 解析右側的「濠江中學模擬網站」。請嚴格按照題目的限制符號作答，並將<strong>核心 Python 代碼</strong>貼在每個任務下方，完成後點擊最下方按鈕送出！
+            </p>
+
+            <form id="submission-form" class="space-y-6">
+                
+                <!-- 任務 01 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-red-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-red-400 text-sm">任務 01 [父子關係]：必須使用 <code>&gt;</code> 符號。</div>
+                    <p class="mt-1 text-xs text-gray-300">目標：獲取「最新公告區」中，<strong class="text-white">直接屬於</strong> <code>.board</code> 的 <code>.notice</code> 文字。請避開被包在深層的錯誤公告。</p>
+                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select(".board > .notice")</code> 確保只找下一層的子節點。</p>
+                    <textarea id="code-01" placeholder="# 貼上任務 01 代碼..." 
+                              class="w-full h-16 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-red-400 focus:outline-none"></textarea>
+                </div>
+                
+                <!-- 任務 02 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-orange-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-orange-400 text-sm">任務 02 [祖先後代]：必須使用 <code> </code> (空格) 符號。</div>
+                    <p class="mt-1 text-xs text-gray-300">目標：獲取「資工系課程表」中，ID 為 <code>cs-dept</code> 底下<strong class="text-white">所有</strong> class 為 <code>course</code> 的課程名稱，不管包了幾層都要抓到。</p>
+                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select("#cs-dept .course")</code> 利用空格能穿透所有階層尋找。</p>
+                    <textarea id="code-02" placeholder="# 貼上任務 02 代碼..." 
+                              class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-orange-400 focus:outline-none"></textarea>
+                </div>
+                
+                <!-- 任務 03 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-yellow-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-yellow-400 text-sm">任務 03 [屬性定位]：必須使用 <code>[ ]</code> 符號。</div>
+                    <p class="mt-1 text-xs text-gray-300">目標：在圖書館清單中，找出所有自訂屬性 <code>data-borrow="yes"</code> (可借閱) 的書名。</p>
+                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select("[data-borrow='yes']")</code> 能直接鎖定具備特定屬性值的標籤。</p>
+                    <textarea id="code-03" placeholder="# 貼上任務 03 代碼..." 
+                              class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-yellow-400 focus:outline-none"></textarea>
+                </div>
+                
+                <!-- 任務 04 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-green-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-green-400 text-sm">任務 04 [唯一識別]：必須使用 <code>#</code> 符號。</div>
+                    <p class="mt-1 text-xs text-gray-300">目標：在校長信箱區塊，有一組隱藏的校園免費 WIFI 密碼，它的 ID 是 <code>hidden-wifi</code>，請提取它的文字。</p>
+                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select("#hidden-wifi")</code> ID 是網頁中的唯一值，加上 # 就能瞬間找到。</p>
+                    <textarea id="code-04" placeholder="# 貼上任務 04 代碼..." 
+                              class="w-full h-16 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-green-400 focus:outline-none"></textarea>
+                </div>
+                
+                <!-- 任務 05 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-teal-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-teal-400 text-sm">任務 05 [模糊匹配]：必須使用 <code>*=</code> 符號。</div>
+                    <p class="mt-1 text-xs text-gray-300">目標：在社團招募連結中，找出所有 <code>href</code> 網址中「包含」 <code>club_reg</code> 字眼的網址。</p>
+                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select("a[href*='club_reg']")</code> 可以抓出部分相符的屬性內容！</p>
+                    <textarea id="code-05" placeholder="# 貼上任務 05 代碼..." 
+                              class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-teal-400 focus:outline-none"></textarea>
+                </div>
+                
+                <!-- 任務 06 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-blue-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-blue-400 text-sm">任務 06 [標籤與類別結合]：必須同時指定標籤與 class。</div>
+                    <p class="mt-1 text-xs text-gray-300">目標：在「榮譽榜」中，獲取所有 <code>li</code> 標籤且 class 為 <code>honor-student</code> 的學生姓名。</p>
+                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：寫法為 <code>soup.select("標籤名.class名")</code>，中間不要有空格喔！</p>
+                    <textarea id="code-06" placeholder="# 貼上任務 06 代碼..." 
+                              class="w-full h-16 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-blue-400 focus:outline-none"></textarea>
+                </div>
+                
+                <!-- 任務 07 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-indigo-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-indigo-400 text-sm">任務 07 [ID與後代結合]：結合 <code>#</code> 與空格。</div>
+                    <p class="mt-1 text-xs text-gray-300">目標：獲取 ID 為 <code>lunch-menu</code> 的區塊中，所有 class 為 <code>dish</code> 的菜色名稱。</p>
+                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：這題是把任務2跟任務4結合，試試 <code>soup.select("#ID名稱 .class名稱")</code>。</p>
+                    <textarea id="code-07" placeholder="# 貼上任務 07 代碼..." 
+                              class="w-full h-16 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-indigo-400 focus:outline-none"></textarea>
+                </div>
+                
+                <!-- 任務 08 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-purple-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-purple-400 text-sm">任務 08 [列表索引]：Python 列表操作。</div>
+                    <p class="mt-1 text-xs text-gray-300">目標：獲取 class 為 <code>club-name</code> 的社團列表，並用 Python 提取「第 4 個」社團的名字。</p>
+                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：抓出列表後，記得使用 <code>[3].text</code> 來提取第 4 個元素 (因為索引從 0 開始算)。</p>
+                    <textarea id="code-08" placeholder="# 貼上任務 08 代碼..." 
+                              class="w-full h-16 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-purple-400 focus:outline-none"></textarea>
+                </div>
+                
+                <!-- 任務 09 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-pink-500 hover:bg-gray-650 transition">
+                    <div class="font-bold text-pink-400 text-sm">任務 09 [字串過濾]：結合 Python 的 <code>in</code> 關鍵字。</div>
+                    <p class="mt-1 text-xs text-gray-300">目標：獲取所有 class 為 <code>exam-rule</code> 的段落，統計裡面包含 "禁止" 兩個字的段落數量。</p>
+                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：先選出所有規則，再使用 <code>for</code> 迴圈搭配 <code>if "禁止" in x.text:</code> 來進行計數。</p>
+                    <textarea id="code-09" placeholder="# 貼上任務 09 代碼..." 
+                              class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-pink-400 focus:outline-none"></textarea>
+                </div>
+                
+                <!-- 任務 10 -->
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-gray-400 hover:bg-gray-650 transition">
+                    <div class="font-bold text-gray-200 text-sm">任務 10 [屬性與後代結合]：結合 <code>[ ]</code> 與空格。</div>
+                    <p class="mt-1 text-xs text-gray-300">目標：獲取屬性 <code>data-grade="senior"</code> (高中部) 區塊底下，class 為 <code>class-title</code> 的班級名稱。</p>
+                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：結合任務3跟任務2，寫法如 <code>soup.select("[屬性='值'] .class名稱")</code>。</p>
+                    <textarea id="code-10" placeholder="# 貼上任務 10 代碼..." 
+                              class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-gray-400 focus:outline-none"></textarea>
+                </div>
+
+                <!-- 提交按鈕 -->
+                <div class="pt-4">
+                    <button type="button" onclick="submitCodes()" id="submit-btn" 
+                            class="w-full py-4 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-extrabold text-lg rounded-lg shadow-lg transition-all flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span id="btn-text">提交小組代碼 (Submit Code)</span>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- 右側：模擬資料區 (供爬蟲解析的目標 HTML) -->
+        <section id="target-zone" class="bg-white text-gray-800 p-6 rounded-lg shadow-xl relative overflow-y-auto h-[100vh] lg:h-[calc(100vh-140px)] sticky top-6 font-sans">
+            <div class="absolute top-0 right-0 bg-blue-700 text-white text-xs font-bold px-3 py-1 rounded-bl-lg shadow z-10">
+                CAMPUS DATA (校園原始碼區)
+            </div>
+            
+            <h2 class="text-2xl font-black text-gray-800 mb-6 border-b-2 border-gray-300 pb-2">
+                🏫 濠江中學生活網
+            </h2>
+
+            <!-- 任務4 目標：隱藏的WIFI密碼 (#id) -->
+            <p id="hidden-wifi" class="visually-hidden">HouKong_WIFI_2026_Free</p>
+
+            <div class="space-y-8">
+                
+                <!-- 任務1 目標：最新公告 (父子 >) -->
+                <div>
+                    <h3 class="text-lg font-bold mb-3 text-gray-700"><i class="fa-solid fa-bullhorn mr-2 text-red-500"></i>學校公告</h3>
+                    <div class="board bg-red-50 p-4 rounded border border-red-200">
+                        <!-- 目標是這個直接子節點 -->
+                        <span class="notice font-bold text-red-700 block mb-2">[重要] 明日全校統一穿著冬季校服 (抓這條)</span>
+                        
+                        <div class="old-news bg-white p-2 mt-2 border border-gray-200 text-sm text-gray-500">
+                            歷史存檔：
+                            <!-- 這是陷阱，非直接子節點 -->
+                            <span class="notice line-through">上週校慶晚會圓滿落幕 (不要抓這條)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 任務2 目標：課程列表 (祖先後代 空格) -->
+                <div>
+                    <h3 class="text-lg font-bold mb-3 text-gray-700"><i class="fa-solid fa-laptop-code mr-2 text-blue-500"></i>高一理科班 (課程列表)</h3>
+                    <div id="science-class" class="bg-blue-50 p-4 rounded border border-blue-200 text-sm">
+                        <ul class="list-disc ml-5 space-y-1">
+                            <li class="course font-semibold text-blue-700">Python 基礎程式設計</li>
+                            <li>核心必修區塊：
+                                <div class="bg-white p-2 mt-1 rounded border">
+                                    <span class="course font-semibold text-blue-700 block">基礎物理學</span>
+                                </div>
+                            </li>
+                            <li class="course font-semibold text-blue-700">化學實驗課</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 任務3 目標：圖書館借閱 (屬性 [ ]) -->
+                <div>
+                    <h3 class="text-lg font-bold mb-3 text-gray-700"><i class="fa-solid fa-book-open mr-2 text-green-500"></i>圖書館藏書狀態</h3>
+                    <ul class="library-books grid grid-cols-2 gap-2 text-sm">
+                        <li class="p-2 border rounded bg-gray-50" data-borrow="no">
+                            <span class="text-gray-400">高中數學精粹 (已借出)</span>
+                        </li>
+                        <li class="p-2 border rounded bg-green-50 border-green-300" data-borrow="yes">
+                            <span class="font-bold text-green-700">Python 爬蟲實戰教學</span>
+                        </li>
+                        <li class="p-2 border rounded bg-green-50 border-green-300" data-borrow="yes">
+                            <span class="font-bold text-green-700">高中生物圖鑑</span>
+                        </li>
+                        <li class="p-2 border rounded bg-gray-50" data-borrow="no">
+                            <span class="text-gray-400">中學地理 (已借出)</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 任務5 目標：社團報名 (模糊匹配 *=) -->
+                <div>
+                    <h3 class="text-lg font-bold mb-3 text-gray-700"><i class="fa-solid fa-users mr-2 text-purple-500"></i>校園連結與活動</h3>
+                    <div class="flex flex-col space-y-2 text-sm bg-purple-50 p-4 rounded border border-purple-200">
+                        <a href="https://houkong.edu.mo/about" class="text-gray-600 hover:underline">關於濠江中學</a>
+                        <a href="https://houkong.edu.mo/club_reg_coding" class="font-bold text-purple-700 hover:underline"><i class="fa-solid fa-code mr-1"></i>編程社報名表</a>
+                        <a href="https://houkong.edu.mo/club_reg_drama" class="font-bold text-purple-700 hover:underline"><i class="fa-solid fa-masks-theater mr-1"></i>話劇社報名表</a>
+                        <a href="https://houkong.edu.mo/contact" class="text-gray-600 hover:underline">校長信箱</a>
+                    </div>
+                </div>
+
+                <!-- 任務6 目標：榮譽榜 (標籤.class) -->
+                <div>
+                    <h3 class="text-lg font-bold mb-3 text-gray-700"><i class="fa-solid fa-trophy mr-2 text-yellow-500"></i>學期榮譽榜</h3>
+                    <ul class="text-sm space-y-1 bg-yellow-50 p-4 rounded border border-yellow-200">
+                        <li class="honor-student font-bold text-yellow-700"><i class="fa-solid fa-star mr-1 text-yellow-500"></i>陳大文 (全級第一)</li>
+                        <li class="normal-student text-gray-600">李小明 (進步獎)</li>
+                        <li class="honor-student font-bold text-yellow-700"><i class="fa-solid fa-star mr-1 text-yellow-500"></i>林美華 (學科優異)</li>
+                        <span class="honor-student text-gray-400 line-through">這是一個陷阱，我是 span 不是 li，不要抓我</span>
+                    </ul>
+                </div>
+
+                <!-- 任務7 目標：午餐菜單 (#id .class) -->
+                <div class="bg-gray-100 p-4 rounded">
+                    <h3 class="text-lg font-bold mb-2 text-gray-700"><i class="fa-solid fa-utensils mr-2 text-orange-600"></i>學校餐廳公告</h3>
+                    <div id="lunch-menu" class="text-sm pl-2 border-l-4 border-orange-400">
+                        <h4 class="font-bold text-orange-700 mb-1">今日 A 餐：</h4>
+                        <span class="dish font-semibold">香菇滑雞飯</span>, 
+                        <span class="dish font-semibold">炒時蔬</span>, 
+                        <span class="dish font-semibold">紫菜蛋花湯</span>
+                    </div>
+                    <div id="dinner-menu" class="text-sm pl-2 border-l-4 border-gray-400 mt-2">
+                        <h4 class="font-bold text-gray-700 mb-1">明日預告 (不要抓)：</h4>
+                        <span class="dish text-gray-500">咖哩豬排飯</span>
+                    </div>
+                </div>
+
+                <!-- 任務8 目標：社團列表 (列表索引) -->
+                <div>
+                    <h3 class="text-lg font-bold mb-3 text-gray-700"><i class="fa-solid fa-guitar mr-2 text-indigo-500"></i>熱門社團一覽</h3>
+                    <div class="club-list flex flex-wrap gap-2 text-sm">
+                        <span class="club-name bg-indigo-100 text-indigo-800 px-3 py-1 rounded">編程社</span>
+                        <span class="club-name bg-indigo-100 text-indigo-800 px-3 py-1 rounded">合唱團</span>
+                        <span class="club-name bg-indigo-100 text-indigo-800 px-3 py-1 rounded">籃球隊</span>
+                        <!-- 這是第 4 個 (索引3) -->
+                        <span class="club-name font-bold bg-indigo-500 text-white px-3 py-1 rounded shadow-md">攝影社 (目標)</span>
+                        <span class="club-name bg-indigo-100 text-indigo-800 px-3 py-1 rounded">辯論隊</span>
+                    </div>
+                </div>
+                
+                <!-- 任務9 目標：考場規則 (字串過濾) -->
+                <div>
+                    <h3 class="text-lg font-bold mb-3 text-gray-700"><i class="fa-solid fa-pen-clip mr-2 text-red-600"></i>期末考考場規則</h3>
+                    <div class="bg-red-50 p-4 border border-red-200 rounded text-sm space-y-2 text-gray-700">
+                        <p class="exam-rule">1. 考生須攜帶學生證應試。</p>
+                        <p class="exam-rule font-semibold text-red-600">2. <strong class="bg-red-200 px-1">禁止</strong>攜帶手機等通訊設備入場。</p>
+                        <p class="exam-rule">3. 考試開始 15 分鐘後不得入場。</p>
+                        <p class="exam-rule font-semibold text-red-600">4. 考試期間嚴格<strong class="bg-red-200 px-1">禁止</strong>交頭接耳。</p>
+                        <p class="exam-rule">5. 提早交卷者須留在座位上等待鈴響。</p>
+                    </div>
+                </div>
+
+                <!-- 任務10 目標：各年級廣播 (屬性與後代) -->
+                <div>
+                    <h3 class="text-lg font-bold mb-3 text-gray-700"><i class="fa-solid fa-broadcast-tower mr-2 text-teal-600"></i>教務處廣播系統</h3>
+                    
+                    <div data-grade="junior" class="mb-2 p-3 bg-gray-100 rounded border">
+                        <span class="text-xs text-gray-500">【初中部廣播】</span>
+                        <h4 class="class-title font-bold text-gray-600">初一甲班</h4>
+                        <p class="text-sm">請班長到教務處領取點名簿。</p>
+                    </div>
+                    
+                    <div data-grade="senior" class="p-3 bg-teal-50 rounded border border-teal-200 shadow-sm">
+                        <span class="text-xs text-teal-500 font-bold">【高中部廣播】(目標區塊)</span>
+                        <h4 class="class-title font-bold text-teal-800 text-lg mt-1">高三理甲</h4>
+                        <p class="text-sm text-teal-700">請全班同學於放學後留在課室進行大掃除。</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- 彈出式模態視窗：自訂提示/通知 (取代原 alert) -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-md w-full shadow-2xl">
+            <h3 class="text-xl font-bold text-green-400 mb-3 flex items-center" id="modal-title">
+                <i class="fa-solid fa-circle-info mr-2"></i>系統提示
+            </h3>
+            <p class="text-sm text-gray-300 mb-6 whitespace-pre-line" id="modal-body">提示內容</p>
+            <button onclick="closeModal()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded transition">
+                確定 (OK)
+            </button>
+        </div>
+    </div>
+
+    <!-- 老師專用：後端 API 與 Google 試算表設定 Modal -->
+    <div id="setup-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden overflow-y-auto">
+        <div class="bg-gray-800 border-2 border-yellow-500 rounded-lg p-6 max-w-2xl w-full my-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-yellow-400 flex items-center">
+                    <i class="fa-solid fa-gears mr-2"></i>老師後端設定 (Google Sheet API)
+                </h3>
+                <button onclick="toggleSetupModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            
+            <p class="text-xs text-gray-300 mb-4 leading-relaxed">
+                此處設定會直接保存在這台電腦的瀏覽器 (LocalStorage) 中，學生開啟網頁時預設不會看到。請在此貼上您的 Google Apps Script Web App 網址以接收學生的代碼。
+            </p>
+
+            <!-- 網址設定 -->
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-blue-300 mb-2" for="web-app-url">
+                    Google Apps Script 網頁應用程式 URL：
+                </label>
+                <input type="text" id="web-app-url" value="https://script.google.com/macros/s/AKfycbwvrlyFsVBbbO-Ist4DNK7YIn_wuS4EMVxbLiZTiV333HGEjopyKJHdqthc63VP57A/exec" placeholder="https://script.google.com/macros/s/.../exec" 
+                       class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded text-xs text-white focus:ring-1 focus:ring-yellow-400 focus:outline-none">
+                <p class="text-xs text-yellow-500/80 mt-1">※ 已經為您預設綁定好了，如非必要無需更改！</p>
+            </div>
+
+            <!-- 教學說明 -->
+            <div class="bg-gray-900 p-4 rounded border border-gray-700 text-xs text-gray-300 space-y-3">
+                <p class="font-bold text-sm text-green-400 border-b border-gray-700 pb-1"><i class="fa-solid fa-graduation-cap mr-1"></i> 5分鐘建置 Google 試算表後端教學：</p>
+                <ol class="list-decimal list-inside space-y-1 text-gray-400">
+                    <li>建立一個新的 <strong class="text-white">Google 試算表</strong>。</li>
+                    <li>點選上方選單的 <strong class="text-white">「擴充功能」 -> 「Apps Script」</strong>。</li>
+                    <li>將裡面的程式碼清空，並完整貼上下方的 <strong class="text-white">GAS 範例代碼</strong>。</li>
+                    <li>點選右上角的 <strong class="text-white">「部署」 -> 「新增部署」</strong>。</li>
+                    <li>選取類型為 <strong class="text-white">「網頁應用程式」</strong>：
+                        <ul class="list-disc list-inside ml-4 mt-1">
+                            <li>專案負責人：<span class="text-yellow-400">「您自己」</span></li>
+                            <li>誰有權限存取：選擇 <span class="text-yellow-400">「任何人 (Anyone)」</span> (關鍵設定！)</li>
+                        </ul>
+                    </li>
+                    <li>點擊部署，並授權存取權限。複製產生的 <strong class="text-green-400">「網頁應用程式網址」</strong> 並貼到上方欄位即可！</li>
+                </ol>
+
+                <div class="mt-4">
+                    <p class="font-bold text-gray-200 mb-1">📋 GAS 範例代碼 (可直接複製)：</p>
+                    <pre class="bg-black p-3 rounded text-green-400 font-mono text-[10px] select-all overflow-x-auto">
+function doPost(e) {
+  try {
+    var params = JSON.parse(e.postData.contents);
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(["時間", "組別", "任務1", "任務2", "任務3", "任務4", "任務5", "任務6", "任務7", "任務8", "任務9", "任務10"]);
+      sheet.setFrozenRows(1);
+    }
+    
+    sheet.appendRow([
+      new Date(), params.leaderName,
+      params.code01, params.code02, params.code03, params.code04, params.code05,
+      params.code06, params.code07, params.code08, params.code09, params.code10
+    ]);
+    
+    return ContentService.createTextOutput(JSON.stringify({ "status": "success", "message": "提交成功！" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ "status": "error", "message": err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}</pre>
+                </div>
+            </div>
+
+            <div class="mt-6 flex space-x-2">
+                <button onclick="saveSetup()" class="flex-1 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-gray-900 font-extrabold rounded transition">
+                    儲存設定 (Save)
+                </button>
+                <button onclick="toggleSetupModal()" class="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded transition">
+                    關閉 (Close)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center p-6 text-gray-500 text-sm mt-8 border-t border-gray-800 bg-gray-950">
+        <p>&copy; 2026 濠江中學爬蟲特訓營. Designed for Python Education.</p>
+        <p class="text-xs text-gray-600 mt-1">若要變更 Google Sheet 接收端，請點選上方任務清單旁的「後端設定」齒輪。</p>
+    </footer>
+
+    <!-- 邏輯 Script 控制 -->
+    <script>
+        // 預設的 Google Sheet API 網址 (來自您的綁定要求)
+        const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbwvrlyFsVBbbO-Ist4DNK7YIn_wuS4EMVxbLiZTiV333HGEjopyKJHdqthc63VP57A/exec";
+
+        // 初始化載入 LocalStorage 中的 API 網址，若無則使用預設值
+        window.onload = function() {
+            const savedUrl = localStorage.getItem('google_sheet_api_url');
+            if (savedUrl) {
+                document.getElementById('web-app-url').value = savedUrl;
+            } else {
+                document.getElementById('web-app-url').value = DEFAULT_API_URL;
+            }
+        };
+
+        // 開關後端設定視窗
+        function toggleSetupModal() {
+            const modal = document.getElementById('setup-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        // 儲存後端設定
+        function saveSetup() {
+            const urlValue = document.getElementById('web-app-url').value.trim();
+            localStorage.setItem('google_sheet_api_url', urlValue);
+            showModal("設定成功", "Google Apps Script 網址已儲存至本地瀏覽器中！\n現在網頁已具備向此位址發送代碼的功能。");
+            toggleSetupModal();
+        }
+
+        // 開啟自訂 Modal 提示
+        function showModal(title, body) {
+            document.getElementById('modal-title').innerHTML = title;
+            document.getElementById('modal-body').innerText = body;
+            document.getElementById('custom-modal').classList.remove('hidden');
+        }
+
+        // 關閉自訂 Modal
+        function closeModal() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        }
+
+        // 核心提交代碼邏輯
+        async function submitCodes() {
+            const leaderName = document.getElementById('leader-name').value.trim();
+            const webAppUrl = document.getElementById('web-app-url').value.trim() || DEFAULT_API_URL;
+
+            // 1. 防呆檢查：必須填寫組長姓名
+            if (!leaderName) {
+                showModal("<i class='fa-solid fa-triangle-exclamation text-yellow-400 mr-2'></i>欄位未填寫", "請先在上方填寫「組長姓名 / 組別名稱」，否則無法辨識是哪一組提交的喔！");
+                document.getElementById('leader-name').focus();
+                return;
+            }
+
+            // 2. 防呆檢查：必須設定 API 網址
+            if (!webAppUrl) {
+                showModal("<i class='fa-solid fa-circle-exclamation text-red-500 mr-2'></i>後端未設定", "檢測到尚未配置 Google 試算表 API 接收端！\n\n請老師或管理者點選右上角「後端設定」齒輪，將 Google Apps Script 的網址貼上並點擊儲存，再行提交。");
+                return;
+            }
+
+            // 3. 收集資料
+            const payload = {
+                leaderName: leaderName,
+                code01: document.getElementById('code-01').value,
+                code02: document.getElementById('code-02').value,
+                code03: document.getElementById('code-03').value,
+                code04: document.getElementById('code-04').value,
+                code05: document.getElementById('code-05').value,
+                code06: document.getElementById('code-06').value,
+                code07: document.getElementById('code-07').value,
+                code08: document.getElementById('code-08').value,
+                code09: document.getElementById('code-09').value,
+                code10: document.getElementById('code-10').value
+            };
+
+            // 改變按鈕狀態為提交中
+            const submitBtn = document.getElementById('submit-btn');
+            const btnText = document.getElementById('btn-text');
+            submitBtn.disabled = true;
+            submitBtn.classList.remove('bg-green-600', 'hover:bg-green-500');
+            submitBtn.classList.add('bg-gray-600', 'cursor-not-allowed');
+            btnText.innerText = "正在傳送代碼至 Google 試算表...";
+
+            try {
+                // 發送 POST 請求至 Google Sheets API
+                // 使用 no-cors 以避免跨域存取阻擋，確保資料單向投遞成功
+                await fetch(webAppUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                showModal(
+                    "<i class='fa-solid fa-circle-check text-green-400 mr-2'></i>提交成功！", 
+                    "太棒了，" + leaderName + "！\n你們組的 10 個任務代碼已成功發送至老師的 Google 試算表中！\n請靜待老師批核。"
+                );
+                
+                // 提交完成後，清空輸入框（保留組長姓名，方便他們萬一需要二次提交）
+                for(let i=1; i<=10; i++) {
+                    const padIndex = i.toString().padStart(2, '0');
+                    document.getElementById(`code-${padIndex}`).value = "";
+                }
+
+            } catch (error) {
+                console.error(error);
+                showModal(
+                    "<i class='fa-solid fa-circle-xmark text-red-500 mr-2'></i>發送失敗", 
+                    "傳送過程中發生錯誤，請檢查您的網路連線，或確認老師配置的 API 網址是否正確。\n錯誤訊息：" + error.message
+                );
+            } finally {
+                // 恢復按鈕狀態
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('bg-gray-600', 'cursor-not-allowed');
+                submitBtn.classList.add('bg-green-600', 'hover:bg-green-500');
+                btnText.innerText = "提交小組代碼 (Submit Code)";
+            }
+        }
+    </script>
+</body>
+</html>
