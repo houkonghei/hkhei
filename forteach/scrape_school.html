@@ -64,93 +64,93 @@
             <form id="submission-form" class="space-y-6">
                 
                 <!-- 任務 01 -->
-                <div class="p-4 bg-gray-700 rounded border-l-4 border-red-500 hover:bg-gray-650 transition">
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-red-500 transition-all duration-300 group focus-within:bg-gray-800 focus-within:border-l-8 focus-within:shadow-lg">
                     <div class="font-bold text-red-400 text-sm">任務 01 [父子關係]：必須使用 <code>&gt;</code> 符號。</div>
                     <p class="mt-1 text-xs text-gray-300">目標：獲取「最新公告區」中，<strong class="text-white">直接屬於</strong> <code>.board</code> 的 <code>.notice</code> 文字。請避開被包在深層的錯誤公告。</p>
-                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select(".board > .notice")</code> 確保只找下一層的子節點。</p>
-                    <textarea id="code-01" placeholder="# 貼上任務 01 代碼..." 
-                              class="w-full h-16 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-red-400 focus:outline-none"></textarea>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden group-focus-within:block"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select(".board > .notice")</code> 確保只找下一層的子節點。</p>
+                    <textarea id="code-01" placeholder="# 貼上任務 01 代碼 (點擊此處顯示提示)..." 
+                              class="w-full h-16 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:outline-none focus:bg-black focus:ring-2 focus:ring-red-400 transition-colors"></textarea>
                 </div>
                 
                 <!-- 任務 02 -->
-                <div class="p-4 bg-gray-700 rounded border-l-4 border-orange-500 hover:bg-gray-650 transition">
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-orange-500 transition-all duration-300 group focus-within:bg-gray-800 focus-within:border-l-8 focus-within:shadow-lg">
                     <div class="font-bold text-orange-400 text-sm">任務 02 [祖先後代]：必須使用 <code> </code> (空格) 符號。</div>
                     <p class="mt-1 text-xs text-gray-300">目標：獲取「資工系課程表」中，ID 為 <code>cs-dept</code> 底下<strong class="text-white">所有</strong> class 為 <code>course</code> 的課程名稱，不管包了幾層都要抓到。</p>
-                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select("#cs-dept .course")</code> 利用空格能穿透所有階層尋找。</p>
-                    <textarea id="code-02" placeholder="# 貼上任務 02 代碼..." 
-                              class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-orange-400 focus:outline-none"></textarea>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden group-focus-within:block"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select("#cs-dept .course")</code> 利用空格能穿透所有階層尋找。</p>
+                    <textarea id="code-02" placeholder="# 貼上任務 02 代碼 (點擊此處顯示提示)..." 
+                              class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:outline-none focus:bg-black focus:ring-2 focus:ring-orange-400 transition-colors"></textarea>
                 </div>
                 
                 <!-- 任務 03 -->
-                <div class="p-4 bg-gray-700 rounded border-l-4 border-yellow-500 hover:bg-gray-650 transition">
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-yellow-500 transition-all duration-300 group focus-within:bg-gray-800 focus-within:border-l-8 focus-within:shadow-lg">
                     <div class="font-bold text-yellow-400 text-sm">任務 03 [屬性定位]：必須使用 <code>[ ]</code> 符號。</div>
                     <p class="mt-1 text-xs text-gray-300">目標：在圖書館清單中，找出所有自訂屬性 <code>data-borrow="yes"</code> (可借閱) 的書名。</p>
-                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select("[data-borrow='yes']")</code> 能直接鎖定具備特定屬性值的標籤。</p>
-                    <textarea id="code-03" placeholder="# 貼上任務 03 代碼..." 
-                              class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-yellow-400 focus:outline-none"></textarea>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden group-focus-within:block"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select("[data-borrow='yes']")</code> 能直接鎖定具備特定屬性值的標籤。</p>
+                    <textarea id="code-03" placeholder="# 貼上任務 03 代碼 (點擊此處顯示提示)..." 
+                              class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:outline-none focus:bg-black focus:ring-2 focus:ring-yellow-400 transition-colors"></textarea>
                 </div>
                 
                 <!-- 任務 04 -->
-                <div class="p-4 bg-gray-700 rounded border-l-4 border-green-500 hover:bg-gray-650 transition">
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-green-500 transition-all duration-300 group focus-within:bg-gray-800 focus-within:border-l-8 focus-within:shadow-lg">
                     <div class="font-bold text-green-400 text-sm">任務 04 [唯一識別]：必須使用 <code>#</code> 符號。</div>
                     <p class="mt-1 text-xs text-gray-300">目標：在校長信箱區塊，有一組隱藏的校園免費 WIFI 密碼，它的 ID 是 <code>hidden-wifi</code>，請提取它的文字。</p>
-                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select("#hidden-wifi")</code> ID 是網頁中的唯一值，加上 # 就能瞬間找到。</p>
-                    <textarea id="code-04" placeholder="# 貼上任務 04 代碼..." 
-                              class="w-full h-16 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-green-400 focus:outline-none"></textarea>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden group-focus-within:block"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select("#hidden-wifi")</code> ID 是網頁中的唯一值，加上 # 就能瞬間找到。</p>
+                    <textarea id="code-04" placeholder="# 貼上任務 04 代碼 (點擊此處顯示提示)..." 
+                              class="w-full h-16 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:outline-none focus:bg-black focus:ring-2 focus:ring-green-400 transition-colors"></textarea>
                 </div>
                 
                 <!-- 任務 05 -->
-                <div class="p-4 bg-gray-700 rounded border-l-4 border-teal-500 hover:bg-gray-650 transition">
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-teal-500 transition-all duration-300 group focus-within:bg-gray-800 focus-within:border-l-8 focus-within:shadow-lg">
                     <div class="font-bold text-teal-400 text-sm">任務 05 [模糊匹配]：必須使用 <code>*=</code> 符號。</div>
                     <p class="mt-1 text-xs text-gray-300">目標：在社團招募連結中，找出所有 <code>href</code> 網址中「包含」 <code>club_reg</code> 字眼的網址。</p>
-                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select("a[href*='club_reg']")</code> 可以抓出部分相符的屬性內容！</p>
-                    <textarea id="code-05" placeholder="# 貼上任務 05 代碼..." 
-                              class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-teal-400 focus:outline-none"></textarea>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden group-focus-within:block"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select("a[href*='club_reg']")</code> 可以抓出部分相符的屬性內容！</p>
+                    <textarea id="code-05" placeholder="# 貼上任務 05 代碼 (點擊此處顯示提示)..." 
+                              class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:outline-none focus:bg-black focus:ring-2 focus:ring-teal-400 transition-colors"></textarea>
                 </div>
                 
                 <!-- 任務 06 -->
-                <div class="p-4 bg-gray-700 rounded border-l-4 border-blue-500 hover:bg-gray-650 transition">
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-blue-500 transition-all duration-300 group focus-within:bg-gray-800 focus-within:border-l-8 focus-within:shadow-lg">
                     <div class="font-bold text-blue-400 text-sm">任務 06 [標籤與類別結合]：必須同時指定標籤與 class。</div>
                     <p class="mt-1 text-xs text-gray-300">目標：在「榮譽榜」中，獲取所有 <code>li</code> 標籤且 class 為 <code>honor-student</code> 的學生姓名。</p>
-                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：寫法為 <code>soup.select("標籤名.class名")</code>，中間不要有空格喔！</p>
-                    <textarea id="code-06" placeholder="# 貼上任務 06 代碼..." 
-                              class="w-full h-16 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-blue-400 focus:outline-none"></textarea>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden group-focus-within:block"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：寫法為 <code>soup.select("標籤名.class名")</code>，中間不要有空格喔！</p>
+                    <textarea id="code-06" placeholder="# 貼上任務 06 代碼 (點擊此處顯示提示)..." 
+                              class="w-full h-16 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:outline-none focus:bg-black focus:ring-2 focus:ring-blue-400 transition-colors"></textarea>
                 </div>
                 
                 <!-- 任務 07 -->
-                <div class="p-4 bg-gray-700 rounded border-l-4 border-indigo-500 hover:bg-gray-650 transition">
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-indigo-500 transition-all duration-300 group focus-within:bg-gray-800 focus-within:border-l-8 focus-within:shadow-lg">
                     <div class="font-bold text-indigo-400 text-sm">任務 07 [ID與後代結合]：結合 <code>#</code> 與空格。</div>
                     <p class="mt-1 text-xs text-gray-300">目標：獲取 ID 為 <code>lunch-menu</code> 的區塊中，所有 class 為 <code>dish</code> 的菜色名稱。</p>
-                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：這題是把任務2跟任務4結合，試試 <code>soup.select("#ID名稱 .class名稱")</code>。</p>
-                    <textarea id="code-07" placeholder="# 貼上任務 07 代碼..." 
-                              class="w-full h-16 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-indigo-400 focus:outline-none"></textarea>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden group-focus-within:block"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：這題是把任務2跟任務4結合，試試 <code>soup.select("#ID名稱 .class名稱")</code>。</p>
+                    <textarea id="code-07" placeholder="# 貼上任務 07 代碼 (點擊此處顯示提示)..." 
+                              class="w-full h-16 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:outline-none focus:bg-black focus:ring-2 focus:ring-indigo-400 transition-colors"></textarea>
                 </div>
                 
                 <!-- 任務 08 -->
-                <div class="p-4 bg-gray-700 rounded border-l-4 border-purple-500 hover:bg-gray-650 transition">
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-purple-500 transition-all duration-300 group focus-within:bg-gray-800 focus-within:border-l-8 focus-within:shadow-lg">
                     <div class="font-bold text-purple-400 text-sm">任務 08 [列表索引]：Python 列表操作。</div>
                     <p class="mt-1 text-xs text-gray-300">目標：獲取 class 為 <code>club-name</code> 的社團列表，並用 Python 提取「第 4 個」社團的名字。</p>
-                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：抓出列表後，記得使用 <code>[3].text</code> 來提取第 4 個元素 (因為索引從 0 開始算)。</p>
-                    <textarea id="code-08" placeholder="# 貼上任務 08 代碼..." 
-                              class="w-full h-16 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-purple-400 focus:outline-none"></textarea>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden group-focus-within:block"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：抓出列表後，記得使用 <code>[3].text</code> 來提取第 4 個元素 (因為索引從 0 開始算)。</p>
+                    <textarea id="code-08" placeholder="# 貼上任務 08 代碼 (點擊此處顯示提示)..." 
+                              class="w-full h-16 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:outline-none focus:bg-black focus:ring-2 focus:ring-purple-400 transition-colors"></textarea>
                 </div>
                 
                 <!-- 任務 09 -->
-                <div class="p-4 bg-gray-700 rounded border-l-4 border-pink-500 hover:bg-gray-650 transition">
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-pink-500 transition-all duration-300 group focus-within:bg-gray-800 focus-within:border-l-8 focus-within:shadow-lg">
                     <div class="font-bold text-pink-400 text-sm">任務 09 [字串過濾]：結合 Python 的 <code>in</code> 關鍵字。</div>
                     <p class="mt-1 text-xs text-gray-300">目標：獲取所有 class 為 <code>exam-rule</code> 的段落，統計裡面包含 "禁止" 兩個字的段落數量。</p>
-                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：先選出所有規則，再使用 <code>for</code> 迴圈搭配 <code>if "禁止" in x.text:</code> 來進行計數。</p>
-                    <textarea id="code-09" placeholder="# 貼上任務 09 代碼..." 
-                              class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-pink-400 focus:outline-none"></textarea>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden group-focus-within:block"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：先選出所有規則，再使用 <code>for</code> 迴圈搭配 <code>if "禁止" in x.text:</code> 來進行計數。</p>
+                    <textarea id="code-09" placeholder="# 貼上任務 09 代碼 (點擊此處顯示提示)..." 
+                              class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:outline-none focus:bg-black focus:ring-2 focus:ring-pink-400 transition-colors"></textarea>
                 </div>
                 
                 <!-- 任務 10 -->
-                <div class="p-4 bg-gray-700 rounded border-l-4 border-gray-400 hover:bg-gray-650 transition">
+                <div class="p-4 bg-gray-700 rounded border-l-4 border-gray-400 transition-all duration-300 group focus-within:bg-gray-800 focus-within:border-l-8 focus-within:shadow-lg">
                     <div class="font-bold text-gray-200 text-sm">任務 10 [屬性與後代結合]：結合 <code>[ ]</code> 與空格。</div>
                     <p class="mt-1 text-xs text-gray-300">目標：獲取屬性 <code>data-grade="senior"</code> (高中部) 區塊底下，class 為 <code>class-title</code> 的班級名稱。</p>
-                    <p class="mt-1 text-xs text-gray-400 border-t border-gray-600 pt-1"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：結合任務3跟任務2，寫法如 <code>soup.select("[屬性='值'] .class名稱")</code>。</p>
-                    <textarea id="code-10" placeholder="# 貼上任務 10 代碼..." 
-                              class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:ring-1 focus:ring-gray-400 focus:outline-none"></textarea>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden group-focus-within:block"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：結合任務3跟任務2，寫法如 <code>soup.select("[屬性='值'] .class名稱")</code>。</p>
+                    <textarea id="code-10" placeholder="# 貼上任務 10 代碼 (點擊此處顯示提示)..." 
+                              class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:outline-none focus:bg-black focus:ring-2 focus:ring-gray-400 transition-colors"></textarea>
                 </div>
 
                 <!-- 提交按鈕 -->
@@ -510,11 +510,7 @@ function doPost(e) {
                     "太棒了，" + leaderName + "！\n你們組的 10 個任務代碼已成功發送至老師的 Google 試算表中！\n請靜待老師批核。"
                 );
                 
-                // 提交完成後，清空輸入框（保留組長姓名，方便他們萬一需要二次提交）
-                for(let i=1; i<=10; i++) {
-                    const padIndex = i.toString().padStart(2, '0');
-                    document.getElementById(`code-${padIndex}`).value = "";
-                }
+                // 提交完成後，代碼將自動保留在文本框中，不進行清空動作 (依據老師要求)
 
             } catch (error) {
                 console.error(error);
