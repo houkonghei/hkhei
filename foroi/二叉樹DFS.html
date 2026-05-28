@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFS 深度優先搜索 - 互動教學工具 (4層多叉樹版)</title>
+    <!-- 引入 Tailwind CSS 提供現代化界面設計 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome 用於圖標 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 自訂動畫與特殊高亮樣式 */
+        .node-transition {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .code-line {
+            transition: background-color 0.2s ease;
+        }
+        .code-line.highlight {
+            background-color: #3e4451 !important;
+            border-left: 4px solid #61afef;
+            color: #ffffff !important;
+        }
+        @keyframes pulse-orange {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0px rgba(243, 156, 18, 0.7); }
+            50% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(243, 156, 18, 0); }
+        }
+        .pulse-active {
+            animation: pulse-orange 2s infinite;
+        }
+        /* SVG 連線過渡 */
+        line {
+            transition: stroke 0.4s, stroke-width 0.4s;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
+
+    <!-- 頁首 Header -->
+    <header class="bg-slate-800 border-b border-slate-700 py-4 px-6 shadow-md">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 p-2.5 rounded-lg text-white">
+                    <i class="fa-solid fa-network-wired text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold text-white tracking-wide">DFS 深度優先搜索互動教學</h1>
+                    <p class="text-xs md:text-sm text-slate-400">直觀理解非二叉樹「多分支」、「4層深度遞歸」與「系統調用棧」的變化過程</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <span class="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full text-xs flex items-center gap-1.5 font-medium">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> 4層多叉樹進階版
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區 -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- 左側：控制、視覺化、狀態 -->
+        <div class="lg:col-span-7 flex flex-col gap-6">
+            
+            <!-- 互動可視化面板 -->
+            <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 shadow-lg flex flex-col flex-1 min-h-[460px]">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-md font-semibold text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-diagram-project text-indigo-400"></i> 多叉樹遍歷動態模擬 (4層高度)
+                    </h2>
+                    <span class="text-xs text-slate-400">起點：1 號根節點</span>
+                </div>
+
+                <!-- SVG 畫布與節點樹 (加大高度至 380px 以容納四層結構) -->
+                <div class="relative bg-slate-950 rounded-lg border border-slate-800 flex-1 min-h-[380px] overflow-hidden" id="canvas-container">
+                    <svg id="svg-lines" class="absolute inset-0 w-full h-full z-10"></svg>
+                    
+                    <!-- 節點 (使用百分比定位以適應寬度，保證 4 層結構完美佈局) -->
+                    <!-- 第一層：根節點 1 (深度 1) -->
+                    <div id="node-1" class="node-transition absolute z-20 w-10 h-10 md:w-11 md:h-11 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center font-bold text-sm md:text-base text-slate-300 shadow-md cursor-default" style="top: 8%; left: 50%; transform: translateX(-50%);">1</div>
+                    
+                    <!-- 第二層：2, 3, 4 (深度 2 - 展示三叉分支) -->
+                    <div id="node-2" class="node-transition absolute z-20 w-10 h-10 md:w-11 md:h-11 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center font-bold text-sm md:text-base text-slate-300 shadow-md cursor-default" style="top: 33%; left: 20%; transform: translateX(-50%);">2</div>
+                    <div id="node-3" class="node-transition absolute z-20 w-10 h-10 md:w-11 md:h-11 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center font-bold text-sm md:text-base text-slate-300 shadow-md cursor-default" style="top: 33%; left: 50%; transform: translateX(-50%);">3</div>
+                    <div id="node-4" class="node-transition absolute z-20 w-10 h-10 md:w-11 md:h-11 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center font-bold text-sm md:text-base text-slate-300 shadow-md cursor-default" style="top: 33%; left: 80%; transform: translateX(-50%);">4</div>
+                    
+                    <!-- 第三層：5, 6, 7, 8, 9 (深度 3) -->
+                    <div id="node-5" class="node-transition absolute z-20 w-10 h-10 md:w-11 md:h-11 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center font-bold text-sm md:text-base text-slate-300 shadow-md cursor-default" style="top: 58%; left: 10%; transform: translateX(-50%);">5</div>
+                    <div id="node-6" class="node-transition absolute z-20 w-10 h-10 md:w-11 md:h-11 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center font-bold text-sm md:text-base text-slate-300 shadow-md cursor-default" style="top: 58%; left: 28%; transform: translateX(-50%);">6</div>
+                    <div id="node-7" class="node-transition absolute z-20 w-10 h-10 md:w-11 md:h-11 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center font-bold text-sm md:text-base text-slate-300 shadow-md cursor-default" style="top: 58%; left: 50%; transform: translateX(-50%);">7</div>
+                    <div id="node-8" class="node-transition absolute z-20 w-10 h-10 md:w-11 md:h-11 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center font-bold text-sm md:text-base text-slate-300 shadow-md cursor-default" style="top: 58%; left: 72%; transform: translateX(-50%);">8</div>
+                    <div id="node-9" class="node-transition absolute z-20 w-10 h-10 md:w-11 md:h-11 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center font-bold text-sm md:text-base text-slate-300 shadow-md cursor-default" style="top: 58%; left: 90%; transform: translateX(-50%);">9</div>
+                    
+                    <!-- 第四層：10, 11 (深度 4 - 極限深度探索點) -->
+                    <div id="node-10" class="node-transition absolute z-20 w-10 h-10 md:w-11 md:h-11 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center font-bold text-sm md:text-base text-slate-300 shadow-md cursor-default" style="top: 83%; left: 10%; transform: translateX(-50%);">10</div>
+                    <div id="node-11" class="node-transition absolute z-20 w-10 h-10 md:w-11 md:h-11 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center font-bold text-sm md:text-base text-slate-300 shadow-md cursor-default" style="top: 83%; left: 72%; transform: translateX(-50%);">11</div>
+                </div>
+            </div>
+
+            <!-- 操作面板與狀態監控 -->
+            <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 shadow-lg flex flex-col gap-4">
+                
+                <!-- 步驟說明 -->
+                <div class="bg-slate-900/50 border-l-4 border-indigo-500 p-4 rounded-r-lg">
+                    <span class="text-xs uppercase tracking-wider text-indigo-400 font-bold block mb-1">當前執行說明</span>
+                    <p class="text-sm md:text-base text-slate-200 min-h-[48px]" id="explanation-text">點擊下方「下一步」按鈕，開始一步步探索 4 層多叉樹的 DFS 遞歸與回溯過程！</p>
+                </div>
+
+                <!-- 按鈕控制區 -->
+                <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-700/50 pt-4">
+                    <div class="flex gap-2">
+                        <button id="btn-prev" disabled class="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:hover:bg-slate-700 text-slate-200 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors">
+                            <i class="fa-solid fa-chevron-left"></i> 上一步
+                        </button>
+                        <button id="btn-next" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors shadow-lg shadow-indigo-600/20">
+                            下一步 <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <button id="btn-auto" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors">
+                            <i class="fa-solid fa-play" id="auto-icon"></i> <span id="auto-text">自動播放</span>
+                        </button>
+                        <button id="btn-reset" class="px-4 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors border border-rose-500/20">
+                            <i class="fa-solid fa-rotate-right"></i> 重置
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 模擬系統狀態（調用棧與遍歷順序） -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/60 p-4 rounded-lg border border-slate-800">
+                    <!-- 調用棧 Call Stack (深度展示至 4 層) -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-layer-group text-sky-400"></i> 系統調用棧 (Call Stack)
+                            </span>
+                            <span class="text-[10px] bg-sky-500/10 text-sky-400 px-1.5 py-0.5 rounded border border-sky-500/20">最大深度: 4 層</span>
+                        </div>
+                        <div id="stack-container" class="flex flex-col-reverse gap-1.5 bg-slate-900 p-3 rounded-md min-h-[140px] border border-slate-800/80 justify-start">
+                            <!-- 空棧提示 -->
+                            <div id="stack-empty" class="text-slate-500 text-xs text-center py-10 italic">目前調用棧為空 (等待 dfs 被呼叫)</div>
+                        </div>
+                    </div>
+
+                    <!-- 訪問順序 -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-list-ol text-emerald-400"></i> 已訪問順序 (Visited List)
+                            </span>
+                        </div>
+                        <div class="bg-slate-900 p-3 rounded-md min-h-[140px] border border-slate-800/80 flex flex-col justify-between">
+                            <div id="visited-container" class="flex flex-wrap gap-1.5 items-center content-start">
+                                <!-- 空訪問提示 -->
+                                <div id="visited-empty" class="text-slate-500 text-xs py-10 italic w-full text-center">尚未訪問任何節點</div>
+                            </div>
+                            <div class="text-[11px] text-slate-500 mt-2 border-t border-slate-800/80 pt-2 flex flex-col gap-1">
+                                <div class="flex justify-between">
+                                    <span>標記陣列 visited[12] 狀態:</span>
+                                    <span id="visited-array-state" class="font-mono text-slate-400 text-[10px]">[idx 0:空, 1:F, 2:F, 3:F, 4:F, 5:F, 6:F, 7:F, 8:F, 9:F, 10:F, 11:F]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- 右側：C++ 代碼聯動 (佔 5 格) -->
+        <div class="lg:col-span-5 flex flex-col">
+            <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 shadow-lg flex flex-col h-full">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-md font-semibold text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-code text-amber-400"></i> C++ 原始碼聯動
+                    </h2>
+                    <span class="text-xs bg-slate-700 px-2 py-0.5 rounded text-slate-300 font-mono">C++11</span>
+                </div>
+
+                <!-- 程式碼顯示區 -->
+                <div class="bg-slate-950 rounded-lg p-4 font-mono text-xs md:text-[13px] leading-relaxed overflow-x-auto text-slate-300 flex-1 border border-slate-800 relative">
+                    <pre class="h-full"><code id="code-block"><span class="code-line block py-0.5 px-2 rounded" id="line-1"><span class="text-pink-400">#include</span> <span class="text-emerald-400">&lt;iostream&gt;</span></span><span class="code-line block py-0.5 px-2 rounded" id="line-2"><span class="text-pink-400">#include</span> <span class="text-emerald-400">&lt;vector&gt;</span></span><span class="code-line block py-0.5 px-2 rounded" id="line-3"><span class="text-pink-400">using namespace</span> <span class="text-blue-400">std</span>;</span><span class="code-line block py-0.5 px-2 rounded" id="line-4"></span><span class="code-line block py-0.5 px-2 rounded" id="line-5"><span class="text-blue-400">vector</span>&lt;<span class="text-orange-400">int</span>&gt; adj[<span class="text-purple-400">12</span>]; <span class="text-slate-500">// 11個節點的多叉樹鄰接表</span></span><span class="code-line block py-0.5 px-2 rounded" id="line-6"><span class="text-orange-400">bool</span> visited[<span class="text-purple-400">12</span>];    <span class="text-slate-500">// 記錄 1~11 號節點</span></span><span class="code-line block py-0.5 px-2 rounded" id="line-7"></span><span class="code-line block py-0.5 px-2 rounded" id="line-8"><span class="text-orange-400">void</span> <span class="text-teal-400">dfs</span>(<span class="text-orange-400">int</span> u) {</span><span class="code-line block py-0.5 px-2 rounded" id="line-9">    visited[u] = <span class="text-purple-400">true</span>; <span class="text-slate-500">// 1. 標記當前節點已訪問</span></span><span class="code-line block py-0.5 px-2 rounded" id="line-10">    <span class="text-pink-400">for</span> (<span class="text-orange-400">int</span> v : adj[u]) { <span class="text-slate-500">// 2. 按順序遍歷所有相連鄰居</span></span><span class="code-line block py-0.5 px-2 rounded" id="line-11">        <span class="text-pink-400">if</span> (!visited[v]) {</span><span class="code-line block py-0.5 px-2 rounded" id="line-12">            <span class="text-teal-400">dfs</span>(v);        <span class="text-slate-500">// 3. 遞歸下探子節點分支</span></span><span class="code-line block py-0.5 px-2 rounded" id="line-13">        }</span><span class="code-line block py-0.5 px-2 rounded" id="line-14">    }</span><span class="code-line block py-0.5 px-2 rounded" id="line-15">} <span class="text-slate-500">// 4. 子樹遍歷完畢，自動彈棧並「回溯」</span></span><span class="code-line block py-0.5 px-2 rounded" id="line-16"></span><span class="code-line block py-0.5 px-2 rounded" id="line-17"><span class="text-orange-400">int</span> <span class="text-teal-400">main</span>() {</span><span class="code-line block py-0.5 px-2 rounded" id="line-18">    <span class="text-slate-500">// 構建多叉四層樹: 1為三叉根；2, 4各有兩個分叉；5, 8各有最底層子葉</span></span><span class="code-line block py-0.5 px-2 rounded" id="line-19">    adj[<span class="text-purple-400">1</span>]={<span class="text-purple-400">2</span>,<span class="text-purple-400">3</span>,<span class="text-purple-400">4</span>}; adj[<span class="text-purple-400">2</span>]={<span class="text-purple-400">5</span>,<span class="text-purple-400">6</span>}; adj[<span class="text-purple-400">3</span>]={<span class="text-purple-400">7</span>}; adj[<span class="text-purple-400">4</span>]={<span class="text-purple-400">8</span>,<span class="text-purple-400">9</span>};</span><span class="code-line block py-0.5 px-2 rounded" id="line-20">    adj[<span class="text-purple-400">5</span>]={<span class="text-purple-400">10</span>};   adj[<span class="text-purple-400">8</span>]={<span class="text-purple-400">11</span>};</span><span class="code-line block py-0.5 px-2 rounded" id="line-21">    <span class="text-teal-400">dfs</span>(<span class="text-purple-400">1</span>); <span class="text-slate-500">// 從根節點 1 啟動探索</span></span><span class="code-line block py-0.5 px-2 rounded" id="line-22">}</span></code></pre>
+                </div>
+
+                <!-- 教學引導提示區 -->
+                <div class="mt-4 bg-slate-900 border border-slate-700/60 p-4 rounded-lg">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-graduation-cap text-indigo-400"></i> 多叉四層樹的課堂核心提問
+                    </h3>
+                    <ul class="text-xs text-slate-300 space-y-2 list-disc list-inside">
+                        <li>問學生：「當遍歷至 10 (第四層最深點) 時，呼叫棧深度是多少？它是如何從 10 回溯退回至 2 的？」</li>
+                        <li>引導觀察：根節點 1 的三個分叉（左、中、右分支）是如何嚴格按照 DFS 「先往極深處下探、不撞南牆不回頭」的順序逐一掃描完畢的。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 頁尾 Footer -->
+    <footer class="bg-slate-950 py-4 px-6 border-t border-slate-800 text-center text-xs text-slate-500 mt-auto">
+        DFS 深度優先搜索互動式視覺化教學平台 (四層非二叉樹版) &copy; 2026.
+    </footer>
+
+    <!-- 邏輯腳本 -->
+    <script>
+        // 定義非二叉四層樹狀圖的物理連線數據 (11個節點，10條邊)
+        const edges = [
+            { from: 1, to: 2, id: 'line-1-2' },
+            { from: 1, to: 3, id: 'line-1-3' },
+            { from: 1, to: 4, id: 'line-1-4' },
+            { from: 2, to: 5, id: 'line-2-5' },
+            { from: 2, to: 6, id: 'line-2-6' },
+            { from: 3, to: 7, id: 'line-3-7' },
+            { from: 4, to: 8, id: 'line-4-8' },
+            { from: 4, to: 9, id: 'line-4-9' },
+            { from: 5, to: 10, id: 'line-5-10' },
+            { from: 8, to: 11, id: 'line-8-11' }
+        ];
+
+        // 系統步驟詳細數據庫 (22 個關鍵教學節點，涵蓋了 4 層極限下探與非二叉多分支探索)
+        const steps = [
+            {
+                line: 21,
+                stack: [1],
+                visited: [1],
+                visitedArr: [false, true, false, false, false, false, false, false, false, false, false, false],
+                activeNode: 1,
+                nodeStates: { 1: 'visiting', 2: 'default', 3: 'default', 4: 'default', 5: 'default', 6: 'default', 7: 'default', 8: 'default', 9: 'default', 10: 'default', 11: 'default' },
+                activeLines: [],
+                exp: "【呼叫 dfs(1)】在 main() 函數中呼叫 dfs(1)。根節點 1 被推入系統調用棧並標記為已訪問。我們正式開始深度優先探索之旅！"
+            },
+            {
+                line: 9,
+                stack: [1],
+                visited: [1],
+                visitedArr: [false, true, false, false, false, false, false, false, false, false, false, false],
+                activeNode: 1,
+                nodeStates: { 1: 'visiting', 2: 'default', 3: 'default', 4: 'default', 5: 'default', 6: 'default', 7: 'default', 8: 'default', 9: 'default', 10: 'default', 11: 'default' },
+                activeLines: [],
+                exp: "進入 dfs(1)。執行第 9 行：將 visited[1] 標記為 true (已訪問)，防止回頭走產生死迴圈。"
+            },
+            {
+                line: 12,
+                stack: [1, 2],
+                visited: [1, 2],
+                visitedArr: [false, true, true, false, false, false, false, false, false, false, false, false],
+                activeNode: 2,
+                nodeStates: { 1: 'visiting', 2: 'visiting', 3: 'default', 4: 'default', 5: 'default', 6: 'default', 7: 'default', 8: 'default', 9: 'default', 10: 'default', 11: 'default' },
+                activeLines: ['line-1-2'],
+                exp: "【深入左分叉 2】節點 1 的第一個鄰居是 2。因為 2 未被訪問，執行 dfs(2)。節點 2 壓入棧頂，建立深度連結線。"
+            },
+            {
+                line: 12,
+                stack: [1, 2, 5],
+                visited: [1, 2, 5],
+                visitedArr: [false, true, true, false, false, true, false, false, false, false, false, false],
+                activeNode: 5,
+                nodeStates: { 1: 'visiting', 2: 'visiting', 3: 'default', 4: 'default', 5: 'visiting', 6: 'default', 7: 'default', 8: 'default', 9: 'default', 10: 'default', 11: 'default' },
+                activeLines: ['line-1-2', 'line-2-5'],
+                exp: "【下探至第 3 層：節點 5】進入 dfs(2) 後，尋找鄰居。發現鄰居 5 尚未訪問，呼叫 dfs(5)！此時調用棧厚度達 3 層。"
+            },
+            {
+                line: 12,
+                stack: [1, 2, 5, 10],
+                visited: [1, 2, 5, 10],
+                visitedArr: [false, true, true, false, false, true, false, false, false, false, true, false],
+                activeNode: 10,
+                nodeStates: { 1: 'visiting', 2: 'visiting', 3: 'default', 4: 'default', 5: 'visiting', 6: 'default', 7: 'default', 8: 'default', 9: 'default', 10: 'visiting', 11: 'default' },
+                activeLines: ['line-1-2', 'line-2-5', 'line-5-10'],
+                exp: "【下探至第 4 層極限：節點 10】在 dfs(5) 中，繼續向下尋找，發現 10 未訪問，呼叫 dfs(10)！我們成功到達了最底層，調用棧累積至 4 層！"
+            },
+            {
+                line: 15,
+                stack: [1, 2, 5],
+                visited: [1, 2, 5, 10],
+                visitedArr: [false, true, true, false, false, true, false, false, false, false, true, false],
+                activeNode: 5,
+                nodeStates: { 1: 'visiting', 2: 'visiting', 3: 'default', 4: 'default', 5: 'visiting', 6: 'default', 7: 'default', 8: 'default', 9: 'default', 10: 'visited', 11: 'default' },
+                activeLines: ['line-1-2', 'line-2-5'],
+                exp: "【回溯第一步】節點 10 是末梢葉子，沒有子節點。dfs(10) 執行結束，10 變綠代表遍歷完成，並從棧頂彈出 (Pop)。控制權退回 dfs(5)。"
+            },
+            {
+                line: 15,
+                stack: [1, 2],
+                visited: [1, 2, 5, 10],
+                visitedArr: [false, true, true, false, false, true, false, false, false, false, true, false],
+                activeNode: 2,
+                nodeStates: { 1: 'visiting', 2: 'visiting', 3: 'default', 4: 'default', 5: 'visited', 6: 'default', 7: 'default', 8: 'default', 9: 'default', 10: 'visited', 11: 'default' },
+                activeLines: ['line-1-2'],
+                exp: "【回溯第二步】回到 dfs(5)。檢查發現 5 也沒有其它未訪問鄰居。dfs(5) 結束並彈出，我們一路回退回調用棧中的節點 2。"
+            },
+            {
+                line: 12,
+                stack: [1, 2, 6],
+                visited: [1, 2, 5, 10, 6],
+                visitedArr: [false, true, true, false, false, true, true, false, false, false, true, false],
+                activeNode: 6,
+                nodeStates: { 1: 'visiting', 2: 'visiting', 3: 'default', 4: 'default', 5: 'visited', 6: 'visiting', 7: 'default', 8: 'default', 9: 'default', 10: 'visited', 11: 'default' },
+                activeLines: ['line-1-2', 'line-2-6'],
+                exp: "【橫向探索分支 6】回到 dfs(2) 的迴圈。檢查發現下一個鄰居 6 尚未被訪問，呼叫 dfs(6)。調用棧重新堆疊回 3 層。"
+            },
+            {
+                line: 15,
+                stack: [1, 2],
+                visited: [1, 2, 5, 10, 6],
+                visitedArr: [false, true, true, false, false, true, true, false, false, false, true, false],
+                activeNode: 2,
+                nodeStates: { 1: 'visiting', 2: 'visiting', 3: 'default', 4: 'default', 5: 'visited', 6: 'visited', 7: 'default', 8: 'default', 9: 'default', 10: 'visited', 11: 'default' },
+                activeLines: ['line-1-2'],
+                exp: "【回溯】節點 6 是葉子，dfs(6) 執行完畢出棧。我們再次退回 dfs(2) 的運算環境中。"
+            },
+            {
+                line: 15,
+                stack: [1],
+                visited: [1, 2, 5, 10, 6],
+                visitedArr: [false, true, true, false, false, true, true, false, false, false, true, false],
+                activeNode: 1,
+                nodeStates: { 1: 'visiting', 2: 'visited', 3: 'default', 4: 'default', 5: 'visited', 6: 'visited', 7: 'default', 8: 'default', 9: 'default', 10: 'visited', 11: 'default' },
+                activeLines: [],
+                exp: "【左子樹全數完成】節點 2 的鄰居 {5, 6} 都已完成遍歷。dfs(2) 正式結束並彈出，控制權歸還給最初的根任務 dfs(1)。"
+            },
+            {
+                line: 12,
+                stack: [1, 3],
+                visited: [1, 2, 5, 10, 6, 3],
+                visitedArr: [false, true, true, true, false, true, true, false, false, false, true, false],
+                activeNode: 3,
+                nodeStates: { 1: 'visiting', 2: 'visited', 3: 'visiting', 4: 'default', 5: 'visited', 6: 'visited', 7: 'default', 8: 'default', 9: 'default', 10: 'visited', 11: 'default' },
+                activeLines: ['line-1-3'],
+                exp: "【進入第二條主分支：節點 3】回到 dfs(1) 迴圈，取得中間的鄰居 3。因為 3 尚未被訪問，呼叫 dfs(3) 入棧。"
+            },
+            {
+                line: 12,
+                stack: [1, 3, 7],
+                visited: [1, 2, 5, 10, 6, 3, 7],
+                visitedArr: [false, true, true, true, false, true, true, true, false, false, true, false],
+                activeNode: 7,
+                nodeStates: { 1: 'visiting', 2: 'visited', 3: 'visiting', 4: 'default', 5: 'visited', 6: 'visited', 7: 'visiting', 8: 'default', 9: 'default', 10: 'visited', 11: 'default' },
+                activeLines: ['line-1-3', 'line-3-7'],
+                exp: "【下探至第 3 層：節點 7】在 dfs(3) 內，發現相連子節點 7，滿足條件，呼叫 dfs(7)！"
+            },
+            {
+                line: 15,
+                stack: [1, 3],
+                visited: [1, 2, 5, 10, 6, 3, 7],
+                visitedArr: [false, true, true, true, false, true, true, true, false, false, true, false],
+                activeNode: 3,
+                nodeStates: { 1: 'visiting', 2: 'visited', 3: 'visiting', 4: 'default', 5: 'visited', 6: 'visited', 7: 'visited', 8: 'default', 9: 'default', 10: 'visited', 11: 'default' },
+                activeLines: ['line-1-3'],
+                exp: "【回溯】節點 7 遍歷完畢，dfs(7) 結束彈出，重新退回 dfs(3)。"
+            },
+            {
+                line: 15,
+                stack: [1],
+                visited: [1, 2, 5, 10, 6, 3, 7],
+                visitedArr: [false, true, true, true, false, true, true, true, false, false, true, false],
+                activeNode: 1,
+                nodeStates: { 1: 'visiting', 2: 'visited', 3: 'visited', 4: 'default', 5: 'visited', 6: 'visited', 7: 'visited', 8: 'default', 9: 'default', 10: 'visited', 11: 'default' },
+                activeLines: [],
+                exp: "【中間子樹遍歷完成】節點 3 唯一的鄰居 7 已完成。dfs(3) 結束並彈出，我們再次回到根任務 dfs(1)。"
+            },
+            {
+                line: 12,
+                stack: [1, 4],
+                visited: [1, 2, 5, 10, 6, 3, 7, 4],
+                visitedArr: [false, true, true, true, true, true, true, true, false, false, true, false],
+                activeNode: 4,
+                nodeStates: { 1: 'visiting', 2: 'visited', 3: 'visited', 4: 'visiting', 5: 'visited', 6: 'visited', 7: 'visited', 8: 'default', 9: 'default', 10: 'visited', 11: 'default' },
+                activeLines: ['line-1-4'],
+                exp: "【進入第三條主分支：節點 4】回到 dfs(1)。迴圈推進至第三個鄰居 4，滿足條件，呼叫 dfs(4) 入棧。這完美展現了多叉樹的多分支尋路！"
+            },
+            {
+                line: 12,
+                stack: [1, 4, 8],
+                visited: [1, 2, 5, 10, 6, 3, 7, 4, 8],
+                visitedArr: [false, true, true, true, true, true, true, true, true, false, true, false],
+                activeNode: 8,
+                nodeStates: { 1: 'visiting', 2: 'visited', 3: 'visited', 4: 'visiting', 5: 'visited', 6: 'visited', 7: 'visited', 8: 'visiting', 9: 'default', 10: 'visited', 11: 'default' },
+                activeLines: ['line-1-4', 'line-4-8'],
+                exp: "【下探至第 3 層：節點 8】進入 dfs(4)，探索第一個鄰居 8。呼叫 dfs(8) 入棧。"
+            },
+            {
+                line: 12,
+                stack: [1, 4, 8, 11],
+                visited: [1, 2, 5, 10, 6, 3, 7, 4, 8, 11],
+                visitedArr: [false, true, true, true, true, true, true, true, true, false, true, true],
+                activeNode: 11,
+                nodeStates: { 1: 'visiting', 2: 'visited', 3: 'visited', 4: 'visiting', 5: 'visited', 6: 'visited', 7: 'visited', 8: 'visiting', 9: 'default', 10: 'visited', 11: 'visiting' },
+                activeLines: ['line-1-4', 'line-4-8', 'line-8-11'],
+                exp: "【再次深挖至第 4 層：節點 11】在 dfs(8) 裡，發現其子節點 11。呼叫 dfs(11)！我們再次到達本多叉樹的【第 4 層極限深度】，棧深度重新疊滿至 4 層！"
+            },
+            {
+                line: 15,
+                stack: [1, 4, 8],
+                visited: [1, 2, 5, 10, 6, 3, 7, 4, 8, 11],
+                visitedArr: [false, true, true, true, true, true, true, true, true, false, true, true],
+                activeNode: 8,
+                nodeStates: { 1: 'visiting', 2: 'visited', 3: 'visited', 4: 'visiting', 5: 'visited', 6: 'visited', 7: 'visited', 8: 'visiting', 9: 'default', 10: 'visited', 11: 'visited' },
+                activeLines: ['line-1-4', 'line-4-8'],
+                exp: "【回溯葉子 11】節點 11 執行完畢，dfs(11) 退場彈出調用棧，控制權回到 dfs(8)。"
+            },
+            {
+                line: 15,
+                stack: [1, 4],
+                visited: [1, 2, 5, 10, 6, 3, 7, 4, 8, 11],
+                visitedArr: [false, true, true, true, true, true, true, true, true, false, true, true],
+                activeNode: 4,
+                nodeStates: { 1: 'visiting', 2: 'visited', 3: 'visited', 4: 'visiting', 5: 'visited', 6: 'visited', 7: 'visited', 8: 'visited', 9: 'default', 10: 'visited', 11: 'visited' },
+                activeLines: ['line-1-4'],
+                exp: "【回溯】節點 8 沒有別的鄰居，dfs(8) 執行結束並彈出，我們成功退回到節點 4。"
+            },
+            {
+                line: 12,
+                stack: [1, 4, 9],
+                visited: [1, 2, 5, 10, 6, 3, 7, 4, 8, 11, 9],
+                visitedArr: [false, true, true, true, true, true, true, true, true, true, true, true],
+                activeNode: 9,
+                nodeStates: { 1: 'visiting', 2: 'visited', 3: 'visited', 4: 'visiting', 5: 'visited', 6: 'visited', 7: 'visited', 8: 'visited', 9: 'visiting', 10: 'visited', 11: 'visited' },
+                activeLines: ['line-1-4', 'line-4-9'],
+                exp: "【橫向探索最後的分支：節點 9】回到 dfs(4) 迴圈，處理最後一個鄰居 9。呼叫 dfs(9)，調用棧堆疊至 3 層。"
+            },
+            {
+                line: 15,
+                stack: [1, 4],
+                visited: [1, 2, 5, 10, 6, 3, 7, 4, 8, 11, 9],
+                visitedArr: [false, true, true, true, true, true, true, true, true, true, true, true],
+                activeNode: 4,
+                nodeStates: { 1: 'visiting', 2: 'visited', 3: 'visited', 4: 'visiting', 5: 'visited', 6: 'visited', 7: 'visited', 8: 'visited', 9: 'visited', 10: 'visited', 11: 'visited' },
+                activeLines: ['line-1-4'],
+                exp: "【回溯】葉子 9 完成任務，dfs(9) 退場彈出。控制權交回 dfs(4)。"
+            },
+            {
+                line: 15,
+                stack: [1],
+                visited: [1, 2, 5, 10, 6, 3, 7, 4, 8, 11, 9],
+                visitedArr: [false, true, true, true, true, true, true, true, true, true, true, true],
+                activeNode: 1,
+                nodeStates: { 1: 'visiting', 2: 'visited', 3: 'visited', 4: 'visited', 5: 'visited', 6: 'visited', 7: 'visited', 8: 'visited', 9: 'visited', 10: 'visited', 11: 'visited' },
+                activeLines: [],
+                exp: "【右側子樹全數完成】節點 4 的鄰居探索完畢。dfs(4) 正式結束彈棧。我們最後一次退回起點任務 dfs(1)。"
+            },
+            {
+                line: 21,
+                stack: [],
+                visited: [1, 2, 5, 10, 6, 3, 7, 4, 8, 11, 9],
+                visitedArr: [false, true, true, true, true, true, true, true, true, true, true, true],
+                activeNode: null,
+                nodeStates: { 1: 'visited', 2: 'visited', 3: 'visited', 4: 'visited', 5: 'visited', 6: 'visited', 7: 'visited', 8: 'visited', 9: 'visited', 10: 'visited', 11: 'visited' },
+                activeLines: [],
+                exp: "【全樹遍歷圓滿完成！】根節點 1 的所有相連分叉全部探索完。dfs(1) 執行結束並彈出，返回 main()。最終訪問順序為：[1, 2, 5, 10, 6, 3, 7, 4, 8, 11, 9]！"
+            }
+        ];
+
+        let currentStep = -1;
+        let autoPlayTimer = null;
+
+        // 綁定 DOM 元素
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+        const btnReset = document.getElementById('btn-reset');
+        const btnAuto = document.getElementById('btn-auto');
+        const autoIcon = document.getElementById('auto-icon');
+        const autoText = document.getElementById('auto-text');
+        const expText = document.getElementById('explanation-text');
+        
+        const stackContainer = document.getElementById('stack-container');
+        const stackEmpty = document.getElementById('stack-empty');
+        
+        const visitedContainer = document.getElementById('visited-container');
+        const visitedEmpty = document.getElementById('visited-empty');
+        const visitedArrayState = document.getElementById('visited-array-state');
+
+        // 初始化 SVG 樹結構的畫線
+        function drawTreeConnections() {
+            const svg = document.getElementById('svg-lines');
+            // 清空舊的連線
+            svg.innerHTML = '';
+            
+            const containerRect = document.getElementById('canvas-container').getBoundingClientRect();
+
+            edges.forEach(e => {
+                const nFrom = document.getElementById(`node-${e.from}`);
+                const nTo = document.getElementById(`node-${e.to}`);
+                
+                // 獲取節點相對於容器的百分比位置並轉換為像素座標
+                const fromX = (parseFloat(nFrom.style.left) / 100) * containerRect.width;
+                const fromY = (parseFloat(nFrom.style.top) / 100) * containerRect.height;
+                const toX = (parseFloat(nTo.style.left) / 100) * containerRect.width;
+                const toY = (parseFloat(nTo.style.top) / 100) * containerRect.height;
+
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute('id', e.id);
+                line.setAttribute('x1', fromX);
+                line.setAttribute('y1', fromY);
+                line.setAttribute('x2', toX);
+                line.setAttribute('y2', toY);
+                line.setAttribute('stroke', '#475569'); // 預設暗灰色
+                line.setAttribute('stroke-width', '3');
+                svg.appendChild(line);
+            });
+        }
+
+        // 當視窗大小改變時，重新繪製連線（保證自適應）
+        window.addEventListener('resize', drawTreeConnections);
+        // 初始化延遲繪製，等待寬度渲染
+        setTimeout(drawTreeConnections, 200);
+
+        // 渲染指定步驟
+        function renderStep(index) {
+            if (index < 0) {
+                resetToInitial();
+                return;
+            }
+            if (index >= steps.length) return;
+
+            const step = steps[index];
+
+            // 1. C++ 程式碼同步高亮
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('highlight'));
+            const targetLine = document.getElementById(`line-${step.line}`);
+            if (targetLine) {
+                targetLine.classList.add('highlight');
+                // 平滑滾動原始碼區域，確保高亮代碼能被看見
+                targetLine.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            // 2. 更新步驟解釋
+            expText.innerText = step.exp;
+
+            // 3. 更新 SVG 連線狀態
+            edges.forEach(e => {
+                const lineEl = document.getElementById(e.id);
+                if (step.activeLines.includes(e.id)) {
+                    lineEl.setAttribute('stroke', '#f59e0b'); // 黃橘色高亮（深度路徑）
+                    lineEl.setAttribute('stroke-width', '5');
+                } else {
+                    lineEl.setAttribute('stroke', '#475569'); // 預設暗灰色
+                    lineEl.setAttribute('stroke-width', '3');
+                }
+            });
+
+            // 4. 更新節點顏色與動態樣式
+            for (let id = 1; id <= 11; id++) {
+                const nodeEl = document.getElementById(`node-${id}`);
+                const state = step.nodeStates[id];
+                nodeEl.classList.remove('pulse-active');
+
+                if (state === 'visiting') {
+                    // 正在訪問 (黃色 + 脈衝)
+                    nodeEl.className = "node-transition absolute z-20 w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center font-bold text-sm md:text-base text-white shadow-lg cursor-default border-2 border-amber-400 bg-amber-500 pulse-active";
+                } else if (state === 'visited') {
+                    // 已完成遍歷 (綠色)
+                    nodeEl.className = "node-transition absolute z-20 w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center font-bold text-sm md:text-base text-white shadow-md cursor-default border-2 border-emerald-500 bg-emerald-600";
+                } else {
+                    // 預設未訪問 (深灰/藍灰)
+                    nodeEl.className = "node-transition absolute z-20 w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center font-bold text-sm md:text-base text-slate-300 shadow-md cursor-default border-2 border-slate-600 bg-slate-800 hover:border-slate-500";
+                }
+            }
+
+            // 5. 更新系統調用棧視覺效果
+            stackContainer.innerHTML = '';
+            if (step.stack.length === 0) {
+                stackContainer.appendChild(stackEmpty);
+            } else {
+                step.stack.forEach((nodeVal, i) => {
+                    const stackItem = document.createElement('div');
+                    // 棧頂高亮
+                    const isTop = (i === step.stack.length - 1);
+                    stackItem.className = `w-full text-center py-1.5 px-3 rounded text-xs font-mono font-bold transition-all duration-300 ${
+                        isTop 
+                        ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20 scale-102 border border-sky-400' 
+                        : 'bg-slate-800 text-slate-400 border border-slate-700'
+                    }`;
+                    stackItem.innerHTML = `dfs(${nodeVal}) ${isTop ? '<span class="text-[9px] px-1 bg-slate-950/40 text-sky-300 rounded ml-1">STACK TOP (棧頂)</span>' : ''}`;
+                    stackContainer.appendChild(stackItem);
+                });
+            }
+
+            // 6. 更新已訪問數組順序
+            visitedContainer.innerHTML = '';
+            if (step.visited.length === 0) {
+                visitedContainer.appendChild(visitedEmpty);
+            } else {
+                step.visited.forEach((nodeVal, index) => {
+                    const visitedItem = document.createElement('div');
+                    visitedItem.className = "flex items-center gap-1 animate-fade-in";
+                    visitedItem.innerHTML = `
+                        <div class="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center font-bold text-xs">${nodeVal}</div>
+                        ${index < step.visited.length - 1 ? '<i class="fa-solid fa-arrow-right text-[9px] text-slate-600"></i>' : ''}
+                    `;
+                    visitedContainer.appendChild(visitedItem);
+                });
+            }
+
+            // 7. 更新 visited[12] 布林陣列文字狀態
+            const arrStr = step.visitedArr.map((b, idx) => {
+                if (idx === 0) return 'idx 0:空';
+                return `${idx}:${b ? 'T' : 'F'}`;
+            }).join(', ');
+            visitedArrayState.innerHTML = `[${arrStr}]`;
+
+            // 更新按鈕禁用狀態
+            btnPrev.disabled = (index === 0);
+            btnNext.disabled = (index === steps.length - 1);
+
+            // 若到最後一步，停止自動播放
+            if (index === steps.length - 1 && autoPlayTimer) {
+                stopAutoPlay();
+            }
+        }
+
+        // 初始化/重置狀態
+        function resetToInitial() {
+            currentStep = -1;
+            stopAutoPlay();
+            
+            // 清空高亮
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('highlight'));
+            
+            // 恢復所有節點 (1~11)
+            for (let id = 1; id <= 11; id++) {
+                const nodeEl = document.getElementById(`node-${id}`);
+                nodeEl.className = "node-transition absolute z-20 w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center font-bold text-sm md:text-base text-slate-300 shadow-md cursor-default border-2 border-slate-600 bg-slate-800 hover:border-slate-500";
+                nodeEl.classList.remove('pulse-active');
+            }
+
+            // 重設連線
+            drawTreeConnections();
+
+            // 重設文字
+            expText.innerText = "點擊「下一步」按鈕，開始一步步探索 4 層多叉樹的 DFS 遞歸與回溯過程！";
+            
+            // 重設調用棧與訪問順序
+            stackContainer.innerHTML = '';
+            stackContainer.appendChild(stackEmpty);
+            visitedContainer.innerHTML = '';
+            visitedContainer.appendChild(visitedEmpty);
+            visitedArrayState.innerHTML = "[idx 0:空, 1:F, 2:F, 3:F, 4:F, 5:F, 6:F, 7:F, 8:F, 9:F, 10:F, 11:F]";
+
+            btnPrev.disabled = true;
+            btnNext.disabled = false;
+        }
+
+        // 自動播放控制
+        function toggleAutoPlay() {
+            if (autoPlayTimer) {
+                stopAutoPlay();
+            } else {
+                startAutoPlay();
+            }
+        }
+
+        function startAutoPlay() {
+            // 如果已經在最後一步，重置後再播放
+            if (currentStep === steps.length - 1) {
+                resetToInitial();
+            }
+            autoIcon.className = "fa-solid fa-pause text-amber-400";
+            autoText.innerText = "暫停播放";
+            btnAuto.classList.replace('bg-slate-700', 'bg-amber-600/20');
+            btnAuto.classList.add('border', 'border-amber-500/30');
+
+            autoPlayTimer = setInterval(() => {
+                currentStep++;
+                if (currentStep < steps.length) {
+                    renderStep(currentStep);
+                } else {
+                    stopAutoPlay();
+                }
+            }, 3000); // 延長至 3 秒，讓學生有充足時間看清 4 層結構的漫長回溯
+        }
+
+        function stopAutoPlay() {
+            if (autoPlayTimer) {
+                clearInterval(autoPlayTimer);
+                autoPlayTimer = null;
+            }
+            autoIcon.className = "fa-solid fa-play";
+            autoText.innerText = "自動播放";
+            btnAuto.className = "px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors";
+        }
+
+        // 綁定按鈕事件
+        btnNext.addEventListener('click', () => {
+            stopAutoPlay();
+            if (currentStep < steps.length - 1) {
+                currentStep++;
+                renderStep(currentStep);
+            }
+        });
+
+        btnPrev.addEventListener('click', () => {
+            stopAutoPlay();
+            if (currentStep > 0) {
+                currentStep--;
+                renderStep(currentStep);
+            } else if (currentStep === 0) {
+                resetToInitial();
+            }
+        });
+
+        btnReset.addEventListener('click', resetToInitial);
+        btnAuto.addEventListener('click', toggleAutoPlay);
+    </script>
+</body>
+</html>

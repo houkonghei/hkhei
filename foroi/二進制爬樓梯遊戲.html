@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>進位制對照體驗：爬樓梯</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@900&family=Roboto+Mono:wght@500;700;900&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            background-color: #020617;
+        }
+        canvas {
+            display: block;
+        }
+        .mono {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .ui-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+        .interactive {
+            pointer-events: auto;
+        }
+        #big-floor-display {
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container" class="relative w-full h-screen">
+    <canvas id="gameCanvas"></canvas>
+    
+    <!-- 主選單 -->
+    <div id="menu-ui" class="absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center z-50">
+        <h1 class="text-6xl font-black text-white mb-2 tracking-tighter italic">BASE EXPLORER</h1>
+        <p class="text-blue-400 mb-12 text-xl font-bold tracking-widest">進位制世界：巨型數字對照攀爬</p>
+        <div class="flex flex-col gap-5 w-80">
+            <button onclick="startGame(2, '二進制')" class="interactive bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-bold text-xl transition-all shadow-lg hover:shadow-blue-500/40">
+                二進制 <span class="text-sm opacity-70 ml-2">BINARY</span>
+            </button>
+            <button onclick="startGame(8, '八進制')" class="interactive bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-2xl font-bold text-xl transition-all shadow-lg hover:shadow-emerald-500/40">
+                八進制 <span class="text-sm opacity-70 ml-2">OCTAL</span>
+            </button>
+            <button onclick="startGame(16, '十六進制')" class="interactive bg-purple-600 hover:bg-purple-500 text-white py-4 rounded-2xl font-bold text-xl transition-all shadow-lg hover:shadow-purple-500/40">
+                十六進制 <span class="text-sm opacity-70 ml-2">HEX</span>
+            </button>
+        </div>
+        <p class="mt-12 text-slate-500 text-sm">提示：使用鍵盤 [↑] [↓] 進行攀爬</p>
+    </div>
+
+    <!-- 遊戲中 UI -->
+    <div id="game-ui" class="hidden ui-overlay">
+        <!-- 巨大背景字 -->
+        <div class="absolute inset-0 flex items-center justify-center">
+            <div id="big-floor-display" class="mono text-[30vw] font-black text-white/[0.02] select-none uppercase">0</div>
+        </div>
+
+        <!-- 頂部狀態 -->
+        <div class="absolute top-8 left-8 flex items-center gap-6">
+            <div class="bg-slate-900/90 border border-white/10 backdrop-blur-xl p-5 rounded-2xl shadow-2xl">
+                <div id="mode-label" class="text-blue-400 text-xs font-black mb-1 tracking-widest uppercase">二進制模式</div>
+                <div class="flex items-baseline gap-3">
+                    <span id="display-value" class="mono text-5xl font-black text-white">0</span>
+                    <span id="display-decimal" class="mono text-xl text-slate-500 font-bold">DEC: 0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 返回按鈕 -->
+        <button onclick="location.reload()" class="interactive absolute top-8 right-8 bg-white/5 hover:bg-red-500/20 text-white/50 hover:text-red-400 px-6 py-3 rounded-xl text-sm font-bold border border-white/10 transition-all">
+            EXIT
+        </button>
+
+        <!-- 進度條 -->
+        <div class="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col items-center gap-2">
+            <div class="text-white/20 text-xs font-bold mono">100</div>
+            <div class="w-1.5 h-64 bg-white/5 rounded-full relative overflow-hidden">
+                <div id="progress-bar" class="absolute bottom-0 w-full bg-blue-500 transition-all duration-300" style="height: 0%"></div>
+            </div>
+            <div class="text-white/20 text-xs font-bold mono">0</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const bigFloorDisplay = document.getElementById('big-floor-display');
+    const displayValue = document.getElementById('display-value');
+    const displayDecimal = document.getElementById('display-decimal');
+    const progressBar = document.getElementById('progress-bar');
+    
+    let baseMode = 10;
+    let currentFloor = 0;
+    const totalFloors = 100;
+    
+    // 繪圖參數 (數值放大 3 倍後調整了間距與寬度)
+    const stairWidth = 600;
+    const stairHeight = 24;
+    const stairGap = 220; // 增加間距以容納巨大文字
+    
+    // 音效設置
+    let audioCtx = null;
+    function playStepSound(frequency) {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+        
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.1);
+    }
+
+    // 平滑攝像機與玩家
+    const camera = { y: 0, targetY: 0 };
+    const player = {
+        y: 0,
+        targetY: 0,
+        width: 48,
+        height: 72,
+        color: '#60a5fa'
+    };
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    window.addEventListener('keydown', (e) => {
+        if (document.getElementById('game-ui').classList.contains('hidden')) return;
+        if (e.code === 'ArrowUp' && currentFloor < totalFloors) move(1);
+        if (e.code === 'ArrowDown' && currentFloor > 0) move(-1);
+    });
+
+    function move(delta) {
+        currentFloor += delta;
+        updateStats();
+        player.targetY = getFloorY(currentFloor) - player.height;
+        
+        // 播放音效：向上音調變高，向下音調變低
+        const baseFreq = delta > 0 ? 440 : 330;
+        const freqOffset = (currentFloor % baseMode) * 20;
+        playStepSound(baseFreq + freqOffset);
+    }
+
+    function updateStats() {
+        const val = currentFloor.toString(baseMode).toUpperCase();
+        displayValue.innerText = val;
+        displayDecimal.innerText = `DEC: ${currentFloor}`;
+        bigFloorDisplay.innerText = val;
+        progressBar.style.height = `${(currentFloor / totalFloors) * 100}%`;
+    }
+
+    function getFloorY(f) {
+        return (canvas.height * 0.8) - (f * stairGap);
+    }
+
+    function startGame(mode, name) {
+        baseMode = mode;
+        document.getElementById('mode-label').innerText = `${name}模式`;
+        document.getElementById('menu-ui').style.display = 'none';
+        document.getElementById('game-ui').classList.remove('hidden');
+        
+        currentFloor = 0;
+        const startY = getFloorY(0) - player.height;
+        player.y = startY;
+        player.targetY = startY;
+        camera.y = startY;
+        
+        updateStats();
+        animate();
+    }
+
+    function drawStair(i, y) {
+        const isCurrent = i === currentFloor;
+        const isBaseStep = (i % baseMode === 0 && i !== 0);
+        
+        const baseVal = i.toString(baseMode).toUpperCase();
+        const decVal = i.toString(10);
+        
+        // --- 核心改動：放大數字尺寸 ---
+        
+        // 左側：進位制數值 (大幅放大)
+        ctx.textAlign = 'right';
+        ctx.fillStyle = isCurrent ? '#60a5fa' : (isBaseStep ? '#fff' : '#334155');
+        // 主字體大小提升至 72px (原 24px)
+        ctx.font = isBaseStep ? '900 72px Roboto Mono' : '700 64px Roboto Mono';
+        ctx.fillText(baseVal, canvas.width / 2 - stairWidth / 2 - 40, y + stairHeight + 15);
+        
+        // 右側：十進制對照 (放大但保留次要感)
+        ctx.textAlign = 'left';
+        ctx.fillStyle = isCurrent ? '#94a3b8' : '#1e293b';
+        // 對照字體大小提升至 42px (原 14px)
+        ctx.font = '500 42px Roboto Mono';
+        ctx.fillText(`(${decVal})`, canvas.width / 2 + stairWidth / 2 + 40, y + stairHeight + 10);
+
+        // 樓梯主體
+        const grad = ctx.createLinearGradient(canvas.width/2 - stairWidth/2, 0, canvas.width/2 + stairWidth/2, 0);
+        if (isCurrent) {
+            grad.addColorStop(0, '#3b82f6');
+            grad.addColorStop(1, '#60a5fa');
+        } else if (isBaseStep) {
+            grad.addColorStop(0, '#1e293b');
+            grad.addColorStop(1, '#475569');
+        } else {
+            grad.addColorStop(0, '#0f172a');
+            grad.addColorStop(1, '#1e293b');
+        }
+
+        ctx.fillStyle = grad;
+        ctx.shadowBlur = isCurrent ? 30 : 0;
+        ctx.shadowColor = '#3b82f6';
+        
+        ctx.beginPath();
+        ctx.roundRect(canvas.width / 2 - stairWidth / 2, y, stairWidth, stairHeight, 6);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        // 當前樓梯高亮線
+        if (isCurrent) {
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+    }
+
+    function animate() {
+        player.y += (player.targetY - player.y) * 0.12;
+        const targetCamY = player.y - (canvas.height * 0.55);
+        camera.y += (targetCamY - camera.y) * 0.08;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.save();
+        ctx.translate(0, -camera.y);
+
+        // 背景裝飾網格
+        ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+        ctx.lineWidth = 1;
+        for(let x = 0; x < canvas.width; x += 100) {
+            ctx.beginPath(); ctx.moveTo(x, camera.y); ctx.lineTo(x, camera.y + canvas.height); ctx.stroke();
+        }
+
+        // 繪製可見區域內的樓梯 (調整緩衝範圍)
+        for (let i = 0; i <= totalFloors; i++) {
+            const y = getFloorY(i);
+            if (y > camera.y - 300 && y < camera.y + canvas.height + 300) {
+                drawStair(i, y);
+            }
+        }
+
+        // 繪製主角 (螢光方塊)
+        ctx.shadowBlur = 30;
+        ctx.shadowColor = '#3b82f6';
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.roundRect(canvas.width / 2 - player.width / 2, player.y, player.width, player.height, 8);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.restore();
+        requestAnimationFrame(animate);
+    }
+
+</script>
+</body>
+</html>

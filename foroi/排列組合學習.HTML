@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>體驗式學習：排列與組合的奧秘</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- KaTeX for beautiful math formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <style>
+    .drag-item {
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: grab;
+    }
+    .drag-item:active {
+      cursor: grabbing;
+      transform: scale(1.1);
+    }
+    .drop-zone {
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+    .drop-zone.drag-over {
+      background-color: #f0fdf4;
+      border-color: #22c55e;
+    }
+    /* Tab transition */
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    /* Scrollbar style */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg py-6 px-4">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-white text-indigo-600 p-2.5 rounded-xl shadow-md">
+          <i class="fa-solid fa-dice fa-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold tracking-tight">探索排列與組合</h1>
+          <p class="text-indigo-100 text-sm mt-0.5">動手拖拖看，用視覺與直覺秒懂 $P^n_r$ 與 $C^n_r$ 的差別！</p>
+        </div>
+      </div>
+      <div class="flex bg-indigo-800/40 p-1 rounded-lg border border-indigo-400/30">
+        <button onclick="switchTab('explore')" id="btn-explore" class="tab-btn px-4 py-2 rounded-md text-sm font-semibold transition bg-white text-indigo-700 shadow-sm">
+          <i class="fa-solid fa-hand-pointer mr-1.5"></i>動手體驗區
+        </button>
+        <button onclick="switchTab('formula')" id="btn-formula" class="tab-btn px-4 py-2 rounded-md text-sm font-semibold transition text-indigo-100 hover:text-white">
+          <i class="fa-solid fa-square-root-variable mr-1.5"></i>公式魔法鏡
+        </button>
+        <button onclick="switchTab('game')" id="btn-game" class="tab-btn px-4 py-2 rounded-md text-sm font-semibold transition text-indigo-100 hover:text-white">
+          <i class="fa-solid fa-gamepad mr-1.5"></i>挑戰競技場
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-grow max-w-6xl w-full mx-auto p-4 md:p-6">
+    
+    <!-- TAB 1: EXPLORE (DRAG & DROP) -->
+    <section id="tab-explore" class="tab-content active space-y-6">
+      
+      <!-- Top Controllers -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-6">
+          <!-- Elements Selection -->
+          <div class="space-y-1">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">元素池大小 (n)</span>
+            <div class="flex items-center gap-2">
+              <button onclick="adjustN(-1)" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center font-bold text-slate-600 transition">-</button>
+              <span id="display-n" class="w-8 text-center text-xl font-extrabold text-slate-800">4</span>
+              <button onclick="adjustN(1)" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center font-bold text-slate-600 transition">+</button>
+            </div>
+          </div>
+          <!-- Selection Size -->
+          <div class="space-y-1">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">取出個數 (r)</span>
+            <div class="flex items-center gap-2">
+              <button onclick="adjustR(-1)" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center font-bold text-slate-600 transition">-</button>
+              <span id="display-r" class="w-8 text-center text-xl font-extrabold text-slate-800">2</span>
+              <button onclick="adjustR(1)" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center font-bold text-slate-600 transition">+</button>
+            </div>
+          </div>
+          <!-- Mode Selector -->
+          <div class="space-y-1">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">核心規則</span>
+            <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
+              <button onclick="setMode('permutation')" id="mode-p" class="px-4 py-1.5 rounded-md text-sm font-bold transition-all bg-indigo-600 text-white shadow-sm">
+                排列 P (順序重要)
+              </button>
+              <button onclick="setMode('combination')" id="mode-c" class="px-4 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900 transition-all">
+                組合 C (順序無關)
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Reset Button -->
+        <button onclick="resetExplore()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition flex items-center gap-2">
+          <i class="fa-solid fa-arrow-rotate-right"></i>重置體驗
+        </button>
+      </div>
+
+      <!-- Interactive Playground Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Source Pool & Drop Target -->
+        <div class="lg:col-span-7 flex flex-col gap-6">
+          <!-- Pool -->
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex-1">
+            <h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+              第一步：看這裡！你擁有的元素池 (n = <span class="text-emerald-600 font-extrabold" id="n-val-label">4</span>)
+            </h3>
+            <p class="text-slate-400 text-xs mb-4">可以試著把下方彩球拖拉進右側目標框中！</p>
+            <div id="elements-pool" class="flex flex-wrap gap-4 p-4 bg-slate-50 rounded-xl justify-center min-h-[100px] items-center border border-dashed border-slate-200">
+              <!-- Dynamically populated drag items -->
+            </div>
+          </div>
+
+          <!-- Target Box -->
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex-1">
+            <h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+              第二步：拖拽到這裡！你要取出的目標位置 (r = <span class="text-indigo-600 font-extrabold" id="r-val-label">2</span>)
+            </h3>
+            <p id="rule-description" class="text-indigo-500 font-medium text-xs mb-4 flex items-center gap-1.5">
+              <i class="fa-solid fa-info-circle"></i>
+              <span>當前為排列 (P) 模式：擺放順序不同，就是完全不同的排列組合！</span>
+            </p>
+            <div id="drop-slots-container" class="flex flex-wrap gap-4 justify-center items-center py-6 px-4 bg-indigo-50/50 rounded-xl border-2 border-indigo-100">
+              <!-- Dynamically populated drop slots -->
+            </div>
+            
+            <div class="mt-4 flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
+              <span class="text-xs text-slate-500">你當前排出的款式：</span>
+              <div id="current-selection-display" class="font-bold text-sm text-slate-700">尚未擺滿</div>
+              <button onclick="addCurrentToCollected()" id="add-combo-btn" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 disabled:cursor-not-allowed">
+                記下這一組
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Visual Result List & Tree Diagram -->
+        <div class="lg:col-span-5 flex flex-col bg-white rounded-2xl p-6 shadow-sm border border-slate-100 min-h-[400px]">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-indigo-600"></i>
+              <span>所有可能性對照盤</span>
+            </h3>
+            <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2.5 py-1 rounded-full" id="stats-counter">
+              已蒐集: 0 / 12
+            </span>
+          </div>
+
+          <!-- Mode Visual Help -->
+          <div id="helper-notice" class="bg-amber-50 border border-amber-100 text-amber-800 p-3 rounded-xl text-xs mb-4 flex items-start gap-2">
+            <i class="fa-solid fa-lightbulb mt-0.5 text-amber-500"></i>
+            <div>
+              <strong id="helper-notice-title">排列 (P) 的魅力</strong>
+              <p id="helper-notice-desc" class="text-slate-600 mt-0.5">當前的球要是換了前後順序，就算成新的可能！快點擊「自動配對全部」來感受所有可能性的分佈。</p>
+            </div>
+          </div>
+
+          <div class="flex gap-2 mb-4">
+            <button onclick="autoGenerateAll()" class="flex-1 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition border border-indigo-200">
+              <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>自動產生所有答案
+            </button>
+            <button onclick="clearCollected()" class="py-2 px-3 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-xl text-xs font-medium transition border border-slate-200">
+              清除蒐集
+            </button>
+          </div>
+
+          <!-- Possibilities Grid Container -->
+          <div class="flex-grow overflow-y-auto max-h-[350px] border border-slate-100 rounded-xl p-3 bg-slate-50/50" id="possibilities-container">
+            <!-- Dynamically populated lists of results -->
+          </div>
+
+          <!-- Formula hint foot -->
+          <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+            <span class="text-xs text-slate-500">即時數學公式計算：</span>
+            <span class="font-extrabold text-indigo-600 text-lg" id="live-formula-calc">
+              P^4_2 = 12
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- TAB 2: FORMULA (FORMULA MAGIC GLASS) -->
+    <section id="tab-formula" class="tab-content space-y-6">
+      
+      <!-- Interactive Formula Slider Box -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Left Pane: Interactive math model -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between">
+          <div>
+            <h3 class="font-extrabold text-slate-800 text-lg mb-2">排列與組合的橋樑：$r!$</h3>
+            <p class="text-slate-500 text-sm mb-6">許多人背一堆公式卻搞不懂由來。其實，組合（C）只是排列（P）扣除掉「重複排隊」產生的多餘次數。讓我們用動態數值一探究竟！</p>
+            
+            <div class="space-y-6">
+              <!-- Interactive sliders -->
+              <div class="space-y-2">
+                <div class="flex justify-between items-center text-sm">
+                  <span class="font-medium text-slate-600">總元素個數 $n$：</span>
+                  <span class="font-bold text-slate-800 text-base" id="slider-n-val">5</span>
+                </div>
+                <input type="range" id="formula-slider-n" min="1" max="8" value="5" oninput="updateFormulaTab()" class="w-full accent-indigo-600">
+              </div>
+
+              <div class="space-y-2">
+                <div class="flex justify-between items-center text-sm">
+                  <span class="font-medium text-slate-600">挑選出來個數 $r$：</span>
+                  <span class="font-bold text-slate-800 text-base" id="slider-r-val">3</span>
+                </div>
+                <input type="range" id="formula-slider-r" min="1" max="5" value="3" oninput="updateFormulaTab()" class="w-full accent-indigo-600">
+              </div>
+            </div>
+          </div>
+
+          <!-- Equation dynamic view -->
+          <div class="mt-8 bg-indigo-50/50 rounded-2xl p-5 border border-indigo-100 text-center space-y-4">
+            <span class="text-xs font-bold tracking-widest text-indigo-600 uppercase block">動態公式渲染</span>
+            
+            <!-- P dynamic -->
+            <div class="py-2 border-b border-indigo-100">
+              <span class="text-xs text-slate-500 block mb-1">排列個數 ($P$):</span>
+              <div class="text-xl font-bold text-slate-800" id="math-p-expr">P^5_3 = 60</div>
+            </div>
+
+            <!-- C dynamic -->
+            <div class="py-2">
+              <span class="text-xs text-slate-500 block mb-1">組合個數 ($C$):</span>
+              <div class="text-xl font-bold text-slate-800" id="math-c-expr">C^5_3 = 10</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Pane: Formula break down explanation -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 space-y-6">
+          <h3 class="font-extrabold text-slate-800 text-lg">為什麼組合要除以 $r!$ ？</h3>
+          
+          <div class="space-y-4 text-slate-600 text-sm leading-relaxed">
+            <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+              <h4 class="font-bold text-emerald-800 mb-1 flex items-center gap-1.5">
+                <i class="fa-solid fa-users"></i> 排列 (Permutation) 想法：
+              </h4>
+              <p>選出來的人是要「分配不同座位」或「排順序」的。</p>
+              <p class="font-semibold text-slate-700 mt-2">
+                第 1 個位置有 $n$ 種選法，第 2 個有 $n-1$ 種... 乘到底：
+              </p>
+              <div class="bg-white/80 p-2 rounded border border-slate-200 font-mono text-center my-2 text-indigo-700 text-base">
+                $P^n_r = \frac{n!}{(n-r)!}$
+              </div>
+            </div>
+
+            <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+              <h4 class="font-bold text-blue-800 mb-1 flex items-center gap-1.5">
+                <i class="fa-solid fa-briefcase"></i> 組合 (Combination) 想法：
+              </h4>
+              <p>選出來的人都一樣（例如：選人組成委員會、買水果）。不管是 A 先被抽到還是 B 先被抽到，結果完全相同！</p>
+              <p class="font-semibold text-slate-700 mt-2">
+                因為選出的 $r$ 個元素在裡面可以產生 $r!$ 種排列，這 $r!$ 種排列對組合來說是同一種！
+              </p>
+              <div class="bg-white/80 p-2 rounded border border-slate-200 font-mono text-center my-2 text-indigo-700 text-base">
+                $C^n_r = \frac{P^n_r}{r!} = \frac{n!}{r!(n-r)!}$
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-50 p-4 rounded-xl text-xs text-slate-500 space-y-2">
+            <span class="font-bold text-slate-700 block">💡 記公式口訣：</span>
+            <ul class="list-disc pl-4 space-y-1">
+              <li><strong>排列 P (Permute)：</strong>一路乘下去（有 $r$ 個數字）。例如 $P^5_3 = 5 \times 4 \times 3$。</li>
+              <li><strong>組合 C (Choose)：</strong>排列完除以 $r!$ 消除順序。例如 $C^5_3 = \frac{5 \times 4 \times 3}{3 \times 2 \times 1}$。</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 3: GAME (CHALLENGE ARENA) -->
+    <section id="tab-game" class="tab-content space-y-6">
+      <div class="max-w-3xl mx-auto bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        
+        <!-- Game Header / Stats -->
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+          <div>
+            <h3 class="font-extrabold text-slate-800 text-xl flex items-center gap-2">
+              <i class="fa-solid fa-trophy text-amber-500"></i>
+              <span>排列組合冒險挑戰</span>
+            </h3>
+            <p class="text-slate-400 text-xs mt-0.5">閱讀生活情境，選出正確的公式與答案！</p>
+          </div>
+          <div class="text-right">
+            <span class="text-xs font-bold text-slate-400 block">當前積分</span>
+            <span id="game-score" class="text-2xl font-extrabold text-indigo-600">0</span>
+          </div>
+        </div>
+
+        <!-- Question Box -->
+        <div id="game-question-area" class="space-y-6">
+          <div class="bg-slate-50 rounded-2xl p-6 border border-slate-100 relative overflow-hidden">
+            <div class="absolute top-0 right-0 bg-indigo-100 text-indigo-800 font-bold text-xs px-3 py-1 rounded-bl-xl" id="question-index">
+              第 1 題
+            </div>
+            
+            <div class="flex items-center gap-2 mb-3 text-xs font-bold text-indigo-600 uppercase tracking-widest">
+              <span id="question-type-tag" class="px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded">排列應用</span>
+            </div>
+            <h4 id="question-text" class="text-lg font-bold text-slate-800 leading-relaxed">
+              三位好朋友（小明、小華、小東）要在一張有三個位置的長椅上合照。請問他們總共有幾種不同的排座位方式？
+            </h4>
+          </div>
+
+          <!-- Options Container -->
+          <div class="space-y-3" id="game-options">
+            <!-- Options dynamically loaded -->
+          </div>
+
+          <!-- Navigation / Feedback -->
+          <div id="game-feedback" class="hidden p-4 rounded-xl flex items-start gap-3">
+            <!-- Success/Fail icon is injected here -->
+            <div id="feedback-icon" class="text-xl"></div>
+            <div>
+              <strong id="feedback-title" class="block font-bold">說明</strong>
+              <p id="feedback-desc" class="text-sm mt-0.5"></p>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-3 mt-4">
+            <button id="btn-next-question" onclick="nextQuestion()" class="hidden px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm">
+              <span>下一題</span> <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Completion Screen -->
+        <div id="game-complete-area" class="hidden text-center py-10 space-y-6">
+          <div class="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto text-amber-500 text-4xl border border-amber-100 animate-bounce">
+            🎉
+          </div>
+          <div class="space-y-2">
+            <h3 class="text-2xl font-bold text-slate-800">你太厲害了！冒險完成！</h3>
+            <p class="text-slate-500 max-w-sm mx-auto">你已經在實際情境中展現了對「排列」和「組合」的驚人直覺與運算力！</p>
+          </div>
+          <div class="bg-indigo-50 max-w-xs mx-auto p-4 rounded-2xl border border-indigo-100">
+            <span class="text-xs text-slate-500 block">最終得分</span>
+            <span id="final-score" class="text-3xl font-extrabold text-indigo-600">0</span>
+          </div>
+          <button onclick="restartGame()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition inline-flex items-center gap-2 shadow-sm">
+            再玩一次
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Notification Popup (Replaces Browser Alert) -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 translate-y-10 opacity-0 pointer-events-none transition-all duration-300">
+    <span id="toast-icon" class="text-indigo-400">💡</span>
+    <span id="toast-message" class="text-sm font-medium">提示</span>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-slate-100 border-t border-slate-200 py-6 mt-8">
+    <div class="max-w-6xl mx-auto px-4 text-center text-slate-400 text-xs space-y-1">
+      <p>© 2026 互動數學樂園 - 排列與組合體驗教室</p>
+      <p>專為中學生設計之自主探索學習工具，支持多端拖放互動</p>
+    </div>
+  </footer>
+
+  <!-- Core JavaScript Business Logic -->
+  <script>
+    // --- APP STATE ---
+    let state = {
+      tab: 'explore',
+      // Explore (Drag & Drop) parameters
+      n: 4,
+      r: 2,
+      mode: 'permutation', // 'permutation' or 'combination'
+      collectedList: [], // List of user-selected arrays
+      draggedItemValue: null,
+      currentDraft: [], // Current dropzone state: [val1, val2...]
+      // Visual elements helper
+      allPossibleFormulas: [],
+      // Formula tab variables
+      formulaN: 5,
+      formulaR: 3,
+      // Game State
+      currentQuestionIndex: 0,
+      score: 0,
+      gameFinished: false,
+      answered: false
+    };
+
+    // Color definitions for visual elements
+    const itemVisuals = [
+      { id: 'gem-red', val: 'A', name: '紅寶石', colorClass: 'bg-red-500 text-white shadow-red-200' },
+      { id: 'gem-blue', val: 'B', name: '藍寶石', colorClass: 'bg-blue-500 text-white shadow-blue-200' },
+      { id: 'gem-emerald', val: 'C', name: '綠翡翠', colorClass: 'bg-emerald-500 text-white shadow-emerald-200' },
+      { id: 'gem-amber', val: 'D', name: '黃琥珀', colorClass: 'bg-amber-500 text-slate-800 shadow-amber-200' },
+      { id: 'gem-purple', val: 'E', name: '紫水晶', colorClass: 'bg-purple-500 text-white shadow-purple-200' },
+      { id: 'gem-orange', val: 'F', name: '橙瑪瑙', colorClass: 'bg-orange-500 text-white shadow-orange-200' }
+    ];
+
+    // Game Database
+    const gameQuestions = [
+      {
+        type: '排列應用 (Permutation)',
+        text: '班級要選出「班長」、「副班長」和「風紀股長」3 個職務。如果候選人有 5 人，且每個人最多只能擔任 1 個職務，請問共有幾種不同的安排方法？',
+        options: [
+          { text: 'C^5_3 = 10 種可能性', correct: false },
+          { text: 'P^5_3 = 60 種可能性', correct: true, desc: '對！職務是有區分的（順序重要），第一個職務有 5 種選法，第二個有 4 種，第三個有 3 種，也就是 $5 \\times 4 \\times 3 = 60$ 種不同的配對！' },
+          { text: '5^3 = 125 種可能性', correct: false },
+          { text: 'C^5_3 \\times 2 = 20 種可能性', correct: false }
+        ]
+      },
+      {
+        type: '組合應用 (Combination)',
+        text: '從 6 位同學中，挑選 2 名代表學校去參加數學競賽。不分名次先後，請問共有幾種不同的派人組合？',
+        options: [
+          { text: 'P^6_2 = 30 種可能', correct: false },
+          { text: '6^2 = 36 種可能', correct: false },
+          { text: 'C^6_2 = 15 種可能', correct: true, desc: '非常棒！因為是選 2 人共同參賽，不分前後，所以是「組合」C。$C^6_2 = \\frac{6 \\times 5}{2 \\times 1} = 15$。' },
+          { text: 'C^6_2 \\times 2 = 30 種可能', correct: false }
+        ]
+      },
+      {
+        type: '排列應用 (Permutation)',
+        text: '用數字卡片 1、2、3、4 排成一個沒有重複數字的三位數，總共可以排成幾個不同的三位數？',
+        options: [
+          { text: 'P^4_3 = 24 個', correct: true, desc: '完全正確！因為排出來的三位數，數字擺放順序不同數值就不同（例如 123 數字和 321 不同）。這是排列：$P^4_3 = 4 \\times 3 \\times 2 = 24$。' },
+          { text: 'C^4_3 = 4 個', correct: false },
+          { text: '4^3 = 64 個', correct: false },
+          { text: 'C^4_3 \\times 2 = 8 個', correct: false }
+        ]
+      },
+      {
+        type: '組合應用 (Combination)',
+        text: '小明在披薩店點配料，店裡提供 5 種配料，他可以任選 3 種。請問小明總共有幾種不同的口味配搭？',
+        options: [
+          { text: 'P^5_3 = 60 種口味', correct: false },
+          { text: 'C^5_3 = 10 種口味', correct: true, desc: '沒錯！披薩配料同時烤出來，不管是先灑洋蔥還是先灑起司，吃起來都是同一盤！順序無差別，用組合：$C^5_3 = 10$。' },
+          { text: 'C^5_3 \\times 3! = 60 種口味', correct: false },
+          { text: '5 + 3 = 8 種口味', correct: false }
+        ]
+      }
+    ];
+
+    // --- UTILITIES ---
+    function toast(message, icon = "💡") {
+      const t = document.getElementById('toast');
+      document.getElementById('toast-icon').textContent = icon;
+      document.getElementById('toast-message').textContent = message;
+      t.classList.remove('translate-y-10', 'opacity-0', 'pointer-events-none');
+      
+      setTimeout(() => {
+        t.classList.add('translate-y-10', 'opacity-0', 'pointer-events-none');
+      }, 3000);
+    }
+
+    function factorial(n) {
+      if (n <= 1) return 1;
+      return n * factorial(n - 1);
+    }
+
+    function calcP(n, r) {
+      if (r > n || r < 0) return 0;
+      let p = 1;
+      for (let i = 0; i < r; i++) {
+        p *= (n - i);
+      }
+      return p;
+    }
+
+    function calcC(n, r) {
+      if (r > n || r < 0) return 0;
+      return calcP(n, r) / factorial(r);
+    }
+
+    // Safe mathematical formatting helper to avoid "No element provided to render"
+    function safeRenderMath(element) {
+      if (!element) return;
+      try {
+        if (typeof renderMathInElement === 'function') {
+          renderMathInElement(element, {
+            delimiters: [
+              { left: "$$", right: "$$", display: true },
+              { left: "$", right: "$", display: false }
+            ],
+            throwOnError: false
+          });
+        }
+      } catch (err) {
+        console.warn("KaTeX rendering deferred or skipped for element:", element, err);
+      }
+    }
+
+    // --- NAVIGATION TAB ---
+    function switchTab(tabId) {
+      state.tab = tabId;
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-indigo-700', 'shadow-sm');
+        btn.classList.add('text-indigo-100', 'hover:text-white');
+      });
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+
+      // Active specific
+      const activeBtn = document.getElementById(`btn-${tabId}`);
+      activeBtn.classList.remove('text-indigo-100', 'hover:text-white');
+      activeBtn.classList.add('bg-white', 'text-indigo-700', 'shadow-sm');
+      document.getElementById(`tab-${tabId}`).classList.add('active');
+
+      // Post-tab-switching activation triggers
+      if (tabId === 'formula') {
+        renderFormulaTab();
+      } else if (tabId === 'explore') {
+        renderExploreElements();
+      } else if (tabId === 'game') {
+        renderGameQuestion();
+      }
+    }
+
+    // --- TAB 1: EXPLORE SYSTEM (DRAG, DROP & GENERATE) ---
+    function adjustN(val) {
+      const nextN = state.n + val;
+      if (nextN >= 2 && nextN <= 6) {
+        state.n = nextN;
+        if (state.r > state.n) {
+          state.r = state.n; // Clamp r to be always <= n
+        }
+        document.getElementById('display-n').innerText = state.n;
+        document.getElementById('display-r').innerText = state.r;
+        resetExplore();
+      } else {
+        toast("超出演示最佳範圍 (n 限於 2 至 6 之間)", "⚠️");
+      }
+    }
+
+    function adjustR(val) {
+      const nextR = state.r + val;
+      if (nextR >= 1 && nextR <= state.n) {
+        state.r = nextR;
+        document.getElementById('display-r').innerText = state.r;
+        resetExplore();
+      } else {
+        toast(`取出個數 r 必須大於 0 且不高於總數 n (${state.n})`, "⚠️");
+      }
+    }
+
+    function setMode(mode) {
+      state.mode = mode;
+      const pBtn = document.getElementById('mode-p');
+      const cBtn = document.getElementById('mode-c');
+      const ruleDesc = document.getElementById('rule-description');
+      const helperTitle = document.getElementById('helper-notice-title');
+      const helperDesc = document.getElementById('helper-notice-desc');
+
+      if (mode === 'permutation') {
+        pBtn.className = "px-4 py-1.5 rounded-md text-sm font-bold transition-all bg-indigo-600 text-white shadow-sm";
+        cBtn.className = "px-4 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900 transition-all";
+        ruleDesc.innerHTML = `<i class="fa-solid fa-info-circle"></i> <span>當前為排列 (P) 模式：擺放順序不同，就是完全不同的排列組合！</span>`;
+        helperTitle.innerText = "排列 (P) 的魅力";
+        helperDesc.innerText = "當前的球要是換了前後順序，就算成新的可能！快點擊「自動配對全部」來感受所有可能性的分佈。";
+      } else {
+        cBtn.className = "px-4 py-1.5 rounded-md text-sm font-bold transition-all bg-indigo-600 text-white shadow-sm";
+        pBtn.className = "px-4 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900 transition-all";
+        ruleDesc.innerHTML = `<i class="fa-solid fa-info-circle"></i> <span>當前為組合 (C) 模式：元素一樣就算同一組，前後擺放位置不影響！</span>`;
+        helperTitle.innerText = "組合 (C) 的消消樂";
+        helperDesc.innerText = "在組合中，就算調換了選出來的順序，也只算同一組喔！我們會自動把重複順序折疊起來顯示！";
+      }
+
+      resetExplore();
+    }
+
+    function resetExplore() {
+      state.collectedList = [];
+      state.currentDraft = Array(state.r).fill(null);
+      renderExploreElements();
+      updateDynamicPossibilities();
+    }
+
+    function renderExploreElements() {
+      // 1. Update Labels
+      document.getElementById('n-val-label').innerText = state.n;
+      document.getElementById('r-val-label').innerText = state.r;
+
+      // 2. Generate Pool Elements
+      const pool = document.getElementById('elements-pool');
+      pool.innerHTML = '';
+      
+      for (let i = 0; i < state.n; i++) {
+        const itemInfo = itemVisuals[i];
+        
+        // Draggable container
+        const div = document.createElement('div');
+        div.id = `source-${itemInfo.val}`;
+        div.className = `drag-item w-14 h-14 rounded-full flex flex-col items-center justify-center font-black shadow-md ${itemInfo.colorClass}`;
+        div.draggable = true;
+        div.innerHTML = `
+          <span class="text-lg leading-none">${itemInfo.val}</span>
+          <span class="text-[9px] font-medium opacity-80 mt-0.5">${itemInfo.name}</span>
+        `;
+        
+        // Attach drag events
+        div.addEventListener('dragstart', (e) => {
+          state.draggedItemValue = itemInfo.val;
+          e.dataTransfer.setData('text/plain', itemInfo.val);
+        });
+
+        // Touch alternatives helper support
+        div.addEventListener('click', () => {
+          // Find first empty draft slot and place it there
+          const emptyIdx = state.currentDraft.indexOf(null);
+          if (emptyIdx !== -1) {
+            if (!state.currentDraft.includes(itemInfo.val)) {
+              placeItemInSlot(itemInfo.val, emptyIdx);
+            } else {
+              toast("這個元素已經被放進框框裡囉！", "⚠️");
+            }
+          } else {
+            toast("位置都擺滿了，可點擊目標球取回重新排放！", "💡");
+          }
+        });
+
+        pool.appendChild(div);
+      }
+
+      // 3. Render Drop Slots
+      const slotsContainer = document.getElementById('drop-slots-container');
+      slotsContainer.innerHTML = '';
+
+      for (let i = 0; i < state.r; i++) {
+        const slotValue = state.currentDraft[i];
+        const slotDiv = document.createElement('div');
+        slotDiv.className = `drop-zone w-16 h-20 rounded-xl border-2 border-dashed border-indigo-200 bg-white flex flex-col items-center justify-center relative`;
+        slotDiv.dataset.index = i;
+
+        if (slotValue) {
+          const itemMeta = itemVisuals.find(it => it.val === slotValue);
+          slotDiv.innerHTML = `
+            <div class="w-12 h-12 rounded-full flex flex-col items-center justify-center font-black shadow-md ${itemMeta.colorClass} cursor-pointer transition transform active:scale-95">
+              <span class="text-sm leading-none">${itemMeta.val}</span>
+              <span class="text-[8px] font-bold opacity-85">${itemMeta.name}</span>
+            </div>
+            <span class="text-[10px] font-bold text-indigo-400 mt-1">槽位 ${i + 1}</span>
+            <button onclick="clearSlot(${i})" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-rose-600 shadow">&times;</button>
+          `;
+        } else {
+          slotDiv.innerHTML = `
+            <i class="fa-solid fa-cloud-arrow-down text-indigo-200 text-lg mb-1"></i>
+            <span class="text-[10px] font-semibold text-indigo-300">位置 ${i + 1}</span>
+          `;
+        }
+
+        // Dragover and Drop Handlers
+        slotDiv.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          slotDiv.classList.add('drag-over');
+        });
+
+        slotDiv.addEventListener('dragleave', () => {
+          slotDiv.classList.remove('drag-over');
+        });
+
+        slotDiv.addEventListener('drop', (e) => {
+          e.preventDefault();
+          slotDiv.classList.remove('drag-over');
+          const value = e.dataTransfer.getData('text/plain') || state.draggedItemValue;
+          
+          if (!value) return;
+
+          // Prevent duplication in standard selection
+          if (state.currentDraft.includes(value)) {
+            toast("這個元素已經放過了，請挑選別的！", "⚠️");
+            return;
+          }
+
+          placeItemInSlot(value, i);
+        });
+
+        slotsContainer.appendChild(slotDiv);
+      }
+
+      // Update draft selection text state
+      updateSelectionDraftUI();
+    }
+
+    function placeItemInSlot(value, index) {
+      state.currentDraft[index] = value;
+      renderExploreElements();
+    }
+
+    function clearSlot(index) {
+      state.currentDraft[index] = null;
+      renderExploreElements();
+    }
+
+    function updateSelectionDraftUI() {
+      const addBtn = document.getElementById('add-combo-btn');
+      const textDisplay = document.getElementById('current-selection-display');
+      
+      const isComplete = !state.currentDraft.includes(null);
+      
+      if (isComplete) {
+        let textVal = "";
+        if (state.mode === 'permutation') {
+          textVal = `排列 ( ${state.currentDraft.join(' → ')} )`;
+        } else {
+          // Sort to represent unique combination
+          const sorted = [...state.currentDraft].sort();
+          textVal = `組合 { ${sorted.join(', ')} }`;
+        }
+        textDisplay.innerText = textVal;
+        addBtn.disabled = false;
+        addBtn.classList.remove('bg-indigo-300', 'cursor-not-allowed');
+        addBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+      } else {
+        textDisplay.innerText = "尚未擺滿槽位";
+        addBtn.disabled = true;
+        addBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+        addBtn.classList.add('bg-indigo-300', 'cursor-not-allowed');
+      }
+    }
+
+    // Adding draft to collected database
+    function addCurrentToCollected() {
+      const isComplete = !state.currentDraft.includes(null);
+      if (!isComplete) return;
+
+      let key = "";
+      let elementArray = [];
+
+      if (state.mode === 'permutation') {
+        elementArray = [...state.currentDraft];
+        key = elementArray.join('');
+      } else {
+        elementArray = [...state.currentDraft].sort();
+        key = elementArray.join('');
+      }
+
+      // Check duplicate
+      const alreadyHave = state.collectedList.some(item => {
+        if (state.mode === 'permutation') {
+          return item.join('') === key;
+        } else {
+          return [...item].sort().join('') === key;
+        }
+      });
+
+      if (alreadyHave) {
+        toast("這一個排列組合已經被你蒐集過了！再試試其他款式吧！", "🔔");
+        return;
+      }
+
+      state.collectedList.push(elementArray);
+      toast("成功蒐集 1 組！", "🎉");
+      
+      // Flash UI updates
+      state.currentDraft = Array(state.r).fill(null);
+      renderExploreElements();
+      updateDynamicPossibilities();
+    }
+
+    function clearCollected() {
+      state.collectedList = [];
+      updateDynamicPossibilities();
+      toast("蒐集歷史已清除", "🧹");
+    }
+
+    // Math core generator for comparison list
+    function generateAllCombinatorics(n, r, mode) {
+      const letters = 'ABCDEF'.substring(0, n).split('');
+      let results = [];
+
+      function backtrack(current, used) {
+        if (current.length === r) {
+          results.push([...current]);
+          return;
+        }
+        for (let i = 0; i < letters.length; i++) {
+          if (used[i]) continue;
+          used[i] = true;
+          current.push(letters[i]);
+          backtrack(current, used);
+          current.pop();
+          used[i] = false;
+        }
+      }
+
+      if (mode === 'permutation') {
+        backtrack([], Array(n).fill(false));
+      } else {
+        // Combination: non-decreasing indexes to avoid duplicates
+        function backtrackC(start, current) {
+          if (current.length === r) {
+            results.push([...current]);
+            return;
+          }
+          for (let i = start; i < letters.length; i++) {
+            current.push(letters[i]);
+            backtrackC(i + 1, current);
+            current.pop();
+          }
+        }
+        backtrackC(0, []);
+      }
+
+      return results;
+    }
+
+    function autoGenerateAll() {
+      const all = generateAllCombinatorics(state.n, state.r, state.mode);
+      state.collectedList = all;
+      updateDynamicPossibilities();
+      toast("已自動補全所有可能！", "✨");
+    }
+
+    // Refresh right pane dynamic table
+    function updateDynamicPossibilities() {
+      const container = document.getElementById('possibilities-container');
+      container.innerHTML = '';
+
+      const allPossible = generateAllCombinatorics(state.n, state.r, state.mode);
+      const totalCount = allPossible.length;
+      const collectedCount = state.collectedList.length;
+
+      // Update counters
+      document.getElementById('stats-counter').innerText = `已蒐集: ${collectedCount} / ${totalCount}`;
+
+      // Live Formula Label Update
+      const formulaDisplay = document.getElementById('live-formula-calc');
+      if (state.mode === 'permutation') {
+        formulaDisplay.innerHTML = `P^{${state.n}}_{${state.r}} = \\frac{${state.n}!}{(${state.n}-${state.r})!} = ${totalCount}`;
+      } else {
+        formulaDisplay.innerHTML = `C^{${state.n}}_{${state.r}} = \\frac{P^{${state.n}}_{${state.r}}}{${state.r}!} = ${totalCount}`;
+      }
+      
+      // Trigger math rendering
+      safeRenderMath(formulaDisplay);
+
+      // Generate HTML Grid representation of all possible combinations
+      if (allPossible.length === 0) {
+        container.innerHTML = `<p class="text-slate-400 text-xs text-center py-6">無可能性資料</p>`;
+        return;
+      }
+
+      const gridDiv = document.createElement('div');
+      gridDiv.className = "grid grid-cols-2 sm:grid-cols-3 gap-2";
+
+      allPossible.forEach(combo => {
+        const comboKey = state.mode === 'permutation' ? combo.join('') : [...combo].sort().join('');
+        
+        // Check if user has collected it
+        const isCollected = state.collectedList.some(item => {
+          if (state.mode === 'permutation') {
+            return item.join('') === comboKey;
+          } else {
+            return [...item].sort().join('') === comboKey;
+          }
+        });
+
+        const itemBox = document.createElement('div');
+        itemBox.className = `p-2 rounded-xl flex items-center justify-center gap-1 border text-xs font-bold transition duration-300 ${
+          isCollected 
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-800 shadow-sm shadow-emerald-100 scale-[1.02]' 
+            : 'bg-white border-slate-200 text-slate-400 opacity-60'
+        }`;
+
+        // Mini ball indicators inside result panel
+        let ballHTML = '';
+        combo.forEach(char => {
+          const meta = itemVisuals.find(it => it.val === char);
+          ballHTML += `<span class="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black ${meta ? meta.colorClass : 'bg-slate-400'} text-white">${char}</span>`;
+        });
+
+        itemBox.innerHTML = `
+          <div class="flex gap-0.5 mr-2">
+            ${ballHTML}
+          </div>
+          <span>${isCollected ? '✓ 有了' : '未發現'}</span>
+        `;
+
+        gridDiv.appendChild(itemBox);
+      });
+
+      container.appendChild(gridDiv);
+    }
+
+
+    // --- TAB 2: FORMULA INTERACTION MODEL ---
+    function updateFormulaTab() {
+      const sliderN = document.getElementById('formula-slider-n');
+      const sliderR = document.getElementById('formula-slider-r');
+      
+      let n = parseInt(sliderN.value);
+      let r = parseInt(sliderR.value);
+
+      // Rule clamp: r must not exceed n
+      if (r > n) {
+        r = n;
+        sliderR.value = r;
+      }
+
+      // Set limits dynamic
+      sliderR.max = n;
+
+      state.formulaN = n;
+      state.formulaR = r;
+
+      renderFormulaTab();
+    }
+
+    function renderFormulaTab() {
+      document.getElementById('slider-n-val').innerText = state.formulaN;
+      document.getElementById('slider-r-val').innerText = state.formulaR;
+
+      const pVal = calcP(state.formulaN, state.formulaR);
+      const cVal = calcC(state.formulaN, state.formulaR);
+
+      // Render math expressions beautifully
+      const mathP = document.getElementById('math-p-expr');
+      const mathC = document.getElementById('math-c-expr');
+
+      // Build P step multiplication format
+      let pChain = "";
+      for (let i = 0; i < state.formulaR; i++) {
+        pChain += (state.formulaN - i) + (i === state.formulaR - 1 ? "" : " \\times ");
+      }
+
+      // Build C step
+      let cDenom = "";
+      for (let i = state.formulaR; i >= 1; i--) {
+        cDenom += i + (i === 1 ? "" : " \\times ");
+      }
+
+      mathP.innerHTML = `P^{${state.formulaN}}_{${state.formulaR}} = ${pChain} = ${pVal}`;
+      mathC.innerHTML = `C^{${state.formulaN}}_{${state.formulaR}} = \\frac{P^{${state.formulaN}}_{${state.formulaR}}}{${state.formulaR}!} = \\frac{${pVal}}{${cDenom}} = ${cVal}`;
+
+      // Rerender formulas math elements
+      safeRenderMath(mathP);
+      safeRenderMath(mathC);
+    }
+
+
+    // --- TAB 3: CHALLENGE MINI GAME ---
+    function renderGameQuestion() {
+      if (state.currentQuestionIndex >= gameQuestions.length) {
+        // Game Finished
+        document.getElementById('game-question-area').classList.add('hidden');
+        document.getElementById('game-complete-area').classList.remove('hidden');
+        document.getElementById('final-score').innerText = state.score;
+        return;
+      }
+
+      const q = gameQuestions[state.currentQuestionIndex];
+      document.getElementById('question-index').innerText = `第 ${state.currentQuestionIndex + 1} / ${gameQuestions.length} 題`;
+      document.getElementById('question-type-tag').innerText = q.type;
+      document.getElementById('question-text').innerText = q.text;
+
+      // Render Options
+      const optionsContainer = document.getElementById('game-options');
+      optionsContainer.innerHTML = '';
+      
+      q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = "w-full text-left p-4 rounded-xl border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/20 active:scale-[0.99] transition flex justify-between items-center bg-white group";
+        btn.onclick = () => selectOption(idx);
+        btn.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="w-6 h-6 rounded-full bg-slate-100 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition flex items-center justify-center text-xs font-bold text-slate-500">
+              ${String.fromCharCode(65 + idx)}
+            </span>
+            <span class="text-sm font-semibold text-slate-700">${opt.text}</span>
+          </div>
+          <i class="fa-regular fa-circle text-slate-300 group-hover:text-indigo-400"></i>
+        `;
+        optionsContainer.appendChild(btn);
+      });
+
+      // Clear previous feedback
+      document.getElementById('game-feedback').classList.add('hidden');
+      document.getElementById('btn-next-question').classList.add('hidden');
+      state.answered = false;
+
+      // Re-trigger LaTeX parsing in questions safely
+      safeRenderMath(document.getElementById('game-question-area'));
+    }
+
+    function selectOption(index) {
+      if (state.answered) return; // Prevent double answer submission
+      state.answered = true;
+
+      const q = gameQuestions[state.currentQuestionIndex];
+      const selected = q.options[index];
+      const feedback = document.getElementById('game-feedback');
+      const icon = document.getElementById('feedback-icon');
+      const title = document.getElementById('feedback-title');
+      const desc = document.getElementById('feedback-desc');
+
+      // Reveal buttons and visual feedback
+      feedback.classList.remove('hidden');
+      document.getElementById('btn-next-question').classList.remove('hidden');
+
+      // Style options based on truth
+      const optionsContainer = document.getElementById('game-options');
+      Array.from(optionsContainer.children).forEach((child, idx) => {
+        child.onclick = null; // Disable clicking
+        const opt = q.options[idx];
+        const circleIcon = child.querySelector('i');
+        
+        if (opt.correct) {
+          child.className = "w-full text-left p-4 rounded-xl border-2 border-emerald-500 bg-emerald-50/50 flex justify-between items-center transition";
+          circleIcon.className = "fa-solid fa-circle-check text-emerald-600 text-lg";
+        } else if (idx === index) {
+          child.className = "w-full text-left p-4 rounded-xl border-2 border-rose-500 bg-rose-50/50 flex justify-between items-center transition";
+          circleIcon.className = "fa-solid fa-circle-xmark text-rose-600 text-lg";
+        } else {
+          child.className = "w-full text-left p-4 rounded-xl border border-slate-100 bg-slate-50/50 opacity-50 flex justify-between items-center transition";
+          circleIcon.className = "fa-regular fa-circle text-slate-300";
+        }
+      });
+
+      if (selected.correct) {
+        state.score += 25; // 25 Points per correct
+        document.getElementById('game-score').innerText = state.score;
+        feedback.className = "p-4 rounded-xl flex items-start gap-3 bg-emerald-50 border border-emerald-100 text-emerald-800";
+        icon.innerHTML = `<i class="fa-solid fa-circle-check"></i>`;
+        title.innerText = "回答正確！太棒了！";
+        desc.innerText = selected.desc || "完全掌握此類型的運算核心觀念。";
+      } else {
+        feedback.className = "p-4 rounded-xl flex items-start gap-3 bg-rose-50 border border-rose-100 text-rose-800";
+        icon.innerHTML = `<i class="fa-solid fa-circle-exclamation text-rose-600"></i>`;
+        title.innerText = "哎呀，答錯囉！";
+        
+        // Find correct option for explanations
+        const correctOpt = q.options.find(o => o.correct);
+        desc.innerText = `別灰心，再想一想！正確答案的由來：${correctOpt.desc}`;
+      }
+
+      // Re-render LaTeX in feedback safely
+      safeRenderMath(feedback);
+    }
+
+    function nextQuestion() {
+      state.currentQuestionIndex++;
+      renderGameQuestion();
+    }
+
+    function restartGame() {
+      state.currentQuestionIndex = 0;
+      state.score = 0;
+      document.getElementById('game-score').innerText = state.score;
+      document.getElementById('game-question-area').classList.remove('hidden');
+      document.getElementById('game-complete-area').classList.add('hidden');
+      renderGameQuestion();
+    }
+
+    // --- LIFE CYCLE INIT ---
+    window.onload = function() {
+      // 1. Safe global rendering init
+      safeRenderMath(document.body);
+
+      // 2. Initial configuration rendering
+      renderExploreElements();
+      renderFormulaTab();
+      renderGameQuestion();
+      
+      // 3. Setup drop handlers on window resize
+      window.addEventListener('resize', () => {
+        // Recalculations if any
+      });
+    };
+  </script>
+</body>
+</html>
