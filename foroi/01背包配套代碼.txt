@@ -1,0 +1,32 @@
+#include <iostream>
+#include <vector>
+#include <algorithm> // 引入 algorithm 以使用 max 函數
+
+using namespace std;
+
+int main() {
+    // 測試數據（保留自原代碼）
+    int W = 5;                      // 背包最大容量
+    vector<int> weight = {2, 1, 3,2}; // 物品重量 (原 weights)
+    vector<int> val = {3,2, 4, 2};    // 物品價值 (原 values)
+    int N = weight.size();          // 物品數量 (原 n)
+
+    // dp[i][w] 代表「只考慮前 i 個物品，在容量為 w 時」的最優價值
+    vector<vector<int>> dp(N + 1, vector<int>(W + 1, 0));
+
+    // 核心動態規劃計算
+    for (int i = 1; i <= N; i++) {
+        for (int w = 0; w <= W; w++) {
+            if (weight[i-1] > w) {
+                dp[i][w] = dp[i-1][w]; // 放不下，承襲不放時的最佳解
+            } else {
+                dp[i][w] = max(dp[i-1][w], dp[i-1][w - weight[i-1]] + val[i-1]);
+            }
+        }
+    }
+
+    // 輸出最終結果
+    cout << "背包能獲得的最大價值為: " << dp[N][W] << endl;
+
+    return 0;
+}
