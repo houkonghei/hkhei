@@ -51,7 +51,7 @@
             <!-- 學生基本資料填寫 -->
             <div class="mb-6 p-4 bg-gray-900 rounded border border-blue-500/30">
                 <label class="block text-sm font-bold text-blue-300 mb-2" for="leader-name">
-                    <i class="fa-solid fa-user-group mr-1"></i> 組長姓名 / 組別名稱：
+                    <i class="fa-solid fa-user-group mr-1"></i> 你的濠江hkms八立學號：
                 </label>
                 <input type="text" id="leader-name" placeholder="請輸入組長姓名 (例如：第一組 王小明)" 
                        class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded text-sm text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
@@ -75,8 +75,8 @@
                 <!-- 任務 02 -->
                 <div class="p-4 bg-gray-700 rounded border-l-4 border-orange-500 transition-all duration-300 group focus-within:bg-gray-800 focus-within:border-l-8 focus-within:shadow-lg">
                     <div class="font-bold text-orange-400 text-sm">任務 02 [祖先後代]：必須使用 <code> </code> (空格) 符號。</div>
-                    <p class="mt-1 text-xs text-gray-300">目標：獲取「資工系課程表」中，ID 為 <code>cs-dept</code> 底下<strong class="text-white">所有</strong> class 為 <code>course</code> 的課程名稱，不管包了幾層都要抓到。</p>
-                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden group-focus-within:block"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select("#cs-dept .course")</code> 利用空格能穿透所有階層尋找。</p>
+                    <p class="mt-1 text-xs text-gray-300">目標：獲取「資工系課程表」中，ID 為 <code>science-class</code> 底下<strong class="text-white">所有</strong> class 為 <code>course</code> 的課程名稱，不管包了幾層都要抓到。</p>
+                    <p class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden group-focus-within:block"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：<code>soup.select("#science-class .course")</code> 利用空格能穿透所有階層尋找。</p>
                     <textarea id="code-02" placeholder="# 貼上任務 02 代碼 (點擊此處顯示提示)..." 
                               class="w-full h-20 p-2 bg-gray-900 border border-gray-600 rounded text-xs font-mono text-green-300 mt-2 focus:outline-none focus:bg-black focus:ring-2 focus:ring-orange-400 transition-colors"></textarea>
                 </div>
