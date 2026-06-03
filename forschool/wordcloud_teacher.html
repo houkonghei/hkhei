@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>課堂互動系統 - 老師端屏幕</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Font Awesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入 WordCloud2.js 用於生成詞雲 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
+    <style>
+        body {
+            background-color: #f8fafc;
+        }
+        .tab-active {
+            border-color: #4f46e5;
+            color: #4f46e5;
+            background-color: #f5f3ff;
+        }
+        /* 美化滾動條 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- 頂部導航欄 -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-200">
+                    <i class="fa-solid fa-chalkboard-user text-xl animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-800">課堂即時互動討論控制台</h1>
+                    <p class="text-xs text-slate-500">即時監控 student 答題狀況、代碼收集與詞雲分析</p>
+                </div>
+            </div>
+            
+            <!-- 控制區 -->
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- 自動重新整理開關 -->
+                <div class="flex items-center bg-slate-100 px-3 py-2 rounded-lg text-sm font-medium text-slate-700">
+                    <span class="mr-2 text-xs">自動重新整理 (5s)</span>
+                    <button id="autoRefreshToggle" onclick="toggleAutoRefresh()" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-indigo-600">
+                        <span id="autoRefreshDot" class="translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                    </button>
+                </div>
+
+                <!-- 手動整理按鈕 -->
+                <button onclick="fetchData()" id="refreshBtn" class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold rounded-lg shadow-sm transition">
+                    <i class="fa-solid fa-rotate mr-2" id="refreshIcon"></i>同步最新答案
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 系統 API 設定條（折疊式，方便調試） -->
+    <div class="bg-amber-50 border-b border-amber-200 py-2.5 px-4">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div class="flex items-center space-x-2 text-xs text-amber-800 font-semibold">
+                <i class="fa-solid fa-triangle-exclamation text-amber-500"></i>
+                <span>如果發生 JSON 解析錯誤，請在此確認或更換您的 API 網址，並確保您的 GAS 已部署為「新版本」。</span>
+            </div>
+            <div class="w-full sm:w-auto flex items-center space-x-2">
+                <input type="text" id="apiInput" class="w-full sm:w-96 px-3 py-1 text-xs border border-amber-300 rounded focus:ring-1 focus:ring-indigo-500 focus:outline-none" placeholder="輸入 API 網址 exec 結尾">
+                <button onclick="saveApiUrl()" class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded shadow-xs transition">保存設定</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col lg:flex-row gap-6">
+        
+        <!-- 左側：題目切換區 (Q1 - Q10) 與 繳交率統計 -->
+        <div class="w-full lg:w-64 flex-shrink-0 flex flex-col gap-4">
+            <!-- 繳交率卡片 -->
+            <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">當前題目繳交率</h3>
+                <div class="flex items-baseline space-x-2">
+                    <span id="submittedCount" class="text-3xl font-extrabold text-indigo-600">0</span>
+                    <span class="text-slate-400">/</span>
+                    <span id="totalStudentsCount" class="text-lg font-medium text-slate-600">10</span>
+                </div>
+                <!-- 進度條 -->
+                <div class="w-full bg-slate-100 rounded-full h-2.5 mt-3 overflow-hidden">
+                    <div id="submissionProgress" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- 題目選擇選單 (Q1-Q10) -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-100 bg-slate-50/50">
+                    <span class="font-bold text-sm text-slate-700"><i class="fa-solid fa-list-ol mr-1.5 text-indigo-500"></i>選擇討論題號</span>
+                </div>
+                <nav class="p-2 space-y-1 max-h-[450px] overflow-y-auto" id="questionTabs">
+                    <!-- 動態生成 Q1 - Q10 標籤頁 -->
+                    <script>
+                        for(let i=1; i<=10; i++) {
+                            document.write(`
+                                <button onclick="switchQuestion(${i})" id="tab-${i}" 
+                                        class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition duration-150">
+                                    <div class="flex items-center space-x-2.5">
+                                        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-xs" id="tab-badge-${i}">Q${i}</span>
+                                        <span>第 ${i} 題</span>
+                                    </div>
+                                    <span id="tab-count-${i}" class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">0人</span>
+                                </button>
+                            `);
+                        }
+                    </script>
+                </nav>
+            </div>
+        </div>
+
+        <!-- 右側：主展示看板 -->
+        <div class="flex-grow flex flex-col gap-4">
+            
+            <!-- 大字顯示當前題號 -->
+            <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <span class="text-xs font-bold text-indigo-600 uppercase tracking-widest" id="currentQuestionSubtitle">QUESTION BOARD</span>
+                    <h2 class="text-xl font-bold text-slate-800" id="currentQuestionTitle">第 1 題 討論看板</h2>
+                </div>
+                
+                <!-- 視圖切換按鈕組 -->
+                <div class="inline-flex rounded-lg p-1 bg-slate-100 border border-slate-200">
+                    <button onclick="switchView('cloud')" id="viewBtn-cloud" class="inline-flex items-center px-3.5 py-1.5 rounded-md text-xs font-bold text-slate-700 bg-white shadow-sm transition">
+                        <i class="fa-solid fa-cloud mr-1.5 text-indigo-500"></i>詞雲分析
+                    </button>
+                    <button onclick="switchView('cards')" id="viewBtn-cards" class="inline-flex items-center px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition">
+                        <i class="fa-solid fa-grip mr-1.5"></i>答案卡片
+                    </button>
+                    <button onclick="switchView('tracker')" id="viewBtn-tracker" class="inline-flex items-center px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition">
+                        <i class="fa-solid fa-clipboard-user mr-1.5"></i>未交追蹤
+                    </button>
+                </div>
+            </div>
+
+            <!-- 主要視圖顯示區 -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm flex-grow min-h-[500px] flex flex-col p-6">
+                
+                <!-- 載入中動畫 -->
+                <div id="loadingOverlay" class="flex-grow flex flex-col items-center justify-center space-y-3">
+                    <i class="fa-solid fa-spinner fa-spin text-4xl text-indigo-600"></i>
+                    <p class="text-sm text-slate-500">正在從雲端同步試算表數據...</p>
+                </div>
+
+                <!-- 無答案提示 -->
+                <div id="noDataAlert" class="hidden flex-grow flex flex-col items-center justify-center space-y-3 text-center">
+                    <div class="p-4 bg-slate-50 rounded-full text-slate-400">
+                        <i class="fa-solid fa-folder-open text-4xl"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-700">尚未收到本題答案</h3>
+                    <p class="text-sm text-slate-400 max-w-sm">學生在個人電腦上點擊「送答案到老師屏幕」後，這裡將會即時呈現！</p>
+                </div>
+
+                <!-- 1. 詞雲分析視圖 -->
+                <div id="view-cloud" class="hidden flex-grow flex flex-col lg:flex-row gap-6">
+                    <!-- 詞雲畫布 -->
+                    <div class="flex-grow bg-slate-50 rounded-xl relative border border-slate-100 flex items-center justify-center min-h-[350px]">
+                        <canvas id="wordcloud-canvas" class="w-full h-full min-h-[380px] max-h-[500px]"></canvas>
+                        <div class="absolute bottom-3 left-3 text-2xs text-slate-400 bg-white/80 px-2 py-1 rounded shadow-sm">
+                            💡 滑鼠懸停至詞彙上可查看出現次數
+                        </div>
+                    </div>
+                    <!-- 詞頻統計側欄 -->
+                    <div class="w-full lg:w-64 flex-shrink-0 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                        <h4 class="text-xs font-bold text-slate-600 mb-3 border-b border-slate-200 pb-2"><i class="fa-solid fa-chart-simple mr-1.5 text-indigo-500"></i>高頻關鍵字排行</h4>
+                        <div class="space-y-2.5 overflow-y-auto max-h-[350px]" id="wordList">
+                            <!-- JS 動態生成詞頻清單 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. 卡片清單視圖 -->
+                <div id="view-cards" class="hidden flex-grow">
+                    <!-- 篩選列 -->
+                    <div class="mb-4 flex flex-col sm:flex-row gap-3 items-center justify-between">
+                        <div class="relative w-full sm:w-72">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400"></i>
+                            <input type="text" id="cardSearch" oninput="filterCards()" placeholder="搜尋答案或學生姓名..." class="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <span class="text-xs text-slate-500" id="cardCountText">顯示 0 個解答</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="cardsGrid">
+                        <!-- JS 動態生成卡片 -->
+                    </div>
+                </div>
+
+                <!-- 3. 未交追蹤視圖 -->
+                <div id="view-tracker" class="hidden flex-grow">
+                    <div class="mb-6 p-4 bg-amber-50 border-l-4 border-amber-400 rounded-r-lg">
+                        <p class="text-xs text-amber-800 font-semibold"><i class="fa-solid fa-circle-info mr-1.5"></i>本頁面名單與「學生端姓名選單」同步。老師可在課室實時提醒以下標示為「未繳交」的同學。</p>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="trackerGrid">
+                        <!-- JS 動態生成學生繳交狀態卡 -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- 狀態提示框 (自訂 Toast 訊息) -->
+    <div id="toast" class="hidden fixed bottom-5 right-5 z-50 max-w-md bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 transform translate-y-2 opacity-0 transition-all duration-300">
+        <span id="toastIcon" class="text-lg"></span>
+        <span id="toastMessage" class="text-sm font-medium"></span>
+    </div>
+
+    <script>
+        // 預設與本地儲存 API URL
+        const DEFAULT_URL = "https://script.google.com/macros/s/AKfycbxyScuB1McshIxPAMHT-t54Z_i_9rADd9yr_cDzBZkUCGwNpHd2NwF01tQMm8bXnUT_/exec";
+        let SCRIPT_URL = localStorage.getItem('teacher_script_url') || DEFAULT_URL;
+        
+        // 學生全名單 (用於未交追蹤，必須與 student.html 下拉選單一致)
+        const ALL_STUDENTS = ["陳大文", "張小明", "李美玲", "黃家豪", "何子軒", "司徒華", "關淑怡", "趙志強", "林詩雅", "歐陽杰"];
+
+        // 全域狀態控制
+        let serverData = {};       // 存放從 GAS 抓到的所有題目答案
+        let currentQuestion = 1;   // 當前選取題號 1 ~ 10
+        let currentView = 'cloud';  // 當前視圖: 'cloud', 'cards', 'tracker'
+        let autoRefreshInterval = null;
+        let isAutoRefreshOn = true;
+
+        // 用於安全儲存學生答案的緩衝陣列，100% 解決單雙引號和括號導致的網頁破版與複製功能出錯問題
+        window.currentAnswersList = [];
+
+        // 初始化
+        window.onload = function() {
+            document.getElementById('apiInput').value = SCRIPT_URL;
+            fetchData();
+            if (isAutoRefreshOn) {
+                startAutoRefresh();
+            }
+        };
+
+        // 保存並切換 API URL
+        function saveApiUrl() {
+            const url = document.getElementById('apiInput').value.trim();
+            if (!url) {
+                showToast('請填入正確的網址', 'error');
+                return;
+            }
+            SCRIPT_URL = url;
+            localStorage.setItem('teacher_script_url', url);
+            showToast('API 網址設定已更新！正在重新獲取數據...', 'success');
+            fetchData();
+        }
+
+        // 從 API 獲取最新試算表資料
+        function fetchData() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const refreshIcon = document.getElementById('refreshIcon');
+            
+            // UI 加載狀態
+            refreshBtn.disabled = true;
+            refreshIcon.classList.add('fa-spin');
+
+            fetch(SCRIPT_URL, {
+                method: 'GET',
+                mode: 'cors'
+            })
+            .then(res => {
+                // 安全檢查：先取得回應的內容格式
+                const contentType = res.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    return res.json();
+                } else {
+                    // 如果不是 JSON，拋出一個自訂錯誤，防止 parser 直接癱瘓
+                    return res.text().then(text => {
+                        throw new Error(`非預期的純文字回應，內容為："${text.substring(0, 30)}..."。這通常是因為 Apps Script 尚未部署「新版本」或部署網址不正確。`);
+                    });
+                }
+            })
+            .then(data => {
+                serverData = data;
+                updateDashboard();
+                showToast('雲端數據同步成功！', 'success');
+            })
+            .catch(err => {
+                console.error("Fetch error:", err);
+                showToast(`同步失敗: ${err.message}`, 'error');
+            })
+            .finally(() => {
+                refreshBtn.disabled = false;
+                refreshIcon.classList.remove('fa-spin');
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            });
+        }
+
+        // 重新整合並更新控制台
+        function updateDashboard() {
+            // 1. 更新左側 Q1 ~ Q10 題目的作答計數與標籤顏色
+            for (let i = 1; i <= 10; i++) {
+                const sheetName = `第 ${i} 題`;
+                const list = serverData[sheetName] || [];
+                
+                // 去重，計算每題實質作答的人數
+                const uniqueStudents = [...new Set(list.map(item => item["學生姓名"]))];
+                const count = uniqueStudents.length;
+
+                // 更新左側徽章計數
+                const countBadge = document.getElementById(`tab-count-${i}`);
+                if (countBadge) {
+                    countBadge.textContent = `${count}人`;
+                    if (count > 0) {
+                        countBadge.className = "text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold";
+                    } else {
+                        countBadge.className = "text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold";
+                    }
+                }
+            }
+
+            // 2. 更新當前選擇題目的顯示
+            renderCurrentQuestionData();
+        }
+
+        // 切換題目
+        function switchQuestion(num) {
+            currentQuestion = num;
+            
+            // 切換左側 Active 樣式
+            for (let i = 1; i <= 10; i++) {
+                const tab = document.getElementById(`tab-${i}`);
+                if (i === num) {
+                    tab.classList.add('tab-active');
+                } else {
+                    tab.classList.remove('tab-active');
+                }
+            }
+
+            document.getElementById('currentQuestionTitle').textContent = `第 ${num} 題 討論看板`;
+            renderCurrentQuestionData();
+        }
+
+        // 切換展示視圖 (詞雲 / 卡片 / 追蹤)
+        function switchView(viewName) {
+            currentView = viewName;
+            
+            // 切換按鈕樣式
+            const views = ['cloud', 'cards', 'tracker'];
+            views.forEach(v => {
+                const btn = document.getElementById(`viewBtn-${v}`);
+                if (v === viewName) {
+                    btn.className = "inline-flex items-center px-3.5 py-1.5 rounded-md text-xs font-bold text-slate-700 bg-white shadow-sm transition";
+                    // 點亮圖示
+                    btn.querySelector('i').classList.add('text-indigo-500');
+                } else {
+                    btn.className = "inline-flex items-center px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition";
+                    btn.querySelector('i').classList.remove('text-indigo-500');
+                }
+            });
+
+            renderCurrentQuestionData();
+        }
+
+        // 核心渲染邏輯：根據當前題號與視圖畫出內容
+        function renderCurrentQuestionData() {
+            const sheetName = `第 ${currentQuestion} 題`;
+            const rawAnswers = serverData[sheetName] || [];
+
+            // 取得去重後每位學生最新的答案
+            const cleanAnswers = getLatestAnswers(rawAnswers);
+
+            // 更新繳交率數據卡
+            const submittedCount = cleanAnswers.length;
+            const totalCount = ALL_STUDENTS.length;
+            document.getElementById('submittedCount').textContent = submittedCount;
+            document.getElementById('totalStudentsCount').textContent = totalCount;
+            const percent = Math.min(100, Math.round((submittedCount / totalCount) * 100));
+            document.getElementById('submissionProgress').style.width = `${percent}%`;
+
+            // 隱藏所有視圖面板與提示
+            document.getElementById('noDataAlert').classList.add('hidden');
+            document.getElementById('view-cloud').classList.add('hidden');
+            document.getElementById('view-cards').classList.add('hidden');
+            document.getElementById('view-tracker').classList.add('hidden');
+
+            // 如果完全沒有答案
+            if (submittedCount === 0) {
+                // 只有在未交追蹤視圖下我們依然渲染，否則顯示「無答案」
+                if (currentView !== 'tracker') {
+                    document.getElementById('noDataAlert').classList.remove('hidden');
+                    return;
+                }
+            }
+
+            // 依視圖進行渲染
+            if (currentView === 'cloud') {
+                document.getElementById('view-cloud').classList.remove('hidden');
+                renderWordCloud(cleanAnswers);
+            } else if (currentView === 'cards') {
+                document.getElementById('view-cards').classList.remove('hidden');
+                renderCards(cleanAnswers);
+            } else if (currentView === 'tracker') {
+                document.getElementById('view-tracker').classList.remove('hidden');
+                renderTracker(cleanAnswers);
+            }
+        }
+
+        // 幫學生資料去重：確保同一題中，同一個學生只有最新的一筆解答記錄
+        function getLatestAnswers(list) {
+            const map = new Map();
+            list.forEach(item => {
+                const name = item["學生姓名"];
+                if (name) {
+                    // 因為 appendRow 是追加在最後一行，最新的答案通常在最下面
+                    // 這裡重複 key 的話會覆蓋它，使其保持最新
+                    map.set(name, item);
+                }
+            });
+            return Array.from(map.values());
+        }
+
+        // --- 1. 渲染詞雲 (Word Cloud) ---
+        function renderWordCloud(answers) {
+            const canvas = document.getElementById('wordcloud-canvas');
+            const wordListContainer = document.getElementById('wordList');
+            wordListContainer.innerHTML = '';
+
+            // 清空舊畫布
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 為了適應 Retina 螢幕，重置寬高以求解析度工整
+            const parent = canvas.parentElement;
+            canvas.width = parent.clientWidth;
+            canvas.height = Math.max(380, parent.clientHeight);
+
+            // 統計詞頻
+            const wordFreq = {};
+            answers.forEach(item => {
+                const ans = (item["回答內容"] || "").trim();
+                if (!ans) return;
+
+                // 清理多餘換行，過濾程式碼
+                if (ans.includes('def ') || ans.includes('import ') || ans.length > 20) {
+                    // 如果是很長的程式碼或文本，不適合詞雲，將其當成整體大標籤或直接跳過
+                    return;
+                }
+
+                // 以常見符號、空白、或直接作整體字串來統計 (在此我們保留整組答案作統計，例如「64萬」)
+                wordFreq[ans] = (wordFreq[ans] || 0) + 1;
+            });
+
+            const wordList = Object.entries(wordFreq).sort((a, b) => b[1] - a[1]);
+
+            if (wordList.length === 0) {
+                // 如果通通都是長代碼，無法顯示詞雲，引導去卡片視圖
+                ctx.font = '16px system-ui';
+                ctx.fillStyle = '#64748b';
+                ctx.textAlign = 'center';
+                ctx.fillText('此題答案偏長或多為程式碼，請使用「卡片清單」檢視！', canvas.width/2, canvas.height/2);
+                return;
+            }
+
+            // 格式化為 WordCloud2.js 所需之陣列格式: [ ['詞彙', 權重], ... ]
+            // 同時計算權重比例以進行縮放
+            const maxFreq = Math.max(...wordList.map(w => w[1]));
+            const cloudList = wordList.map(([word, freq]) => {
+                // 基礎字型大小：在 16px 至 48px 之間，依頻率動態縮放
+                const size = 16 + (freq / maxFreq) * 32;
+                return [word, size];
+            });
+
+            // 調用庫渲染
+            WordCloud(canvas, {
+                list: cloudList,
+                gridSize: 8,
+                weightFactor: 1,
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                color: function (word, weight) {
+                    // 動態色彩分配
+                    const colors = ['#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+                    return colors[Math.floor(Math.random() * colors.length)];
+                },
+                backgroundColor: 'transparent',
+                rotateRatio: 0.2, // 少量旋轉，增加視覺美感
+                rotationSteps: 2,
+                click: function(item) {
+                    // 點擊詞彙，自動切換到卡片模式並篩選該詞彙
+                    const keyword = item[0];
+                    switchView('cards');
+                    document.getElementById('cardSearch').value = keyword;
+                    filterCards();
+                }
+            });
+
+            // 在右邊側欄渲染漂亮的詞頻分析清單
+            wordList.forEach(([word, freq], idx) => {
+                const percent = Math.round((freq / answers.length) * 100);
+                const itemHtml = `
+                    <div class="bg-white p-2.5 rounded-lg border border-slate-100 flex flex-col space-y-1 shadow-2xs hover:border-indigo-200 cursor-pointer" onclick="switchView('cards'); document.getElementById('cardSearch').value='${word}'; filterCards();">
+                        <div class="flex justify-between text-xs">
+                            <span class="font-bold text-slate-700 truncate max-w-[120px]" title="${word}">${word}</span>
+                            <span class="text-indigo-600 font-semibold">${freq}人 (${percent}%)</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-indigo-500 h-1.5 rounded-full" style="width: ${percent}%"></div>
+                        </div>
+                    </div>
+                `;
+                wordListContainer.insertAdjacentHTML('beforeend', itemHtml);
+            });
+        }
+
+        // --- 2. 渲染答案卡片視圖 (Cards) ---
+        function renderCards(answers) {
+            const grid = document.getElementById('cardsGrid');
+            grid.innerHTML = '';
+            
+            // 每次渲染卡片前，重設全域答案緩衝區
+            window.currentAnswersList = [];
+
+            answers.forEach((item, index) => {
+                const name = item["學生姓名"];
+                const ans = item["回答內容"] || "";
+                
+                // 將答案存入全域陣列中，避免 inline 屬性字串跳脫問題
+                window.currentAnswersList.push(ans);
+                
+                // 格式化時間
+                let timeStr = "";
+                if(item["送出時間"]) {
+                    const date = new Date(item["送出時間"]);
+                    if(!isNaN(date.getTime())) {
+                        timeStr = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                    }
+                }
+
+                // 檢查是否為程式碼 (簡單多行或含有 Python 關鍵字)
+                const isCode = ans.includes('\n') || ans.includes('def ') || ans.includes('import ') || ans.includes('print(') || ans.includes(' = ');
+
+                // 💡 修正細節 1：onclick 改為呼叫 safeCopyToClipboard 傳入 index，完美避免屬性被引號截斷
+                // 💡 修正細節 2：內文部分 ${escapeHtml(ans)} 與 <div> 標籤緊貼，不產生任何排版殘留的多餘空格與換行
+                const cardHtml = `
+                    <div class="bg-slate-50 hover:bg-indigo-50/10 rounded-xl p-4 border border-slate-100 hover:border-indigo-100 transition-all shadow-2xs relative flex flex-col justify-between card-element" data-student="${name}" data-answer="${ans.replace(/"/g, '&quot;')}">
+                        <div>
+                            <!-- 頂部資訊列 -->
+                            <div class="flex items-center justify-between mb-2.5">
+                                <div class="flex items-center space-x-2">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    <span class="font-bold text-sm text-slate-800">${name}</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-2xs text-slate-400 font-mono">${timeStr}</span>
+                                    <button onclick="safeCopyToClipboard(this, ${index})" class="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-white border border-transparent hover:border-slate-200 shadow-3xs transition" title="複製內容">
+                                        <i class="fa-regular fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- 內文 (注意：緊貼標籤，杜絕第一行置中問題) -->
+                            <div class="text-xs text-slate-700 whitespace-pre-wrap ${isCode ? 'font-mono bg-slate-950 text-slate-100 p-3 rounded-lg max-h-[180px] overflow-y-auto leading-relaxed' : 'bg-white p-3 rounded-lg border border-slate-200/60 leading-relaxed'}">${escapeHtml(ans)}</div>
+                        </div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', cardHtml);
+            });
+
+            filterCards(); // 套用當前可能存在的搜尋過濾器
+        }
+
+        // 安全複製中介方法
+        function safeCopyToClipboard(btn, index) {
+            const textToCopy = window.currentAnswersList[index] || "";
+            copyToClipboard(btn, textToCopy);
+        }
+
+        // 卡片搜尋過濾
+        function filterCards() {
+            const keyword = document.getElementById('cardSearch').value.trim().toLowerCase();
+            const cards = document.querySelectorAll('.card-element');
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const name = card.getAttribute('data-student').toLowerCase();
+                const answer = card.getAttribute('data-answer').toLowerCase();
+
+                if (name.includes(keyword) || answer.includes(keyword)) {
+                    card.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+
+            document.getElementById('cardCountText').textContent = `顯示 ${visibleCount} 個解答 (共 ${cards.length} 個)`;
+        }
+
+        // --- 3. 渲染未交追蹤 (Tracker) ---
+        function renderTracker(answers) {
+            const grid = document.getElementById('trackerGrid');
+            grid.innerHTML = '';
+
+            // 取得已繳交學生名單
+            const submittedStudents = answers.map(item => item["學生姓名"]);
+
+            ALL_STUDENTS.forEach(student => {
+                const hasSubmitted = submittedStudents.includes(student);
+                
+                const cardHtml = `
+                    <div class="p-4 rounded-xl border flex flex-col items-center justify-center text-center space-y-2.5 transition shadow-3xs
+                                ${hasSubmitted 
+                                    ? 'bg-emerald-50/40 border-emerald-100 text-emerald-800' 
+                                    : 'bg-slate-50/50 border-slate-100 text-slate-400'
+                                }">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold
+                                    ${hasSubmitted 
+                                        ? 'bg-emerald-100 text-emerald-700' 
+                                        : 'bg-slate-200 text-slate-500'
+                                    }">
+                            ${student.substring(0, 1)}
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm text-slate-800">${student}</p>
+                            <span class="inline-flex items-center text-2xs mt-1 px-1.5 py-0.5 rounded-full font-semibold
+                                        ${hasSubmitted 
+                                            ? 'bg-emerald-100/80 text-emerald-800' 
+                                            : 'bg-slate-100 text-slate-400'
+                                        }">
+                                <i class="fa-solid ${hasSubmitted ? 'fa-circle-check' : 'fa-circle-minus'} mr-1"></i>
+                                ${hasSubmitted ? '已繳交' : '未繳交'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', cardHtml);
+            });
+        }
+
+        // --- 工具程式 ---
+
+        // HTML 轉義以防 XSS 與排版毀壞 (程式碼展示極為需要)
+        function escapeHtml(string) {
+            return String(string).replace(/[&<>"']/g, function (s) {
+                return {
+                    "&": "&amp;",
+                    "<": "&lt;",
+                    ">": "&gt;",
+                    '"': "&quot;",
+                    "'": "&#39;"
+                }[s];
+            });
+        }
+
+        // 一鍵複製答案到剪貼簿
+        function copyToClipboard(btn, text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                const icon = btn.querySelector('i');
+                icon.className = 'fa-solid fa-check text-emerald-600';
+                showToast('已成功複製到剪貼簿！', 'success');
+                setTimeout(() => {
+                    icon.className = 'fa-regular fa-copy';
+                }, 2000);
+            } catch (err) {
+                showToast('複製失敗，瀏覽器拒絕存取剪貼簿！', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // 自動刷新控制器
+        function toggleAutoRefresh() {
+            const dot = document.getElementById('autoRefreshDot');
+            const toggle = document.getElementById('autoRefreshToggle');
+
+            isAutoRefreshOn = !isAutoRefreshOn;
+
+            if (isAutoRefreshOn) {
+                toggle.classList.add('bg-indigo-600');
+                toggle.classList.remove('bg-slate-300');
+                dot.classList.add('translate-x-5');
+                startAutoRefresh();
+                showToast('自動重新整理已啟用！(5秒間隔)', 'info');
+            } else {
+                toggle.classList.remove('bg-indigo-600');
+                toggle.classList.add('bg-slate-300');
+                dot.classList.remove('translate-x-5');
+                stopAutoRefresh();
+                showToast('自動重新整理已關閉！', 'info');
+            }
+        }
+
+        function startAutoRefresh() {
+            if(autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = setInterval(() => {
+                fetchData();
+            }, 5000);
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+
+        // 自訂提示框 (Toast)
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMessage.textContent = message;
+            
+            if (type === 'success') {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400';
+            } else if (type === 'error') {
+                toastIcon.className = 'fa-solid fa-circle-exclamation text-rose-400';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-info text-sky-400';
+            }
+
+            toast.classList.remove('hidden', 'translate-y-2', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.classList.add('hidden'), 300);
+            }, 3500); // 增加可讀時間
+        }
+    </script>
+</body>
+</html>
