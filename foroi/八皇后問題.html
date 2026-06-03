@@ -1,0 +1,626 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>八皇后问题 (C++) 编程教学与互动演示</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-cpp.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        chessLight: '#f0d9b5',
+                        chessDark: '#b58863',
+                        conflict: '#fecaca',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .tab-active {
+                @apply border-b-2 border-primary text-primary font-medium;
+            }
+            .chess-cell {
+                @apply w-12 h-12 flex items-center justify-center text-3xl cursor-pointer transition-all duration-200 hover:opacity-80;
+            }
+            .queen {
+                @apply text-gray-800 font-bold drop-shadow-md;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-5xl mx-auto px-4 py-8">
+        <!-- 标题 -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">八皇后问题</h1>
+            <p class="text-lg text-gray-600">C++ 回溯算法编程教学与互动演示</p>
+        </header>
+
+        <!-- 标签页导航 -->
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="flex space-x-8">
+                <button class="tab-btn tab-active py-4 px-1 text-gray-600 hover:text-primary transition-colors" data-tab="intro">问题介绍</button>
+                <button class="tab-btn py-4 px-1 text-gray-600 hover:text-primary transition-colors" data-tab="algorithm">算法思路</button>
+                <button class="tab-btn py-4 px-1 text-gray-600 hover:text-primary transition-colors" data-tab="code">C++ 代码</button>
+                <button class="tab-btn py-4 px-1 text-gray-600 hover:text-primary transition-colors" data-tab="demo">互动演示</button>
+            </nav>
+        </div>
+
+        <!-- 标签页内容 -->
+        <div class="tab-content" id="intro">
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">什么是八皇后问题？</h2>
+                <p class="text-gray-700 mb-4 leading-relaxed">
+                    八皇后问题是一个古老而著名的问题，由国际象棋棋手马克斯·贝瑟尔于1848年提出。
+                    它是回溯算法的经典教学案例，被广泛用于数据结构与算法的入门教学。
+                </p>
+                
+                <h3 class="text-xl font-semibold text-gray-800 mb-3">问题规则</h3>
+                <ul class="list-disc list-inside text-gray-700 space-y-2 mb-6">
+                    <li>在一个 8×8 的国际象棋棋盘上放置 8 个皇后</li>
+                    <li>任意两个皇后都不能互相攻击</li>
+                    <li>皇后可以攻击同一行、同一列、同一对角线上的任意棋子</li>
+                    <li>也就是说：任意两个皇后都不能处于同一行、同一列或同一斜线上</li>
+                </ul>
+
+                <h3 class="text-xl font-semibold text-gray-800 mb-3">问题的解</h3>
+                <p class="text-gray-700 mb-4 leading-relaxed">
+                    八皇后问题共有 <strong class="text-primary">92</strong> 种不同的独立解。
+                    如果我们将通过旋转、翻转棋盘得到的相同解视为同一个解的话，那么最终只有 <strong class="text-primary">12</strong> 个独立的基本解。
+                </p>
+
+                <div class="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                    <p class="text-blue-800 text-sm">
+                        💡 暴力枚举需要检查 44 亿种可能的摆放方式，而通过回溯算法，我们可以高效地剪枝掉大量无效的搜索空间，快速找到所有解。
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content hidden" id="algorithm">
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">回溯算法思路</h2>
+                <p class="text-gray-700 mb-6 leading-relaxed">
+                    回溯法（Backtracking）是一种暴力搜索算法，但它通过"试错"的方式，在发现当前选择无法得到有效解时，回退到上一步重新选择，从而避免了大量无效的计算。
+                </p>
+
+                <h3 class="text-xl font-semibold text-gray-800 mb-3">核心思路</h3>
+                <ol class="list-decimal list-inside text-gray-700 space-y-3 mb-6">
+                    <li>
+                        <strong>逐行放置</strong>：由于每行只能放一个皇后（否则会同行冲突），我们一行一行地处理，每一行只需要选择一个列来放置皇后。
+                    </li>
+                    <li>
+                        <strong>合法性检查</strong>：对于当前行的每一列，检查这个位置是否与已经放置的皇后冲突（列冲突、对角线冲突）。
+                    </li>
+                    <li>
+                        <strong>递归深入</strong>：如果当前位置合法，我们就放置皇后，然后递归处理下一行。
+                    </li>
+                    <li>
+                        <strong>回溯回退</strong>：如果下一行所有列都无法放置皇后，说明当前的选择不对，我们就把当前的皇后移除，尝试下一个列。
+                    </li>
+                    <li>
+                        <strong>终止条件</strong>：当我们成功处理完所有 8 行时，说明我们找到了一个有效的解。
+                    </li>
+                </ol>
+
+                <h3 class="text-xl font-semibold text-gray-800 mb-3">优化：冲突标记</h3>
+                <p class="text-gray-700 mb-4 leading-relaxed">
+                    为了快速检查冲突，我们不需要每次都遍历所有已放置的皇后，而是用三个数组来标记状态：
+                </p>
+                <ul class="list-disc list-inside text-gray-700 space-y-2 mb-6">
+                    <li><code class="bg-gray-100 px-1 rounded">col[c]</code>：标记第 c 列是否已经有皇后</li>
+                    <li><code class="bg-gray-100 px-1 rounded">d1[row-col+7]</code>：标记主对角线（左上到右下）是否有皇后。对于主对角线，row - col 的值是固定的，范围是 -7 到 7，加 7 变成 0 到 14 的索引。</li>
+                    <li><code class="bg-gray-100 px-1 rounded">d2[row+col]</code>：标记副对角线（右上到左下）是否有皇后。对于副对角线，row + col 的值是固定的，范围是 0 到 14。</li>
+                </ul>
+
+                <div class="bg-green-50 rounded-lg p-4 border border-green-100">
+                    <p class="text-green-800 text-sm">
+                        ✨ 通过这三个标记数组，我们可以在 O(1) 时间内完成冲突检查，将整个算法的效率提升了一个量级！
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content hidden" id="code">
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">C++ 完整实现代码</h2>
+                <p class="text-gray-700 mb-4">
+                    下面是完整的 C++ 回溯法实现代码，包含了上述的优化标记，代码清晰易懂，适合初学者学习。
+                </p>
+
+                <pre class="rounded-lg overflow-auto text-sm"><code class="language-cpp">#include &lt;iostream&gt;
+using namespace std;
+
+const int N = 8;                 // 皇后的数量
+bool col[N] = {false};           // 列标记：col[c] 表示第c列是否有皇后
+bool d1[2*N] = {false};          // 主对角线标记：row-col
+bool d2[2*N] = {false};          // 副对角线标记：row+col
+int pos[N] = {0};                // 记录解：pos[row] 表示第row行皇后的列位置
+int solution_count = 0;          // 解的计数器
+
+// 打印当前的解
+void print_solution() {
+    cout << "解 " << ++solution_count << ": " << endl;
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            if (pos[i] == j) {
+                cout << "Q ";
+            } else {
+                cout << ". ";
+            }
+        }
+        cout << endl;
+    }
+    cout << endl;
+}
+
+// 回溯函数：处理第row行
+void backtrack(int row) {
+    // 递归终止条件：所有行都处理完了，找到一个解
+    if (row == N) {
+        print_solution();
+        return;
+    }
+
+    // 尝试当前行的每一列
+    for (int c = 0; c < N; c++) {
+        // 检查当前位置是否合法（没有冲突）
+        if (!col[c] && !d1[row - c + N - 1] && !d2[row + c]) {
+            // 放置皇后，标记状态
+            pos[row] = c;
+            col[c] = true;
+            d1[row - c + N - 1] = true;
+            d2[row + c] = true;
+
+            // 递归处理下一行
+            backtrack(row + 1);
+
+            // 回溯：撤销当前选择，尝试下一个列
+            col[c] = false;
+            d1[row - c + N - 1] = false;
+            d2[row + c] = false;
+        }
+    }
+}
+
+int main() {
+    cout << "八皇后问题的所有解：" << endl << endl;
+    backtrack(0);
+    cout << "总共有 " << solution_count << " 个解。" << endl;
+    return 0;
+}
+</code></pre>
+
+                <div class="mt-6 bg-yellow-50 rounded-lg p-4 border border-yellow-100">
+                    <p class="text-yellow-800 text-sm">
+                        📝 代码说明：你可以将这段代码复制到你的 C++ 编译器中运行，它会输出所有 92 个解的棋盘布局。
+                        如果你只想统计解的数量而不打印每个解，可以注释掉 <code>print_solution()</code> 调用，运行速度会更快。
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content hidden" id="demo">
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">互动演示</h2>
+                
+                <div class="flex flex-col lg:flex-row gap-8">
+                    <!-- 棋盘 -->
+                    <div class="flex-shrink-0">
+                        <div id="chessboard" class="grid grid-cols-8 border-2 border-gray-800 rounded-lg overflow-hidden">
+                            <!-- 棋盘格子会通过JS生成 -->
+                        </div>
+                    </div>
+
+                    <!-- 控制面板 -->
+                    <div class="flex-1 space-y-4">
+                        <!-- 模式选择 -->
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h3 class="font-semibold text-gray-800 mb-3">模式选择</h3>
+                            <div class="flex gap-2">
+                                <button id="mode-auto" class="mode-btn px-4 py-2 rounded-lg bg-primary text-white">算法演示</button>
+                                <button id="mode-manual" class="mode-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700">手动尝试</button>
+                            </div>
+                        </div>
+
+                        <!-- 自动模式控制 -->
+                        <div id="auto-controls" class="bg-gray-50 rounded-lg p-4 space-y-4">
+                            <h3 class="font-semibold text-gray-800">算法演示控制</h3>
+                            
+                            <div class="flex items-center gap-2">
+                                <button id="btn-prev-step" class="p-2 rounded-lg bg-gray-200 hover:bg-gray-300 transition-colors">
+                                    ⏮️
+                                </button>
+                                <button id="btn-play" class="flex-1 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors">
+                                    ▶️ 播放
+                                </button>
+                                <button id="btn-next-step" class="p-2 rounded-lg bg-gray-200 hover:bg-gray-300 transition-colors">
+                                    ⏭️
+                                </button>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <button id="btn-reset" class="flex-1 px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
+                                    🔄 重置
+                                </button>
+                                <button id="btn-show-solution" class="flex-1 px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
+                                    🎯 查看解
+                                </button>
+                            </div>
+
+                            <div>
+                                <label class="text-sm text-gray-600">播放速度</label>
+                                <input id="speed-slider" type="range" min="1" max="100" value="20" class="w-full">
+                            </div>
+
+                            <div class="text-sm text-gray-600">
+                                <p>当前步骤: <span id="current-step">0</span> / <span id="total-steps">0</span></p>
+                                <p>已找到解: <span id="found-solutions">0</span> / 92</p>
+                            </div>
+                        </div>
+
+                        <!-- 手动模式控制 -->
+                        <div id="manual-controls" class="bg-gray-50 rounded-lg p-4 space-y-4 hidden">
+                            <h3 class="font-semibold text-gray-800">手动尝试</h3>
+                            <p class="text-sm text-gray-600">点击棋盘格子放置皇后，尝试自己找到一个解！</p>
+                            
+                            <button id="btn-clear" class="w-full px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
+                                🗑️ 清空棋盘
+                            </button>
+
+                            <div id="manual-status" class="text-sm text-gray-600">
+                                <p>已放置皇后: <span id="queen-count">0</span> / 8</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 标签页切换
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                
+                // 更新按钮状态
+                tabBtns.forEach(b => b.classList.remove('tab-active'));
+                btn.classList.add('tab-active');
+                
+                // 更新内容显示
+                tabContents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+                document.getElementById(tab).classList.remove('hidden');
+            });
+        });
+
+        // 棋盘初始化
+        const chessboard = document.getElementById('chessboard');
+        let board = Array(8).fill().map(() => Array(8).fill(0)); // 0: empty, 1: queen
+        
+        // 生成棋盘格子
+        function initChessboard() {
+            chessboard.innerHTML = '';
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = `chess-cell ${(row + col) % 2 === 0 ? 'bg-chessLight' : 'bg-chessDark'}`;
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    
+                    cell.addEventListener('click', () => handleCellClick(row, col));
+                    
+                    chessboard.appendChild(cell);
+                }
+            }
+            renderBoard();
+        }
+
+        // 渲染棋盘
+        function renderBoard() {
+            const cells = chessboard.querySelectorAll('.chess-cell');
+            // 先重置所有格子
+            cells.forEach(cell => {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                cell.className = `chess-cell ${(row + col) % 2 === 0 ? 'bg-chessLight' : 'bg-chessDark'}`;
+                cell.innerHTML = '';
+            });
+
+            // 计算冲突格子
+            let conflictCells = new Set();
+            if (isManualMode) {
+                // 手动模式下，计算已放置皇后的冲突格子
+                for (let r = 0; r < 8; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        if (board[r][c] === 1) {
+                            // 标记所有冲突格子
+                            for (let i = 0; i < 8; i++) {
+                                conflictCells.add(`${r},${i}`); // 行
+                                conflictCells.add(`${i},${c}`); // 列
+                                if (r+i < 8 && c+i < 8) conflictCells.add(`${r+i},${c+i}`);
+                                if (r+i < 8 && c-i >= 0) conflictCells.add(`${r+i},${c-i}`);
+                                if (r-i >= 0 && c+i < 8) conflictCells.add(`${r-i},${c+i}`);
+                                if (r-i >= 0 && c-i >= 0) conflictCells.add(`${r-i},${c-i}`);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 应用冲突标记和皇后
+            cells.forEach(cell => {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                const key = `${row},${col}`;
+                
+                if (board[row][col] === 1) {
+                    cell.innerHTML = '<span class="queen">♛</span>';
+                } else if (conflictCells.has(key) && isManualMode) {
+                    cell.classList.add('bg-conflict');
+                }
+            });
+        }
+
+        // 模式控制
+        let isManualMode = false;
+        const modeAutoBtn = document.getElementById('mode-auto');
+        const modeManualBtn = document.getElementById('mode-manual');
+        const autoControls = document.getElementById('auto-controls');
+        const manualControls = document.getElementById('manual-controls');
+
+        modeAutoBtn.addEventListener('click', () => {
+            isManualMode = false;
+            modeAutoBtn.className = 'mode-btn px-4 py-2 rounded-lg bg-primary text-white';
+            modeManualBtn.className = 'mode-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700';
+            autoControls.classList.remove('hidden');
+            manualControls.classList.add('hidden');
+            resetAutoDemo();
+        });
+
+        modeManualBtn.addEventListener('click', () => {
+            isManualMode = true;
+            modeManualBtn.className = 'mode-btn px-4 py-2 rounded-lg bg-primary text-white';
+            modeAutoBtn.className = 'mode-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700';
+            autoControls.classList.add('hidden');
+            manualControls.classList.remove('hidden');
+            clearManualBoard();
+        });
+
+        // 手动模式处理
+        function handleCellClick(row, col) {
+            if (isManualMode) {
+                if (board[row][col] === 1) {
+                    // 移除皇后
+                    board[row][col] = 0;
+                } else {
+                    // 检查是否有冲突
+                    let hasConflict = false;
+                    for (let r = 0; r < 8; r++) {
+                        for (let c = 0; c < 8; c++) {
+                            if (board[r][c] === 1) {
+                                if (r === row || c === col || 
+                                    Math.abs(r - row) === Math.abs(c - col)) {
+                                    hasConflict = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (!hasConflict) {
+                        board[row][col] = 1;
+                    }
+                }
+                renderBoard();
+                updateManualStatus();
+            }
+        }
+
+        function clearManualBoard() {
+            board = Array(8).fill().map(() => Array(8).fill(0));
+            renderBoard();
+            updateManualStatus();
+        }
+
+        function updateManualStatus() {
+            let count = 0;
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (board[r][c] === 1) count++;
+                }
+            }
+            document.getElementById('queen-count').textContent = count;
+            
+            const statusEl = document.getElementById('manual-status');
+            if (count === 8) {
+                statusEl.innerHTML = `<p class="text-green-600 font-semibold">🎉 恭喜你！成功找到一个解！</p>`;
+            } else {
+                statusEl.innerHTML = `<p>已放置皇后: <span id="queen-count">${count}</span> / 8</p>`;
+            }
+        }
+
+        document.getElementById('btn-clear').addEventListener('click', clearManualBoard);
+
+        // 自动演示模式
+        let steps = [];
+        let solutions = [];
+        let currentStepIndex = 0;
+        let isPlaying = false;
+        let playInterval = null;
+
+        function generateSteps() {
+            steps = [];
+            solutions = [];
+            let tempBoard = Array(8).fill().map(() => Array(8).fill(0));
+            let col = Array(8).fill(false);
+            let d1 = Array(15).fill(false);
+            let d2 = Array(15).fill(false);
+
+            function backtrack(row) {
+                if (row === 8) {
+                    solutions.push(tempBoard.map(r => [...r]));
+                    return;
+                }
+                for (let c = 0; c < 8; c++) {
+                    if (!col[c] && !d1[row - c + 7] && !d2[row + c]) {
+                        // 放置皇后
+                        tempBoard[row][c] = 1;
+                        col[c] = true;
+                        d1[row - c + 7] = true;
+                        d2[row + c] = true;
+                        steps.push({row, col: c, type: 'place'});
+                        
+                        backtrack(row + 1);
+                        
+                        // 回溯移除
+                        tempBoard[row][c] = 0;
+                        col[c] = false;
+                        d1[row - c + 7] = false;
+                        d2[row + c] = false;
+                        steps.push({row, col: c, type: 'remove'});
+                    }
+                }
+            }
+
+            backtrack(0);
+        }
+
+        function resetAutoDemo() {
+            stopPlay();
+            board = Array(8).fill().map(() => Array(8).fill(0));
+            currentStepIndex = 0;
+            renderBoard();
+            updateAutoStatus();
+        }
+
+        function applyStep(step) {
+            if (step.type === 'place') {
+                board[step.row][step.col] = 1;
+            } else {
+                board[step.row][step.col] = 0;
+            }
+        }
+
+        function nextStep() {
+            if (currentStepIndex < steps.length) {
+                applyStep(steps[currentStepIndex]);
+                currentStepIndex++;
+                renderBoard();
+                updateAutoStatus();
+                return true;
+            }
+            stopPlay();
+            return false;
+        }
+
+        function prevStep() {
+            if (currentStepIndex > 0) {
+                currentStepIndex--;
+                const step = steps[currentStepIndex];
+                // 反向操作
+                if (step.type === 'place') {
+                    board[step.row][step.col] = 0;
+                } else {
+                    board[step.row][step.col] = 1;
+                }
+                renderBoard();
+                updateAutoStatus();
+            }
+        }
+
+        function startPlay() {
+            if (isPlaying) return;
+            isPlaying = true;
+            const speed = 101 - document.getElementById('speed-slider').value;
+            playInterval = setInterval(() => {
+                if (!nextStep()) {
+                    stopPlay();
+                }
+            }, speed * 10);
+            document.getElementById('btn-play').innerHTML = '⏸️ 暂停';
+        }
+
+        function stopPlay() {
+            isPlaying = false;
+            if (playInterval) {
+                clearInterval(playInterval);
+                playInterval = null;
+            }
+            document.getElementById('btn-play').innerHTML = '▶️ 播放';
+        }
+
+        function togglePlay() {
+            if (isPlaying) {
+                stopPlay();
+            } else {
+                startPlay();
+            }
+        }
+
+        function updateAutoStatus() {
+            document.getElementById('current-step').textContent = currentStepIndex;
+            document.getElementById('total-steps').textContent = steps.length;
+            
+            // 计算当前已经找到多少个解了
+            let found = 0;
+            for (let i = 0; i < currentStepIndex; i++) {
+                // 当完成一行的所有尝试后，就是一个解的结束
+                if (steps[i].row === 7 && steps[i].type === 'remove') {
+                    found++;
+                }
+            }
+            document.getElementById('found-solutions').textContent = found;
+        }
+
+        let currentSolutionIndex = 0;
+        function showNextSolution() {
+            stopPlay();
+            if (currentSolutionIndex < solutions.length) {
+                board = solutions[currentSolutionIndex].map(r => [...r]);
+                currentSolutionIndex++;
+                renderBoard();
+            } else {
+                currentSolutionIndex = 0;
+            }
+        }
+
+        // 自动模式按钮事件
+        document.getElementById('btn-play').addEventListener('click', togglePlay);
+        document.getElementById('btn-next-step').addEventListener('click', () => {
+            stopPlay();
+            nextStep();
+        });
+        document.getElementById('btn-prev-step').addEventListener('click', () => {
+            stopPlay();
+            prevStep();
+        });
+        document.getElementById('btn-reset').addEventListener('click', resetAutoDemo);
+        document.getElementById('btn-show-solution').addEventListener('click', showNextSolution);
+
+        // 初始化
+        initChessboard();
+        generateSteps();
+        updateAutoStatus();
+
+        // Prism 高亮
+        Prism.highlightAll();
+    </script>
+</body>
+</html>

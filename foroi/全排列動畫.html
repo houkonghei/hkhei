@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全排列 Swap 回溯動畫演示器</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        .node-active {
+            filter: drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.8));
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-950 p-4">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-blue-600 rounded-lg text-white">
+                    <i class="fa-solid fa-diagram-project text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">全排列 Swap-Based 回溯演算法</h1>
+                    <p class="text-xs text-slate-400">直觀、一步步的遞迴與狀態還原動畫教學</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700">陣列長度 N=3</span>
+                <span class="text-xs bg-blue-900/40 text-blue-400 px-2 py-1 rounded border border-blue-800">遞迴深度最大 3 層</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden">
+        
+        <!-- Left: Visualization and Control Panel (8 cols) -->
+        <div class="lg:col-span-7 flex flex-col gap-6">
+            
+            <!-- Array State Visualization -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-5 shadow-2xl relative">
+                <h2 class="text-sm font-semibold text-slate-400 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-microchip text-blue-500"></i>
+                    記憶體狀態 (當前陣列 <code>nums</code>)
+                </h2>
+                
+                <div class="flex justify-center items-center py-6 gap-6 relative min-h-[140px]">
+                    <!-- Array Slots -->
+                    <div id="array-container" class="flex gap-4 relative">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+
+                <!-- Explanation Panel of Current State -->
+                <div class="mt-2 bg-slate-900/80 border border-slate-800 rounded-lg p-3 text-sm text-slate-300 min-h-[50px] flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-blue-400 shrink-0"></i>
+                    <p id="state-desc">載入中...</p>
+                </div>
+            </div>
+
+            <!-- Call Tree Visualization -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-5 shadow-2xl flex-1 flex flex-col min-h-[350px]">
+                <h2 class="text-sm font-semibold text-slate-400 mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-tree text-emerald-500"></i>
+                    遞迴呼叫樹 (Call Tree)
+                </h2>
+                <p class="text-xs text-slate-500 mb-4">當前所在的遞迴路徑會以藍色高亮。葉子節點（綠色）代表成功收集到一個排列組合。</p>
+                
+                <div class="flex-1 flex justify-center items-center overflow-auto p-2" id="tree-canvas-container">
+                    <!-- SVG Tree Container -->
+                    <svg id="tree-svg" class="w-full h-[280px]" viewBox="0 0 800 280">
+                        <!-- Tree links and nodes will be dynamically drawn here -->
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Play Controls -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg">
+                <div class="flex items-center gap-2">
+                    <button id="btn-prev" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-lg text-sm font-medium transition flex items-center gap-1">
+                        <i class="fa-solid fa-backward"></i> 上一步
+                    </button>
+                    <button id="btn-play" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-lg text-sm font-medium transition flex items-center gap-1 shadow-md shadow-blue-900/30">
+                        <i id="play-icon" class="fa-solid fa-play"></i> <span id="play-text">自動播放</span>
+                    </button>
+                    <button id="btn-next" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-lg text-sm font-medium transition flex items-center gap-1">
+                        下一步 <i class="fa-solid fa-forward"></i>
+                    </button>
+                    <button id="btn-reset" class="px-3 py-2 bg-red-950/40 hover:bg-red-900/40 text-red-400 rounded-lg text-sm font-medium transition border border-red-900/30 flex items-center gap-1 ml-2">
+                        <i class="fa-solid fa-rotate-right"></i> 重設
+                    </button>
+                </div>
+
+                <!-- Step Counter / Progress -->
+                <div class="flex items-center gap-4 w-full md:w-auto justify-end">
+                    <span class="text-xs text-slate-400">
+                        進度: <span id="step-counter" class="font-bold text-blue-400">0</span> / <span id="total-steps" class="text-slate-400">0</span>
+                    </span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-400 shrink-0">播放速度:</span>
+                        <input type="range" id="speed-slider" min="500" max="3000" step="250" value="1500" class="w-24 accent-blue-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right: Code and Detailed Tracing (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-6">
+            
+            <!-- Code Window -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex flex-col shadow-2xl flex-1">
+                <!-- Code Header -->
+                <div class="bg-slate-900 px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <div class="flex gap-1.5">
+                            <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-yellow-500 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
+                        </div>
+                        <span class="text-xs text-slate-400 code-font ml-2">backtrack.cpp</span>
+                    </div>
+                    <span class="text-xs text-blue-400 bg-blue-950/80 border border-blue-900 px-2 py-0.5 rounded">C++</span>
+                </div>
+                
+                <!-- Code Area -->
+                <div class="p-4 overflow-y-auto text-xs code-font leading-relaxed relative flex-1 bg-slate-950">
+                    <!-- Line 1 -->
+                    <div id="code-l1" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">1</span>
+                        <span class="text-blue-400">void</span> <span class="text-yellow-400">backtrack</span>(<span class="text-emerald-400">vector&lt;int&gt;&</span> nums, <span class="text-blue-400">int</span> start, <span class="text-emerald-400">vector&lt;vector&lt;int&gt;&gt;&</span> result) {
+                    </div>
+                    <!-- Line 2 -->
+                    <div id="code-l2" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">2</span>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// 終止條件：指針達到末尾，收集答案</span>
+                    </div>
+                    <!-- Line 3 -->
+                    <div id="code-l3" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">3</span>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">if</span> (start == nums.<span class="text-yellow-400">size</span>()) {
+                    </div>
+                    <!-- Line 4 -->
+                    <div id="code-l4" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">4</span>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;result.<span class="text-yellow-400">push_back</span>(nums);
+                    </div>
+                    <!-- Line 5 -->
+                    <div id="code-l5" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">5</span>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">return</span>;
+                    </div>
+                    <!-- Line 6 -->
+                    <div id="code-l6" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">6</span>
+                        &nbsp;&nbsp;&nbsp;&nbsp;}
+                    </div>
+                    <!-- Line 7 -->
+                    <div id="code-l7" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">7</span>
+                    </div>
+                    <!-- Line 8 -->
+                    <div id="code-l8" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">8</span>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">for</span> (<span class="text-blue-400">int</span> i = start; i &lt; nums.<span class="text-yellow-400">size</span>(); ++i) {
+                    </div>
+                    <!-- Line 9 -->
+                    <div id="code-l9" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">9</span>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// 做選擇：固定 start 與 i 的交換</span>
+                    </div>
+                    <!-- Line 10 -->
+                    <div id="code-l10" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">10</span>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-yellow-400">swap</span>(nums[start], nums[i]);
+                    </div>
+                    <!-- Line 11 -->
+                    <div id="code-l11" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">11</span>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    </div>
+                    <!-- Line 12 -->
+                    <div id="code-l12" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">12</span>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// 遞迴進入下一層</span>
+                    </div>
+                    <!-- Line 13 -->
+                    <div id="code-l13" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">13</span>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-yellow-400">backtrack</span>(nums, start + <span class="text-cyan-400">1</span>, result);
+                    </div>
+                    <!-- Line 14 -->
+                    <div id="code-l14" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">14</span>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    </div>
+                    <!-- Line 15 -->
+                    <div id="code-l15" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">15</span>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// 撤銷選擇：還原狀態</span>
+                    </div>
+                    <!-- Line 16 -->
+                    <div id="code-l16" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">16</span>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-yellow-400">swap</span>(nums[start], nums[i]);
+                    </div>
+                    <!-- Line 17 -->
+                    <div id="code-l17" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">17</span>
+                        &nbsp;&nbsp;&nbsp;&nbsp;}
+                    </div>
+                    <!-- Line 18 -->
+                    <div id="code-l18" class="py-0.5 px-2 rounded -mx-2 transition-colors duration-200">
+                        <span class="text-slate-600 select-none mr-4 w-4 inline-block text-right">18</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collected Permutations Panel -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 shadow-lg flex flex-col h-48">
+                <h2 class="text-sm font-semibold text-slate-400 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-folder-open text-amber-500"></i>
+                    已收集的排列組 (<code>result</code>)
+                </h2>
+                <div class="flex-1 overflow-y-auto bg-slate-900 rounded-lg p-3">
+                    <div id="results-list" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <!-- Permutations dynamically added -->
+                    </div>
+                    <div id="no-result" class="text-xs text-slate-500 text-center py-6">
+                        目前還沒有收集到排列組合，當遞迴到 start = 3 時將會加入結果中。
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer Explanation & Tip Section -->
+    <footer class="bg-slate-950 border-t border-slate-800 py-3 px-4 text-center text-xs text-slate-500">
+        <div>
+            核心提示：此演算法的思想在於<strong>「固定」當前位置的元素</strong>。
+            對於 index = <code>start</code> 而言，我們嘗試將它與後方所有的 <code>i</code> (包含自己) 進行交換。
+            交換完後，代表 <code>start</code> 的位置被固定下來了，我們再<strong>遞迴處理下一個位置 <code>start+1</code></strong>。
+            在探索完整個分支返回時，我們必須再執行一次 <code>swap</code> 把位置換回來（這就是回溯法精髓的<strong>撤銷選擇</strong>），才能保證下一個分支能基於原本乾淨的順序進行。
+        </div>
+    </footer>
+
+    <!-- Scripting Core Logic -->
+    <script>
+        // STEP GENERATOR FOR VISUALIZATION
+        // To build a step-by-step debugger, we execute the recursive algorithm beforehand 
+        // to collect all actions (calls, loops, swaps, returns, push_backs) into a linear sequence of steps.
+
+        const initialNums = [1, 2, 3];
+        let steps = [];
+        let globalId = 0;
+
+        // Tree structure representation for rendering
+        // Nodes: { id, label, start, numsVal, active, visited, finished, isLeaf, x, y, parentId }
+        let treeNodes = [];
+        let treeLinks = [];
+
+        // Build the physical structure of the tree for layout
+        function buildTreeLayout() {
+            // Level 0: start = 0
+            treeNodes.push({ id: "node_root", label: "[1,2,3]", start: 0, numsVal: [1,2,3], isLeaf: false, x: 400, y: 35, parentId: null });
+            
+            // Level 1: start = 1
+            // Branch from [1,2,3] swap index 0 with 0 -> [1,2,3]
+            treeNodes.push({ id: "node_0_0", label: "swap(0,0)", start: 1, numsVal: [1,2,3], isLeaf: false, x: 180, y: 110, parentId: "node_root" });
+            // Branch from [1,2,3] swap index 0 with 1 -> [2,1,3]
+            treeNodes.push({ id: "node_0_1", label: "swap(0,1)", start: 1, numsVal: [2,1,3], isLeaf: false, x: 400, y: 110, parentId: "node_root" });
+            // Branch from [1,2,3] swap index 0 with 2 -> [3,2,1]
+            treeNodes.push({ id: "node_0_2", label: "swap(0,2)", start: 1, numsVal: [3,2,1], isLeaf: false, x: 620, y: 110, parentId: "node_root" });
+
+            // Level 2: start = 2
+            // Branches from node_0_0 [1,2,3]
+            treeNodes.push({ id: "node_0_0_1_1", label: "swap(1,1)", start: 2, numsVal: [1,2,3], isLeaf: false, x: 100, y: 185, parentId: "node_0_0" });
+            treeNodes.push({ id: "node_0_0_1_2", label: "swap(1,2)", start: 2, numsVal: [1,3,2], isLeaf: false, x: 260, y: 185, parentId: "node_0_0" });
+
+            // Branches from node_0_1 [2,1,3]
+            treeNodes.push({ id: "node_0_1_1_1", label: "swap(1,1)", start: 2, numsVal: [2,1,3], isLeaf: false, x: 340, y: 185, parentId: "node_0_1" });
+            treeNodes.push({ id: "node_0_1_1_2", label: "swap(1,2)", start: 2, numsVal: [2,3,1], isLeaf: false, x: 460, y: 185, parentId: "node_0_1" });
+
+            // Branches from node_0_2 [3,2,1]
+            treeNodes.push({ id: "node_0_2_1_1", label: "swap(1,1)", start: 2, numsVal: [3,2,1], isLeaf: false, x: 540, y: 185, parentId: "node_0_2" });
+            treeNodes.push({ id: "node_0_2_1_2", label: "swap(1,2)", start: 2, numsVal: [3,1,2], isLeaf: false, x: 700, y: 185, parentId: "node_0_2" });
+
+            // Level 3: start = 3 (Leaf nodes / base cases)
+            // Leaf nodes
+            treeNodes.push({ id: "leaf_1", label: "[1,2,3]", start: 3, numsVal: [1,2,3], isLeaf: true, x: 100, y: 250, parentId: "node_0_0_1_1" });
+            treeNodes.push({ id: "leaf_2", label: "[1,3,2]", start: 3, numsVal: [1,3,2], isLeaf: true, x: 260, y: 250, parentId: "node_0_0_1_2" });
+            treeNodes.push({ id: "leaf_3", label: "[2,1,3]", start: 3, numsVal: [2,1,3], isLeaf: true, x: 340, y: 250, parentId: "node_0_1_1_1" });
+            treeNodes.push({ id: "leaf_4", label: "[2,3,1]", start: 3, numsVal: [2,3,1], isLeaf: true, x: 460, y: 250, parentId: "node_0_1_1_2" });
+            treeNodes.push({ id: "leaf_5", label: "[3,2,1]", start: 3, numsVal: [3,2,1], isLeaf: true, x: 540, y: 250, parentId: "node_0_2_1_1" });
+            treeNodes.push({ id: "leaf_6", label: "[3,1,2]", start: 3, numsVal: [3,1,2], isLeaf: true, x: 700, y: 250, parentId: "node_0_2_1_2" });
+
+            // Create links
+            treeNodes.forEach(node => {
+                if (node.parentId) {
+                    treeLinks.push({
+                        from: node.parentId,
+                        to: node.id
+                    });
+                }
+            });
+        }
+
+        // Generate Steps of backtracking process
+        function generateSteps() {
+            let nums = [...initialNums];
+            let results = [];
+            
+            // Map call path/trace to Node ID on the SVG tree
+            // Helps light up the path dynamically during execution
+            function getNodeID(start, pathHistory) {
+                if (start === 0) return "node_root";
+                
+                // Track indices of swap at each recursion level to match physical nodes
+                // pathHistory records the exact indices swapped at each level
+                // e.g., level 0 (swap index 0 with 0, or 1, or 2)
+                const lvl0_i = pathHistory[0]; 
+                let nodeLvl1 = `node_0_${lvl0_i}`;
+                
+                if (start === 1) return nodeLvl1;
+
+                const lvl1_i = pathHistory[1]; // i at start = 1
+                // i could be 1 or 2
+                let suffix = `1_${lvl1_i}`; // swap(1, 1) or swap(1, 2)
+                let nodeLvl2 = `${nodeLvl1}_${suffix}`;
+                
+                if (start === 2) return nodeLvl2;
+                
+                if (start === 3) {
+                    // Match leaf with correct value
+                    if (nodeLvl2 === "node_0_0_1_1_1_1") return "leaf_1"; // [1,2,3]
+                    if (nodeLvl2 === "node_0_0_1_2_1_2") return "leaf_2"; // [1,3,2]
+                    if (nodeLvl2 === "node_0_1_1_1_1_1") return "leaf_3"; // [2,1,3]
+                    if (nodeLvl2 === "node_0_1_1_2_1_2") return "leaf_4"; // [2,3,1]
+                    if (nodeLvl2 === "node_0_2_1_1_1_1") return "leaf_5"; // [3,2,1]
+                    if (nodeLvl2 === "node_0_2_1_2_1_2") return "leaf_6"; // [3,1,2]
+                }
+                return null;
+            }
+
+            function backtrackHelper(start, pathHistory) {
+                const nodeId = getNodeID(start, pathHistory);
+                
+                // Step: Enter function
+                steps.push({
+                    type: 'ENTER',
+                    line: 1,
+                    nums: [...nums],
+                    start: start,
+                    i: null,
+                    nodeId: nodeId,
+                    path: [...pathHistory],
+                    desc: `進入遞迴函數 <code>backtrack(nums, start = ${start})</code>。當前的陣列狀態為 [${nums.join(', ')}]。`
+                });
+
+                // Step: Check boundary condition
+                steps.push({
+                    type: 'CHECK_LIMIT',
+                    line: 3,
+                    nums: [...nums],
+                    start: start,
+                    i: null,
+                    nodeId: nodeId,
+                    path: [...pathHistory],
+                    desc: `檢查終止條件：<code>start == nums.size()</code>。此時 <code>start = ${start}</code>, <code>size = 3</code>。`
+                });
+
+                if (start === nums.length) {
+                    // Collect permutation
+                    results.push([...nums]);
+                    steps.push({
+                        type: 'COLLECT',
+                        line: 4,
+                        nums: [...nums],
+                        start: start,
+                        i: null,
+                        nodeId: nodeId,
+                        path: [...pathHistory],
+                        collected: [...nums],
+                        desc: `🎉 達到葉子節點！<code>start == 3</code>，我們成功收集到一個全排列答案：<strong>[${nums.join(', ')}]</strong>。將其塞入 <code>result</code> 容器。`
+                    });
+
+                    steps.push({
+                        type: 'RETURN',
+                        line: 5,
+                        nums: [...nums],
+                        start: start,
+                        i: null,
+                        nodeId: nodeId,
+                        path: [...pathHistory],
+                        desc: `執行 <code>return;</code>，回溯並返回上一層遞迴。`
+                    });
+                    return;
+                }
+
+                // Loop
+                for (let i = start; i < nums.length; ++i) {
+                    const currentPath = [...pathHistory, i];
+                    const nextNodeId = getNodeID(start + 1, currentPath);
+
+                    steps.push({
+                        type: 'LOOP_START',
+                        line: 8,
+                        nums: [...nums],
+                        start: start,
+                        i: i,
+                        nodeId: nodeId,
+                        path: [...pathHistory],
+                        desc: `進入迴圈。<code>start = ${start}</code>，當前 <code>i = ${i}</code> (範圍：${start} 到 2)。`
+                    });
+
+                    // SWAP STEP
+                    steps.push({
+                        type: 'SWAP',
+                        line: 10,
+                        nums: [...nums],
+                        start: start,
+                        i: i,
+                        nodeId: nextNodeId, // Highlight next node in tree which represents this choice
+                        path: [...pathHistory],
+                        swapPair: [start, i],
+                        desc: `做選擇：將 index <code>start (${start})</code> 與 <code>i (${i})</code> 進行 <code>swap</code>。<br><code>swap(nums[${start}], nums[${i}])</code> 使得陣列中 <strong>${nums[start]}</strong> 與 <strong>${nums[i]}</strong> 位置交換。`
+                    });
+
+                    // Perform Swap physically
+                    let temp = nums[start];
+                    nums[start] = nums[i];
+                    nums[i] = temp;
+
+                    steps.push({
+                        type: 'AFTER_SWAP',
+                        line: 10,
+                        nums: [...nums],
+                        start: start,
+                        i: i,
+                        nodeId: nextNodeId,
+                        path: [...pathHistory],
+                        desc: `交換完成！<code>nums[${start}]</code> 位置元素被「固定」為 <strong>${nums[start]}</strong>。陣列變為 [${nums.join(', ')}]。接著即將呼叫遞迴。`
+                    });
+
+                    // RECURSION CALL
+                    steps.push({
+                        type: 'CALL',
+                        line: 13,
+                        nums: [...nums],
+                        start: start,
+                        i: i,
+                        nodeId: nextNodeId,
+                        path: [...pathHistory],
+                        desc: `準備深入下一層！呼叫 <code>backtrack(nums, start + 1)</code>。此處傳入的 start 指針將變為 <strong>${start + 1}</strong>。`
+                    });
+
+                    // Recurse
+                    backtrackHelper(start + 1, currentPath);
+
+                    // BACK FROM RECURSION
+                    steps.push({
+                        type: 'BACK_FROM_CALL',
+                        line: 13,
+                        nums: [...nums],
+                        start: start,
+                        i: i,
+                        nodeId: nodeId, // back to current node
+                        path: [...pathHistory],
+                        desc: `從下層遞迴返回。此時我們準備「撤銷剛才做的選擇」，才能嘗試別的交換可能。`
+                    });
+
+                    // REVERSE SWAP STEP (BACKTRACK)
+                    steps.push({
+                        type: 'REVERT_SWAP',
+                        line: 16,
+                        nums: [...nums],
+                        start: start,
+                        i: i,
+                        nodeId: nodeId,
+                        path: [...pathHistory],
+                        swapPair: [start, i],
+                        desc: `撤銷選擇（回溯）：再次執行 <code>swap(nums[${start}], nums[${i}])</code>，將 <strong>${nums[start]}</strong> 與 <strong>${nums[i]}</strong> 的位置換回來，還原到做選擇前的初始狀態。`
+                    });
+
+                    // Perform Reverse Swap physically
+                    temp = nums[start];
+                    nums[start] = nums[i];
+                    nums[i] = temp;
+
+                    steps.push({
+                        type: 'AFTER_REVERT',
+                        line: 16,
+                        nums: [...nums],
+                        start: start,
+                        i: i,
+                        nodeId: nodeId,
+                        path: [...pathHistory],
+                        desc: `還原完成！陣列回復為 [${nums.join(', ')}]。現在可以放心地繼續下一次 <code>i++</code> 的探勘了！`
+                    });
+                }
+
+                steps.push({
+                    type: 'FUNC_END',
+                    line: 18,
+                    nums: [...nums],
+                    start: start,
+                    i: null,
+                    nodeId: nodeId,
+                    path: [...pathHistory],
+                    desc: `迴圈執行結束。<code>backtrack(start = ${start})</code> 任務完成，返回上一層。`
+                });
+            }
+
+            backtrackHelper(0, []);
+        }
+
+        // STATE AND CONTROL
+        let currentStepIdx = 0;
+        let isPlaying = false;
+        let playInterval = null;
+        let playSpeed = 1500; // ms
+
+        // INITIALIZATION
+        buildTreeLayout();
+        generateSteps();
+
+        // RENDER TREE
+        const svg = document.getElementById("tree-svg");
+        
+        function renderStaticTree() {
+            // Draw links
+            treeLinks.forEach(link => {
+                const fromNode = treeNodes.find(n => n.id === link.from);
+                const toNode = treeNodes.find(n => n.id === link.to);
+                
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                path.setAttribute("id", `link_${link.from}_to_${link.to}`);
+                path.setAttribute("x1", fromNode.x);
+                path.setAttribute("y1", fromNode.y);
+                path.setAttribute("x2", toNode.x);
+                path.setAttribute("y2", toNode.y);
+                path.setAttribute("stroke", "#334155"); // slate-700
+                path.setAttribute("stroke-width", "2");
+                path.setAttribute("stroke-dasharray", toNode.isLeaf ? "3,3" : "0");
+                svg.appendChild(path);
+            });
+
+            // Draw nodes
+            treeNodes.forEach(node => {
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                g.setAttribute("id", node.id);
+                g.setAttribute("class", "cursor-pointer");
+                
+                // Circle
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", node.x);
+                circle.setAttribute("cy", node.y);
+                circle.setAttribute("r", node.isLeaf ? "14" : "18");
+                circle.setAttribute("fill", node.isLeaf ? "#064e3b" : "#0f172a"); // emerald-950 or slate-900
+                circle.setAttribute("stroke", node.isLeaf ? "#10b981" : "#475569"); // emerald-500 or slate-600
+                circle.setAttribute("stroke-width", "2");
+                circle.setAttribute("class", "transition-all duration-300");
+                circle.setAttribute("id", `circle_${node.id}`);
+                g.appendChild(circle);
+
+                // Text
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", node.x);
+                text.setAttribute("y", node.y + (node.isLeaf ? 4 : 5));
+                text.setAttribute("text-anchor", "middle");
+                text.setAttribute("fill", node.isLeaf ? "#34d399" : "#94a3b8"); // emerald-400 or slate-400
+                text.setAttribute("font-size", node.isLeaf ? "8px" : "10px");
+                text.setAttribute("class", "font-medium select-none");
+                
+                // For level 0,1,2 nodes, label swap action
+                // For leaves, label the permutation
+                text.textContent = node.isLeaf ? node.label : node.label;
+                text.setAttribute("id", `text_${node.id}`);
+                g.appendChild(text);
+
+                // Tooltip text (start level description)
+                if(!node.isLeaf) {
+                    const labelLvl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    labelLvl.setAttribute("x", node.x);
+                    labelLvl.setAttribute("y", node.y - 23);
+                    labelLvl.setAttribute("text-anchor", "middle");
+                    labelLvl.setAttribute("fill", "#64748b"); // slate-500
+                    labelLvl.setAttribute("font-size", "7px");
+                    labelLvl.setAttribute("class", "font-bold select-none");
+                    labelLvl.textContent = `start = ${node.start}`;
+                    g.appendChild(labelLvl);
+                }
+
+                svg.appendChild(g);
+            });
+        }
+
+        renderStaticTree();
+
+        // RENDER ARRAY STATE VISUALLY
+        function renderArrayState(step) {
+            const container = document.getElementById("array-container");
+            container.innerHTML = ""; // Clear
+            
+            const nums = step.nums;
+            const start = step.start;
+            const i = step.i;
+            const swapPair = step.swapPair;
+
+            // Generate slots
+            nums.forEach((val, index) => {
+                const cell = document.createElement("div");
+                cell.id = `array-cell-${index}`;
+                
+                // Core box styling based on pointers
+                let borderStyle = "border-slate-700 bg-slate-900";
+                let textStyle = "text-slate-200";
+                
+                if (index === start) {
+                    borderStyle = "border-blue-500 bg-blue-950/50 ring-2 ring-blue-500/30";
+                    textStyle = "text-blue-300 font-bold";
+                } else if (i !== null && index === i) {
+                    borderStyle = "border-emerald-500 bg-emerald-950/50 ring-2 ring-emerald-500/30";
+                    textStyle = "text-emerald-300 font-bold";
+                } else if (index < start) {
+                    // Elements before start are already "frozen/fixed" in the current recursion stack
+                    borderStyle = "border-slate-800 bg-slate-950 opacity-60";
+                    textStyle = "text-slate-500 line-through decoration-blue-500/40";
+                }
+
+                cell.className = `w-14 h-14 md:w-16 md:h-16 flex flex-col justify-center items-center border-2 rounded-xl transition-all duration-300 relative ${borderStyle} ${textStyle}`;
+                
+                // Element Value
+                const valSpan = document.createElement("span");
+                valSpan.className = "text-2xl font-bold tracking-tight";
+                valSpan.textContent = val;
+                cell.appendChild(valSpan);
+
+                // Index indicator
+                const idxLabel = document.createElement("span");
+                idxLabel.className = "absolute -bottom-5 text-[10px] text-slate-500 font-medium code-font";
+                idxLabel.textContent = `[${index}]`;
+                cell.appendChild(idxLabel);
+
+                // Pointer Tags
+                if (index === start) {
+                    const tag = document.createElement("span");
+                    tag.className = "absolute -top-7 px-1.5 py-0.5 bg-blue-600 text-white text-[9px] font-bold rounded shadow-lg animate-bounce";
+                    tag.innerHTML = "start";
+                    cell.appendChild(tag);
+                }
+                
+                if (i !== null && index === i) {
+                    const tag = document.createElement("span");
+                    tag.className = "absolute -top-7 px-1.5 py-0.5 bg-emerald-600 text-white text-[9px] font-bold rounded shadow-lg animate-bounce";
+                    tag.innerHTML = "i";
+                    cell.appendChild(tag);
+                }
+
+                container.appendChild(cell);
+            });
+
+            // If we are swapping, we can draw a curved connection line or animate it
+            if (swapPair && (step.type === 'SWAP' || step.type === 'REVERT_SWAP')) {
+                const sIdx = swapPair[0];
+                const iIdx = swapPair[1];
+                if (sIdx !== iIdx) {
+                    // Visual cues for swap
+                    const cellS = document.getElementById(`array-cell-${sIdx}`);
+                    const cellI = document.getElementById(`array-cell-${iIdx}`);
+                    
+                    if (cellS && cellI) {
+                        cellS.classList.add("scale-105", "border-dashed", "border-yellow-400");
+                        cellI.classList.add("scale-105", "border-dashed", "border-yellow-400");
+                    }
+                }
+            }
+        }
+
+        // UPDATE CODE HIGHLIGHT
+        function highlightCodeLine(lineNum) {
+            // Remove previous active highlights
+            for (let l = 1; l <= 18; l++) {
+                const row = document.getElementById(`code-l${l}`);
+                if (row) {
+                    row.classList.remove("bg-blue-900/40", "border-l-4", "border-blue-500", "text-slate-100");
+                }
+            }
+            
+            // Add to current line
+            const activeRow = document.getElementById(`code-l${lineNum}`);
+            if (activeRow) {
+                activeRow.classList.add("bg-blue-900/40", "border-l-4", "border-blue-500", "text-slate-100");
+                // Scroll in view if hidden
+                activeRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // UPDATE TREE HIGHLIGHTS
+        function updateTreeVisualization(currentStep) {
+            const activeNodeId = currentStep.nodeId;
+            const path = currentStep.path;
+            
+            // Reset all nodes
+            treeNodes.forEach(node => {
+                const circle = document.getElementById(`circle_${node.id}`);
+                const text = document.getElementById(`text_${node.id}`);
+                
+                if (circle && text) {
+                    circle.setAttribute("fill", node.isLeaf ? "#042f2e" : "#0f172a");
+                    circle.setAttribute("stroke", node.isLeaf ? "#065f46" : "#334155");
+                    circle.setAttribute("stroke-width", "2");
+                    circle.classList.remove("node-active");
+                    
+                    text.setAttribute("fill", node.isLeaf ? "#059669" : "#64748b");
+                }
+            });
+
+            // Reset all links
+            treeLinks.forEach(link => {
+                const l = document.getElementById(`link_${link.from}_to_${link.to}`);
+                if (l) {
+                    l.setAttribute("stroke", "#334155");
+                    l.setAttribute("stroke-width", "2");
+                }
+            });
+
+            if (!activeNodeId) return;
+
+            // Highlight history path and links leading to the active node
+            let currentNode = treeNodes.find(n => n.id === activeNodeId);
+            
+            // Draw path up to root
+            while (currentNode) {
+                const circle = document.getElementById(`circle_${currentNode.id}`);
+                const text = document.getElementById(`text_${currentNode.id}`);
+                
+                if (circle && text) {
+                    if (currentNode.id === activeNodeId) {
+                        // The exact current step
+                        circle.setAttribute("fill", currentNode.isLeaf ? "#10b981" : "#1e40af"); // bright emerald or blue-800
+                        circle.setAttribute("stroke", currentNode.isLeaf ? "#34d399" : "#60a5fa"); // bright emerald or blue-400
+                        circle.setAttribute("stroke-width", "4");
+                        circle.classList.add("node-active");
+                        text.setAttribute("fill", "#ffffff");
+                    } else {
+                        // Parent paths
+                        circle.setAttribute("fill", currentNode.isLeaf ? "#065f46" : "#1e3a8a"); // darker blue
+                        circle.setAttribute("stroke", currentNode.isLeaf ? "#10b981" : "#3b82f6"); // blue-500
+                        circle.setAttribute("stroke-width", "2");
+                        text.setAttribute("fill", "#eff6ff");
+                    }
+                }
+
+                // Highlight link
+                if (currentNode.parentId) {
+                    const linkId = `link_${currentNode.parentId}_to_${currentNode.id}`;
+                    const l = document.getElementById(linkId);
+                    if (l) {
+                        l.setAttribute("stroke", "#3b82f6"); // blue-500 active path
+                        l.setAttribute("stroke-width", "3.5");
+                    }
+                }
+
+                currentNode = treeNodes.find(n => n.id === currentNode.parentId);
+            }
+        }
+
+        // UPDATE COLLECTED RESULTS
+        function updateCollectedResults(currentIndex) {
+            const resultsList = document.getElementById("results-list");
+            const noResultTip = document.getElementById("no-result");
+            resultsList.innerHTML = "";
+
+            // Find all collected permutations up to current step
+            let collectedArray = [];
+            for (let s = 0; s <= currentIndex; s++) {
+                if (steps[s].type === 'COLLECT') {
+                    // Avoid duplicates in view if we hit collect step multiple times in history
+                    const key = steps[s].collected.join(',');
+                    if (!collectedArray.some(c => c.join(',') === key)) {
+                        collectedArray.push(steps[s].collected);
+                    }
+                }
+            }
+
+            if (collectedArray.length > 0) {
+                noResultTip.classList.add("hidden");
+                collectedArray.forEach((perm, idx) => {
+                    const div = document.createElement("div");
+                    div.className = "flex justify-center items-center gap-1.5 py-1.5 px-3 bg-emerald-950/40 border border-emerald-900/50 rounded-lg text-emerald-400 text-sm font-semibold code-font animate-fade-in";
+                    div.innerHTML = `<span class="text-[10px] text-emerald-600 font-normal">#${idx+1}</span> [${perm.join(',')}]`;
+                    resultsList.appendChild(div);
+                });
+            } else {
+                noResultTip.classList.remove("hidden");
+            }
+        }
+
+        // RENDER CURRENT STEP (MAIN DRIVER)
+        function renderStep(idx) {
+            if (idx < 0 || idx >= steps.length) return;
+            currentStepIdx = idx;
+
+            const step = steps[idx];
+
+            // Counter UI
+            document.getElementById("step-counter").textContent = idx + 1;
+            document.getElementById("total-steps").textContent = steps.length;
+
+            // Explanation Card
+            document.getElementById("state-desc").innerHTML = step.desc;
+
+            // Array Layout Update
+            renderArrayState(step);
+
+            // Code highlight update
+            highlightCodeLine(step.line);
+
+            // Tree SVG update
+            updateTreeVisualization(step);
+
+            // Collected items
+            updateCollectedResults(idx);
+
+            // Button Disabling Safety
+            document.getElementById("btn-prev").disabled = idx === 0;
+            document.getElementById("btn-next").disabled = idx === steps.length - 1;
+            
+            if (idx === 0) {
+                document.getElementById("btn-prev").classList.add("opacity-50", "cursor-not-allowed");
+            } else {
+                document.getElementById("btn-prev").classList.remove("opacity-50", "cursor-not-allowed");
+            }
+
+            if (idx === steps.length - 1) {
+                document.getElementById("btn-next").classList.add("opacity-50", "cursor-not-allowed");
+                if (isPlaying) stopPlayback();
+            } else {
+                document.getElementById("btn-next").classList.remove("opacity-50", "cursor-not-allowed");
+            }
+        }
+
+        // PLAYBACK ENGINE
+        function startPlayback() {
+            if (currentStepIdx >= steps.length - 1) {
+                currentStepIdx = 0; // Wrap around on completion reset
+            }
+            isPlaying = true;
+            document.getElementById("play-text").textContent = "暫停播放";
+            document.getElementById("play-icon").className = "fa-solid fa-pause";
+            
+            playInterval = setInterval(() => {
+                if (currentStepIdx < steps.length - 1) {
+                    renderStep(currentStepIdx + 1);
+                } else {
+                    stopPlayback();
+                }
+            }, playSpeed);
+        }
+
+        function stopPlayback() {
+            isPlaying = false;
+            document.getElementById("play-text").textContent = "自動播放";
+            document.getElementById("play-icon").className = "fa-solid fa-play";
+            clearInterval(playInterval);
+        }
+
+        // EVENT LISTENERS
+        document.getElementById("btn-next").addEventListener("click", () => {
+            if (isPlaying) stopPlayback();
+            if (currentStepIdx < steps.length - 1) {
+                renderStep(currentStepIdx + 1);
+            }
+        });
+
+        document.getElementById("btn-prev").addEventListener("click", () => {
+            if (isPlaying) stopPlayback();
+            if (currentStepIdx > 0) {
+                renderStep(currentStepIdx - 1);
+            }
+        });
+
+        document.getElementById("btn-play").addEventListener("click", () => {
+            if (isPlaying) {
+                stopPlayback();
+            } else {
+                startPlayback();
+            }
+        });
+
+        document.getElementById("btn-reset").addEventListener("click", () => {
+            stopPlayback();
+            renderStep(0);
+        });
+
+        document.getElementById("speed-slider").addEventListener("input", (e) => {
+            playSpeed = 3500 - parseInt(e.target.value); // invert slider value so higher on slider means faster
+            if (isPlaying) {
+                stopPlayback();
+                startPlayback();
+            }
+        });
+
+        // Initialize First Step
+        renderStep(0);
+
+    </script>
+</body>
+</html>

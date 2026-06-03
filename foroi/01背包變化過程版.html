@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>0/1 背包問題直觀互動教學</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons (Inline SVGs used for reliability, but loaded for external compatibility if needed) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbar for matrix container */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md py-4 px-6">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-2">
+                    🎒 0/1 背包問題直觀互動教學 (C++)
+                </h1>
+                <p class="text-blue-100 text-sm mt-1">最簡單、最直觀、一步步觀察動態規劃（DP）的矩陣變化</p>
+            </div>
+            <div class="flex gap-2">
+                <span class="bg-blue-500 bg-opacity-30 text-white border border-blue-400 px-3 py-1 rounded-full text-xs font-semibold">
+                    C++ 程式碼對照
+                </span>
+                <span class="bg-indigo-500 bg-opacity-30 text-white border border-indigo-400 px-3 py-1 rounded-full text-xs font-semibold">
+                    動態規劃 (DP)
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Side: Controls & Input Data (4 cols on lg) -->
+        <div class="lg:col-span-4 space-y-6 flex flex-col">
+            
+            <!-- Card 1: Parameters Setup -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+                    ⚙️ 1. 設定測試資料
+                </h2>
+                
+                <!-- Knapsack Capacity -->
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">
+                        背包總容量 (W): <span id="capacity-val" class="text-blue-600 font-bold">5</span>
+                    </label>
+                    <input type="range" id="capacity-slider" min="1" max="10" value="5" 
+                           class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                    <div class="flex justify-between text-xs text-slate-400 mt-1">
+                        <span>1</span>
+                        <span>5</span>
+                        <span>10</span>
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <div class="mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-sm font-semibold text-slate-700">物品清單 (最多 5 個):</label>
+                        <button id="add-item-btn" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold px-2 py-1 rounded transition-colors flex items-center gap-1">
+                            ＋ 新增物品
+                        </button>
+                    </div>
+                    
+                    <div class="max-h-52 overflow-y-auto border border-slate-200 rounded-lg">
+                        <table class="w-full text-left text-sm text-slate-600">
+                            <thead class="bg-slate-50 text-slate-700 sticky top-0 border-b border-slate-200 text-xs uppercase">
+                                <tr>
+                                    <th class="px-3 py-2">物品</th>
+                                    <th class="px-3 py-2">重量 (w)</th>
+                                    <th class="px-3 py-2">價值 (v)</th>
+                                    <th class="px-2 py-2 text-center">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="items-table-body" class="divide-y divide-slate-100">
+                                <!-- Dynamic rows go here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <button id="reset-default-btn" class="text-xs text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 font-medium px-3 py-2 rounded-lg transition-colors w-full">
+                        回復預設測資
+                    </button>
+                    <button id="apply-settings-btn" class="text-xs text-white bg-blue-600 hover:bg-blue-700 font-bold px-3 py-2 rounded-lg transition-colors w-full shadow-sm">
+                        確認並重新生成
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card 2: Step-by-Step Interactive Controller -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex-1 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+                        🎮 2. 模擬控制器
+                    </h2>
+                    
+                    <!-- Progress Information -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-4 space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">目前階段:</span>
+                            <span id="current-phase" class="font-bold text-indigo-600">設定中</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">當前處理物品:</span>
+                            <span id="info-current-item" class="font-semibold text-slate-800">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">當前背包容量:</span>
+                            <span id="info-current-weight" class="font-semibold text-slate-800">-</span>
+                        </div>
+                    </div>
+
+                    <!-- Step description text -->
+                    <div class="border-l-4 border-blue-500 bg-blue-50 p-3 rounded-r-lg mb-4">
+                        <p class="text-xs text-blue-500 uppercase font-bold tracking-wider mb-1">直觀解說：</p>
+                        <p id="step-explanation" class="text-slate-700 text-sm leading-relaxed font-medium">
+                            點擊下方的「下一步 ➡️」或「自動播放」開始模擬計算過程。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Simulation Buttons -->
+                <div class="space-y-2 mt-4">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="prev-btn" disabled class="bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:hover:bg-slate-100 text-slate-700 font-semibold py-2 px-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-1">
+                            ⬅️ 上一步
+                        </button>
+                        <button id="next-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-1 shadow">
+                            下一步 ➡️
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="play-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-1 shadow">
+                            ▶️ 自動播放
+                        </button>
+                        <button id="reset-sim-btn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-1">
+                            🔄 重置步驟
+                        </button>
+                    </div>
+                    
+                    <!-- Play speed settings (hidden unless playing) -->
+                    <div class="flex items-center justify-between text-xs text-slate-500 pt-2">
+                        <span>播放速度:</span>
+                        <select id="play-speed" class="bg-slate-100 border border-slate-200 rounded px-2 py-1 focus:outline-none">
+                            <option value="1500">慢 (1.5秒)</option>
+                            <option value="800" selected>正常 (0.8秒)</option>
+                            <option value="400">快 (0.4秒)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Side: DP Table & Code (8 cols on lg) -->
+        <div class="lg:col-span-8 space-y-6 flex flex-col">
+            
+            <!-- Card 3: DP Matrix Visualizer -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <div class="flex justify-between items-center border-b pb-2 mb-4 flex-wrap gap-2">
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        📊 3. 狀態轉移矩陣 (dp[i][w])
+                    </h2>
+                    <div class="flex items-center gap-3 text-xs">
+                        <div class="flex items-center gap-1">
+                            <span class="w-3 h-3 bg-yellow-100 border border-yellow-400 inline-block rounded"></span>
+                            <span>當前計算格</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="w-3 h-3 bg-red-100 border border-red-300 inline-block rounded"></span>
+                            <span>不放此物品</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="w-3 h-3 bg-green-100 border border-green-300 inline-block rounded"></span>
+                            <span>放入此物品之餘額</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Matrix Container -->
+                <div class="overflow-x-auto custom-scrollbar border border-slate-100 rounded-lg bg-slate-50 p-2">
+                    <table class="min-w-full text-center border-collapse">
+                        <thead>
+                            <tr class="text-xs font-bold text-slate-500">
+                                <!-- Top row: Weight indices -->
+                                <th class="px-2 py-1 bg-slate-100 border border-slate-200 text-slate-700 font-extrabold text-left pl-3">
+                                    物品 \ 容量 (w)
+                                </th>
+                                <!-- Generated weights column headers -->
+                                <template id="matrix-header-template">
+                                    <th class="px-3 py-2 bg-slate-100 border border-slate-200 w-12">
+                                        <div class="text-slate-800 font-bold" data-weight-header>0</div>
+                                    </th>
+                                </template>
+                                <th id="header-anchor" class="hidden"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="matrix-body" class="text-sm font-semibold">
+                            <!-- Dynamic rows containing:
+                                 Row name (Item info) + dp cells
+                            -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Decision Result Alert -->
+                <div id="final-result-box" class="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg hidden transition-all duration-300">
+                    <h3 class="text-emerald-800 font-bold text-sm flex items-center gap-1 mb-1">
+                        🏆 最優決策完成！
+                    </h3>
+                    <p class="text-emerald-700 text-xs leading-relaxed">
+                        背包所能裝下的最大總價值為：<span id="res-max-val" class="font-extrabold text-base text-emerald-600">0</span>。
+                        選擇的物品為：<span id="res-items-chosen" class="font-extrabold">無</span>。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Card 4: C++ Code Synchronizer -->
+            <div class="bg-slate-900 text-slate-100 rounded-xl shadow-lg border border-slate-800 p-5 flex-1 flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-4">
+                        <h2 class="text-base font-bold text-slate-300 flex items-center gap-2">
+                            💻 C++ 程式碼同步高亮
+                        </h2>
+                        <span class="text-xs text-slate-500 font-mono">knapsack.cpp</span>
+                    </div>
+
+                    <!-- Code block -->
+                    <div class="code-font text-xs md:text-sm overflow-x-auto space-y-1 bg-slate-950 p-4 rounded-lg border border-slate-800">
+                        <div id="code-line-1" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            <span class="text-pink-400">#include</span> &lt;iostream&gt;
+                        </div>
+                        <div id="code-line-2" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            <span class="text-pink-400">#include</span> &lt;vector&gt;
+                        </div>
+                        <div id="code-line-3" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            <span class="text-pink-400">using namespace</span> std;
+                        </div>
+                        <div id="code-line-4" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            &nbsp;
+                        </div>
+                        <div id="code-line-5" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            <span class="text-blue-400">int</span> <span class="text-yellow-400">main</span>() {
+                        </div>
+                        <!-- State initialization -->
+                        <div id="code-line-6" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// dp[i][w] 代表「只考慮前 i 個物品，在容量為 w 時」的最優價值</span>
+                        </div>
+                        <div id="code-line-7" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            &nbsp;&nbsp;&nbsp;&nbsp;vector&lt;vector&lt;<span class="text-blue-400">int</span>&gt;&gt; <span class="text-teal-400">dp</span>(N + 1, vector&lt;<span class="text-blue-400">int</span>&gt;(W + 1, 0));
+                        </div>
+                        <!-- Outer Loop -->
+                        <div id="code-line-8" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-pink-400">for</span> (<span class="text-blue-400">int</span> i = 1; i &lt;= N; i++) {
+                        </div>
+                        <!-- Inner Loop -->
+                        <div id="code-line-9" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-pink-400">for</span> (<span class="text-blue-400">int</span> w = 0; w &lt;= W; w++) {
+                        </div>
+                        <!-- Condition 1: Can't fit -->
+                        <div id="code-line-10" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-pink-400">if</span> (weight[i-1] &gt; w) {
+                        </div>
+                        <div id="code-line-11" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dp[i][w] = dp[i-1][w]; <span class="text-slate-500">// 放不下，承襲不放時的最佳解</span>
+                        </div>
+                        <!-- Condition 2: Can fit, choose max -->
+                        <div id="code-line-12" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} <span class="text-pink-400">else</span> {
+                        </div>
+                        <div id="code-line-13" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dp[i][w] = <span class="text-purple-400">max</span>(dp[i-1][w], dp[i-1][w - weight[i-1]] + val[i-1]);
+                        </div>
+                        <div id="code-line-14" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+                        </div>
+                        <div id="code-line-15" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+                        </div>
+                        <div id="code-line-16" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            &nbsp;&nbsp;&nbsp;&nbsp;}
+                        </div>
+                        <!-- End of main -->
+                        <div id="code-line-17" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            &nbsp;&nbsp;&nbsp;&nbsp;cout &lt;&lt; <span class="text-amber-400">"最大價值: "</span> &lt;&lt; dp[N][W] &lt;&lt; endl;
+                        </div>
+                        <div id="code-line-18" class="px-2 py-0.5 rounded transition-all duration-150 text-slate-400">
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live formula bubble -->
+                <div class="mt-4 bg-slate-950 border border-slate-800 p-3 rounded-lg text-xs">
+                    <span class="text-indigo-400 font-bold block mb-1">💡 當前執行的動態轉移方程對應：</span>
+                    <div id="live-math-formula" class="font-mono text-slate-300">
+                        <!-- Mathematical interpretation placeholder -->
+                        尚未開始
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer with informative links/guides -->
+    <footer class="bg-slate-900 text-slate-400 text-xs py-6 border-t border-slate-800 mt-12">
+        <div class="max-w-7xl mx-auto px-6 text-center space-y-2">
+            <p>💡 <span class="text-slate-300 font-semibold">直觀小貼士：</span> 0/1 背包問題的關鍵在於「決策」。對每個物品，你只有兩個選擇：<b>放 (1)</b> 或是 <b>不放 (0)</b>。</p>
+            <p>我們透過二維矩陣來記錄所有小容量下的最佳成果，大容量的答案就是透過小容量的最佳成果「疊加組合」出來的，這就是動態規劃的精髓！</p>
+            <p class="pt-2 text-slate-500">Built using Tailwind CSS & Pure Vanilla JS. No framework overhead.</p>
+        </div>
+    </footer>
+
+    <!-- Script Section for Logic and UI binding -->
+    <script>
+        // 1. Initial Default Data
+        let items = [
+            { id: 1, name: '🎁 物品 A', weight: 2, value: 3 },
+            { id: 2, name: '🧸 物品 B', weight: 1, value: 2 },
+            { id: 3, name: '📘 物品 C', weight: 3, value: 4 },
+            { id: 4, name: '📱 物品 D', weight: 2, value: 2 }
+        ];
+        let maxCapacity = 5;
+
+        // Simulation State Engine
+        let simSteps = [];
+        let currentStepIndex = -1;
+        let playInterval = null;
+
+        // DOM elements cache
+        const capacitySlider = document.getElementById('capacity-slider');
+        const capacityVal = document.getElementById('capacity-val');
+        const itemsTableBody = document.getElementById('items-table-body');
+        const addItemBtn = document.getElementById('add-item-btn');
+        const applySettingsBtn = document.getElementById('apply-settings-btn');
+        const resetDefaultBtn = document.getElementById('reset-default-btn');
+        
+        const matrixBody = document.getElementById('matrix-body');
+        const headerAnchor = document.getElementById('header-anchor');
+        const finalResultBox = document.getElementById('final-result-box');
+        const resMaxVal = document.getElementById('res-max-val');
+        const resItemsChosen = document.getElementById('res-items-chosen');
+
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const playBtn = document.getElementById('play-btn');
+        const resetSimBtn = document.getElementById('reset-sim-btn');
+        const playSpeedSelect = document.getElementById('play-speed');
+
+        const currentPhaseText = document.getElementById('current-phase');
+        const infoCurrentItem = document.getElementById('info-current-item');
+        const infoCurrentWeight = document.getElementById('info-current-weight');
+        const stepExplanation = document.getElementById('step-explanation');
+        const liveMathFormula = document.getElementById('live-math-formula');
+
+        // Initialize UI
+        function init() {
+            renderItemsTable();
+            capacitySlider.value = maxCapacity;
+            capacityVal.textContent = maxCapacity;
+            
+            // Generate DP Table grid skeleton & simulation array
+            generateDPSimulation();
+            renderDPTableSkeleton();
+            resetSimulation();
+        }
+
+        // Render input setup tables
+        function renderItemsTable() {
+            itemsTableBody.innerHTML = '';
+            items.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-3 py-2 font-semibold text-slate-800">${item.name}</td>
+                    <td class="px-3 py-2">
+                        <input type="number" min="1" max="10" value="${item.weight}" 
+                               class="w-16 bg-slate-100 border border-slate-200 rounded px-2 py-1 text-center font-bold"
+                               onchange="updateItemParam(${item.id}, 'weight', this.value)">
+                    </td>
+                    <td class="px-3 py-2">
+                        <input type="number" min="1" max="20" value="${item.value}" 
+                               class="w-16 bg-slate-100 border border-slate-200 rounded px-2 py-1 text-center font-bold"
+                               onchange="updateItemParam(${item.id}, 'value', this.value)">
+                    </td>
+                    <td class="px-2 py-2 text-center">
+                        <button class="text-red-500 hover:text-red-700 transition-colors" onclick="removeItem(${item.id})">
+                            🗑️
+                        </button>
+                    </td>
+                `;
+                itemsTableBody.appendChild(tr);
+            });
+
+            // Handle limit check
+            addItemBtn.disabled = items.length >= 5;
+            if (items.length >= 5) {
+                addItemBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                addItemBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // Inline event functions
+        window.updateItemParam = function(id, field, value) {
+            const item = items.find(it => it.id === id);
+            if (item) {
+                let parsed = parseInt(value);
+                if (isNaN(parsed) || parsed < 1) parsed = 1;
+                item[field] = parsed;
+            }
+        };
+
+        window.removeItem = function(id) {
+            items = items.filter(it => it.id !== id);
+            // Rename items based on indices to keep it simple and orderly
+            items.forEach((it, idx) => {
+                const char = String.fromCharCode(65 + idx); // A, B, C...
+                it.name = `🎁 物品 ${char}`;
+            });
+            renderItemsTable();
+        };
+
+        addItemBtn.addEventListener('click', () => {
+            if (items.length >= 5) return;
+            const nextChar = String.fromCharCode(65 + items.length);
+            const newItem = {
+                id: Date.now(),
+                name: `🎁 物品 ${nextChar}`,
+                weight: Math.floor(Math.random() * 3) + 1,
+                value: Math.floor(Math.random() * 5) + 2
+            };
+            items.push(newItem);
+            renderItemsTable();
+        });
+
+        capacitySlider.addEventListener('input', (e) => {
+            maxCapacity = parseInt(e.target.value);
+            capacityVal.textContent = maxCapacity;
+        });
+
+        applySettingsBtn.addEventListener('click', () => {
+            stopAutoplay();
+            generateDPSimulation();
+            renderDPTableSkeleton();
+            resetSimulation();
+        });
+
+        resetDefaultBtn.addEventListener('click', () => {
+            stopAutoplay();
+            items = [
+                { id: 1, name: '🎁 物品 A', weight: 2, value: 3 },
+                { id: 2, name: '🧸 物品 B', weight: 1, value: 2 },
+                { id: 3, name: '📘 物品 C', weight: 3, value: 4 },
+                { id: 4, name: '📱 物品 D', weight: 2, value: 2 }
+            ];
+            maxCapacity = 5;
+            init();
+        });
+
+        // 2. Algorithm & Step Simulation Engine Generator
+        function generateDPSimulation() {
+            const N = items.length;
+            const W = maxCapacity;
+
+            // Setup empty simulation step arrays
+            simSteps = [];
+
+            // DP Initialization phase step
+            // 2D Array setup
+            let currentDpMatrix = Array(N + 1).fill(null).map(() => Array(W + 1).fill(0));
+
+            // Step for initial empty row / zero weight columns setting
+            simSteps.push({
+                type: 'INIT',
+                row: 0,
+                col: null,
+                dpState: cloneMatrix(currentDpMatrix),
+                activeCodeLines: [7],
+                explanation: `初始化二維 DP 矩陣（大小為 [${N + 1}]x[${W + 1}]）。當沒有物品或背包容量為 0 時，最大價值皆為 0。`,
+                formulaText: `dp[0][w] = 0 (無物品) 且 dp[i][0] = 0 (背包無容量)`
+            });
+
+            // Outer loop: items
+            for (let i = 1; i <= N; i++) {
+                const item = items[i - 1];
+                const itemWeight = item.weight;
+                const itemVal = item.value;
+
+                // Inner loop: capacities
+                for (let w = 0; w <= W; w++) {
+                    const prevDpState = cloneMatrix(currentDpMatrix);
+                    let formula = '';
+                    let actionExplanation = '';
+                    let activeLines = [];
+                    let targetIsFitted = false;
+                    let comparisonTrace = null; // Store indices used for math
+
+                    if (itemWeight > w) {
+                        // Case A: Cannot fit
+                        currentDpMatrix[i][w] = currentDpMatrix[i - 1][w];
+                        activeLines = [10, 11];
+                        actionExplanation = `當前容量為 ${w}，而「${item.name}」重量是 ${itemWeight}。因<b>裝不下</b>此物品，只能選擇不拿。所以最大價值與「上一階段處理完 ${items[i-2] ? items[i-2].name : '無'} 的成果」相同。`;
+                        formula = `dp[${i}][${w}] = dp[${i-1}][${w}] = ${currentDpMatrix[i][w]}`;
+                        comparisonTrace = {
+                            fromCell: [i - 1, w],
+                            fittedCell: null
+                        };
+                    } else {
+                        // Case B: Can fit
+                        const excludeVal = currentDpMatrix[i - 1][w];
+                        const includeVal = currentDpMatrix[i - 1][w - itemWeight] + itemVal;
+                        currentDpMatrix[i][w] = Math.max(excludeVal, includeVal);
+                        
+                        targetIsFitted = includeVal > excludeVal;
+                        activeLines = [13];
+                        
+                        actionExplanation = `當前容量為 ${w}，大於或等於「${item.name}」的重量 ${itemWeight}。我們可以決定<b>要不要放入</b>它。<br>
+                        • <b>不拿此物品：</b>承襲上方格子價值 <span class="text-rose-600 font-bold">${excludeVal}</span><br>
+                        • <b>拿取此物品：</b>獲得其價值 <span class="text-emerald-600 font-bold">${itemVal}</span> + 扣除其重量後剩餘容量 (${w} - ${itemWeight} = ${w - itemWeight}) 的最佳解 <span class="text-teal-600 font-bold">${currentDpMatrix[i - 1][w - itemWeight]}</span> = 合計 <span class="text-emerald-700 font-bold">${includeVal}</span>。<br>
+                        取兩者較大值：<b>max(${excludeVal}, ${includeVal}) = ${currentDpMatrix[i][w]}</b>。`;
+
+                        formula = `dp[${i}][${w}] = max( dp[${i-1}][${w}], dp[${i-1}][${w}-${itemWeight}] + ${itemVal} ) = max(${excludeVal}, ${excludeVal}+${itemVal}) = ${currentDpMatrix[i][w]}`;
+                        comparisonTrace = {
+                            fromCell: [i - 1, w],
+                            fittedCell: [i - 1, w - itemWeight],
+                            itemVal: itemVal,
+                            targetIsFitted
+                        };
+                    }
+
+                    simSteps.push({
+                        type: 'COMPUTE',
+                        row: i,
+                        col: w,
+                        currentItem: item,
+                        currentWeight: w,
+                        dpState: cloneMatrix(currentDpMatrix),
+                        activeCodeLines: activeLines,
+                        explanation: actionExplanation,
+                        formulaText: formula,
+                        comparisonTrace
+                    });
+                }
+            }
+
+            // BACKTRACKING STEPS TO SHOW THE FINAL PATH
+            let i = N;
+            let w = W;
+            let chosenItems = [];
+            let backtrackPath = [];
+
+            while (i > 0 && w > 0) {
+                const item = items[i - 1];
+                const currentVal = currentDpMatrix[i][w];
+                const upperVal = currentDpMatrix[i - 1][w];
+
+                if (currentVal !== upperVal) {
+                    // Item was chosen
+                    chosenItems.push(item);
+                    backtrackPath.push({
+                        row: i,
+                        col: w,
+                        action: 'CHOSEN',
+                        explanation: `回溯分析：格子 dp[${i}][${w}] (${currentVal}) 不等於上一排相同位置的價值 dp[${i-1}][${w}] (${upperVal})，這代表<b>「${item.name}」絕對被選中了</b>！<br>接下來我們帶著賸餘容量 (${w} - ${item.weight} = ${w - item.weight}) 前往上一排尋找決策點。`,
+                        prevW: w,
+                        nextW: w - item.weight,
+                        prevI: i,
+                        nextI: i - 1
+                    });
+                    w -= item.weight;
+                } else {
+                    // Item was not chosen
+                    backtrackPath.push({
+                        row: i,
+                        col: w,
+                        action: 'SKIPPED',
+                        explanation: `回溯分析：格子 dp[${i}][${w}] (${currentVal}) 等於上一排相同位置的價值 dp[${i-1}][${w}] (${upperVal})，這表示<b>「${item.name}」沒有被選入</b>。直接往上一排對齊容量繼續尋找。`,
+                        prevW: w,
+                        nextW: w,
+                        prevI: i,
+                        nextI: i - 1
+                    });
+                }
+                i--;
+            }
+
+            // Append backtracking steps
+            backtrackPath.forEach((step, idx) => {
+                simSteps.push({
+                    type: 'BACKTRACK',
+                    row: step.prevI,
+                    col: step.prevW,
+                    nextRow: step.nextI,
+                    nextCol: step.nextW,
+                    currentItem: items[step.prevI - 1],
+                    currentWeight: step.prevW,
+                    dpState: cloneMatrix(currentDpMatrix),
+                    activeCodeLines: [17],
+                    explanation: step.explanation,
+                    formulaText: `正在回溯... 剩餘背包重量: ${step.prevW}`,
+                    chosenList: [...chosenItems],
+                    isChosen: step.action === 'CHOSEN'
+                });
+            });
+
+            // Final finished summary step
+            simSteps.push({
+                type: 'FINISHED',
+                row: null,
+                col: null,
+                dpState: cloneMatrix(currentDpMatrix),
+                activeCodeLines: [17, 18],
+                explanation: `回溯追蹤結束！最終確認我們放入了：<span class="text-blue-600 font-bold">${chosenItems.length > 0 ? chosenItems.map(it => it.name).join(', ') : '無'}</span>。可獲得的最優最大價值總和為 <b>${currentDpMatrix[N][W]}</b>。`,
+                formulaText: `終局最優解 dp[${N}][${W}] = ${currentDpMatrix[N][W]}`,
+                chosenList: chosenItems
+            });
+        }
+
+        function cloneMatrix(matrix) {
+            return matrix.map(row => [...row]);
+        }
+
+        // 3. Render Table Structure & Elements
+        function renderDPTableSkeleton() {
+            // Header generation based on maxCapacity
+            const parentRow = headerAnchor.parentNode;
+            // Clear existing headers except first column
+            const existingHeaders = parentRow.querySelectorAll('[data-weight-header]');
+            existingHeaders.forEach(el => el.closest('th').remove());
+
+            const template = document.getElementById('matrix-header-template');
+            for (let w = 0; w <= maxCapacity; w++) {
+                const clone = template.content.cloneNode(true);
+                clone.querySelector('[data-weight-header]').textContent = w;
+                // Assign a dynamic ID to easily access this header column
+                parentRow.insertBefore(clone, headerAnchor);
+            }
+
+            // Build Matrix Body rows
+            matrixBody.innerHTML = '';
+            
+            // Row 0: No items (Base Case 0)
+            const row0 = document.createElement('tr');
+            row0.className = "border-b border-slate-200 transition-colors duration-150";
+            row0.id = `matrix-row-0`;
+            row0.innerHTML = `
+                <td class="px-3 py-3 text-left pl-3 bg-slate-100 text-slate-500 text-xs border-r border-slate-200">
+                    <span class="font-bold">初始第0列</span> <span class="text-slate-400 block text-[10px]">(無任何物品時)</span>
+                </td>
+            `;
+            for (let w = 0; w <= maxCapacity; w++) {
+                row0.innerHTML += `
+                    <td id="cell-0-${w}" class="border border-slate-200 py-3 text-slate-400 font-normal">
+                        0
+                    </td>
+                `;
+            }
+            matrixBody.appendChild(row0);
+
+            // Row 1 to N
+            items.forEach((item, idx) => {
+                const i = idx + 1;
+                const row = document.createElement('tr');
+                row.className = "border-b border-slate-200 hover:bg-slate-50 transition-colors duration-150";
+                row.id = `matrix-row-${i}`;
+                row.innerHTML = `
+                    <td class="px-3 py-3 text-left pl-3 bg-slate-100 text-slate-700 text-xs font-bold border-r border-slate-200">
+                        <div class="text-slate-800">${item.name}</div>
+                        <div class="text-[10px] text-slate-400 font-mono">w=${item.weight}, v=${item.value}</div>
+                    </td>
+                `;
+                for (let w = 0; w <= maxCapacity; w++) {
+                    row.innerHTML += `
+                        <td id="cell-${i}-${w}" class="border border-slate-200 py-3 text-slate-300 font-semibold transition-all duration-300">
+                            0
+                        </td>
+                    `;
+                }
+                matrixBody.appendChild(row);
+            });
+        }
+
+        // 4. Step Simulation Player & UI Refresher
+        function resetSimulation() {
+            currentStepIndex = 0;
+            updateStepUI();
+            finalResultBox.classList.add('hidden');
+        }
+
+        function updateStepUI() {
+            if (simSteps.length === 0) return;
+            const step = simSteps[currentStepIndex];
+
+            // Update controllers status
+            prevBtn.disabled = currentStepIndex === 0;
+            nextBtn.disabled = currentStepIndex === simSteps.length - 1;
+            
+            // Apply text descriptions
+            if (step.type === 'INIT') {
+                currentPhaseText.textContent = "⚙️ 初始化階段";
+                infoCurrentItem.textContent = "無";
+                infoCurrentWeight.textContent = "-";
+            } else if (step.type === 'COMPUTE') {
+                currentPhaseText.textContent = `📝 計算矩陣第 ${step.row} 列`;
+                infoCurrentItem.textContent = `${step.currentItem.name} (w=${step.currentItem.weight}, v=${step.currentItem.value})`;
+                infoCurrentWeight.textContent = `${step.currentWeight}`;
+            } else if (step.type === 'BACKTRACK') {
+                currentPhaseText.textContent = "🔍 回溯最優解路徑";
+                infoCurrentItem.textContent = `${step.currentItem.name}`;
+                infoCurrentWeight.textContent = `${step.currentWeight}`;
+            } else {
+                currentPhaseText.textContent = "🏁 完成";
+                infoCurrentItem.textContent = "全數計算完畢";
+                infoCurrentWeight.textContent = "-";
+            }
+
+            stepExplanation.innerHTML = step.explanation;
+            liveMathFormula.textContent = step.formulaText;
+
+            // Highlight corresponding C++ Code Lines
+            highlightCodeLines(step.activeCodeLines);
+
+            // Redraw DP Grid values & classes based on the current step's states
+            refreshTableCells(step);
+        }
+
+        function highlightCodeLines(linesArray) {
+            // Remove previous highlights
+            for (let i = 1; i <= 18; i++) {
+                const line = document.getElementById(`code-line-${i}`);
+                if (line) {
+                    line.classList.remove('bg-blue-900', 'text-white', 'font-bold', 'border-l-4', 'border-blue-400', 'pl-1');
+                    line.classList.add('text-slate-400');
+                }
+            }
+            // Add highlights
+            linesArray.forEach(lineNum => {
+                const line = document.getElementById(`code-line-${lineNum}`);
+                if (line) {
+                    line.classList.remove('text-slate-400');
+                    line.classList.add('bg-blue-950', 'text-blue-200', 'font-bold', 'border-l-4', 'border-blue-400', 'pl-1');
+                }
+            });
+        }
+
+        function refreshTableCells(step) {
+            // Reset cell styles and apply values from this step
+            for (let i = 0; i <= items.length; i++) {
+                for (let w = 0; w <= maxCapacity; w++) {
+                    const cell = document.getElementById(`cell-${i}-${w}`);
+                    if (!cell) continue;
+
+                    // Write down the DP value up to current step knowledge
+                    const isCellCalculated = (step.type === 'FINISHED') || 
+                                             (step.type === 'BACKTRACK') || 
+                                             (step.type === 'INIT' && i === 0) || 
+                                             (step.type === 'COMPUTE' && (i < step.row || (i === step.row && w <= step.col)));
+                    
+                    if (isCellCalculated) {
+                        cell.textContent = step.dpState[i][w];
+                        cell.classList.remove('text-slate-300');
+                        cell.classList.add('text-slate-800');
+                    } else {
+                        cell.textContent = '0';
+                        cell.classList.remove('text-slate-800');
+                        cell.classList.add('text-slate-300');
+                    }
+
+                    // Reset special styling classes
+                    cell.className = "border border-slate-200 py-3 font-semibold transition-all duration-300";
+                }
+            }
+
+            // Apply Step-Specific Active Highlighting
+            if (step.type === 'COMPUTE') {
+                const activeCell = document.getElementById(`cell-${step.row}-${step.col}`);
+                if (activeCell) {
+                    activeCell.classList.add('bg-yellow-100', 'border-2', 'border-yellow-500', 'scale-105', 'shadow-sm', 'text-yellow-900', 'z-10');
+                }
+
+                // Reference trace highlights
+                if (step.comparisonTrace) {
+                    const { fromCell, fittedCell, targetIsFitted } = step.comparisonTrace;
+                    
+                    // From cell (the grid exactly above the active cell - representing "not choice")
+                    if (fromCell) {
+                        const fromEl = document.getElementById(`cell-${fromCell[0]}-${fromCell[1]}`);
+                        if (fromEl) {
+                            fromEl.classList.add('bg-rose-50', 'text-rose-700', 'border', 'border-rose-300', 'line-through-none');
+                            if (!targetIsFitted) {
+                                fromEl.classList.add('ring-2', 'ring-rose-400');
+                            }
+                        }
+                    }
+
+                    // Fitted cell (the leftover capacity grid on the upper row)
+                    if (fittedCell) {
+                        const fittedEl = document.getElementById(`cell-${fittedCell[0]}-${fittedCell[1]}`);
+                        if (fittedEl) {
+                            fittedEl.classList.add('bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-300');
+                            if (targetIsFitted) {
+                                fittedEl.classList.add('ring-2', 'ring-emerald-400');
+                            }
+                        }
+                    }
+                }
+            } else if (step.type === 'BACKTRACK') {
+                const activeCell = document.getElementById(`cell-${step.row}-${step.col}`);
+                if (activeCell) {
+                    if (step.isChosen) {
+                        activeCell.classList.add('bg-indigo-600', 'text-white', 'scale-105', 'shadow', 'z-10', 'border-2', 'border-indigo-800');
+                    } else {
+                        activeCell.classList.add('bg-slate-300', 'text-slate-700', 'scale-100');
+                    }
+                }
+            } else if (step.type === 'FINISHED') {
+                // Highlight final maximum cell and show decision box
+                const maxCell = document.getElementById(`cell-${items.length}-${maxCapacity}`);
+                if (maxCell) {
+                    maxCell.classList.add('bg-emerald-600', 'text-white', 'scale-110', 'animate-pulse', 'z-20');
+                }
+
+                finalResultBox.classList.remove('hidden');
+                resMaxVal.textContent = step.dpState[items.length][maxCapacity];
+                if (step.chosenList && step.chosenList.length > 0) {
+                    resItemsChosen.innerHTML = step.chosenList.map(it => `<span class="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded text-xs mx-0.5 font-bold">${it.name} (w:${it.weight}, v:${it.value})</span>`).join('');
+                } else {
+                    resItemsChosen.textContent = "背包空間不足，未能放入任何物品";
+                }
+            }
+        }
+
+        // 5. Playback Handlers
+        nextBtn.addEventListener('click', () => {
+            if (currentStepIndex < simSteps.length - 1) {
+                currentStepIndex++;
+                updateStepUI();
+            }
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (currentStepIndex > 0) {
+                currentStepIndex--;
+                updateStepUI();
+                finalResultBox.classList.add('hidden');
+            }
+        });
+
+        resetSimBtn.addEventListener('click', () => {
+            stopAutoplay();
+            resetSimulation();
+        });
+
+        playBtn.addEventListener('click', () => {
+            if (playInterval) {
+                stopAutoplay();
+            } else {
+                startAutoplay();
+            }
+        });
+
+        function startAutoplay() {
+            if (currentStepIndex === simSteps.length - 1) {
+                // Loop restart
+                currentStepIndex = 0;
+            }
+            playBtn.innerHTML = '⏸️ 暫停播放';
+            playBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+            playBtn.classList.add('bg-amber-600', 'hover:bg-amber-700');
+            
+            const intervalDuration = parseInt(playSpeedSelect.value);
+            playInterval = setInterval(() => {
+                if (currentStepIndex < simSteps.length - 1) {
+                    currentStepIndex++;
+                    updateStepUI();
+                } else {
+                    stopAutoplay();
+                }
+            }, intervalDuration);
+        }
+
+        function stopAutoplay() {
+            if (playInterval) {
+                clearInterval(playInterval);
+                playInterval = null;
+            }
+            playBtn.innerHTML = '▶️ 自動播放';
+            playBtn.classList.remove('bg-amber-600', 'hover:bg-amber-700');
+            playBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+        }
+
+        // Handle speed updates mid-play smoothly
+        playSpeedSelect.addEventListener('change', () => {
+            if (playInterval) {
+                stopAutoplay();
+                startAutoplay();
+            }
+        });
+
+        // Initialize on load
+        window.onload = function() {
+            init();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dijkstra 最短路徑演算法互動指南 🚀</title>
+    <!-- Tailwind CSS for Modern Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        .pulse-active {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.7)); }
+            50% { transform: scale(1.12); filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.9)); }
+        }
+        .glow-line {
+            stroke-dasharray: 8;
+            animation: dash 15s linear infinite;
+        }
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -1000;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header & Intro -->
+    <header class="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 text-white shadow-md py-6 px-4">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-black tracking-wider flex items-center gap-2">
+                    <span>🚀 Dijkstra 最短路徑演算法</span>
+                    <span class="text-xs bg-yellow-400 text-indigo-900 px-2 py-0.5 rounded-full font-bold">初中生秒懂版</span>
+                </h1>
+                <p class="text-indigo-100 text-sm mt-1">用「小郵差送信」的故事，一步步搞懂地圖導航背後的秘密！</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="restartScenario()" class="bg-white/10 hover:bg-white/20 transition px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-1">
+                    🔄 重設地圖
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
+        
+        <!-- Left Panel: Story & Controls (5 Cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-6">
+            
+            <!-- Analogy & Mission Card -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                <h2 class="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                    <span class="text-2xl">📬</span> 郵差的任務背景
+                </h2>
+                <p class="text-slate-600 text-sm leading-relaxed mb-4">
+                    小郵差要從 <strong class="text-indigo-600">郵局 (A)</strong> 出發，送信任務是要找出到 <strong class="text-purple-600">其他所有小鎮 (B, C, D, E, F)</strong> 的<strong class="text-emerald-600">最省時路線（分鐘數總和最小）</strong>。
+                </p>
+                <div class="grid grid-cols-3 gap-2 text-xs text-center">
+                    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2 rounded-xl">
+                        <span class="block text-lg font-bold">綠色</span>
+                        已確定最短路徑
+                    </div>
+                    <div class="bg-amber-50 border border-amber-200 text-amber-800 p-2 rounded-xl">
+                        <span class="block text-lg font-bold">黃色</span>
+                        目前正在站立/檢查
+                    </div>
+                    <div class="bg-slate-100 border border-slate-200 text-slate-500 p-2 rounded-xl">
+                        <span class="block text-lg font-bold">灰色</span>
+                        還不確定的城鎮
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controller Panel -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col gap-4">
+                <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider">控制面板</h3>
+                
+                <!-- Progress Bar -->
+                <div>
+                    <div class="flex justify-between text-xs text-slate-500 mb-1">
+                        <span id="step-counter">步驟：0 / 0</span>
+                        <span id="step-percent">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                        <div id="progress-bar-fill" class="bg-indigo-600 h-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="grid grid-cols-4 gap-2">
+                    <button id="btn-prev" onclick="prevStep()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 transition text-slate-700 py-3 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-1">
+                        <span>◀</span> <span class="text-[10px]">上一步</span>
+                    </button>
+                    <button id="btn-play" onclick="togglePlay()" class="bg-indigo-600 hover:bg-indigo-700 text-white active:scale-95 transition py-3 rounded-xl font-bold text-sm col-span-2 flex flex-col items-center justify-center gap-1 shadow-md shadow-indigo-100">
+                        <span id="play-icon">▶ 播放</span> <span class="text-[10px]">自動演示</span>
+                    </button>
+                    <button id="btn-next" onclick="nextStep()" class="bg-slate-100 hover:bg-slate-200 active:scale-95 transition text-slate-700 py-3 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-1">
+                        <span>▶</span> <span class="text-[10px]">下一步</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Detailed Explanation Box -->
+            <div class="bg-gradient-to-br from-slate-900 to-indigo-950 text-slate-100 rounded-2xl p-5 shadow-lg relative overflow-hidden flex-grow min-h-[160px] flex flex-col justify-between">
+                <div class="absolute right-0 top-0 opacity-10 text-[120px] select-none font-bold">?</div>
+                <div>
+                    <h3 class="text-amber-400 text-xs font-bold tracking-widest uppercase mb-1 flex items-center gap-1">
+                        <span class="inline-block w-2 h-2 rounded-full bg-amber-400 animate-ping"></span> 郵差大聲公（當前動作）
+                    </h3>
+                    <p id="explanation-text" class="text-sm md:text-base leading-relaxed font-medium transition-all duration-300">
+                        載入中，請點擊「下一步」或「播放」開始冒險！
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-white/10 flex justify-between items-center text-xs text-slate-400">
+                    <span>💡 觀察右方的地圖與表格變化！</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Panel: Visualizer & Table (7 Cols) -->
+        <div class="lg:col-span-7 flex flex-col gap-6">
+            
+            <!-- Map Visualization Card -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-base font-bold text-slate-900 flex items-center gap-1.5">
+                        🗺️ 小鎮地圖及道路時間
+                    </h2>
+                    <span class="text-xs text-slate-400">線條上的數字代表行車時間（分鐘）</span>
+                </div>
+                
+                <!-- SVG Map Container -->
+                <div class="relative w-full aspect-[4/3] bg-slate-50 rounded-xl overflow-hidden border border-slate-100">
+                    <svg id="map-svg" viewBox="0 0 650 400" class="w-full h-full">
+                        <!-- Definitions for markers/gradients -->
+                        <defs>
+                            <marker id="arrow" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+                            </marker>
+                            <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.6"/>
+                                <stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
+                            </radialGradient>
+                        </defs>
+
+                        <!-- Roads (Edges) -->
+                        <g id="svg-edges">
+                            <!-- Dynamically generated or static edges -->
+                        </g>
+
+                        <!-- Town Nodes (Nodes) -->
+                        <g id="svg-nodes">
+                            <!-- Dynamically generated or static nodes -->
+                        </g>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Distance Records Table -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                <h3 class="text-base font-bold text-slate-900 mb-3 flex items-center gap-1.5">
+                    📊 郵局送信記錄表（關鍵對照表）
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                <th class="pb-3 pl-2">小鎮 (Node)</th>
+                                <th class="pb-3">是否確定最短路徑？</th>
+                                <th class="pb-3 text-right">預估最短時間 (分鐘)</th>
+                                <th class="pb-3 text-right pr-2">前一步從小鎮 (Parent)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Dynamically filled -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Code & Technical Deep Dive Section -->
+    <section class="max-w-7xl w-full mx-auto p-4 md:p-6 border-t border-slate-200 mt-6">
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                        💻 其實很簡單！C++ 程式碼對應實作 (C++11)
+                    </h2>
+                    <p class="text-slate-500 text-xs mt-1">程式碼中使用了優先佇列 (Priority Queue) 來加速尋找下一個最近小鎮，這正是導航系統的寫法喔！</p>
+                </div>
+                <button onclick="copyCode()" class="self-start md:self-auto bg-slate-100 hover:bg-slate-200 active:scale-95 transition text-slate-700 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1">
+                    📋 複製程式碼
+                </button>
+            </div>
+
+            <!-- Code Block with syntax highlight concept -->
+            <div class="bg-slate-900 rounded-xl overflow-hidden shadow-inner text-sm relative">
+                <div class="flex items-center justify-between px-4 py-2 bg-slate-950 text-slate-400 text-xs font-mono">
+                    <span>dijkstra_algorithm.cpp</span>
+                    <span class="text-emerald-400">C++11 Ready</span>
+                </div>
+                <pre class="p-4 md:p-6 overflow-x-auto text-slate-300 font-mono leading-relaxed" id="cpp-code"><code>#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;queue&gt;
+#include &lt;utility&gt;
+
+using namespace std;
+
+// 定義代表無限大的數值（代表一開始路還不通）
+const int INF = 1e9; 
+
+// 代表道路的結構：(目標小鎮, 送信所需時間)
+struct Edge {
+    int to;
+    int weight;
+};
+
+void dijkstra(int start, const vector&lt;vector&lt;Edge&gt;&gt;&amp; graph, int n) {
+    // 1. 建立我們在網頁中看到的那張「記錄表」
+    vector&lt;int&gt; dist(n, INF);     // 記錄從起點到各小鎮的最短時間，一開始都設為無限大
+    vector&lt;bool&gt; visited(n, false); // 記錄小鎮是否已被「標記為確定」
+    vector&lt;int&gt; parent(n, -1);     // 記錄各小鎮的最短路徑是從「哪一個前一步小鎮」走過來的
+
+    // 2. 郵局 (起點) 到自己的時間是 0 分鐘
+    dist[start] = 0;
+
+    // 優先佇列 (Min-Heap)：用來每次自動挑選「目前時間最短、且還沒確定」的小鎮
+    // 儲存格式為: pair&lt;當前距離, 小鎮編號&gt;
+    priority_queue&lt;pair&lt;int, int&gt;, vector&lt;pair&lt;int, int&gt;&gt;, greater&lt;pair&lt;int, int&gt;&gt;&gt; pq;
+    pq.push({0, start});
+
+    while (!pq.empty()) {
+        // 3. 挑選目前預估時間最短的小鎮
+        int u = pq.top().second;
+        pq.pop();
+
+        // 如果這個小鎮已經確定過了，就直接跳過
+        if (visited[u]) continue;
+
+        // 4. 將其標記為「已確定最短路徑」
+        visited[u] = true;
+
+        // 5. 檢查這個小鎮連出去的所有鄰近小鎮 (Relaxation 鬆弛操作)
+        for (const auto&amp; edge : graph[u]) {
+            int v = edge.to;
+            int weight = edge.weight;
+
+            // 如果：【走到 u 的時間】 + 【u 到 v 的時間】 &lt; 【原本記錄走到 v 的時間】
+            if (dist[u] + weight &lt; dist[v]) {
+                dist[v] = dist[u] + weight; // 更新成更短的時間！
+                parent[v] = u;              // 記錄前一步是從小鎮 u 走過來的
+                pq.push({dist[v], v});      // 丟進排程，之後繼續往外探索
+            }
+        }
+    }
+
+    // 6. 輸出最終送信的最短時間結果
+    cout &lt;&lt; "--- Dijkstra 送信路線表結果 ---" &lt;&lt; endl;
+    for (int i = 0; i &lt; n; ++i) {
+        char town = 'A' + i; // 轉換為字母 A, B, C...
+        cout &lt;&lt; "到小鎮 " &lt;&lt; town &lt;&lt; " 的最短時間: ";
+        if (dist[i] == INF) cout &lt;&lt; "路不通 (INF)" &lt;&lt; endl;
+        else cout &lt;&lt; dist[i] &lt;&lt; " 分鐘" &lt;&lt; endl;
+    }
+}
+
+int main() {
+    int n = 6; // 共 6 個小鎮 (A=0, B=1, C=2, D=3, E=4, F=5)
+    vector&lt;vector&lt;Edge&gt;&gt; graph(n);
+
+    // 建立地圖上的道路與行車時間 (無向圖，雙向可通)
+    // A (0) 連接的小路
+    graph[0].push_back({1, 4});  // A - B (4)
+    graph[0].push_back({2, 2});  // A - C (2)
+    graph[1].push_back({0, 4});
+    graph[2].push_back({0, 2});
+
+    // B (1) 連接的小路
+    graph[1].push_back({2, 1});  // B - C (1)
+    graph[1].push_back({3, 5});  // B - D (5)
+    graph[2].push_back({1, 1});
+    graph[3].push_back({1, 5});
+
+    // C (2) 連接的小路
+    graph[2].push_back({3, 8});  // C - D (8)
+    graph[2].push_back({4, 10}); // C - E (10)
+    graph[3].push_back({2, 8});
+    graph[4].push_back({2, 10});
+
+    // D (3) 連接的小路
+    graph[3].push_back({4, 2});  // D - E (2)
+    graph[3].push_back({5, 6});  // D - F (6)
+    graph[4].push_back({3, 2});
+    graph[5].push_back({3, 6});
+
+    // E (4) 連接的小路
+    graph[4].push_back({5, 3});  // E - F (3)
+    graph[5].push_back({4, 3});
+
+    // 從小鎮 A (0) 開始送信！
+    dijkstra(0, graph, n);
+
+    return 0;
+}</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 text-center py-6 px-4 mt-auto border-t border-slate-800 text-xs">
+        <p>© Dijkstra 互動學習指南 - 專為初學者打造的演算法動態課堂</p>
+    </footer>
+
+    <!-- Simulation Script -->
+    <script>
+        // --- 1. Map Data Definition ---
+        const nodes = [
+            { id: 'A', x: 80,  y: 200, label: '郵局 (A)' },
+            { id: 'B', x: 230, y: 100, label: '小鎮 (B)' },
+            { id: 'C', x: 230, y: 300, label: '小鎮 (C)' },
+            { id: 'D', x: 400, y: 100, label: '小鎮 (D)' },
+            { id: 'E', x: 400, y: 300, label: '小鎮 (E)' },
+            { id: 'F', x: 570, y: 200, label: '目的地 (F)' }
+        ];
+
+        const edges = [
+            { id: 'e1', from: 'A', to: 'B', w: 4 },
+            { id: 'e2', from: 'A', to: 'C', w: 2 },
+            { id: 'e3', from: 'B', to: 'C', w: 1 },
+            { id: 'e4', from: 'B', to: 'D', w: 5 },
+            { id: 'e5', from: 'C', to: 'D', w: 8 },
+            { id: 'e6', from: 'C', to: 'E', w: 10 },
+            { id: 'e7', from: 'D', to: 'E', w: 2 },
+            { id: 'e8', from: 'D', to: 'F', w: 6 },
+            { id: 'e9', from: 'E', to: 'F', w: 3 }
+        ];
+
+        // Helper to find mid point for label
+        function getEdgeMidPoint(fromNode, toNode) {
+            const f = nodes.find(n => n.id === fromNode);
+            const t = nodes.find(n => n.id === toNode);
+            return {
+                x: (f.x + t.x) / 2,
+                y: (f.y + t.y) / 2
+            };
+        }
+
+        // Render SVG elements
+        function initSVGMap() {
+            const edgesGroup = document.getElementById('svg-edges');
+            const nodesGroup = document.getElementById('svg-nodes');
+            
+            // Render Edges
+            edgesGroup.innerHTML = edges.map(edge => {
+                const fromNode = nodes.find(n => n.id === edge.from);
+                const toNode = nodes.find(n => n.id === edge.to);
+                const mid = getEdgeMidPoint(edge.from, edge.to);
+                
+                // Offset text slightly above line
+                return `
+                    <g id="edge-group-${edge.id}">
+                        <line id="line-${edge.id}" x1="${fromNode.x}" y1="${fromNode.y}" x2="${toNode.x}" y2="${toNode.y}" 
+                            class="stroke-slate-300 transition-colors duration-500" stroke-width="4" stroke-linecap="round"/>
+                        <circle cx="${mid.x}" cy="${mid.y}" r="13" class="fill-white stroke-slate-200" stroke-width="1.5"/>
+                        <text x="${mid.x}" y="${mid.y + 4}" text-anchor="middle" class="text-xs font-extrabold fill-slate-600 select-none">${edge.w}</text>
+                    </g>
+                `;
+            }).join('');
+
+            // Render Nodes
+            nodesGroup.innerHTML = nodes.map(node => {
+                const isStart = node.id === 'A';
+                const isEnd = node.id === 'F';
+                const colorClass = isStart ? 'fill-indigo-600' : (isEnd ? 'fill-purple-600' : 'fill-slate-400');
+                
+                return `
+                    <g id="node-group-${node.id}" class="cursor-pointer transition-transform duration-300">
+                        <circle id="node-glow-${node.id}" cx="${node.x}" cy="${node.y}" r="24" class="fill-transparent"/>
+                        <circle id="node-circle-${node.id}" cx="${node.x}" cy="${node.y}" r="18" class="${colorClass} stroke-white shadow-md transition-colors duration-500" stroke-width="3"/>
+                        <text x="${node.x}" y="${node.y + 5}" text-anchor="middle" class="fill-white text-xs font-bold font-mono select-none">${node.id}</text>
+                        <text x="${node.x}" y="${node.y - 25}" text-anchor="middle" class="text-xs font-bold fill-slate-700 select-none bg-white">${node.label}</text>
+                    </g>
+                `;
+            }).join('');
+        }
+
+        // --- 2. Dijkstra Simulation Engine ---
+        // Generates explicit steps of states for easy play-back.
+        let steps = [];
+        let currentStepIndex = 0;
+        let isPlaying = false;
+        let playInterval = null;
+
+        function buildSimulationSteps() {
+            steps = [];
+            
+            // Initialization state
+            let currentDistances = { A: 0, B: Infinity, C: Infinity, D: Infinity, E: Infinity, F: Infinity };
+            let currentParents = { A: '-', B: '-', C: '-', D: '-', E: '-', F: '-' };
+            let visitedSet = new Set();
+            
+            steps.push({
+                type: 'INIT',
+                currentNode: null,
+                evaluatingEdge: null,
+                visited: new Set(visitedSet),
+                distances: { ...currentDistances },
+                parents: { ...currentParents },
+                description: "🏁 <strong>任務開始！</strong> 郵局 A 的距離設為 0 分鐘。其他城鎮因為還沒去過，暫時寫成代表無限大的「∞」！所有小鎮目前都還<strong>不確定</strong>最短時間。",
+                highlightedNodes: [],
+                highlightedEdges: []
+            });
+
+            // Standard Dijkstra Execution to record steps
+            const allNodes = ['A', 'B', 'C', 'D', 'E', 'F'];
+            
+            while (visitedSet.size < allNodes.length) {
+                // Find unvisited node with minimum distance
+                let minNode = null;
+                let minDist = Infinity;
+                
+                for (const node of allNodes) {
+                    if (!visitedSet.has(node) && currentDistances[node] < minDist) {
+                        minDist = currentDistances[node];
+                        minNode = node;
+                    }
+                }
+                
+                if (minNode === null) break; // unreachable nodes remaining (if any)
+
+                // Step: Select minNode
+                steps.push({
+                    type: 'SELECT_MIN',
+                    currentNode: minNode,
+                    evaluatingEdge: null,
+                    visited: new Set(visitedSet),
+                    distances: { ...currentDistances },
+                    parents: { ...currentParents },
+                    description: `🔍 檢查所有<strong>未確定</strong>的小鎮：目前預估時間最短的是小鎮 <strong class="text-amber-400 font-bold">${minNode}</strong> (${minDist} 分鐘)。我們走到 <strong class="text-amber-400">${minNode}</strong>。`,
+                    highlightedNodes: [minNode],
+                    highlightedEdges: []
+                });
+
+                // Step: Mark visited
+                visitedSet.add(minNode);
+                steps.push({
+                    type: 'MARK_VISITED',
+                    currentNode: minNode,
+                    evaluatingEdge: null,
+                    visited: new Set(visitedSet),
+                    distances: { ...currentDistances },
+                    parents: { ...currentParents },
+                    description: `✅ 把小鎮 <strong class="text-emerald-400 font-bold">${minNode}</strong> 標記為<strong>「已確定」</strong>！從此刻起，到 ${minNode} 的最短時間就是 <strong>${minDist} 分鐘</strong>，絕不會再變動。接下來，準備從 ${minNode} 往外看鄰接的道路！`,
+                    highlightedNodes: [minNode],
+                    highlightedEdges: []
+                });
+
+                // Find neighbors
+                const neighbors = edges.filter(e => e.from === minNode || e.to === minNode);
+                
+                for (const edge of neighbors) {
+                    const neighbor = edge.from === minNode ? edge.to : edge.from;
+                    if (visitedSet.has(neighbor)) continue; // skip already finished neighbors
+
+                    const currentDistToMin = currentDistances[minNode];
+                    const roadWeight = edge.w;
+                    const calculatedDist = currentDistToMin + roadWeight;
+                    const originalDist = currentDistances[neighbor];
+
+                    let updated = false;
+                    let desc = "";
+
+                    if (calculatedDist < originalDist) {
+                        currentDistances[neighbor] = calculatedDist;
+                        currentParents[neighbor] = minNode;
+                        updated = true;
+                        desc = `🛣️ 檢查從小鎮 ${minNode} 連往 <strong class="text-indigo-400">${neighbor}</strong> 的道路（耗時 ${roadWeight} 分鐘）。<br>算算看：到 ${minNode} 需要 ${currentDistToMin} 分鐘，再走這條路就要 <strong>${currentDistToMin} + ${roadWeight} = ${calculatedDist} 分鐘</strong>。<br>這比原本記錄的（${originalDist === Infinity ? '無通路' : originalDist + ' 分鐘'}）還要<strong>快</strong>！<br>🎉 <strong class="text-emerald-400">大發現！更新 ${neighbor} 的預估時間為 ${calculatedDist} 分鐘，前一步記為 ${minNode}</strong>。`;
+                    } else {
+                        desc = `🛣️ 檢查從小鎮 ${minNode} 連往 <strong class="text-slate-400">${neighbor}</strong> 的道路（耗時 ${roadWeight} 分鐘）。<br>算算看：如果走這條路，到 ${neighbor} 需要 <strong>${currentDistToMin} + ${roadWeight} = ${calculatedDist} 分鐘</strong>。<br>但原本記錄的路線只要 <strong>${originalDist} 分鐘</strong> 就能到 ${neighbor}，這條路比較慢。❌ <strong class="text-rose-400">保留原本更快的路，不作變動</strong>。`;
+                    }
+
+                    steps.push({
+                        type: 'RELAX_EDGE',
+                        currentNode: minNode,
+                        evaluatingEdge: edge.id,
+                        targetNeighbor: neighbor,
+                        visited: new Set(visitedSet),
+                        distances: { ...currentDistances },
+                        parents: { ...currentParents },
+                        description: desc,
+                        highlightedNodes: [minNode, neighbor],
+                        highlightedEdges: [edge.id],
+                        didUpdate: updated
+                    });
+                }
+            }
+
+            // Final step
+            steps.push({
+                type: 'FINISH',
+                currentNode: null,
+                evaluatingEdge: null,
+                visited: new Set(visitedSet),
+                distances: { ...currentDistances },
+                parents: { ...currentParents },
+                description: "🏁 <strong>任務完美達成！</strong> 所有的城鎮的最短時間都已經被算出來了！<br>現在我們可以順著表中的「前一步」，像走迷宮一樣百分之百地推出任何城鎮到郵局 A 的最快神級路線！",
+                highlightedNodes: [],
+                highlightedEdges: []
+            });
+        }
+
+        // --- 3. UI Update Engine ---
+        function renderStep(index) {
+            if (index < 0 || index >= steps.length) return;
+            const step = steps[index];
+
+            // 1. Update text explanation
+            document.getElementById('explanation-text').innerHTML = step.description;
+            document.getElementById('step-counter').innerText = `步驟：${index} / ${steps.length - 1}`;
+            
+            const progressPercent = Math.round((index / (steps.length - 1)) * 100);
+            document.getElementById('step-percent').innerText = `${progressPercent}%`;
+            document.getElementById('progress-bar-fill').style.width = `${progressPercent}%`;
+
+            // 2. Update Table Rows
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = nodes.map(node => {
+                const distVal = step.distances[node.id];
+                const displayDist = distVal === Infinity ? '∞' : `${distVal} 分鐘`;
+                const isVisited = step.visited.has(node.id);
+                const parent = step.parents[node.id];
+                
+                // Styling based on state
+                let rowBg = 'hover:bg-slate-50';
+                let statusBadge = `<span class="bg-slate-100 text-slate-500 text-xs px-2 py-1 rounded-full font-bold">❌ 尚未確定</span>`;
+                
+                if (isVisited) {
+                    rowBg = 'bg-emerald-50/60 hover:bg-emerald-50';
+                    statusBadge = `<span class="bg-emerald-500 text-white text-xs px-2 py-1 rounded-full font-bold">✅ 確定最短</span>`;
+                }
+
+                // If current node in algorithm
+                let currentHighlightClass = "";
+                if (step.currentNode === node.id) {
+                    rowBg = 'bg-amber-100 hover:bg-amber-100/80 font-bold';
+                    currentHighlightClass = "ring-2 ring-amber-400";
+                } else if (step.type === 'RELAX_EDGE' && step.targetNeighbor === node.id) {
+                    rowBg = step.didUpdate ? 'bg-indigo-100 animate-pulse' : 'bg-rose-50';
+                }
+
+                return `
+                    <tr class="border-b border-slate-100 text-sm transition-colors duration-300 ${rowBg} ${currentHighlightClass}">
+                        <td class="py-3 pl-2 font-bold text-slate-900">${node.id} (${node.label.split(' ')[0]})</td>
+                        <td class="py-3">${statusBadge}</td>
+                        <td class="py-3 text-right font-mono font-bold text-indigo-600">${displayDist}</td>
+                        <td class="py-3 text-right pr-2 font-mono font-bold text-slate-500">${parent}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // 3. Update SVG visual states
+            nodes.forEach(node => {
+                const circle = document.getElementById(`node-circle-${node.id}`);
+                const glow = document.getElementById(`node-glow-${node.id}`);
+                
+                // Reset classes
+                circle.className = "stroke-white shadow-md transition-all duration-300";
+                glow.setAttribute('fill', 'transparent');
+                glow.className.baseVal = '';
+
+                // Visited / Non-visited styling
+                if (step.visited.has(node.id)) {
+                    circle.classList.add('fill-emerald-500', 'r-[20]');
+                } else {
+                    if (node.id === 'A') {
+                        circle.classList.add('fill-indigo-600');
+                    } else if (node.id === 'F') {
+                        circle.classList.add('fill-purple-600');
+                    } else {
+                        circle.classList.add('fill-slate-400');
+                    }
+                }
+
+                // Active nodes
+                if (step.currentNode === node.id) {
+                    circle.classList.add('fill-amber-500', 'r-[22]');
+                    glow.setAttribute('fill', 'url(#glow)');
+                    glow.className.baseVal = 'pulse-active';
+                }
+
+                if (step.type === 'RELAX_EDGE' && step.targetNeighbor === node.id) {
+                    circle.classList.add('fill-indigo-400', 'scale-110');
+                }
+            });
+
+            // Update Edges visual states
+            edges.forEach(edge => {
+                const line = document.getElementById(`line-${edge.id}`);
+                
+                // Reset styling
+                line.setAttribute('class', 'stroke-slate-300 transition-colors duration-500');
+                line.setAttribute('stroke-width', '4');
+
+                // If this edge is evaluating right now
+                if (step.evaluatingEdge === edge.id) {
+                    line.setAttribute('class', 'stroke-amber-400 glow-line transition-colors duration-300');
+                    line.setAttribute('stroke-width', '6');
+                } else {
+                    // Check if this edge is on the current shortest tree path
+                    const fromNode = edge.from;
+                    const toNode = edge.to;
+                    const parentOfTo = step.parents[toNode];
+                    const parentOfFrom = step.parents[fromNode];
+
+                    if ((parentOfTo === fromNode && step.visited.has(toNode)) || 
+                        (parentOfFrom === toNode && step.visited.has(fromNode))) {
+                        // Color it as confirmed shortest route link
+                        line.setAttribute('class', 'stroke-emerald-400 transition-colors duration-500');
+                        line.setAttribute('stroke-width', '5');
+                    }
+                }
+            });
+
+            // Enable/Disable step buttons
+            document.getElementById('btn-prev').disabled = index === 0;
+            document.getElementById('btn-prev').style.opacity = index === 0 ? '0.5' : '1';
+
+            document.getElementById('btn-next').disabled = index === steps.length - 1;
+            document.getElementById('btn-next').style.opacity = index === steps.length - 1 ? '0.5' : '1';
+        }
+
+        // --- 4. Controls Handling ---
+        function nextStep() {
+            if (currentStepIndex < steps.length - 1) {
+                currentStepIndex++;
+                renderStep(currentStepIndex);
+            } else {
+                pauseDemo();
+            }
+        }
+
+        function prevStep() {
+            if (currentStepIndex > 0) {
+                currentStepIndex--;
+                renderStep(currentStepIndex);
+            }
+        }
+
+        function togglePlay() {
+            if (isPlaying) {
+                pauseDemo();
+            } else {
+                playDemo();
+            }
+        }
+
+        function playDemo() {
+            isPlaying = true;
+            document.getElementById('play-icon').innerText = "⏸ 暫停";
+            
+            // If already at end, restart
+            if (currentStepIndex === steps.length - 1) {
+                currentStepIndex = 0;
+                renderStep(currentStepIndex);
+            }
+
+            playInterval = setInterval(() => {
+                nextStep();
+            }, 1800); // Friendly speed for reading
+        }
+
+        function pauseDemo() {
+            isPlaying = false;
+            document.getElementById('play-icon').innerText = "▶ 播放";
+            if (playInterval) {
+                clearInterval(playInterval);
+            }
+        }
+
+        function restartScenario() {
+            pauseDemo();
+            currentStepIndex = 0;
+            buildSimulationSteps();
+            renderStep(currentStepIndex);
+        }
+
+        // Copy C++ code utility
+        function copyCode() {
+            const codeText = document.getElementById('cpp-code').innerText;
+            
+            // Fallback for clipboard copy due to potential iframe restrictions
+            const textarea = document.createElement('textarea');
+            textarea.value = codeText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                alert('🎉 C++ 程式碼已成功複製到剪貼簿！');
+            } catch (err) {
+                alert('無法自動複製，請手動全選程式碼複製。');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // --- 5. Application Launch ---
+        window.onload = function() {
+            initSVGMap();
+            buildSimulationSteps();
+            renderStep(0);
+        };
+    </script>
+</body>
+</html>

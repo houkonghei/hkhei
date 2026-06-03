@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFS vs BFS 迷宮尋路演算法互動教學平台</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Custom Style to optimize code display -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        .code-font {
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+        }
+        /* Custom scrollbar for high-tech dark theme */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        /* Animation highlights */
+        @keyframes pulse-yellow {
+            0%, 100% { background-color: rgba(234, 179, 8, 0.2); }
+            50% { background-color: rgba(234, 179, 8, 0.45); }
+        }
+        .highlight-line {
+            animation: pulse-yellow 2s infinite;
+            border-left: 4px solid #eab308;
+            font-weight: 500;
+        }
+        /* Glowing effects */
+        .glow-green { box-shadow: 0 0 15px rgba(34, 197, 94, 0.5); }
+        .glow-red { box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
+        .glow-blue { box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+        .glow-yellow { box-shadow: 0 0 15px rgba(234, 179, 8, 0.6); }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-brand-500 selection:text-white">
+
+    <!-- Top Navigation Header -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-brand-500/10 text-brand-500 rounded-lg border border-brand-500/20">
+                    <i data-lucide="map-pin" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-brand-500 to-sky-400 bg-clip-text text-transparent">
+                        DFS & BFS 迷宮尋路：動態程式碼追蹤平台
+                    </h1>
+                    <p class="text-xs text-slate-400">專為學生打造的演算法與資料結構互動學習工具</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-400 px-2 py-1 bg-slate-800 rounded">C++ 程式碼同步追蹤</span>
+                <span class="text-xs text-slate-400 px-2 py-1 bg-slate-800 rounded">疊棧與佇列可視化</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Controls & Maze Visualization (7 cols) -->
+        <section class="lg:col-span-7 flex flex-col gap-6">
+            
+            <!-- Quick Mode Selector & Action Toolbar -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl">
+                <div class="flex flex-col sm:flex-row justify-between gap-4">
+                    <!-- Tab Selector -->
+                    <div class="bg-slate-950 p-1 rounded-lg border border-slate-800 flex flex-1">
+                        <button id="btn-dfs" onclick="switchMode('DFS')" class="flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 text-brand-500 bg-brand-500/10 border border-brand-500/20">
+                            <i data-lucide="git-commit" class="w-4 h-4"></i>
+                            DFS (深度優先搜尋)
+                        </button>
+                        <button id="btn-bfs" onclick="switchMode('BFS')" class="flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 text-slate-400 hover:text-slate-200">
+                            <i data-lucide="git-branch" class="w-4 h-4"></i>
+                            BFS (廣度優先搜尋)
+                        </button>
+                    </div>
+                    <!-- Quick Map Presets -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-400 whitespace-nowrap">地圖設定:</span>
+                        <select id="map-preset" onchange="loadPreset()" class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-500">
+                            <option value="default">預設 4x4 (原始代碼)</option>
+                            <option value="open">簡單通道 (4x4)</option>
+                            <option value="deadend">死胡同地圖 (4x4)</option>
+                            <option value="custom6x6">進階挑戰 (6x6 迷宮)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Simulation Control Panel -->
+                <div class="mt-4 flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-800">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button id="btn-play" onclick="togglePlay()" class="bg-brand-500 hover:bg-brand-600 active:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-1.5 transition-all duration-150">
+                            <i id="play-icon" data-lucide="play" class="w-4 h-4"></i>
+                            <span id="play-text">自動播放</span>
+                        </button>
+                        <button onclick="stepForward()" class="bg-slate-800 hover:bg-slate-700 text-slate-100 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-1.5 transition-all duration-150">
+                            <i data-lucide="skip-forward" class="w-4 h-4"></i>
+                            單步執行
+                        </button>
+                        <button onclick="resetSimulation()" class="bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-400 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-1.5 transition-all duration-150">
+                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                            重置
+                        </button>
+                    </div>
+
+                    <!-- Speed slider -->
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-slate-400">播放速度:</span>
+                        <input id="speed-slider" type="range" min="100" max="1500" value="600" step="100" class="w-24 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-brand-500">
+                        <span id="speed-val" class="text-xs code-font text-slate-400 w-10">0.6s</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Maze Map Area -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl flex flex-col items-center">
+                <div class="w-full flex justify-between items-center mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-semibold text-slate-200">迷宮網格地圖</span>
+                        <span id="edit-tip" class="text-xs text-brand-400 bg-brand-500/10 border border-brand-500/20 px-2 py-0.5 rounded flex items-center gap-1">
+                            <i data-lucide="info" class="w-3.5 h-3.5"></i> 點擊空格可自由編輯牆壁 (0 與 1 轉換)
+                        </span>
+                    </div>
+                    <div class="flex gap-4 text-xs text-slate-400">
+                        <div class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 bg-emerald-500 rounded"></div> 起點</div>
+                        <div class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 bg-rose-500 rounded"></div> 終點</div>
+                        <div class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 bg-yellow-400 rounded animate-pulse"></div> 目前</div>
+                    </div>
+                </div>
+
+                <!-- Actual Grid Container -->
+                <div id="maze-grid" class="grid gap-3 p-4 bg-slate-950 border border-slate-800 rounded-xl max-w-full overflow-auto transition-all duration-300">
+                    <!-- Dynamic Tiles Generated via JS -->
+                </div>
+
+                <!-- Path Legend -->
+                <div class="w-full mt-4 flex flex-wrap justify-center gap-4 text-xs border-t border-slate-800/60 pt-4">
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-4 h-4 bg-slate-800 border border-slate-700 rounded"></div>
+                        <span>未探索的道路 (0)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-4 h-4 bg-slate-600 rounded"></div>
+                        <span>牆壁 (1)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-4 h-4 bg-sky-500/20 border border-sky-500/40 rounded"></div>
+                        <span>已標記訪問 (2)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-4 h-4 bg-amber-500/40 border border-amber-500/80 rounded"></div>
+                        <span>已在佇列中排隊</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-4 h-4 bg-emerald-500/20 border-2 border-emerald-400 rounded"></div>
+                        <span>最終成功路徑</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Data Structure Visualizer -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-slate-200 flex items-center gap-2">
+                        <i data-lucide="database" class="w-5 h-5 text-indigo-400"></i>
+                        記憶體資料結構：<span id="ds-title" class="text-indigo-400 font-bold">系統疊棧 (Stack)</span>
+                    </h3>
+                    <span id="ds-type-badge" class="text-xs text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded">LIFO (後進先出)</span>
+                </div>
+                
+                <!-- Visual container -->
+                <div id="ds-container" class="bg-slate-950 rounded-xl p-4 border border-slate-800 min-h-[140px] flex items-center justify-center transition-all duration-300">
+                    <!-- Dynamic stack frames or queue cells go here -->
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Column: Code Display & Explanation (5 cols) -->
+        <section class="lg:col-span-5 flex flex-col gap-6">
+            
+            <!-- Real-time Chinese Narrator Console -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl flex flex-col gap-3 min-h-[150px] relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1.5 h-full bg-yellow-500"></div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs uppercase tracking-wider font-semibold text-yellow-500 flex items-center gap-1.5">
+                        <span class="w-2 h-2 bg-yellow-500 rounded-full animate-ping"></span>
+                        演算法中控台
+                    </span>
+                    <span class="text-xs text-slate-500 code-font" id="step-counter">步驟: 0</span>
+                </div>
+                <!-- Interactive Narrative Explanation -->
+                <div class="flex-1 flex flex-col justify-center">
+                    <p id="narrator-text" class="text-slate-100 font-medium text-base leading-relaxed">
+                        點擊「自動播放」或「單步執行」按鈕，一起來看 C++ 程式碼是如何在記憶體裡走迷宮的吧！
+                    </p>
+                </div>
+            </div>
+
+            <!-- C++ Code Tracking View -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl flex-1 flex flex-col overflow-hidden max-h-[600px]">
+                <div class="flex justify-between items-center pb-3 border-b border-slate-800 mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 bg-red-500 rounded-full"></span>
+                        <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                        <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+                        <span class="text-xs code-font font-semibold text-slate-400 ml-2" id="code-file-name">DFS走迷宮.cpp</span>
+                    </div>
+                    <button onclick="copyCurrentCode()" class="text-xs text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i> 複製原始碼
+                    </button>
+                </div>
+                
+                <!-- Code text wrapper with custom scrollbar -->
+                <div class="flex-1 overflow-auto rounded-lg bg-slate-950 border border-slate-900 code-font text-xs p-3 leading-6 relative">
+                    <pre id="cpp-code-block" class="whitespace-pre select-none text-slate-300">
+                        <!-- Filled by JS based on mode -->
+                    </pre>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Detailed Explanation / Education Footer Info Card -->
+    <footer class="bg-slate-900 border-t border-slate-800 mt-8 py-8 px-6 text-slate-400">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="space-y-3">
+                <h4 class="text-sm font-semibold text-slate-200 flex items-center gap-1.5">
+                    <i data-lucide="book-open" class="w-4 h-4 text-brand-500"></i>
+                    💡 教師教學引導要點
+                </h4>
+                <ul class="text-xs space-y-2 list-disc pl-5 leading-relaxed">
+                    <li><strong class="text-slate-300">DFS 的「不撞南牆不回頭」：</strong>引導學生觀察疊棧（Stack）的增長。當前格子遇到死胡同（全部鄰居不是牆壁就是已被走過）時，程式碼將執行到 <code class="bg-slate-950 p-1 rounded font-mono text-rose-400">return false;</code>，接著疊棧會自動彈出（Pop），畫面上黃色指針退回上一個格子。</li>
+                    <li><strong class="text-slate-300">BFS 的「層層擴散」：</strong>引導學生注意佇列（Queue）的變化。每當黃色指針訪問一個格子，它都會把四周可通行的「全部鄰居」**同時標記為已訪問**並推進 Queue 裡排隊。這在畫面上看起來像水波紋擴散，並且它找到的**一定是「最短路徑」**！</li>
+                </ul>
+            </div>
+            <div class="space-y-3">
+                <h4 class="text-sm font-semibold text-slate-200 flex items-center gap-1.5">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-brand-500"></i>
+                    🛠️ 互動技巧提示
+                </h4>
+                <ul class="text-xs space-y-2 list-disc pl-5 leading-relaxed">
+                    <li><strong class="text-slate-300">手動編輯地圖：</strong>若要在迷宮設置全新的牆壁，可在非執行狀態下，直接點擊網格中的任意白色格子將其切換為灰色牆壁（1），再切換為道路（0），動態產生全新迷宮來測試你的演算法。</li>
+                    <li><strong class="text-slate-300">速度調整：</strong>在講課時，您可以將速度拉到最慢（1500ms），單步向學生解說；在展示完整搜尋時，可以拉到最快（100ms）瞬間跑出結果。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto mt-6 pt-6 border-t border-slate-800 text-center text-xs text-slate-500">
+            DFS 與 BFS 走迷宮互動教學平台 © 2026 互動資工講堂
+        </div>
+    </footer>
+
+    <!-- JS Logic implementation -->
+    <script>
+        // C++ Source codes to display
+        const dfsCodeLines = [
+`#include <iostream>
+#include <vector>
+
+using namespace std;
+
+const int ROWS = 4;
+const int COLS = 4;
+
+// DFS 函式：回傳 true 代表找得到終點，false 代表死路
+bool dfs(vector<vector<int>>& maze, int r, int c) {
+    // 1. 檢查邊界條件：是否超出迷宮範圍？
+    if (r < 0 || r >= ROWS || c < 0 || c >= COLS) {
+        return false;
+    }
+
+    // 2. 檢查目前位置：如果是牆壁(1)或已經走過(2)，則無法前進
+    if (maze[r][c] == 1 || maze[r][c] == 2) {
+        return false;
+    }
+
+    // 3. 檢查是否到達終點（右下角）
+    if (r == ROWS - 1 && c == COLS - 1) {
+        return true;
+    }
+
+    // 4. 標記目前位置為「已訪問」(2)，代表我現在踩在這一格上
+    maze[r][c] = 2;
+
+    // 用一個變數來儲存派分身出去探路的結果
+    bool isFound = false;
+
+    // 5. 往四個方向探索，把結果存進變數裡
+
+    // 嘗試【向下】走
+    isFound = dfs(maze, r + 1, c); 
+    if (isFound == true) {
+        return true; // 派出去的分身回報找到了！直接收工，不用再試其他方向
+    }
+
+    // 如果向下失敗了，嘗試【向上】走
+    isFound = dfs(maze, r - 1, c);  
+    if (isFound == true) {
+        return true; // 找到了！直接收工
+    }
+
+    // 如果上面也失敗了，嘗試【向右】走
+    isFound = dfs(maze, r, c + 1);  
+    if (isFound == true) {
+        return true; // 找到了！直接收工
+    }
+
+    // 如果右邊也失敗了，嘗試【向左】走
+    isFound = dfs(maze, r, c - 1);  
+    if (isFound == true) {
+        return true; // 找到了！直接收工
+    }
+
+    // 6. 如果上下左右四個方向全部都試過了，依然沒有找到出口
+    // 說明這是一條死胡同，對上層（上一個格子）回報 false
+    return false;
+}`,
+`int main() {
+    vector<vector<int>> maze = {
+        {0, 1, 0, 0},
+        {0, 1, 0, 1},
+        {0, 0, 0, 1},
+        {1, 1, 0, 0}
+    };
+    cout << "開始走迷宮..." << endl;
+    if (dfs(maze, 0, 0)) {
+        cout << "成功找到出口！" << endl;
+    } else {
+        cout << "這是個死胡同，找不到出口。" << endl;
+    }
+    return 0;
+}`
+        ];
+
+        const bfsCodeLines = [
+`#include <iostream>
+#include <vector>
+#include <queue>   // 引入排隊神器 Queue
+
+using namespace std;
+
+const int ROWS = 4;
+const int COLS = 4;
+
+// BFS 函式：回傳 true 代表找得到終點，false 代表死路
+bool bfs(vector<vector<int>>& maze, int startR, int startC) {
+    
+    // 1. 建立一個排隊箱子，裡面專門放接下來要對抗的座標 (r, c)
+    queue<pair<int, int>> q;
+
+    // 2. 把起點丟進排隊箱子裡
+    q.push({startR, startC});
+    
+    // 3. 立刻把起點標記為「已訪問」(2)，代表我們已經包圍這一格了
+    maze[startR][startC] = 2;
+
+    // 4. 開始排隊探路！只要箱子裡還有紙條（不為空），就繼續找
+    while (q.empty() == false) {
+        
+        // 拿出排在最前面的那個人（最老的一張紙條）
+        pair<int, int> current = q.front();
+        q.pop(); // 拿出來後，就從箱子裡移走
+
+        int r = current.first;  // 目前格子的行
+        int c = current.second; // 目前格子的列
+
+        // 檢查：我們拿到終點的紙條了嗎？
+        if (r == ROWS - 1 && c == COLS - 1) {
+            return true; // 哇！拿到終點了，成功找到出口！
+        }
+
+        // 5. 站在目前這格，觀察上下左右四個鄰居，誰可以走路？
+        
+        // 【向下探路】 (r + 1, c)
+        int nextR = r + 1;
+        int nextC = c;
+        // 檢查：沒超出邊界、而且是路(0)
+        if (nextR >= 0 && nextR < ROWS && nextC >= 0 && nextC < COLS && maze[nextR][nextC] == 0) {
+            maze[nextR][nextC] = 2; // 立刻標記為已訪問，免得重複排隊
+            q.push({nextR, nextC}); // 丟進箱子排隊
+        }
+
+        // 【向上探路】 (r - 1, c)
+        nextR = r - 1;
+        nextC = c;
+        if (nextR >= 0 && nextR < ROWS && nextC >= 0 && nextC < COLS && maze[nextR][nextC] == 0) {
+            maze[nextR][nextC] = 2;
+            q.push({nextR, nextC});
+        }
+
+        // 【向右探路】 (r, c + 1)
+        nextR = r;
+        nextC = c + 1;
+        if (nextR >= 0 && nextR < ROWS && nextC >= 0 && nextC < COLS && maze[nextR][nextC] == 0) {
+            maze[nextR][nextC] = 2;
+            q.push({nextR, nextC});
+        }
+
+        // 【向左探路】 (r, c - 1)
+        nextR = r;
+        nextC = c - 1;
+        if (nextR >= 0 && nextR < ROWS && nextC >= 0 && nextC < COLS && maze[nextR][nextC] == 0) {
+            maze[nextR][nextC] = 2;
+            q.push({nextR, nextC});
+        }
+    }
+
+    // 6. 如果把箱子都排空了，大家都沒摸到終點，說明沒有路可以通往終點
+    return false;
+}`,
+`int main() {
+    vector<vector<int>> maze = {
+        {0, 1, 0, 0},
+        {0, 1, 0, 1},
+        {0, 0, 0, 1},
+        {1, 1, 0, 0}
+    };
+    cout << "開始用 BFS 走迷宮..." << endl;
+    if (bfs(maze, 0, 0)) {
+        cout << "成功找到出口！" << endl;
+    } else {
+        cout << "這是個死胡同，找不到出口。" << endl;
+    }
+    return 0;
+}`
+        ];
+
+        // Presets Definition
+        const presets = {
+            'default': {
+                rows: 4, cols: 4,
+                maze: [
+                    [0, 1, 0, 0],
+                    [0, 1, 0, 1],
+                    [0, 0, 0, 1],
+                    [1, 1, 0, 0]
+                ]
+            },
+            'open': {
+                rows: 4, cols: 4,
+                maze: [
+                    [0, 0, 0, 0],
+                    [1, 1, 1, 0],
+                    [0, 0, 0, 0],
+                    [0, 1, 1, 0]
+                ]
+            },
+            'deadend': {
+                rows: 4, cols: 4,
+                maze: [
+                    [0, 1, 0, 0],
+                    [0, 1, 0, 1],
+                    [0, 1, 0, 1],
+                    [1, 1, 1, 0]
+                ]
+            },
+            'custom6x6': {
+                rows: 6, cols: 6,
+                maze: [
+                    [0, 1, 0, 0, 0, 0],
+                    [0, 1, 0, 1, 1, 0],
+                    [0, 0, 0, 0, 1, 0],
+                    [1, 1, 1, 0, 1, 0],
+                    [0, 0, 1, 0, 0, 0],
+                    [0, 0, 0, 1, 1, 0]
+                ]
+            }
+        };
+
+        // State variables
+        let currentMode = "DFS"; // DFS or BFS
+        let activePreset = "default";
+        let gridRows = 4;
+        let gridCols = 4;
+        let originalMaze = JSON.parse(JSON.stringify(presets.default.maze));
+        
+        let steps = [];
+        let currentStepIndex = -1;
+        let isPlaying = false;
+        let playInterval = null;
+
+        // Code rendering configuration
+        // Map raw strings into indexed HTML lines for easy highlighting
+        let dfsLineMapping = [];
+        let bfsLineMapping = [];
+
+        // Setup codes display on DOM load
+        window.onload = function() {
+            lucide.createIcons();
+            
+            // Build the code representations
+            buildCodeBlockDisplay("DFS");
+            buildCodeBlockDisplay("BFS");
+
+            // Initialize Grid
+            loadPreset();
+
+            // Setup speed slider listener
+            const speedSlider = document.getElementById("speed-slider");
+            const speedVal = document.getElementById("speed-val");
+            speedSlider.addEventListener("input", function() {
+                speedVal.innerText = `${(this.value / 1000).toFixed(1)}s`;
+                if (isPlaying) {
+                    // Reset interval with new speed
+                    pause();
+                    play();
+                }
+            });
+        };
+
+        function buildCodeBlockDisplay(mode) {
+            const rawCode = mode === "DFS" ? dfsCodeLines.join("\n\n") : bfsCodeLines.join("\n\n");
+            const lines = rawCode.split("\n");
+            
+            // We want to wrap each line in a span with IDs so we can highlight them easily.
+            let html = "";
+            lines.forEach((line, index) => {
+                const lineNum = index + 1;
+                // HTML Escape
+                const escapedLine = line
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+                
+                html += `<div id="${mode.toLowerCase()}-line-${lineNum}" class="flex px-2 py-0.5 hover:bg-slate-900 border-l-4 border-transparent transition-all duration-150">
+                    <span class="w-8 text-right text-slate-600 select-none pr-3 block shrink-0 border-r border-slate-800 mr-3">${lineNum}</span>
+                    <span class="whitespace-pre block">${escapedLine === "" ? " " : escapedLine}</span>
+                </div>`;
+            });
+
+            if (mode === "DFS") {
+                dfsLineMapping = lines;
+            } else {
+                bfsLineMapping = lines;
+            }
+        }
+
+        // Renders active code into block container
+        function renderCodeView() {
+            const block = document.getElementById("cpp-code-block");
+            const fileName = document.getElementById("code-file-name");
+            
+            fileName.innerText = currentMode === "DFS" ? "DFS走迷宮.cpp" : "BFS走迷宮.cpp";
+
+            // Fill code lines html
+            let html = "";
+            const lines = currentMode === "DFS" ? dfsLineMapping : bfsLineMapping;
+            lines.forEach((line, index) => {
+                const lineNum = index + 1;
+                const escapedLine = line
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+                
+                html += `<div id="${currentMode.toLowerCase()}-line-${lineNum}" class="flex px-2 py-0.5 hover:bg-slate-900 border-l-4 border-transparent transition-all duration-150">
+                    <span class="w-8 text-right text-slate-600 select-none pr-3 block shrink-0 border-r border-slate-800 mr-3">${lineNum}</span>
+                    <span class="whitespace-pre block">${escapedLine === "" ? " " : escapedLine}</span>
+                </div>`;
+            });
+            block.innerHTML = html;
+        }
+
+        function copyCurrentCode() {
+            const rawCode = currentMode === "DFS" ? dfsCodeLines.join("\n\n") : bfsCodeLines.join("\n\n");
+            
+            // Clipboard Copy Fallback
+            const el = document.createElement('textarea');
+            el.value = rawCode;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+
+            // Trigger visual feedback toast
+            showNotification("複製成功！原始碼已拷貝至您的剪貼簿。");
+        }
+
+        function showNotification(msg) {
+            let notification = document.createElement("div");
+            notification.className = "fixed bottom-5 right-5 bg-brand-600 text-white border border-brand-500 rounded-xl py-3 px-5 shadow-2xl z-50 text-sm font-medium flex items-center gap-2 transform translate-y-10 opacity-0 transition-all duration-300";
+            notification.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5"></i> ${msg}`;
+            document.body.appendChild(notification);
+            lucide.createIcons();
+            
+            // Animate in
+            setTimeout(() => {
+                notification.classList.remove("translate-y-10", "opacity-0");
+            }, 10);
+
+            // Animate out
+            setTimeout(() => {
+                notification.classList.add("translate-y-10", "opacity-0");
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        function loadPreset() {
+            pause();
+            const selector = document.getElementById("map-preset");
+            activePreset = selector.value;
+            const data = presets[activePreset];
+            
+            gridRows = data.rows;
+            gridCols = data.cols;
+            originalMaze = JSON.parse(JSON.stringify(data.maze));
+
+            // Set grid dimension style dynamically
+            const grid = document.getElementById("maze-grid");
+            grid.style.gridTemplateColumns = `repeat(${gridCols}, minmax(0, 1fr))`;
+
+            resetSimulation();
+        }
+
+        function renderMaze(mazeState, activeCoord = null, solutionPath = []) {
+            const grid = document.getElementById("maze-grid");
+            grid.innerHTML = "";
+
+            // Adjust sizing based on dimensions to keep layout beautiful
+            const sizeClass = gridRows === 4 ? "w-16 h-16 text-lg" : "w-12 h-12 text-sm";
+
+            for (let r = 0; r < gridRows; r++) {
+                for (let c = 0; c < gridCols; c++) {
+                    const cellVal = mazeState[r][c];
+                    const isStart = (r === 0 && c === 0);
+                    const isEnd = (r === gridRows - 1 && c === gridCols - 1);
+                    const isActive = activeCoord && activeCoord[0] === r && activeCoord[1] === c;
+                    const inSolution = solutionPath.some(coord => coord[0] === r && coord[1] === c);
+
+                    let bgStyle = "bg-slate-800 border-slate-700 text-slate-400";
+                    let tileLabel = "0";
+                    let glow = "";
+
+                    if (cellVal === 1) {
+                        bgStyle = "bg-slate-600 border-slate-500 text-slate-300 font-bold";
+                        tileLabel = "1";
+                    } else if (cellVal === 2) {
+                        bgStyle = "bg-sky-500/10 border-sky-500/40 text-sky-400 font-semibold";
+                        tileLabel = "2";
+                    }
+
+                    if (inSolution) {
+                        bgStyle = "bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 font-bold shadow-inner";
+                        tileLabel = "路徑";
+                    }
+
+                    if (isStart) {
+                        bgStyle = "bg-emerald-500/10 border-2 border-emerald-500 text-emerald-400 font-bold";
+                        tileLabel = "起點";
+                        if (!inSolution && !isActive && cellVal === 2) {
+                            bgStyle = "bg-sky-500/10 border-2 border-sky-500 text-sky-400 font-bold";
+                        }
+                    }
+
+                    if (isEnd) {
+                        bgStyle = "bg-rose-500/10 border-2 border-rose-500 text-rose-400 font-bold";
+                        tileLabel = "終點";
+                        if (cellVal === 2) {
+                            bgStyle = "bg-sky-500/10 border-2 border-sky-500 text-sky-400 font-bold";
+                        }
+                    }
+
+                    if (isActive) {
+                        bgStyle = "bg-yellow-400 border-2 border-yellow-300 text-slate-950 font-bold animate-pulse";
+                        glow = "glow-yellow z-10 scale-105";
+                        tileLabel = "📍";
+                    }
+
+                    const tile = document.createElement("div");
+                    tile.className = `${sizeClass} flex flex-col items-center justify-center border rounded-xl transition-all duration-200 select-none cursor-pointer ${bgStyle} ${glow}`;
+                    
+                    // Main layout of tile
+                    tile.innerHTML = `
+                        <span class="text-xs text-slate-500 mb-0.5">(${r},${c})</span>
+                        <span class="font-bold">${tileLabel}</span>
+                    `;
+
+                    // Click to Edit functionality (only allowed if simulation hasn't started/is on step -1 or reset)
+                    tile.addEventListener("click", () => {
+                        if (currentStepIndex > -1) {
+                            showNotification("⚠️ 請先點擊【重置】按鈕，才能編輯地圖喔！");
+                            return;
+                        }
+                        if (isStart || isEnd) {
+                            showNotification("⚠️ 起點與終點不能編輯成牆壁！");
+                            return;
+                        }
+
+                        // Toggle cell wall state
+                        originalMaze[r][c] = originalMaze[r][c] === 1 ? 0 : 1;
+                        resetSimulation();
+                        showNotification(`將地圖格子 (${r}, ${c}) 設定為 ${originalMaze[r][c] === 1 ? '牆壁 (1)' : '道路 (0)'}`);
+                    });
+
+                    grid.appendChild(tile);
+                }
+            }
+        }
+
+        function renderDataStructure(stepData) {
+            const container = document.getElementById("ds-container");
+            const title = document.getElementById("ds-title");
+            const badge = document.getElementById("ds-type-badge");
+
+            container.innerHTML = "";
+
+            if (currentMode === "DFS") {
+                title.innerText = "呼叫疊棧 (Call Stack)";
+                badge.innerText = "LIFO (後進先出 - 遞迴深度)";
+                badge.className = "text-xs text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded";
+
+                const stack = stepData ? stepData.stack : [];
+                if (!stack || stack.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-slate-500 text-sm flex flex-col items-center gap-2">
+                            <i data-lucide="layers" class="w-8 h-8 text-slate-600"></i>
+                            系統呼叫棧為空 (等待遞迴啟動)
+                        </div>
+                    `;
+                    lucide.createIcons();
+                    return;
+                }
+
+                // Show Stack container (vertical pile)
+                const stackWrapper = document.createElement("div");
+                stackWrapper.className = "flex flex-col-reverse gap-1.5 w-full max-w-[280px]";
+
+                stack.forEach((coord, idx) => {
+                    const isTop = idx === stack.length - 1;
+                    const item = document.createElement("div");
+                    item.className = `px-3 py-1.5 rounded-lg border text-xs flex justify-between items-center transition-all duration-300 ${
+                        isTop 
+                            ? 'bg-indigo-500/20 border-indigo-400 text-indigo-200 font-semibold scale-102 glow-blue' 
+                            : 'bg-slate-900 border-slate-800 text-slate-400'
+                    }`;
+                    item.innerHTML = `
+                        <span class="font-mono">dfs(maze, ${coord[0]}, ${coord[1]})</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-950 font-semibold">${isTop ? '最上層 (Active)' : `層級 ${idx}`}</span>
+                    `;
+                    stackWrapper.appendChild(item);
+                });
+                container.appendChild(stackWrapper);
+
+            } else {
+                title.innerText = "佇列箱子 (Queue)";
+                badge.innerText = "FIFO (先進先出 - 排隊中)";
+                badge.className = "text-xs text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded";
+
+                const queue = stepData ? stepData.queue : [];
+                if (!queue || queue.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-slate-500 text-sm flex flex-col items-center gap-2">
+                            <i data-lucide="align-horizontal-left" class="w-8 h-8 text-slate-600"></i>
+                            佇列為空 (沒有紙條在排隊)
+                        </div>
+                    `;
+                    lucide.createIcons();
+                    return;
+                }
+
+                // Show Queue container (horizontal train-like view)
+                const queueWrapper = document.createElement("div");
+                queueWrapper.className = "flex items-center gap-2 overflow-x-auto w-full max-w-full py-2 px-1";
+
+                // Add indicator for where things POP and PUSH
+                const outArrow = document.createElement("div");
+                outArrow.className = "text-xs font-bold text-rose-400 flex flex-col items-center shrink-0 pr-1 border-r border-slate-800";
+                outArrow.innerHTML = `<span>Pop</span><i data-lucide="arrow-left" class="w-4 h-4"></i>`;
+                queueWrapper.appendChild(outArrow);
+
+                queue.forEach((coord, idx) => {
+                    const isFront = idx === 0;
+                    const isTail = idx === queue.length - 1;
+                    const item = document.createElement("div");
+                    item.className = `px-3 py-2 rounded-xl border text-xs text-center font-mono shrink-0 transition-all duration-300 ${
+                        isFront 
+                            ? 'bg-sky-500/20 border-sky-400 text-sky-200 font-bold ring-1 ring-sky-500' 
+                            : 'bg-slate-900 border-slate-800 text-slate-400'
+                    }`;
+                    item.innerHTML = `
+                        <div class="font-semibold">(${coord[0]}, ${coord[1]})</div>
+                        <div class="text-[9px] text-slate-500 mt-0.5">${isFront ? '最前(Front)' : isTail ? '新加入' : `位置 ${idx}`}</div>
+                    `;
+                    queueWrapper.appendChild(item);
+                });
+
+                const inArrow = document.createElement("div");
+                inArrow.className = "text-xs font-bold text-emerald-400 flex flex-col items-center shrink-0 pl-1 border-l border-slate-800";
+                inArrow.innerHTML = `<span>Push</span><i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+                queueWrapper.appendChild(inArrow);
+
+                container.appendChild(queueWrapper);
+                lucide.createIcons();
+            }
+        }
+
+        // Switches modes between DFS and BFS
+        function switchMode(mode) {
+            if (currentMode === mode) return;
+            pause();
+            currentMode = mode;
+
+            // Highlight buttons
+            const btnDfs = document.getElementById("btn-dfs");
+            const btnBfs = document.getElementById("btn-bfs");
+
+            if (mode === "DFS") {
+                btnDfs.className = "flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 text-brand-500 bg-brand-500/10 border border-brand-500/20";
+                btnBfs.className = "flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 text-slate-400 hover:text-slate-200";
+            } else {
+                btnBfs.className = "flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 text-brand-500 bg-brand-500/10 border border-brand-500/20";
+                btnDfs.className = "flex-1 py-2 px-4 rounded-md font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 text-slate-400 hover:text-slate-200";
+            }
+
+            resetSimulation();
+        }
+
+        // ==========================================
+        // ALGORITHM STEPPING ENGINE
+        // Generators to drive UI steps dynamically
+        // ==========================================
+
+        function* getBfsSteps(initialMaze) {
+            let maze = initialMaze.map(row => [...row]);
+            let q = [];
+            let parent = {}; // stringified coordinate 'r,c' -> 'pr,pc' to reconstruct path
+            
+            yield { line: 11, maze, explanation: "【C++ 第 11 行】進入 `bfs()` 函式，準備開始從起點尋找出口！", queue: [...q] };
+            yield { line: 14, maze, explanation: "【C++ 第 14 行】宣告一個 Queue 佇列排隊箱子，它的特性是「先進先出 (FIFO)」！", queue: [...q] };
+
+            q.push([0, 0]);
+            yield { line: 17, maze, explanation: "【C++ 第 17 行】首先，將起點的坐標 (0, 0) 推入佇列中開始排隊！", queue: [...q] };
+
+            maze[0][0] = 2; // Visited
+            yield { line: 20, maze: maze.map(row => [...row]), explanation: "【C++ 第 20 行】將起點標記為已訪問 `2`，像是在地圖格子上插上旗子，代表已被控制。", queue: [...q] };
+
+            while (q.length > 0) {
+                yield { line: 23, maze: maze.map(row => [...row]), explanation: "【C++ 第 23 行】進入迴圈！檢查佇列排隊箱子是否為空？目前排隊中還有項目，繼續前進！", queue: [...q] };
+
+                let curr = q.shift();
+                let [r, c] = curr;
+                
+                // Focus state representation
+                let focusMaze = maze.map(row => [...row]);
+                focusMaze[r][c] = 3; // Focus index marker 3
+
+                yield { line: 26, maze: focusMaze, explanation: `【C++ 第 26-27 行】從佇列最前端取出下一個需要探索的格子 (${r}, ${c})，並從佇列移出。`, queue: [...q], activeCoord: [r, c] };
+
+                if (r === gridRows - 1 && c === gridCols - 1) {
+                    yield { line: 32, maze: focusMaze, explanation: "【C++ 第 32 行】比對檢查：我們到達終點 (右下角) 了嗎？是的，找到出路了！", queue: [...q], activeCoord: [r, c] };
+                    yield { line: 33, maze: focusMaze, explanation: "【C++ 第 33 行】執行 `return true;` 回傳成功訊號！大功告成！", queue: [...q], activeCoord: [r, c], isSuccess: true, parent };
+                    return;
+                }
+
+                // Check direction sets: Down, Up, Right, Left based on C++ source
+                // 1. Down
+                let nextR = r + 1;
+                let nextC = c;
+                yield { line: 39, maze: focusMaze, explanation: `【C++ 第 39-41 行】向下探路：評估鄰居 (${nextR}, ${nextC}) 是否可以行進。`, queue: [...q], activeCoord: [r, c] };
+                if (nextR >= 0 && nextR < gridRows && nextC >= 0 && nextC < gridCols) {
+                    if (maze[nextR][nextC] === 0) {
+                        parent[`${nextR},${nextC}`] = `${r},${c}`;
+                        maze[nextR][nextC] = 2; // Visit immediately
+                        q.push([nextR, nextC]);
+                        let postMaze = maze.map(row => [...row]);
+                        postMaze[r][c] = 3;
+                        yield { line: 42, maze: postMaze, explanation: `【C++ 第 42 行】向下成功！將 (${nextR}, ${nextC}) 標記為 \`2\`，並將它排入佇列（排在最後）。`, queue: [...q], activeCoord: [r, c] };
+                    } else {
+                        let reason = maze[nextR][nextC] === 1 ? "是牆壁 (1)" : "已經被訪問過了 (2)";
+                        yield { line: 41, maze: focusMaze, explanation: `向下失敗：(${nextR}, ${nextC}) 該格子${reason}。`, queue: [...q], activeCoord: [r, c] };
+                    }
+                } else {
+                    yield { line: 41, maze: focusMaze, explanation: `向下失敗：(${nextR}, ${nextC}) 超出邊界範圍！`, queue: [...q], activeCoord: [r, c] };
+                }
+
+                // 2. Up
+                nextR = r - 1;
+                nextC = c;
+                yield { line: 47, maze: focusMaze, explanation: `【C++ 第 47-49 行】向上探路：評估鄰居 (${nextR}, ${nextC}) 是否可以行進。`, queue: [...q], activeCoord: [r, c] };
+                if (nextR >= 0 && nextR < gridRows && nextC >= 0 && nextC < gridCols) {
+                    if (maze[nextR][nextC] === 0) {
+                        parent[`${nextR},${nextC}`] = `${r},${c}`;
+                        maze[nextR][nextC] = 2;
+                        q.push([nextR, nextC]);
+                        let postMaze = maze.map(row => [...row]);
+                        postMaze[r][c] = 3;
+                        yield { line: 50, maze: postMaze, explanation: `【C++ 第 50 行】向上成功！將 (${nextR}, ${nextC}) 標記為 \`2\`，並將它排入佇列。`, queue: [...q], activeCoord: [r, c] };
+                    } else {
+                        let reason = maze[nextR][nextC] === 1 ? "是牆壁 (1)" : "已經被訪問過了 (2)";
+                        yield { line: 49, maze: focusMaze, explanation: `向上失敗：(${nextR}, ${nextC}) 該格子${reason}。`, queue: [...q], activeCoord: [r, c] };
+                    }
+                } else {
+                    yield { line: 49, maze: focusMaze, explanation: `向上失敗：(${nextR}, ${nextC}) 超出邊界範圍！`, queue: [...q], activeCoord: [r, c] };
+                }
+
+                // 3. Right
+                nextR = r;
+                nextC = c + 1;
+                yield { line: 55, maze: focusMaze, explanation: `【C++ 第 55-57 行】向右探路：評估鄰居 (${nextR}, ${nextC}) 是否可以行進。`, queue: [...q], activeCoord: [r, c] };
+                if (nextR >= 0 && nextR < gridRows && nextC >= 0 && nextC < gridCols) {
+                    if (maze[nextR][nextC] === 0) {
+                        parent[`${nextR},${nextC}`] = `${r},${c}`;
+                        maze[nextR][nextC] = 2;
+                        q.push([nextR, nextC]);
+                        let postMaze = maze.map(row => [...row]);
+                        postMaze[r][c] = 3;
+                        yield { line: 58, maze: postMaze, explanation: `【C++ 第 58 行】向右成功！將 (${nextR}, ${nextC}) 標記為 \`2\`，並將它排入佇列。`, queue: [...q], activeCoord: [r, c] };
+                    } else {
+                        let reason = maze[nextR][nextC] === 1 ? "是牆壁 (1)" : "已經被訪問過了 (2)";
+                        yield { line: 57, maze: focusMaze, explanation: `向右失敗：(${nextR}, ${nextC}) 該格子${reason}。`, queue: [...q], activeCoord: [r, c] };
+                    }
+                } else {
+                    yield { line: 57, maze: focusMaze, explanation: `向右失敗：(${nextR}, ${nextC}) 超出邊界範圍！`, queue: [...q], activeCoord: [r, c] };
+                }
+
+                // 4. Left
+                nextR = r;
+                nextC = c - 1;
+                yield { line: 63, maze: focusMaze, explanation: `【C++ 第 63-65 行】向左探路：評估鄰居 (${nextR}, ${nextC}) 是否可以行進。`, queue: [...q], activeCoord: [r, c] };
+                if (nextR >= 0 && nextR < gridRows && nextC >= 0 && nextC < gridCols) {
+                    if (maze[nextR][nextC] === 0) {
+                        parent[`${nextR},${nextC}`] = `${r},${c}`;
+                        maze[nextR][nextC] = 2;
+                        q.push([nextR, nextC]);
+                        let postMaze = maze.map(row => [...row]);
+                        postMaze[r][c] = 3;
+                        yield { line: 66, maze: postMaze, explanation: `【C++ 第 66 行】向左成功！將 (${nextR}, ${nextC}) 標記為 \`2\`，並將它排入佇列。`, queue: [...q], activeCoord: [r, c] };
+                    } else {
+                        let reason = maze[nextR][nextC] === 1 ? "是牆壁 (1)" : "已經被訪問過了 (2)";
+                        yield { line: 65, maze: focusMaze, explanation: `向左失敗：(${nextR}, ${nextC}) 該格子${reason}。`, queue: [...q], activeCoord: [r, c] };
+                    }
+                } else {
+                    yield { line: 65, maze: focusMaze, explanation: `向左失敗：(${nextR}, ${nextC}) 超出邊界範圍！`, queue: [...q], activeCoord: [r, c] };
+                }
+            }
+
+            yield { line: 71, maze: maze.map(row => [...row]), explanation: "【C++ 第 71 行】Queue 的排隊清單已經全數清空！大家都沒摸到終點。回傳 `false` 代表此迷宮是個死胡同。", queue: [] };
+        }
+
+        function* getDfsSteps(initialMaze) {
+            let maze = initialMaze.map(row => [...row]);
+            let stack = [];
+            let parent = {};
+
+            function* dfsHelper(r, c) {
+                stack.push([r, c]);
+                
+                // Safe guard out-of-bound coordinates prior to boundary check block
+                let outOfBounds = (r < 0 || r >= gridRows || c < 0 || c >= gridCols);
+                let tempMaze = maze.map(row => [...row]);
+                if (!outOfBounds) {
+                    tempMaze[r][c] = 3; // Focus index 3 to visually represent state
+                }
+
+                yield { 
+                    line: 11, 
+                    maze: tempMaze, 
+                    explanation: `【C++ 第 11 行】進入 \`dfs(maze, ${r}, ${c})\`。系統自動將此格參數壓入系統呼叫疊棧中。`, 
+                    stack: [...stack], 
+                    activeCoord: outOfBounds ? null : [r, c] 
+                };
+
+                // 1. Boundary check
+                yield { 
+                    line: 13, 
+                    maze: tempMaze, 
+                    explanation: `【C++ 第 13 行】檢查邊界條件：我們是否超出 ${gridRows}x${gridCols} 地圖？`, 
+                    stack: [...stack], 
+                    activeCoord: outOfBounds ? null : [r, c] 
+                };
+                
+                if (outOfBounds) {
+                    yield { 
+                        line: 14, 
+                        maze: tempMaze, 
+                        explanation: "【C++ 第 14 行】確定超出迷宮範圍，回傳 `false` 並回溯 (Backtrack)！", 
+                        stack: [...stack], 
+                        activeCoord: null 
+                    };
+                    stack.pop();
+                    return false;
+                }
+
+                // 2. Wall or visited check
+                yield { 
+                    line: 18, 
+                    maze: tempMaze, 
+                    explanation: `【C++ 第 18 行】檢查當前坐標 (${r}, ${c}) 是否為牆壁(1) 或 已經被我們踩過了(2)？`, 
+                    stack: [...stack], 
+                    activeCoord: [r, c] 
+                };
+                
+                if (maze[r][c] === 1 || maze[r][c] === 2) {
+                    let reason = maze[r][c] === 1 ? "牆壁 (1)" : "已被踩過訪過 (2)";
+                    yield { 
+                        line: 19, 
+                        maze: tempMaze, 
+                        explanation: `【C++ 第 19 行】遇到${reason}，無法通行，回傳 \`false\` 並彈棧回溯。`, 
+                        stack: [...stack], 
+                        activeCoord: [r, c] 
+                    };
+                    stack.pop();
+                    return false;
+                }
+
+                // 3. Destination reached
+                yield { 
+                    line: 23, 
+                    maze: tempMaze, 
+                    explanation: `【C++ 第 23 行】檢查坐標 (${r}, ${c}) 是否就是終點？`, 
+                    stack: [...stack], 
+                    activeCoord: [r, c] 
+                };
+                
+                if (r === gridRows - 1 && c === gridCols - 1) {
+                    yield { 
+                        line: 24, 
+                        maze: tempMaze, 
+                        explanation: "【C++ 第 24-25 行】這就是終點！大功告成！回傳 `true` 的捷報！", 
+                        stack: [...stack], 
+                        activeCoord: [r, c] 
+                    };
+                    return true;
+                }
+
+                // 4. Mark Visited
+                maze[r][c] = 2; // Visited
+                let postMaze = maze.map(row => [...row]);
+                postMaze[r][c] = 3;
+                yield { 
+                    line: 28, 
+                    maze: postMaze, 
+                    explanation: `【C++ 第 28 行】踩實這一格！將 (${r}, ${c}) 標記為已訪問 \`2\`。避免之後的分身重複探索。`, 
+                    stack: [...stack], 
+                    activeCoord: [r, c] 
+                };
+
+                yield { 
+                    line: 31, 
+                    maze: postMaze, 
+                    explanation: "【C++ 第 31 行】初始化區域變數 `isFound = false`，代表還沒找到通往終點的路徑。", 
+                    stack: [...stack], 
+                    activeCoord: [r, c] 
+                };
+
+                // 5. Try directions based on C++ source
+                // 1. Down
+                yield { 
+                    line: 36, 
+                    maze: postMaze, 
+                    explanation: `【C++ 第 36-37 行】嘗試【向下走】探索：派生分身，遞迴呼叫 \`dfs(maze, ${r+1}, ${c})\``, 
+                    stack: [...stack], 
+                    activeCoord: [r, c] 
+                };
+                let downFound = yield* dfsHelper(r + 1, c);
+                
+                // Restore Focus visual representation back to this call frame
+                postMaze = maze.map(row => [...row]);
+                postMaze[r][c] = 3;
+
+                yield { 
+                    line: 38, 
+                    maze: postMaze, 
+                    explanation: `【C++ 第 38 行】向下分身回報結果。是否成功抵達終點？[${downFound ? '成功' : '失敗'}]。`, 
+                    stack: [...stack], 
+                    activeCoord: [r, c] 
+                };
+                if (downFound) {
+                    parent[`${r+1},${c}`] = `${r},${c}`;
+                    yield { 
+                        line: 39, 
+                        maze: postMaze, 
+                        explanation: "【C++ 第 39 行】向下探索成功，不用試其他方向了，直接向上層回報 `true` 收工！", 
+                        stack: [...stack], 
+                        activeCoord: [r, c] 
+                    };
+                    return true;
+                }
+
+                // 2. Up
+                yield { 
+                    line: 43, 
+                    maze: postMaze, 
+                    explanation: `【C++ 第 43-44 行】往下死路。嘗試【向上走】探索：遞迴呼叫 \`dfs(maze, ${r-1}, ${c})\``, 
+                    stack: [...stack], 
+                    activeCoord: [r, c] 
+                };
+                let upFound = yield* dfsHelper(r - 1, c);
+                
+                postMaze = maze.map(row => [...row]);
+                postMaze[r][c] = 3;
+
+                yield { 
+                    line: 45, 
+                    maze: postMaze, 
+                    explanation: `【C++ 第 45 行】向上分身回報結果。是否成功抵達終點？[${upFound ? '成功' : '失敗'}]。`, 
+                    stack: [...stack], 
+                    activeCoord: [r, c] 
+                };
+                if (upFound) {
+                    parent[`${r-1},${c}`] = `${r},${c}`;
+                    yield { 
+                        line: 46, 
+                        maze: postMaze, 
+                        explanation: "【C++ 第 46 行】向上探索成功，向上層回報 `true`！", 
+                        stack: [...stack], 
+                        activeCoord: [r, c] 
+                    };
+                    return true;
+                }
+
+                // 3. Right
+                yield { 
+                    line: 50, 
+                    maze: postMaze, 
+                    explanation: `【C++ 第 50-51 行】往上死路。嘗試【向右走】探索：遞迴呼叫 \`dfs(maze, ${r}, ${c+1})\``, 
+                    stack: [...stack], 
+                    activeCoord: [r, c] 
+                };
+                let rightFound = yield* dfsHelper(r, c + 1);
+                
+                postMaze = maze.map(row => [...row]);
+                postMaze[r][c] = 3;
+
+                yield { 
+                    line: 52, 
+                    maze: postMaze, 
+                    explanation: `【C++ 第 52 行】向右分身回報結果。是否成功抵達終點？[${rightFound ? '成功' : '失敗'}]。`, 
+                    stack: [...stack], 
+                    activeCoord: [r, c] 
+                };
+                if (rightFound) {
+                    parent[`${r},${c+1}`] = `${r},${c}`;
+                    yield { 
+                        line: 53, 
+                        maze: postMaze, 
+                        explanation: "【C++ 第 53 行】向右探索成功，向上層回報 `true`！", 
+                        stack: [...stack], 
+                        activeCoord: [r, c] 
+                    };
+                    return true;
+                }
+
+                // 4. Left
+                yield { 
+                    line: 57, 
+                    maze: postMaze, 
+                    explanation: `【C++ 第 57-58 行】往右死路。嘗試【向左走】探索：遞迴呼叫 \`dfs(maze, ${r}, ${c-1})\``, 
+                    stack: [...stack], 
+                    activeCoord: [r, c] 
+                };
+                let leftFound = yield* dfsHelper(r, c - 1);
+                
+                postMaze = maze.map(row => [...row]);
+                postMaze[r][c] = 3;
+
+                yield { 
+                    line: 59, 
+                    maze: postMaze, 
+                    explanation: `【C++ 第 59 行】向左分身回報結果。是否成功抵達終點？[${leftFound ? '成功' : '失敗'}]。`, 
+                    stack: [...stack], 
+                    activeCoord: [r, c] 
+                };
+                if (leftFound) {
+                    parent[`${r},${c-1}`] = `${r},${c}`;
+                    yield { 
+                        line: 60, 
+                        maze: postMaze, 
+                        explanation: "【C++ 第 60 行】向左探索成功，向上層回報 `true`！", 
+                        stack: [...stack], 
+                        activeCoord: [r, c] 
+                    };
+                    return true;
+                }
+
+                // 6. Fail, backtrack
+                yield { 
+                    line: 65, 
+                    maze: postMaze, 
+                    explanation: `【C++ 第 65 行】四個方向全部試過，都是死路。確定 (${r}, ${c}) 是死胡同。`, 
+                    stack: [...stack], 
+                    activeCoord: [r, c] 
+                };
+                yield { 
+                    line: 66, 
+                    maze: postMaze, 
+                    explanation: "【C++ 第 66 行】回傳 `false` 給上層。準備從系統呼叫疊棧中彈出。", 
+                    stack: [...stack], 
+                    activeCoord: [r, c] 
+                };
+                stack.pop();
+                return false;
+            }
+
+            let success = yield* dfsHelper(0, 0);
+            if (success) {
+                yield { line: 81, maze, explanation: "【C++ 第 81 行】最外層 dfs 回傳 `true`，說明成功通往終點！C++ 程式輸出：『成功找到出口！』", stack: [], isSuccess: true, parent };
+            } else {
+                yield { line: 83, maze, explanation: "【C++ 第 83 行】DFS 執行結束，沒有找到通路。C++ 程式輸出：『這是個死胡同，找不到出口。』", stack: [] };
+            }
+        }
+
+        // Setup the list of states based on the active mode
+        function resetSimulation() {
+            pause();
+            currentStepIndex = -1;
+            steps = [];
+
+            // Compile the steps using generator
+            const generator = currentMode === "DFS" 
+                ? getDfsSteps(originalMaze) 
+                : getBfsSteps(originalMaze);
+
+            let res = generator.next();
+            while(!res.done) {
+                steps.push(res.value);
+                res = generator.next();
+            }
+
+            // Sync Code highlight View & Maze View
+            renderCodeView();
+            renderMaze(originalMaze);
+            renderDataStructure(null);
+
+            // Set counter
+            document.getElementById("step-counter").innerText = `步驟: 0 / ${steps.length}`;
+            document.getElementById("narrator-text").innerText = "已重置。點擊「單步執行」或「自動播放」開始觀察程式碼如何執行！";
+        }
+
+        function stepForward() {
+            if (steps.length === 0) return;
+            if (currentStepIndex >= steps.length - 1) {
+                pause();
+                showNotification("模擬已結束！可點擊【重置】重新開始。");
+                return;
+            }
+
+            currentStepIndex++;
+            applyStep(currentStepIndex);
+        }
+
+        function applyStep(index) {
+            const step = steps[index];
+            if (!step) return;
+
+            // Highlight line of code
+            highlightCodeLine(step.line);
+
+            // Reconstruct path if success
+            let solutionPath = [];
+            if (step.isSuccess && step.parent) {
+                // Backtrack from end to start
+                let currKey = `${gridRows - 1},${gridCols - 1}`;
+                solutionPath.push([gridRows - 1, gridCols - 1]);
+                while (step.parent[currKey]) {
+                    let parts = step.parent[currKey].split(",");
+                    let pR = parseInt(parts[0]);
+                    let pC = parseInt(parts[1]);
+                    solutionPath.push([pR, pC]);
+                    currKey = step.parent[currKey];
+                }
+            }
+
+            // Draw maze
+            renderMaze(step.maze, step.activeCoord, solutionPath);
+
+            // Draw data structure
+            renderDataStructure(step);
+
+            // Setup explanation text
+            document.getElementById("narrator-text").innerHTML = step.explanation;
+            document.getElementById("step-counter").innerText = `步驟: ${index + 1} / ${steps.length}`;
+        }
+
+        function highlightCodeLine(lineNum) {
+            // Remove previous highlights
+            const activeLines = document.querySelectorAll('.highlight-line');
+            activeLines.forEach(l => l.classList.remove('highlight-line'));
+
+            // Set new one
+            const lineElem = document.getElementById(`${currentMode.toLowerCase()}-line-${lineNum}`);
+            if (lineElem) {
+                lineElem.classList.add('highlight-line');
+                // Scroll code block smoothly to bring active line into view
+                lineElem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // Automatic Player controls
+        function togglePlay() {
+            if (isPlaying) {
+                pause();
+            } else {
+                play();
+            }
+        }
+
+        function play() {
+            if (currentStepIndex >= steps.length - 1) {
+                resetSimulation();
+            }
+            isPlaying = true;
+            document.getElementById("play-text").innerText = "暫停播放";
+            
+            // Swap icon
+            const btnIcon = document.getElementById("play-icon");
+            btnIcon.setAttribute("data-lucide", "pause");
+            lucide.createIcons();
+
+            const speed = parseInt(document.getElementById("speed-slider").value);
+            
+            playInterval = setInterval(() => {
+                stepForward();
+            }, speed);
+        }
+
+        function pause() {
+            isPlaying = false;
+            document.getElementById("play-text").innerText = "自動播放";
+            
+            // Swap icon
+            const btnIcon = document.getElementById("play-icon");
+            btnIcon.setAttribute("data-lucide", "play");
+            lucide.createIcons();
+
+            if (playInterval) {
+                clearInterval(playInterval);
+                playInterval = null;
+            }
+        }
+    </script>
+</body>
+</html>
