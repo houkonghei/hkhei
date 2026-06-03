@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聰明的兔子 - 互動教學平台</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        /* 旋轉動畫，用於狐狸跳躍 */
+        @keyframes bounce-custom {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-15px) scale(1.1); }
+        }
+        .fox-bounce {
+            animation: bounce-custom 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- 導航欄 -->
+    <header class="bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/20 p-2 rounded-full">
+                    <span class="text-3xl">🐰</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black tracking-wider">聰明的兔子</h1>
+                    <p class="text-xs text-amber-100">經典 C++ 演算法可視化互動教材</p>
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="scrollToSection('interactive-zone')" class="bg-white text-orange-600 font-bold px-4 py-2 rounded-full hover:bg-orange-50 transition shadow-md flex items-center gap-1 text-sm">
+                    <i data-lucide="play-circle" class="w-4 h-4"></i> 開始互動模擬
+                </button>
+                <button onclick="scrollToSection('cpp-code-section')" class="bg-orange-700 text-white font-bold px-4 py-2 rounded-full hover:bg-orange-800 transition border border-orange-400/30 flex items-center gap-1 text-sm">
+                    <i data-lucide="code-2" class="w-4 h-4"></i> C++ 原始碼與解析
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 核心內容區 -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- 左側：題目描述與數學引導 (4格) -->
+        <section class="lg:col-span-4 flex flex-col gap-6">
+            <!-- 題目卡片 -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                <div class="flex items-center gap-2 text-orange-600 font-bold mb-3">
+                    <i data-lucide="book-open" class="w-5 h-5"></i>
+                    <h2 class="text-lg">故事背景</h2>
+                </div>
+                <div class="prose prose-slate text-sm leading-relaxed text-slate-600 space-y-3">
+                    <p>圍繞著山頂有 <span class="font-bold text-slate-800">$n$</span> 個山洞，一隻狐狸和一隻兔子住在不同的洞裡。</p>
+                    <p>兔子對狐狸說：</p>
+                    <div class="bg-amber-50 border-l-4 border-amber-500 p-3 rounded-r-lg my-2 text-amber-950 italic text-xs">
+                        「你從第 $n$ 號洞出發，先到第 1 號洞找我；第二次隔 1 個洞（第 3 號洞）找我；第三次隔 2 個洞（第 6 號洞）找我... 依此類推，如果進了 1000 次洞都找不到我，你就要停下來。」
+                    </div>
+                    <p>狐狸滿口答應，找了 1000 次也沒找到兔子，累得再也醒不來。請問兔子可以躲在哪些<strong>安全山洞</strong>中？</p>
+                </div>
+            </div>
+
+            <!-- 規律解析卡片 -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex-grow">
+                <div class="flex items-center gap-2 text-amber-600 font-bold mb-3">
+                    <i data-lucide="lightbulb" class="w-5 h-5"></i>
+                    <h2 class="text-lg">數學規律拆解</h2>
+                </div>
+                <ul class="space-y-4 text-xs text-slate-600">
+                    <li class="flex items-start gap-2">
+                        <span class="bg-amber-100 text-amber-800 rounded px-1.5 py-0.5 font-bold">1</span>
+                        <div>
+                            <p class="font-semibold text-slate-800">山洞編號：$1$ 到 $n$</p>
+                            <p>在程式中為了方便取餘數（Modulo），我們可以使用 $0$ 到 $n-1$ 表示，最後輸出時再加 1。</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="bg-amber-100 text-amber-800 rounded px-1.5 py-0.5 font-bold">2</span>
+                        <div>
+                            <p class="font-semibold text-slate-800">狐狸每次進洞的規律：</p>
+                            <p class="mb-1">第 1 次：第 1 號洞（相當於從 0 走 1 步）</p>
+                            <p class="mb-1">第 2 次：第 3 號洞（相當於在 1 的基礎上再走 2 步）</p>
+                            <p class="mb-1">第 3 次：第 6 號洞（相當於在 3 的基礎上再走 3 步）</p>
+                            <p class="font-medium text-amber-700">第 $i$ 次：在上一次的位置加上 $i$ 步，並對 $n$ 取餘數！</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="bg-amber-100 text-amber-800 rounded px-1.5 py-0.5 font-bold">3</span>
+                        <div>
+                            <p class="font-semibold text-slate-800">公式表達：</p>
+                            <div class="bg-slate-50 p-2 rounded text-center font-mono my-1 text-slate-800 text-xs">
+                                pos = (pos + i) % n
+                            </div>
+                            <p>注意：若餘數為 0，代表第 $n$ 號洞。</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 右側：互動模擬區 (8格) -->
+        <section id="interactive-zone" class="lg:col-span-8 flex flex-col gap-6">
+            
+            <!-- 互動控制面板 -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold flex items-center gap-2 text-slate-800">
+                            <span>🎮</span> 狐狸與兔子動態模擬盤
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-1">動態調整山洞數，一步步觀察狐狸的搜捕路徑！</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <label for="cave-count" class="font-semibold text-sm text-slate-700">山洞數量 n (3~30):</label>
+                        <input type="number" id="cave-count" min="3" max="30" value="10" 
+                               class="w-16 px-2 py-1 border border-slate-200 rounded-lg text-center font-bold text-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <button onclick="initSimulation()" class="bg-slate-800 text-white font-semibold text-xs px-3 py-2 rounded-lg hover:bg-slate-700 transition">
+                            重新設定
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 模擬主視圖：環形地圖與狀態 -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                    
+                    <!-- 圓環渲染區 -->
+                    <div class="md:col-span-7 flex justify-center items-center relative min-h-[320px] bg-slate-50 rounded-xl p-4 overflow-hidden">
+                        <!-- 圓環中心狀態顯示 -->
+                        <div class="absolute text-center z-10 bg-white/90 backdrop-blur-sm p-4 rounded-full shadow-md border border-slate-100 w-36 h-36 flex flex-col justify-center items-center">
+                            <span id="center-emoji" class="text-3xl mb-1">🦊</span>
+                            <span id="center-label" class="text-xs font-semibold text-slate-400">當前位置</span>
+                            <span id="center-pos" class="text-lg font-black text-slate-800">未出發</span>
+                        </div>
+                        
+                        <!-- 山洞容器 -->
+                        <div id="caves-container" class="relative w-72 h-72">
+                            <!-- JS 動態生成山洞元素 -->
+                        </div>
+                    </div>
+
+                    <!-- 狀態與數據看板 -->
+                    <div class="md:col-span-5 flex flex-col gap-4">
+                        <div class="bg-orange-50 rounded-xl p-4 border border-orange-100/50">
+                            <h3 class="text-xs font-bold uppercase text-orange-600 tracking-wider mb-2">當前統計資訊</h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="bg-white p-3 rounded-lg border border-orange-100 shadow-2xs">
+                                    <p class="text-[10px] text-slate-400 font-medium">跳躍次數</p>
+                                    <p id="stat-step" class="text-lg font-black text-slate-800">0 / 1000</p>
+                                </div>
+                                <div class="bg-white p-3 rounded-lg border border-orange-100 shadow-2xs">
+                                    <p class="text-[10px] text-slate-400 font-medium">本次新增步數</p>
+                                    <p id="stat-add" class="text-lg font-black text-slate-800">+0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 rounded-xl p-4 border border-slate-200/50">
+                            <h3 class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1">
+                                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i>
+                                <span>安全山洞 (兔子藏身處)：</span>
+                            </h3>
+                            <!-- 安全山洞列表 -->
+                            <div id="safe-caves-list" class="flex flex-wrap gap-1.5 min-h-[40px] items-center">
+                                <!-- JS 動態生成 -->
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-2">※ 顯示狐狸至今從未進入過的山洞編號。</p>
+                        </div>
+
+                        <!-- 歷史足跡 -->
+                        <div class="bg-slate-50 rounded-xl p-4 border border-slate-200/50 flex-grow">
+                            <h3 class="text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+                                <i data-lucide="history" class="w-4 h-4 text-slate-500"></i>
+                                <span>最近 4 次搜捕紀錄：</span>
+                            </h3>
+                            <div id="history-list" class="text-xs font-mono text-slate-500 space-y-1">
+                                <div class="italic text-slate-400">尚未開始搜捕</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 模擬控制按鈕 -->
+                <div class="mt-6 pt-6 border-t border-slate-100 flex flex-wrap gap-3 justify-center">
+                    <button onclick="stepSim()" id="btn-step" class="bg-orange-500 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-orange-600 active:translate-y-0.5 transition flex items-center gap-1 text-sm shadow-md shadow-orange-500/20">
+                        <i data-lucide="skip-forward" class="w-4 h-4"></i> 單步模擬
+                    </button>
+                    <button onclick="toggleAutoPlay()" id="btn-auto" class="bg-emerald-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-emerald-700 active:translate-y-0.5 transition flex items-center gap-1 text-sm shadow-md shadow-emerald-500/20">
+                        <i id="btn-auto-icon" data-lucide="play" class="w-4 h-4"></i> <span id="btn-auto-text">自動播放</span>
+                    </button>
+                    <button onclick="runToLimit()" class="bg-amber-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-amber-700 active:translate-y-0.5 transition flex items-center gap-1 text-sm shadow-md shadow-amber-500/20">
+                        <i data-lucide="chevrons-right" class="w-4 h-4"></i> 直接完成 1000 次
+                    </button>
+                    <button onclick="resetSimulation()" class="bg-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-xl hover:bg-slate-300 transition flex items-center gap-1 text-sm">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> 重設狀態
+                    </button>
+                </div>
+            </div>
+
+            <!-- 動態原理說明卡 -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                <h3 class="text-md font-bold text-slate-800 mb-2 flex items-center gap-2">
+                    <span>💡</span> 觀察與思考
+                </h3>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                    當 $n = 10$ 時，您會發現不管狐狸找多少次，牠永遠只會進到 <b>1, 3, 5, 6, 8, 10</b> 號洞。而 <b>2, 4, 7, 9</b> 號洞是牠絕對進不去的。
+                    <br><br>
+                    這是因為隨著步數增加，取模運算（$\pmod n$）產生的數列進入了某種<strong>週期性循環</strong>。在 C++ 程式中，我們可以用一個大小為 $n+1$ 的布林值陣列（Boolean Array）或標記陣列，將狐狸去過的洞標為 `true`，最後把剩下為 `false` 的洞號輸出，這就是最經典的「篩選法」思維！
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <!-- C++ 程式碼對照區 -->
+    <section id="cpp-code-section" class="bg-slate-900 text-slate-100 py-12 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+                <div>
+                    <h2 class="text-2xl font-black tracking-wide flex items-center gap-2 text-amber-400">
+                        <i data-lucide="code-2" class="w-6 h-6"></i> 標準 C++ 程式碼實現
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">程式採用了直觀且高效率的陣列標記法，完美對應模擬邏輯。</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs text-slate-400">標準：C++11 或以上</span>
+                    <span class="bg-slate-800 px-3 py-1 rounded-full text-xs text-emerald-400 font-mono border border-emerald-500/20">競賽標準 O(1000) 複雜度</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- 程式碼顯示區 (7格) -->
+                <div class="lg:col-span-7 bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+                    <div class="flex justify-between items-center bg-slate-900 px-4 py-3 border-b border-slate-800">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-3 h-3 rounded-full bg-rose-500"></span>
+                            <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                            <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                            <span class="text-xs font-mono text-slate-400 ml-2">rabbit.cpp</span>
+                        </div>
+                        <button onclick="copyCode()" class="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i> 複製程式碼
+                        </button>
+                    </div>
+                    <pre class="p-6 text-xs sm:text-sm font-mono overflow-x-auto text-emerald-400 leading-relaxed"><code><span class="text-slate-500">// 聰明的兔子 - C++ 完整解決方案</span>
+<span class="text-rose-400">#include</span> <span class="text-amber-300">&lt;iostream&gt;</span>
+<span class="text-rose-400">#include</span> <span class="text-amber-300">&lt;vector&gt;</span>
+
+<span class="text-purple-400">using namespace</span> std;
+
+<span class="text-teal-400">int</span> <span class="text-blue-400">main</span>() {
+    <span class="text-teal-400">int</span> n;
+    <span class="text-slate-500">// 讀入山洞數量 n</span>
+    <span class="text-purple-400">if</span> (!(cin &gt;&gt; n)) <span class="text-purple-400">return</span> <span class="text-amber-300">0</span>;
+
+    <span class="text-slate-500">// visited 陣列用來標記洞號是否被狐狸進去過</span>
+    <span class="text-slate-500">// 陣列大小開 n+1，索引剛好對應 1 到 n 號洞</span>
+    <span class="text-slate-500">// 初始化皆為 false (代表沒進去過)</span>
+    vector&lt;<span class="text-teal-400">bool</span>&gt; <span class="text-blue-400">visited</span>(n + <span class="text-amber-300">1</span>, <span class="text-purple-400">false</span>);
+
+    <span class="text-teal-400">int</span> current_pos = <span class="text-amber-300">0</span>; <span class="text-slate-500">// 從第 n 號洞出發，在 modulo n 系統中等同於 0 號洞</span>
+
+    <span class="text-slate-500">// 狐狸總共找 1000 次</span>
+    <span class="text-purple-400">for</span> (<span class="text-teal-400">int</span> i = <span class="text-amber-300">1</span>; i &lt;= <span class="text-amber-300">1000</span>; ++i) {
+        <span class="text-slate-500">// 計算這一次狐狸進洞的編號 (跳躍 i 步)</span>
+        current_pos = (current_pos + i) % n;
+
+        <span class="text-slate-500">// 在餘數為 0 的時候，代表第 n 號洞</span>
+        <span class="text-teal-400">int</span> cave_num = (current_pos == <span class="text-amber-300">0</span>) ? n : current_pos;
+
+        <span class="text-slate-500">// 標記此山洞已被狐狸搜查</span>
+        visited[cave_num] = <span class="text-purple-400">true</span>;
+    }
+
+    <span class="text-slate-500">// 尋找哪些山洞是狐狸「從未進入」的</span>
+    <span class="text-teal-400">bool</span> first = <span class="text-purple-400">true</span>;
+    <span class="text-purple-400">for</span> (<span class="text-teal-400">int</span> i = <span class="text-amber-300">1</span>; i &lt;= n; ++i) {
+        <span class="text-purple-400">if</span> (!visited[i]) {
+            <span class="text-purple-400">if</span> (!first) {
+                cout &lt;&lt; <span class="text-amber-300">" "</span>;
+            }
+            cout &lt;&lt; i;
+            first = <span class="text-purple-400">false</span>;
+        }
+    }
+    cout &lt;&lt; endl;
+
+    <span class="text-purple-400">return</span> <span class="text-amber-300">0</span>;
+}</code></pre>
+                </div>
+
+                <!-- 程式碼邏輯拆解與解說 (5格) -->
+                <div class="lg:col-span-5 flex flex-col gap-6 text-slate-300">
+                    <div class="bg-slate-800/40 border border-slate-800 p-6 rounded-2xl">
+                        <h3 class="text-md font-bold text-amber-400 mb-3 flex items-center gap-1.5">
+                            <i data-lucide="activity" class="w-5 h-5"></i>
+                            <span>關鍵程式邏輯解析</span>
+                        </h3>
+                        <div class="space-y-4 text-xs sm:text-sm">
+                            <div>
+                                <p class="font-semibold text-white">1. 布林值標記陣列 (visited)</p>
+                                <p class="text-slate-400 mt-1">
+                                    我們利用一個大小為 `n + 1` 的布林值向量，在 C++ 裡面表示每個山洞的造訪狀態。初始全部設定為 `false`。
+                                </p>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-white">2. 巧妙處理「環形」結構</p>
+                                <p class="text-slate-400 mt-1">
+                                    環形山洞在數學上最適合用<b>取模運算 (Modulo) `%`</b>。從 $0$ 到 $n-1$ 跑，
+                                    每跑一圈就會回到開頭。最後當餘數是 `0` 時，我們再手動拉回 `n` 即可，避免了複雜的邊界判斷。
+                                </p>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-white">3. 單一空格的分隔格式</p>
+                                <p class="text-slate-400 mt-1">
+                                    在程式尾端，為了配合題目 Output 要求「數與數之間用一個空格分隔」，我們利用一個 `first` 布林旗標來控制是否輸出空格，這是在程式檢測（OJ 系統）中避免多餘空格導致 Presentation Error 的標準做法。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-indigo-950 to-slate-900 border border-indigo-900/50 p-6 rounded-2xl flex-grow">
+                        <h3 class="text-md font-bold text-indigo-300 mb-2 flex items-center gap-1.5">
+                            <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                            <span>課堂引導與提問推薦</span>
+                        </h3>
+                        <p class="text-xs text-slate-400 leading-relaxed mb-3">
+                            教師在教學時可以問學生：「如果狐狸不是找 1000 次，而是無限次找下去，兔子的安全洞會改變嗎？」
+                        </p>
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            <b>提示學生的數學本質：</b> 當 $n$ 為 $2$ 的冪次方（例如 $2, 4, 8, 16$ 等）時，我們會發現有些特殊的現象。深入引導能讓學生體會「數論」在演算法中扮演的奧妙角色！
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 頁腳 -->
+    <footer class="bg-slate-950 text-slate-500 py-6 border-t border-slate-900 text-center text-xs">
+        <p>© 2026 聰明的兔子互動教學平台 - 啟發學生的程式思維</p>
+    </footer>
+
+    <!-- JS 核心邏輯 -->
+    <script>
+        // 初始化 Lucide 圖標
+        lucide.createIcons();
+
+        // 全域變數
+        let n = 10;
+        let currentPos = 0; // 0-based index
+        let visited = [];
+        let stepCount = 0;
+        let history = [];
+        let autoPlayInterval = null;
+
+        // 初始化
+        function initSimulation() {
+            const inputVal = parseInt(document.getElementById('cave-count').value);
+            if (isNaN(inputVal) || inputVal < 3 || inputVal > 30) {
+                alert("請輸入 3 到 30 之間的整數山洞數！");
+                return;
+            }
+            n = inputVal;
+            resetSimulation();
+        }
+
+        // 重設
+        function resetSimulation() {
+            stopAutoPlay();
+            currentPos = 0; // 從第 n 號洞出發，mod n 之下等於 0 
+            stepCount = 0;
+            visited = new Array(n + 1).fill(false);
+            history = [];
+            
+            updateUI();
+            renderCaves();
+        }
+
+        // 畫出圓環狀山洞
+        function renderCaves() {
+            const container = document.getElementById('caves-container');
+            container.innerHTML = '';
+            
+            const radius = 120; // 圓環半徑 (px)
+            const centerX = 144; // 容器中心 X (288 / 2)
+            const centerY = 144; // 容器中心 Y
+
+            for (let i = 1; i <= n; i++) {
+                // 計算每個洞在圓周上的角度位置 (1 號洞在正上方，即 -90度)
+                const angle = ((i - 1) / n) * 2 * Math.PI - Math.PI / 2;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+
+                const caveEl = document.createElement('div');
+                caveEl.id = `cave-${i}`;
+                caveEl.style.left = `${x - 22}px`;
+                caveEl.style.top = `${y - 22}px`;
+                
+                // 判斷是否為狐狸當前所在
+                // 我們定義當前洞：如果 currentPos 為 0 則是 n，否則就是 currentPos
+                const currentCaveNum = (currentPos === 0) ? n : currentPos;
+                const isFoxHere = (stepCount > 0 && i === currentCaveNum);
+                const isVisited = visited[i];
+
+                let bgClass = "bg-white border-slate-300 text-slate-700";
+                let emoji = "🕳️";
+
+                if (isFoxHere) {
+                    bgClass = "bg-orange-500 border-orange-600 text-white font-extrabold scale-110 z-20 shadow-lg ring-4 ring-orange-200 fox-bounce";
+                    emoji = "🦊";
+                } else if (isVisited) {
+                    bgClass = "bg-slate-200 border-slate-300 text-slate-500 opacity-80";
+                    emoji = "❌";
+                } else {
+                    bgClass = "bg-emerald-50 border-emerald-300 text-emerald-800 font-semibold shadow-xs hover:bg-emerald-100 cursor-help";
+                    emoji = "🐰";
+                }
+
+                caveEl.className = `absolute w-11 h-11 rounded-full border-2 flex flex-col items-center justify-center text-[10px] transition-all duration-300 ${bgClass}`;
+                caveEl.innerHTML = `
+                    <span class="text-xs leading-none">${emoji}</span>
+                    <span class="font-bold leading-none mt-0.5">${i}</span>
+                `;
+                caveEl.title = `第 ${i} 號山洞` + (isVisited ? " (狐狸曾進過)" : " (安全山洞)");
+                
+                container.appendChild(caveEl);
+            }
+        }
+
+        // 單步演算法模擬
+        function stepSim() {
+            if (stepCount >= 1000) {
+                alert("狐狸已經累倒了（找滿了 1000 次），無法再找了！可以按重設或直接調整山洞數。");
+                stopAutoPlay();
+                return;
+            }
+
+            stepCount++;
+            const addSteps = stepCount; // 每次跳躍步數就是當前次數
+            const lastPos = currentPos;
+            currentPos = (currentPos + addSteps) % n;
+
+            const targetCaveNum = (currentPos === 0) ? n : currentPos;
+            visited[targetCaveNum] = true;
+
+            // 紀錄歷史
+            const lastCaveNum = (lastPos === 0) ? n : lastPos;
+            history.unshift({
+                step: stepCount,
+                from: lastCaveNum,
+                add: addSteps,
+                to: targetCaveNum
+            });
+            if (history.length > 4) history.pop();
+
+            updateUI();
+            renderCaves();
+        }
+
+        // 點擊「直接完成 1000 次」
+        function runToLimit() {
+            stopAutoPlay();
+            
+            // 直接進行高速模擬
+            while (stepCount < 1000) {
+                stepCount++;
+                currentPos = (currentPos + stepCount) % n;
+                const targetCaveNum = (currentPos === 0) ? n : currentPos;
+                visited[targetCaveNum] = true;
+            }
+
+            // 隨手塞一個最後歷史
+            history = [{
+                step: 1000,
+                from: "未知",
+                add: 1000,
+                to: (currentPos === 0) ? n : currentPos
+            }];
+
+            updateUI();
+            renderCaves();
+        }
+
+        // 更新數據看板與UI文字
+        function updateUI() {
+            // 更新狀態
+            document.getElementById('stat-step').innerText = `${stepCount} / 1000`;
+            document.getElementById('stat-add').innerText = `+${stepCount}`;
+
+            // 中心狀態盤
+            const centerEmoji = document.getElementById('center-emoji');
+            const centerPos = document.getElementById('center-pos');
+            const centerLabel = document.getElementById('center-label');
+
+            if (stepCount === 0) {
+                centerEmoji.innerText = "🐰";
+                centerPos.innerText = "未開始";
+                centerLabel.innerText = "兔子安全的";
+            } else {
+                const curCave = (currentPos === 0) ? n : currentPos;
+                centerEmoji.innerText = "🦊";
+                centerPos.innerText = `${curCave} 號洞`;
+                centerLabel.innerText = "狐狸當前搜捕";
+            }
+
+            // 渲染安全山洞
+            const safeContainer = document.getElementById('safe-caves-list');
+            safeContainer.innerHTML = '';
+            
+            let safeCount = 0;
+            for (let i = 1; i <= n; i++) {
+                if (!visited[i]) {
+                    safeCount++;
+                    const badge = document.createElement('span');
+                    badge.className = "bg-emerald-500 text-white font-bold text-xs px-2.5 py-1 rounded-md shadow-xs flex items-center gap-0.5 animate-bounce-short";
+                    badge.innerHTML = `🐰 <span>${i} 號</span>`;
+                    safeContainer.appendChild(badge);
+                }
+            }
+
+            if (safeCount === 0) {
+                safeContainer.innerHTML = `<span class="text-xs font-semibold text-rose-500 bg-rose-50 px-2 py-1 rounded">⚠️ 兔子無處可躲，狐狸一定能抓到牠！</span>`;
+            }
+
+            // 渲染歷史列表
+            const histContainer = document.getElementById('history-list');
+            if (history.length === 0) {
+                histContainer.innerHTML = `<div class="italic text-slate-400">尚未開始搜捕</div>`;
+            } else {
+                histContainer.innerHTML = '';
+                history.forEach(h => {
+                    const item = document.createElement('div');
+                    item.className = "text-xs flex justify-between border-b border-slate-100 py-1";
+                    item.innerHTML = `
+                        <span class="text-orange-600 font-bold">第 ${h.step} 次搜尋:</span>
+                        <span class="text-slate-600">從 ${h.from} 洞走 ${h.add} 步 ➜ 到了 <b class="text-slate-800">${h.to} 號洞</b></span>
+                    `;
+                    histContainer.appendChild(item);
+                });
+            }
+        }
+
+        // 自動播放控制
+        function toggleAutoPlay() {
+            if (autoPlayInterval) {
+                stopAutoPlay();
+            } else {
+                startAutoPlay();
+            }
+        }
+
+        function startAutoPlay() {
+            const btnText = document.getElementById('btn-auto-text');
+            const btnIcon = document.getElementById('btn-auto-icon');
+            btnText.innerText = "暫停播放";
+            btnIcon.setAttribute('data-lucide', 'pause');
+            lucide.createIcons();
+
+            autoPlayInterval = setInterval(() => {
+                if (stepCount >= 1000) {
+                    stopAutoPlay();
+                } else {
+                    stepSim();
+                }
+            }, 150); // 150 毫秒跑一步
+        }
+
+        function stopAutoPlay() {
+            if (autoPlayInterval) {
+                clearInterval(autoPlayInterval);
+                autoPlayInterval = null;
+            }
+            const btnText = document.getElementById('btn-auto-text');
+            const btnIcon = document.getElementById('btn-auto-icon');
+            if (btnText && btnIcon) {
+                btnText.innerText = "自動播放";
+                btnIcon.setAttribute('data-lucide', 'play');
+                lucide.createIcons();
+            }
+        }
+
+        // 滾動定位
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 複製代碼
+        function copyCode() {
+            const codeText = `// 聰明的兔子 - C++ 完整解決方案
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+int main() {
+    int n;
+    if (!(cin >> n)) return 0;
+
+    vector<bool> visited(n + 1, false);
+    int current_pos = 0; 
+
+    for (int i = 1; i <= 1000; ++i) {
+        current_pos = (current_pos + i) % n;
+        int cave_num = (current_pos == 0) ? n : current_pos;
+        visited[cave_num] = true;
+    }
+
+    bool first = true;
+    for (int i = 1; i <= n; ++i) {
+        if (!visited[i]) {
+            if (!first) {
+                cout << " ";
+            }
+            cout << i;
+            first = false;
+        }
+    }
+    cout << endl;
+
+    return 0;
+}`;
+            // 複製到剪貼簿安全寫法 (相容 iframe 環境)
+            const tempTextArea = document.createElement("textarea");
+            tempTextArea.value = codeText;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            try {
+                document.execCommand('copy');
+                alert("C++ 原始碼已複製到您的剪貼簿！");
+            } catch (err) {
+                alert("複製失敗，請手動複製網頁底部的程式碼。");
+            }
+            document.body.removeChild(tempTextArea);
+        }
+
+        // 網頁載入後，預設初始化
+        window.onload = function() {
+            initSimulation();
+        }
+    </script>
+</body>
+</html>
