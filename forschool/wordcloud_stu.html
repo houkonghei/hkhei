@@ -30,10 +30,10 @@
             <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight sm:text-4xl">
                 <i class="fa-solid fa-graduation-cap text-indigo-600 mr-2"></i>課堂即時互動系統
             </h1>
-            <p class="mt-2 text-sm text-gray-600">請選擇你的姓名，並在對應的題號輸入老師口頭提問的答案。</p>
+            <p class="mt-2 text-sm text-gray-600">請確認您的姓名，並在對應的題號輸入老師口頭提問的答案。</p>
         </header>
 
-        <!-- 學生基本資料卡 -->
+        <!-- 學生基本資料卡 (動態自雲端載入) -->
         <div class="bg-white rounded-2xl shadow-xl p-6 mb-6 card">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div class="flex items-center space-x-3">
@@ -46,31 +46,21 @@
                     </div>
                 </div>
                 <div class="w-full sm:w-64">
+                    <!-- 💡 此下拉選單的選項將在網頁載入時，自動從試算表的「學生名冊」分頁獲取並生成 -->
                     <select id="studentName" class="block w-full rounded-lg border-gray-300 bg-gray-50 border p-3 text-gray-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
-                        <option value="" disabled selected>-- 請選擇你的姓名 --</option>
-                        <!-- 以下姓名你可以自由修改 -->
-                        <option value="陳大文">陳大文</option>
-                        <option value="張小明">張小明</option>
-                        <option value="李美玲">李美玲</option>
-                        <option value="黃家豪">黃家豪</option>
-                        <option value="何子軒">何子軒</option>
-                        <option value="司徒華">司徒華</option>
-                        <option value="關淑怡">關淑怡</option>
-                        <option value="趙志強">趙志強</option>
-                        <option value="林詩雅">林詩雅</option>
-                        <option value="歐陽杰">歐陽杰</option>
+                        <option value="" disabled selected>-- 正在連線載入名冊... --</option>
                     </select>
                 </div>
             </div>
         </div>
 
-        <!-- 狀態提示框 (自訂 Modal 訊息，代替瀏覽器原生 alert) -->
+        <!-- 狀態提示框 (自訂 Toast 訊息) -->
         <div id="toast" class="hidden fixed bottom-5 right-5 z-50 max-w-md bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 transform translate-y-2 opacity-0 transition-all duration-300">
             <span id="toastIcon" class="text-lg"></span>
             <span id="toastMessage" class="text-sm font-medium"></span>
         </div>
 
-        <!-- 隱藏的表單與 iframe：用於徹底繞過 iframe 內 Fetch CORS 重新導向的限制 -->
+        <!-- 隱藏的表單與 iframe：用於 100% 繞過 iframe 內 Fetch CORS 重新導向被瀏覽器阻擋的限制 -->
         <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
         <form id="submit_form" method="POST" target="hidden_iframe" class="hidden">
             <input type="hidden" name="studentName" id="form_studentName">
@@ -80,7 +70,7 @@
 
         <!-- 10個問題回答區 -->
         <div class="space-y-4">
-            <!-- 動態生成 10 個問題輸入框 -->
+            <!-- 動態生成 10 個問題輸入區 -->
             <script>
                 const questionsCount = 10;
                 for (let i = 1; i <= questionsCount; i++) {
@@ -100,11 +90,11 @@
                                     </span>
                                 </div>
                                 
-                                <!-- 答案多行輸入框 (高度適中，適合寫代碼) -->
+                                <!-- 答案多行輸入框 (高度適中，支援代碼寫作) -->
                                 <div class="w-full">
                                     <textarea id="ans-${i}" rows="4"
                                               class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-gray-800 placeholder-gray-400 font-mono text-sm leading-relaxed" 
-                                              placeholder="請輸入你的解答... (支援多行文本與程式碼)"></textarea>
+                                              placeholder="請輸入你的解答... (支援多行文字與程式碼)"></textarea>
                                 </div>
                                 
                                 <!-- 送出按鈕 -->
@@ -133,6 +123,37 @@
         // 您的 Google Apps Script Web App 部署網址 (已安全地硬編碼於此)
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxyScuB1McshIxPAMHT-t54Z_i_9rADd9yr_cDzBZkUCGwNpHd2NwF01tQMm8bXnUT_/exec";
 
+        // 頁面一載入時，立刻向後端 Google 試算表動態同步並生成最新學生名冊
+        window.onload = function() {
+            const select = document.getElementById('studentName');
+            
+            fetch(SCRIPT_URL, {
+                method: 'GET',
+                mode: 'cors'
+            })
+            .then(res => res.json())
+            .then(data => {
+                select.innerHTML = '<option value="" disabled selected>-- 請選擇你的姓名 --</option>';
+                // 檢查是否有回傳動態名冊
+                if (data._studentList && data._studentList.length > 0) {
+                    data._studentList.forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.textContent = name;
+                        select.appendChild(option);
+                    });
+                } else {
+                    select.innerHTML = '<option value="" disabled selected>-- 雲端尚未設定名冊 --</option>';
+                    showToast('發現試算表內無學生名冊，請在試算表中維護「學生名冊」分頁。', 'info');
+                }
+            })
+            .catch(err => {
+                console.error("名單載入失敗：", err);
+                select.innerHTML = '<option value="" disabled selected>-- 載入失敗，請重新整理 --</option>';
+                showToast('無法取得學生名單，請確認網路連線或 API 網址是否正確！', 'error');
+            });
+        };
+
         // 自訂通知 UI (Toast)
         function showToast(message, type = 'info') {
             const toast = document.getElementById('toast');
@@ -141,7 +162,6 @@
 
             toastMessage.textContent = message;
             
-            // 根據類型設定圖示與顏色
             if (type === 'success') {
                 toastIcon.className = 'fa-solid fa-circle-check text-emerald-400';
             } else if (type === 'error') {
@@ -150,16 +170,14 @@
                 toastIcon.className = 'fa-solid fa-circle-info text-sky-400';
             }
 
-            // 顯示 Toast 
             toast.classList.remove('hidden', 'translate-y-2', 'opacity-0');
             toast.classList.add('translate-y-0', 'opacity-100');
 
-            // 3秒後消失
             setTimeout(() => {
                 toast.classList.remove('translate-y-0', 'opacity-100');
                 toast.classList.add('translate-y-2', 'opacity-0');
                 setTimeout(() => toast.classList.add('hidden'), 300);
-            }, 3000);
+            }, 4000);
         }
 
         // 送出答案邏輯
@@ -192,14 +210,14 @@
             document.getElementById('form_answer').value = answer;
 
             try {
-                // 2. 透過隱藏表單提交資料到隱藏的 iframe (繞過 Fetch CORS/沙盒安全限制)
+                // 2. 透過隱藏表單提交資料到隱藏的 iframe (完美繞過 CORS/沙盒限制)
                 form.submit();
 
-                // 3. 因為 iframe 提交是極速且不被阻擋的，直接在前端進行成功的 UI 反饋
+                // 3. 由於 iframe 提交是極速且不可阻擋的，直接在前端進行成功的 UI 變更反饋
                 setTimeout(() => {
                     showToast(`第 ${questionNum} 題答案已成功傳送到老師屏幕！`, 'success');
                     setButtonSuccess(questionNum);
-                }, 1200); // 提供 1.2 秒的傳送加載感，優化體驗
+                }, 1200); // 1.2 秒的加載感，讓體驗更真實
 
             } catch (error) {
                 console.error('Submission Error:', error);
