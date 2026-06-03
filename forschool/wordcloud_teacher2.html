@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>課堂互動系統 - 老師端屏幕</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Font Awesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入 WordCloud2.js 用於生成詞雲 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
+    <style>
+        body {
+            background-color: #f8fafc;
+        }
+        .tab-active {
+            border-color: #4f46e5;
+            color: #4f46e5;
+            background-color: #f5f3ff;
+        }
+        /* 美化滾動條 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* 隨機抽人動畫特效 */
+        @keyframes shine {
+            0% { box-shadow: 0 0 5px rgba(245, 158, 11, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.9); }
+            100% { box-shadow: 0 0 5px rgba(245, 158, 11, 0.5); }
+        }
+        .random-btn-active {
+            animation: shine 1.5s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col relative">
+
+    <!-- 頂部導航欄 -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-200">
+                    <i class="fa-solid fa-chalkboard-user text-xl animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-800">課堂即時互動討論控制台</h1>
+                    <p class="text-xs text-slate-500">即時監控全班答題狀況與代碼收集</p>
+                </div>
+            </div>
+            
+            <!-- 控制區 -->
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- 🎲 隨機抽人按鈕 (建議 D) -->
+                <button onclick="randomDraw()" class="random-btn-active inline-flex items-center px-4 py-2 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-sm font-bold rounded-lg shadow-md transition transform active:scale-95">
+                    <i class="fa-solid fa-dice mr-2 text-base"></i>🎲 隨機抽答案
+                </button>
+
+                <div class="h-6 w-px bg-slate-300 mx-1"></div>
+
+                <!-- 一鍵清空按鈕 -->
+                <button onclick="showClearModal()" class="inline-flex items-center px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-sm font-semibold rounded-lg shadow-sm transition">
+                    <i class="fa-solid fa-trash-can mr-2"></i>清空所有答案
+                </button>
+                
+                <div class="h-6 w-px bg-slate-300 mx-1"></div>
+
+                <!-- 自動重新整理開關 -->
+                <div class="flex items-center bg-slate-100 px-3 py-2 rounded-lg text-sm font-medium text-slate-700">
+                    <span class="mr-2 text-xs">自動整理 (5s)</span>
+                    <button id="autoRefreshToggle" onclick="toggleAutoRefresh()" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-indigo-600">
+                        <span id="autoRefreshDot" class="translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                    </button>
+                </div>
+
+                <!-- 手動整理按鈕 -->
+                <button onclick="fetchData()" id="refreshBtn" class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold rounded-lg shadow-sm transition">
+                    <i class="fa-solid fa-rotate mr-2" id="refreshIcon"></i>同步最新答案
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 系統 API 設定條（折疊式，方便調試） -->
+    <div class="bg-amber-50 border-b border-amber-200 py-2.5 px-4">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div class="flex items-center space-x-2 text-xs text-amber-800 font-semibold">
+                <i class="fa-solid fa-triangle-exclamation text-amber-500"></i>
+                <span>如果發生錯誤，請在此確認或更換您的 API 網址，並確保 GAS 已部署為「新版本」。</span>
+            </div>
+            <div class="w-full sm:w-auto flex items-center space-x-2">
+                <input type="text" id="apiInput" class="w-full sm:w-96 px-3 py-1 text-xs border border-amber-300 rounded focus:ring-1 focus:ring-indigo-500 focus:outline-none" placeholder="輸入 API 網址 exec 結尾">
+                <button onclick="saveApiUrl()" class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded shadow-xs transition">保存設定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隱藏表單：用於發送清空指令繞過 CORS -->
+    <iframe name="hidden_iframe_teacher" id="hidden_iframe_teacher" style="display:none;"></iframe>
+    <form id="clear_form" method="POST" target="hidden_iframe_teacher" class="hidden">
+        <input type="hidden" name="action" value="clearAll">
+    </form>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col lg:flex-row gap-6">
+        
+        <!-- 左側：題目切換區 (Q1 - Q10) 與 繳交率統計 -->
+        <div class="w-full lg:w-64 flex-shrink-0 flex flex-col gap-4">
+            <!-- 繳交率卡片 -->
+            <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">當前題目繳交率</h3>
+                <div class="flex items-baseline space-x-2">
+                    <span id="submittedCount" class="text-3xl font-extrabold text-indigo-600">0</span>
+                    <span class="text-slate-400">/</span>
+                    <span id="totalStudentsCount" class="text-lg font-medium text-slate-600">0</span>
+                </div>
+                <!-- 進度條 -->
+                <div class="w-full bg-slate-100 rounded-full h-2.5 mt-3 overflow-hidden">
+                    <div id="submissionProgress" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- 題目選擇選單 (Q1-Q10) -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-100 bg-slate-50/50">
+                    <span class="font-bold text-sm text-slate-700"><i class="fa-solid fa-list-ol mr-1.5 text-indigo-500"></i>選擇討論題號</span>
+                </div>
+                <nav class="p-2 space-y-1 max-h-[450px] overflow-y-auto" id="questionTabs">
+                    <script>
+                        for(let i=1; i<=10; i++) {
+                            document.write(`
+                                <button onclick="switchQuestion(${i})" id="tab-${i}" 
+                                        class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition duration-150">
+                                    <div class="flex items-center space-x-2.5">
+                                        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-xs" id="tab-badge-${i}">Q${i}</span>
+                                        <span>第 ${i} 題</span>
+                                    </div>
+                                    <span id="tab-count-${i}" class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">0人</span>
+                                </button>
+                            `);
+                        }
+                    </script>
+                </nav>
+            </div>
+        </div>
+
+        <!-- 右側：主展示看板 -->
+        <div class="flex-grow flex flex-col gap-4">
+            
+            <!-- 大字顯示當前題號 -->
+            <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <span class="text-xs font-bold text-indigo-600 uppercase tracking-widest" id="currentQuestionSubtitle">QUESTION BOARD</span>
+                    <h2 class="text-xl font-bold text-slate-800" id="currentQuestionTitle">第 1 題 討論看板</h2>
+                </div>
+                
+                <!-- 視圖切換按鈕組 (卡片優先) -->
+                <div class="inline-flex rounded-lg p-1 bg-slate-100 border border-slate-200 overflow-x-auto">
+                    <button onclick="switchView('cards')" id="viewBtn-cards" class="inline-flex items-center px-3.5 py-1.5 rounded-md text-xs font-bold text-slate-700 bg-white shadow-sm transition">
+                        <i class="fa-solid fa-grip mr-1.5 text-indigo-500"></i>答案卡片
+                    </button>
+                    <button onclick="switchView('cloud')" id="viewBtn-cloud" class="inline-flex items-center px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition">
+                        <i class="fa-solid fa-chart-pie mr-1.5"></i>統計與詞雲
+                    </button>
+                    <button onclick="switchView('tracker')" id="viewBtn-tracker" class="inline-flex items-center px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition">
+                        <i class="fa-solid fa-clipboard-user mr-1.5"></i>未交追蹤
+                    </button>
+                </div>
+            </div>
+
+            <!-- 主要視圖顯示區 -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm flex-grow min-h-[500px] flex flex-col p-6">
+                
+                <!-- 載入中動畫 -->
+                <div id="loadingOverlay" class="flex-grow flex flex-col items-center justify-center space-y-3">
+                    <i class="fa-solid fa-spinner fa-spin text-4xl text-indigo-600"></i>
+                    <p class="text-sm text-slate-500">正在從雲端同步試算表數據...</p>
+                </div>
+
+                <!-- 無答案提示 -->
+                <div id="noDataAlert" class="hidden flex-grow flex flex-col items-center justify-center space-y-3 text-center">
+                    <div class="p-4 bg-slate-50 rounded-full text-slate-400">
+                        <i class="fa-solid fa-folder-open text-4xl"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-700">尚未收到本題答案</h3>
+                    <p class="text-sm text-slate-400 max-w-sm">學生端送出答案後，這裡將會即時呈現！</p>
+                </div>
+
+                <!-- 1. 卡片清單視圖 (預設第一分類) -->
+                <div id="view-cards" class="hidden flex-grow flex-col">
+                    <!-- 篩選列 -->
+                    <div class="mb-4 flex flex-col sm:flex-row gap-3 items-center justify-between">
+                        <div class="relative w-full sm:w-72">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400"></i>
+                            <input type="text" id="cardSearch" oninput="filterCards()" placeholder="搜尋答案或學生姓名..." class="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <span class="text-xs text-slate-500" id="cardCountText">顯示 0 個解答</span>
+                    </div>
+                    
+                    <!-- 網格排版調整：xl 大螢幕下顯示3列，容納更多資訊 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="cardsGrid">
+                        <!-- JS 動態生成卡片 -->
+                    </div>
+                </div>
+
+                <!-- 2. 數據統計與詞雲分析視圖 (建議 E - 左直條圖、右詞雲) -->
+                <div id="view-cloud" class="hidden flex-grow flex-col lg:flex-row gap-6">
+                    <!-- 左半部：精準直條圖統計統計表 (建議 E) -->
+                    <div class="flex-grow bg-slate-50 rounded-xl p-5 border border-slate-100 flex flex-col">
+                        <h4 class="text-sm font-bold text-slate-700 mb-4 pb-2 border-b border-slate-200 flex items-center justify-between">
+                            <span><i class="fa-solid fa-chart-bar mr-1.5 text-indigo-500"></i>精準直條圖回答統計</span>
+                            <span class="text-2xs text-slate-400">相同簡答答案將自動合併統計</span>
+                        </h4>
+                        <div class="space-y-4 overflow-y-auto max-h-[400px] pr-2" id="barChartContainer">
+                            <!-- JS 動態生成直條圖統計 -->
+                        </div>
+                    </div>
+
+                    <!-- 右半部：詞雲輔助分析 -->
+                    <div class="w-full lg:w-[350px] flex-shrink-0 bg-slate-50 rounded-xl p-4 border border-slate-100 flex flex-col">
+                        <h4 class="text-xs font-bold text-slate-600 mb-3 border-b border-slate-200 pb-2"><i class="fa-solid fa-cloud mr-1.5 text-indigo-500"></i>詞雲分佈</h4>
+                        <div class="flex-grow relative flex items-center justify-center bg-white rounded-lg border border-slate-200/50 min-h-[220px]">
+                            <canvas id="wordcloud-canvas" class="w-full h-full min-h-[220px] max-h-[300px]"></canvas>
+                        </div>
+                        <!-- 高頻詞排行列表 -->
+                        <div class="space-y-2.5 overflow-y-auto max-h-[150px] mt-3" id="wordList">
+                            <!-- JS 動態生成詞頻清單 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. 未交追蹤視圖 -->
+                <div id="view-tracker" class="hidden flex-grow">
+                    <div class="mb-6 p-4 bg-amber-50 border-l-4 border-amber-400 rounded-r-lg">
+                        <p class="text-xs text-amber-800 font-semibold"><i class="fa-solid fa-circle-info mr-1.5"></i>本頁面名單與 Spreadsheet 上的「學生名冊」同步。老師可實時提醒未繳交同學。</p>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="trackerGrid">
+                        <!-- JS 動態生成學生繳交狀態卡 -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- 💡 建議 C - 焦點放大討論視窗 (Spotlight Modal) -->
+    <div id="spotlightModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <!-- 背景遮罩 -->
+            <div class="fixed inset-0 bg-slate-900 bg-opacity-85 transition-opacity" onclick="hideSpotlight()"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <!-- 彈窗本體 -->
+            <div class="inline-block align-middle bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl w-full border border-slate-100 animate-scale-up">
+                <!-- 彈窗頂部 -->
+                <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-expand text-amber-300 animate-pulse text-lg"></i>
+                        <h3 class="text-lg font-bold">💡 課堂焦點討論放大鏡</h3>
+                    </div>
+                    <button onclick="hideSpotlight()" class="text-white hover:text-indigo-200 transition">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                <!-- 彈窗內容 -->
+                <div class="p-6 bg-slate-50">
+                    <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-200">
+                        <div>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">答題學生</span>
+                            <h4 class="text-2xl font-black text-slate-800" id="spotlightStudentName">-</h4>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">提交時間</span>
+                            <p class="text-sm font-mono text-slate-600" id="spotlightTime">-</p>
+                        </div>
+                    </div>
+                    <div class="my-4">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">回答內容</span>
+                        <!-- 超大字型展示區 -->
+                        <div id="spotlightContent" class="text-2xl font-medium text-slate-800 bg-white p-6 rounded-xl border border-slate-200 whitespace-pre-wrap leading-relaxed shadow-inner overflow-y-auto max-h-[450px]">
+                            <!-- 動態注入放大內容 -->
+                        </div>
+                    </div>
+                </div>
+                <!-- 彈窗底部 -->
+                <div class="bg-slate-100 px-6 py-4 flex justify-between items-center border-t border-slate-200">
+                    <button id="spotlightCopyBtn" onclick="copySpotlight()" class="inline-flex items-center px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg shadow-sm transition">
+                        <i class="fa-regular fa-copy mr-2"></i>複製本答案
+                    </button>
+                    <button onclick="hideSpotlight()" class="inline-flex items-center px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm transition">
+                        關閉視窗
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自訂刪除確認彈窗 (Modal) -->
+    <div id="clearModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <!-- 背景遮罩 -->
+            <div class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <!-- 彈窗主體 -->
+            <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <i class="fa-solid fa-triangle-exclamation text-rose-600"></i>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                            <h3 class="text-lg leading-6 font-bold text-slate-900" id="modal-title">清空所有題目答案</h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-slate-500">您確定要刪除第 1 題至第 10 題的所有學生回答紀錄嗎？此動作將會清除 Google 試算表中的對應內容，且<span class="font-bold text-rose-600">無法復原</span>。是否繼續？</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-slate-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-slate-200">
+                    <button type="button" onclick="executeClearAll()" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-rose-600 text-base font-medium text-white hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500 sm:ml-3 sm:w-auto sm:text-sm transition" id="confirmClearBtn">
+                        確定清空
+                    </button>
+                    <button type="button" onclick="hideClearModal()" class="mt-3 w-full inline-flex justify-center rounded-lg border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition">
+                        取消
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 狀態提示框 (自訂 Toast 訊息) -->
+    <div id="toast" class="hidden fixed bottom-5 right-5 z-50 max-w-md bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 transform translate-y-2 opacity-0 transition-all duration-300">
+        <span id="toastIcon" class="text-lg"></span>
+        <span id="toastMessage" class="text-sm font-medium"></span>
+    </div>
+
+    <script>
+        const DEFAULT_URL = "https://script.google.com/macros/s/AKfycbxyScuB1McshIxPAMHT-t54Z_i_9rADd9yr_cDzBZkUCGwNpHd2NwF01tQMm8bXnUT_/exec";
+        let SCRIPT_URL = localStorage.getItem('teacher_script_url') || DEFAULT_URL;
+        
+        let ALL_STUDENTS = [];
+        let serverData = {};       
+        let currentQuestion = 1;   
+        let currentView = 'cards';  // 預設進入時顯示卡片視圖
+        let autoRefreshInterval = null;
+        let isAutoRefreshOn = true;
+
+        window.currentAnswersList = [];
+        let activeSpotlightAnswer = ""; // 用於焦點複製快取
+
+        window.onload = function() {
+            document.getElementById('apiInput').value = SCRIPT_URL;
+            fetchData();
+            if (isAutoRefreshOn) {
+                startAutoRefresh();
+            }
+        };
+
+        function saveApiUrl() {
+            const url = document.getElementById('apiInput').value.trim();
+            if (!url) {
+                showToast('請填入正確的網址', 'error');
+                return;
+            }
+            SCRIPT_URL = url;
+            localStorage.setItem('teacher_script_url', url);
+            showToast('API 網址設定已更新！正在重新獲取數據...', 'success');
+            fetchData();
+        }
+
+        function fetchData() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const refreshIcon = document.getElementById('refreshIcon');
+            
+            refreshBtn.disabled = true;
+            refreshIcon.classList.add('fa-spin');
+
+            fetch(SCRIPT_URL, { method: 'GET', mode: 'cors' })
+            .then(res => {
+                const contentType = res.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    return res.json();
+                } else {
+                    return res.text().then(text => {
+                        throw new Error(`非預期的回應內容。請確保 Apps Script 已部署新版本。`);
+                    });
+                }
+            })
+            .then(data => {
+                serverData = data;
+                if (data._studentList) {
+                    ALL_STUDENTS = data._studentList;
+                }
+                updateDashboard();
+                showToast('雲端數據同步成功！', 'success');
+            })
+            .catch(err => {
+                console.error("Fetch error:", err);
+                showToast(`同步失敗: ${err.message}`, 'error');
+            })
+            .finally(() => {
+                refreshBtn.disabled = false;
+                refreshIcon.classList.remove('fa-spin');
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            });
+        }
+
+        function updateDashboard() {
+            for (let i = 1; i <= 10; i++) {
+                const sheetName = `第 ${i} 題`;
+                const list = serverData[sheetName] || [];
+                const uniqueStudents = [...new Set(list.map(item => item["學生姓名"]))];
+                const count = uniqueStudents.length;
+
+                const countBadge = document.getElementById(`tab-count-${i}`);
+                if (countBadge) {
+                    countBadge.textContent = `${count}人`;
+                    if (count > 0) {
+                        countBadge.className = "text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold";
+                    } else {
+                        countBadge.className = "text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold";
+                    }
+                }
+            }
+            renderCurrentQuestionData();
+        }
+
+        function switchQuestion(num) {
+            currentQuestion = num;
+            for (let i = 1; i <= 10; i++) {
+                const tab = document.getElementById(`tab-${i}`);
+                if (i === num) {
+                    tab.classList.add('tab-active');
+                } else {
+                    tab.classList.remove('tab-active');
+                }
+            }
+            document.getElementById('currentQuestionTitle').textContent = `第 ${num} 題 討論看板`;
+            renderCurrentQuestionData();
+        }
+
+        function switchView(viewName) {
+            currentView = viewName;
+            
+            const views = ['cards', 'cloud', 'tracker'];
+            views.forEach(v => {
+                const btn = document.getElementById(`viewBtn-${v}`);
+                if (v === viewName) {
+                    btn.className = "inline-flex items-center px-3.5 py-1.5 rounded-md text-xs font-bold text-slate-700 bg-white shadow-sm transition";
+                    btn.querySelector('i').classList.add('text-indigo-500');
+                } else {
+                    btn.className = "inline-flex items-center px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition";
+                    btn.querySelector('i').classList.remove('text-indigo-500');
+                }
+            });
+
+            renderCurrentQuestionData();
+        }
+
+        function renderCurrentQuestionData() {
+            const sheetName = `第 ${currentQuestion} 題`;
+            const rawAnswers = serverData[sheetName] || [];
+            const cleanAnswers = getLatestAnswers(rawAnswers);
+
+            const submittedCount = cleanAnswers.length;
+            const totalCount = ALL_STUDENTS.length;
+            document.getElementById('submittedCount').textContent = submittedCount;
+            document.getElementById('totalStudentsCount').textContent = totalCount;
+            const percent = totalCount === 0 ? 0 : Math.min(100, Math.round((submittedCount / totalCount) * 100));
+            document.getElementById('submissionProgress').style.width = `${percent}%`;
+
+            document.getElementById('noDataAlert').classList.add('hidden');
+            document.getElementById('view-cards').classList.add('hidden');
+            document.getElementById('view-cloud').classList.add('hidden');
+            document.getElementById('view-tracker').classList.add('hidden');
+
+            if (submittedCount === 0) {
+                if (currentView !== 'tracker') {
+                    document.getElementById('noDataAlert').classList.remove('hidden');
+                    return;
+                }
+            }
+
+            if (currentView === 'cards') {
+                document.getElementById('view-cards').classList.remove('hidden');
+                document.getElementById('view-cards').classList.add('flex');
+                renderCards(cleanAnswers);
+            } else if (currentView === 'cloud') {
+                document.getElementById('view-cloud').classList.remove('hidden');
+                document.getElementById('view-cloud').classList.add('flex');
+                renderWordCloud(cleanAnswers);
+            } else if (currentView === 'tracker') {
+                document.getElementById('view-tracker').classList.remove('hidden');
+                renderTracker(cleanAnswers);
+            }
+        }
+
+        function getLatestAnswers(list) {
+            const map = new Map();
+            list.forEach(item => {
+                const name = item["學生姓名"];
+                if (name) {
+                    map.set(name, item);
+                }
+            });
+            return Array.from(map.values());
+        }
+
+        // --- 1. 卡片視圖 ---
+        function renderCards(answers) {
+            const grid = document.getElementById('cardsGrid');
+            grid.innerHTML = '';
+            window.currentAnswersList = [];
+
+            answers.forEach((item, index) => {
+                const name = item["學生姓名"];
+                const ans = item["回答內容"] || "";
+                window.currentAnswersList.push(ans);
+                
+                let timeStr = "";
+                if(item["送出時間"]) {
+                    const date = new Date(item["送出時間"]);
+                    if(!isNaN(date.getTime())) {
+                        timeStr = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                    }
+                }
+
+                const isCode = ans.includes('\n') || ans.includes('def ') || ans.includes('import ') || ans.includes('print(') || ans.includes(' = ');
+
+                // 💡 點選卡片背景或點擊「🔍 焦點放大」皆可觸發 C - 放大鏡
+                const cardHtml = `
+                    <div onclick="safeSpotlight(${index}, '${name}', '${timeStr}')" class="bg-slate-50 hover:bg-indigo-50/10 rounded-xl p-4 border border-slate-100 hover:border-indigo-100 transition-all shadow-2xs relative flex flex-col justify-between card-element cursor-pointer group" data-student="${name}" data-answer="${ans.replace(/"/g, '&quot;')}">
+                        <div>
+                            <div class="flex items-center justify-between mb-2.5">
+                                <div class="flex items-center space-x-2">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    <span class="font-bold text-sm text-slate-800">${name}</span>
+                                </div>
+                                <div class="flex items-center space-x-1.5" onclick="event.stopPropagation()">
+                                    <span class="text-2xs text-slate-400 font-mono mr-1">${timeStr}</span>
+                                    <!-- 🔍 Spotlight 按鈕 -->
+                                    <button onclick="safeSpotlight(${index}, '${name}', '${timeStr}')" class="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-white border border-transparent hover:border-slate-200 shadow-3xs transition" title="放大討論">
+                                        <i class="fa-solid fa-expand"></i>
+                                    </button>
+                                    <button onclick="safeCopyToClipboard(this, ${index})" class="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-white border border-transparent hover:border-slate-200 shadow-3xs transition" title="複製內容">
+                                        <i class="fa-regular fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="text-xs text-slate-700 whitespace-pre-wrap ${isCode ? 'font-mono bg-slate-950 text-slate-100 p-3 rounded-lg max-h-[180px] overflow-y-auto leading-relaxed' : 'bg-white p-3 rounded-lg border border-slate-200/60 leading-relaxed'}">${escapeHtml(ans)}</div>
+                        </div>
+                        <div class="mt-2.5 pt-2 border-t border-slate-100 flex justify-between items-center text-3xs text-slate-400 opacity-0 group-hover:opacity-100 transition">
+                            <span>點擊卡片任何地方以全螢幕討論</span>
+                            <span class="text-indigo-500 font-bold"><i class="fa-solid fa-magnifying-glass-plus mr-1"></i>放大焦點</span>
+                        </div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', cardHtml);
+            });
+            filterCards();
+        }
+
+        function safeCopyToClipboard(btn, index) {
+            const textToCopy = window.currentAnswersList[index] || "";
+            copyToClipboard(btn, textToCopy);
+        }
+
+        function filterCards() {
+            const keyword = document.getElementById('cardSearch').value.trim().toLowerCase();
+            const cards = document.querySelectorAll('.card-element');
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const name = card.getAttribute('data-student').toLowerCase();
+                const answer = card.getAttribute('data-answer').toLowerCase();
+
+                if (name.includes(keyword) || answer.includes(keyword)) {
+                    card.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+
+            document.getElementById('cardCountText').textContent = `顯示 ${visibleCount} 個解答 (共 ${cards.length} 個)`;
+        }
+
+        // --- 2. 統計與詞雲視圖 (包含建議 E - 精準直條圖統計) ---
+        function renderWordCloud(answers) {
+            const canvas = document.getElementById('wordcloud-canvas');
+            const wordListContainer = document.getElementById('wordList');
+            const barChartContainer = document.getElementById('barChartContainer');
+            
+            wordListContainer.innerHTML = '';
+            barChartContainer.innerHTML = '';
+
+            // 統計相同的簡答答案 (建議 E - 精準直條圖)
+            const exactAnswerFreq = {};
+            // 統計單字詞頻 (用於詞雲)
+            const wordFreq = {};
+
+            answers.forEach(item => {
+                const ans = (item["回答內容"] || "").trim();
+                if (!ans) return;
+
+                // 1. 直條圖統計 (保留完整原始簡答)
+                // 自動對短文字或代碼做聚合。我們過濾過長的超長程式碼以美化統計，或保留完整長度
+                const shortenedAns = ans.length > 50 ? ans.substring(0, 47) + "..." : ans;
+                exactAnswerFreq[shortenedAns] = (exactAnswerFreq[shortenedAns] || 0) + 1;
+
+                // 2. 詞雲統計 (跳過代碼與超長文本)
+                if (ans.includes('def ') || ans.includes('import ') || ans.length > 20) return;
+                wordFreq[ans] = (wordFreq[ans] || 0) + 1;
+            });
+
+            // 🎨 渲染建議 E：精準直條圖統計表
+            const barData = Object.entries(exactAnswerFreq).sort((a, b) => b[1] - a[1]);
+            const totalResponses = answers.length;
+
+            if (barData.length === 0) {
+                barChartContainer.innerHTML = `
+                    <div class="flex-grow flex flex-col items-center justify-center p-8 text-slate-400">
+                        <i class="fa-solid fa-chart-bar text-2xl mb-2"></i>
+                        <p class="text-xs">本題尚無任何答題數據</p>
+                    </div>
+                `;
+            } else {
+                barData.forEach(([ansText, count], idx) => {
+                    const percent = Math.round((count / totalResponses) * 100);
+                    // 根據名次給予不同進度條顏色 (前三名主題色，其餘灰色)
+                    const barColor = idx === 0 ? 'bg-indigo-600' : (idx === 1 ? 'bg-indigo-400' : (idx === 2 ? 'bg-sky-400' : 'bg-slate-400'));
+                    
+                    const barHtml = `
+                        <div class="space-y-1 hover:bg-slate-100/50 p-2 rounded-lg transition">
+                            <div class="flex justify-between items-center text-xs font-semibold">
+                                <span class="text-slate-800 font-mono truncate max-w-[280px] md:max-w-[450px]" title="${ansText}">${escapeHtml(ansText)}</span>
+                                <span class="text-slate-500 font-mono">${count} 票 (${percent}%)</span>
+                            </div>
+                            <div class="w-full bg-slate-200 h-3 rounded-full overflow-hidden flex">
+                                <div class="${barColor} h-3 rounded-full transition-all duration-1000 ease-out" style="width: ${percent}%"></div>
+                            </div>
+                        </div>
+                    `;
+                    barChartContainer.insertAdjacentHTML('beforeend', barHtml);
+                });
+            }
+
+            // 🎨 渲染右半部：詞雲
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const parent = canvas.parentElement;
+            canvas.width = parent.clientWidth;
+            canvas.height = Math.max(220, parent.clientHeight);
+
+            const wordList = Object.entries(wordFreq).sort((a, b) => b[1] - a[1]);
+
+            if (wordList.length === 0) {
+                ctx.font = '14px system-ui';
+                ctx.fillStyle = '#94a3b8';
+                ctx.textAlign = 'center';
+                ctx.fillText('目前無適合詞雲分析的簡短答案。', canvas.width/2, canvas.height/2);
+                return;
+            }
+
+            const maxFreq = Math.max(...wordList.map(w => w[1]));
+            const cloudList = wordList.map(([word, freq]) => {
+                const size = 12 + (freq / maxFreq) * 24;
+                return [word, size];
+            });
+
+            WordCloud(canvas, {
+                list: cloudList,
+                gridSize: 4,
+                weightFactor: 1,
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                color: function (word, weight) {
+                    const colors = ['#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+                    return colors[Math.floor(Math.random() * colors.length)];
+                },
+                backgroundColor: 'transparent',
+                rotateRatio: 0,
+                click: function(item) {
+                    const keyword = item[0];
+                    switchView('cards');
+                    document.getElementById('cardSearch').value = keyword;
+                    filterCards();
+                }
+            });
+
+            wordList.forEach(([word, freq], idx) => {
+                const percent = Math.round((freq / answers.length) * 100);
+                const itemHtml = `
+                    <div class="bg-white p-2 rounded border border-slate-100 flex justify-between items-center text-2xs hover:border-indigo-200 cursor-pointer" onclick="switchView('cards'); document.getElementById('cardSearch').value='${word}'; filterCards();">
+                        <span class="font-bold text-slate-700 truncate max-w-[120px]" title="${word}">${word}</span>
+                        <span class="text-indigo-600 font-bold">${freq}人 (${percent}%)</span>
+                    </div>
+                `;
+                wordListContainer.insertAdjacentHTML('beforeend', itemHtml);
+            });
+        }
+
+        // --- 3. 追蹤視圖 ---
+        function renderTracker(answers) {
+            const grid = document.getElementById('trackerGrid');
+            grid.innerHTML = '';
+            const submittedStudents = answers.map(item => item["學生姓名"]);
+
+            ALL_STUDENTS.forEach(student => {
+                const hasSubmitted = submittedStudents.includes(student);
+                const cardHtml = `
+                    <div class="p-4 rounded-xl border flex flex-col items-center justify-center text-center space-y-2.5 transition shadow-3xs
+                                ${hasSubmitted 
+                                    ? 'bg-emerald-50/40 border-emerald-100 text-emerald-800' 
+                                    : 'bg-slate-50/50 border-slate-100 text-slate-400'
+                                }">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold
+                                    ${hasSubmitted 
+                                        ? 'bg-emerald-100 text-emerald-700' 
+                                        : 'bg-slate-200 text-slate-500'
+                                    }">
+                            ${student.substring(0, 1)}
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm text-slate-800">${student}</p>
+                            <span class="inline-flex items-center text-2xs mt-1 px-1.5 py-0.5 rounded-full font-semibold
+                                        ${hasSubmitted 
+                                            ? 'bg-emerald-100/80 text-emerald-800' 
+                                            : 'bg-slate-100 text-slate-400'
+                                        }">
+                                <i class="fa-solid ${hasSubmitted ? 'fa-circle-check' : 'fa-circle-minus'} mr-1"></i>
+                                ${hasSubmitted ? '已繳交' : '未繳交'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', cardHtml);
+            });
+        }
+
+        // --- 🎯 建議 C - 焦點放大 (Spotlight) 控制器 ---
+        function safeSpotlight(index, name, timeStr) {
+            // 防止外層點擊與內層 copy 按鈕重疊
+            if (event) event.stopPropagation();
+
+            const answerText = window.currentAnswersList[index] || "";
+            activeSpotlightAnswer = answerText;
+
+            // 寫入 Spotlight 資訊
+            document.getElementById('spotlightStudentName').textContent = name;
+            document.getElementById('spotlightTime').textContent = timeStr;
+            
+            // 是否為代碼字型樣式判斷
+            const isCode = answerText.includes('\n') || answerText.includes('def ') || answerText.includes('import ') || answerText.includes('print(') || answerText.includes(' = ');
+            const contentBox = document.getElementById('spotlightContent');
+            
+            if (isCode) {
+                contentBox.className = "text-xl font-mono bg-slate-950 text-slate-100 p-6 rounded-xl border border-slate-800 whitespace-pre leading-relaxed shadow-inner overflow-auto max-h-[450px]";
+            } else {
+                contentBox.className = "text-2xl font-semibold text-slate-800 bg-white p-6 rounded-xl border border-slate-200 whitespace-pre-wrap leading-relaxed shadow-inner overflow-y-auto max-h-[450px]";
+            }
+            contentBox.innerHTML = escapeHtml(answerText);
+
+            // 顯示彈窗
+            document.getElementById('spotlightModal').classList.remove('hidden');
+        }
+
+        function hideSpotlight() {
+            document.getElementById('spotlightModal').classList.add('hidden');
+        }
+
+        function copySpotlight() {
+            const btn = document.getElementById('spotlightCopyBtn');
+            const originalHtml = btn.innerHTML;
+            
+            const textarea = document.createElement('textarea');
+            textarea.value = activeSpotlightAnswer;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                btn.className = "inline-flex items-center px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 text-sm font-semibold rounded-lg shadow-sm transition";
+                btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i>已複製成功';
+                showToast('已複製焦點討論答案！', 'success');
+                setTimeout(() => {
+                    btn.className = "inline-flex items-center px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-semibold rounded-lg shadow-sm transition";
+                    btn.innerHTML = originalHtml;
+                }, 2000);
+            } catch (err) {
+                showToast('複製失敗', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // --- 🎲 建議 D - 隨機抽答案核心邏輯 ---
+        function randomDraw() {
+            const sheetName = `第 ${currentQuestion} 題`;
+            const rawAnswers = serverData[sheetName] || [];
+            const cleanAnswers = getLatestAnswers(rawAnswers);
+
+            if (cleanAnswers.length === 0) {
+                showToast('當前題目沒有人繳交任何答案，無法進行抽選！', 'error');
+                return;
+            }
+
+            showToast('🎰 正在對全班提交檔案進行隨機滾動抽選...', 'info');
+
+            // 伴隨一個充滿樂趣的動態閃爍特效 (閃爍 8 次，約 1 秒)
+            let counter = 0;
+            const flashInterval = setInterval(() => {
+                const tempIndex = Math.floor(Math.random() * cleanAnswers.length);
+                const randomStudent = cleanAnswers[tempIndex];
+                
+                // 動態在吐司或螢幕秀出快滾名單，製造戲劇效果
+                showToast(`🎲 滾動名單中: ${randomStudent["學生姓名"]}`, 'info');
+                counter++;
+
+                if (counter > 6) {
+                    clearInterval(flashInterval);
+                    
+                    // 最終定案
+                    const finalIndex = Math.floor(Math.random() * cleanAnswers.length);
+                    const chosen = cleanAnswers[finalIndex];
+                    
+                    let timeStr = "";
+                    if(chosen["送出時間"]) {
+                        const date = new Date(chosen["送出時間"]);
+                        if(!isNaN(date.getTime())) {
+                            timeStr = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                        }
+                    }
+
+                    // 動態將答案放入全域陣列備查
+                    const listIndex = window.currentAnswersList.indexOf(chosen["回答內容"]);
+                    let finalIndexInList = listIndex !== -1 ? listIndex : window.currentAnswersList.length;
+                    if(listIndex === -1) {
+                        window.currentAnswersList.push(chosen["回答內容"]);
+                    }
+
+                    // 1.5 秒後，華麗彈出 Spotlight Modal！
+                    setTimeout(() => {
+                        showToast(`🎉 恭喜抽中 ${chosen["學生姓名"]} 的回答！`, 'success');
+                        safeSpotlight(finalIndexInList, chosen["學生姓名"], timeStr);
+                    }, 500);
+                }
+            }, 180);
+        }
+
+        // --- 清空答案功能 ---
+        function showClearModal() {
+            document.getElementById('clearModal').classList.remove('hidden');
+        }
+
+        function hideClearModal() {
+            document.getElementById('clearModal').classList.add('hidden');
+        }
+
+        function executeClearAll() {
+            const btn = document.getElementById('confirmClearBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>清空中...';
+
+            const form = document.getElementById('clear_form');
+            form.action = SCRIPT_URL;
+            
+            try {
+                form.submit();
+                setTimeout(() => {
+                    hideClearModal();
+                    btn.disabled = false;
+                    btn.innerHTML = '確定清空';
+                    showToast('已成功清空所有題目的答案！', 'success');
+                    fetchData(); // 重新整理畫面
+                }, 1500);
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerHTML = '確定清空';
+                showToast('清空指令發送失敗！', 'error');
+            }
+        }
+
+        // --- 工具程式 ---
+        function escapeHtml(string) {
+            return String(string).replace(/[&<>"']/g, function (s) {
+                return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[s];
+            });
+        }
+
+        function copyToClipboard(btn, text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                const icon = btn.querySelector('i');
+                icon.className = 'fa-solid fa-check text-emerald-600';
+                showToast('已成功複製到剪貼簿！', 'success');
+                setTimeout(() => { icon.className = 'fa-regular fa-copy'; }, 2000);
+            } catch (err) {
+                showToast('複製失敗，瀏覽器拒絕存取剪貼簿！', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function toggleAutoRefresh() {
+            const dot = document.getElementById('autoRefreshDot');
+            const toggle = document.getElementById('autoRefreshToggle');
+            isAutoRefreshOn = !isAutoRefreshOn;
+
+            if (isAutoRefreshOn) {
+                toggle.classList.add('bg-indigo-600');
+                toggle.classList.remove('bg-slate-300');
+                dot.classList.add('translate-x-5');
+                startAutoRefresh();
+                showToast('自動重新整理已啟用！(5秒間隔)', 'info');
+            } else {
+                toggle.classList.remove('bg-indigo-600');
+                toggle.classList.add('bg-slate-300');
+                dot.classList.remove('translate-x-5');
+                stopAutoRefresh();
+                showToast('自動重新整理已關閉！', 'info');
+            }
+        }
+
+        function startAutoRefresh() {
+            if(autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = setInterval(() => { fetchData(); }, 5000);
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+            toastMessage.textContent = message;
+            
+            if (type === 'success') toastIcon.className = 'fa-solid fa-circle-check text-emerald-400';
+            else if (type === 'error') toastIcon.className = 'fa-solid fa-circle-exclamation text-rose-400';
+            else toastIcon.className = 'fa-solid fa-circle-info text-sky-400';
+
+            toast.classList.remove('hidden', 'translate-y-2', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.classList.add('hidden'), 300);
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
