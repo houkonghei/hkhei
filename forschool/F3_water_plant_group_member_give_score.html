@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小組活動組員互評系統</title>
+    <!-- 引入 Tailwind CSS 提供現代美觀的 UI 界面 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 針對密碼框（分數、密碼）在特定瀏覽器下可能出現的「顯示密碼」眼睛圖標進行隱藏，確保隱私 */
+        input[type="password"]::-ms-reveal,
+        input[type="password"]::-ms-clear {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen py-8 px-4 sm:px-6 lg:px-8 font-sans">
+    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+        
+        <!-- 頁首與標題 -->
+        <div class="bg-gradient-to-r py-8 px-6 text-center border-b border-slate-100">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800">小組活動組員互評系統</h1>
+            <p class="mt-2 text-sm text-slate-500">請認真且客觀地為你的組員評分。為了保護隱私，分數輸入框已進行加密隱藏。</p>
+        </div>
+
+        <form id="evaluationForm" class="p-6 sm:p-8 space-y-8">
+            
+            <!-- 第一部分：評分學生個人資料 -->
+            <div class="bg-slate-50 p-5 rounded-xl border border-slate-200/60 space-y-4">
+                <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2">
+                    <span class="flex items-center justify-center bg-blue-500 text-white rounded-full w-6 h-6 text-sm">1</span>
+                    你的個人資料
+                </h2>
+                
+                <!-- 原有資料項目：班別、學號、姓名 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- 班別下拉選單 -->
+                    <div>
+                        <label for="studentClass" class="block text-sm font-semibold text-slate-600 mb-1">學生班別：</label>
+                        <select id="studentClass" required class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                            <option value="">-- 請選擇班別 --</option>
+                            <!-- 【IT老師提示】：你可以在下方自行修改或增加班別名稱 -->
+                            <option value="初三2班">初三2班</option>
+                            <option value="XXX">XXX 班</option>
+                            <option value="YYY">YYY 班</option>
+                            <option value="ZZZ">ZZZ 班</option>
+                        </select>
+                    </div>
+
+                    <!-- 班內學號 -->
+                    <div>
+                        <label for="studentSeatNo" class="block text-sm font-semibold text-slate-600 mb-1">班內學號 (1~50)：</label>
+                        <input type="number" id="studentSeatNo" min="1" max="50" required placeholder="請輸入學號"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                    </div>
+
+                    <!-- 學生姓名 -->
+                    <div>
+                        <label for="studentName" class="block text-sm font-semibold text-slate-600 mb-1">學生姓名：</label>
+                        <input type="text" id="studentName" required placeholder="請輸入中文"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                    </div>
+                </div>
+
+                <!-- 🆕 新增項目：濠江 HKMS 生號與密碼 (兩欄並排) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-200/60">
+                    <!-- 濠江 HKMS 8位學生生號 -->
+                    <div>
+                        <label for="studentHkmsId" class="block text-sm font-semibold text-slate-600 mb-1">濠江 HKMS 8位學生生號：</label>
+                        <input type="text" id="studentHkmsId" required maxlength="8" placeholder="請輸入8位數字生號"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                    </div>
+
+                    <!-- 濠江 HKMS 八位密碼 -->
+                    <div>
+                        <label for="studentHkmsPassword" class="block text-sm font-semibold text-slate-600 mb-1">濠江 HKMS 八位密碼：</label>
+                        <input type="password" id="studentHkmsPassword" required maxlength="8" placeholder="請輸入8位密碼"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第二部分：組員評分主體 -->
+            <div class="space-y-6">
+                <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2">
+                    <span class="flex items-center justify-center bg-blue-500 text-white rounded-full w-6 h-6 text-sm">2</span>
+                    組員評分表 (最多評分 6 位同學)
+                </h2>
+                <p class="text-xs text-amber-600 bg-amber-50 border border-amber-100 p-3 rounded-lg">
+                    💡 提示：請勿重複評分同一位同學。分數請輸入 1 至 100 之間的整數。輸入的分數會以 <strong>••••</strong> 密碼格式顯示，身旁的同學不會看見。
+                </p>
+
+                <!-- 評分小組區塊 (重複 6 組，共 12 個項目) -->
+                <div class="space-y-4">
+                    
+                    <!-- 第 1、2 位同學 (Pair 1) -->
+                    <div class="peer-row p-4 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="peer_1" class="block text-sm font-semibold text-slate-600 mb-1">我要評分的第 1 位同學，他/她是：</label>
+                            <select id="peer_1" class="peer-select w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                                <option value="">-- 請選擇同學 --</option>
+                                <!-- 【IT老師提示】：請在此處替換成你班上的學生名單 -->
+                                <option value="王一伊">王一伊</option>
+<option value="叶浩軒">叶浩軒</option>
+<option value="伍錦泰">伍錦泰</option>
+<option value="吳宇森">吳宇森</option>
+<option value="呂志宏">呂志宏</option>
+<option value="岑嘉朗">岑嘉朗</option>
+<option value="李文豪">李文豪</option>
+<option value="李嘉兒">李嘉兒</option>
+<option value="林晨妤">林晨妤</option>
+<option value="林紫琪">林紫琪</option>
+<option value="林學柔">林學柔</option>
+<option value="林靜妤">林靜妤</option>
+<option value="洪子茵">洪子茵</option>
+<option value="唐敬添">唐敬添</option>
+<option value="孫紹榮">孫紹榮</option>
+<option value="區綺彤">區綺彤</option>
+<option value="張哲雨">張哲雨</option>
+<option value="張皓寧">張皓寧</option>
+<option value="梁荻欣">梁荻欣</option>
+<option value="陳育霖">陳育霖</option>
+<option value="陳雨村">陳雨村</option>
+<option value="陳梓豪">陳梓豪</option>
+<option value="陳梓鵬">陳梓鵬</option>
+<option value="陸曉潼">陸曉潼</option>
+<option value="麥銘富">麥銘富</option>
+<option value="黃梓瑜">黃梓瑜</option>
+<option value="葉凱琳">葉凱琳</option>
+<option value="劉子軒">劉子軒</option>
+<option value="蔡海泓">蔡海泓</option>
+<option value="蔡傑安">蔡傑安</option>
+<option value="鄭國樺">鄭國樺</option>
+<option value="鄭詠同">鄭詠同</option>
+<option value="盧恩輝">盧恩輝</option>
+<option value="羅莉宜">羅莉宜</option>
+<option value="司徒德宇">司徒德宇</option>
+
+                            </select>
+                        </div>
+                        <div>
+                            <label for="score_1" class="block text-sm font-semibold text-slate-600 mb-1">第 1 位同學，他/她 值多少分 (1~100)：</label>
+                            <input type="password" id="score_1" min="1" max="100" placeholder="請輸入 1-100 分數"
+                                   class="peer-score w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        </div>
+                    </div>
+
+                    <!-- 第 3、4 位同學 (Pair 2) -->
+                    <div class="peer-row p-4 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="peer_2" class="block text-sm font-semibold text-slate-600 mb-1">我要評分的第 2 位同學，他/她是：</label>
+                            <select id="peer_2" class="peer-select w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                                <option value="">-- 請選擇同學 --</option>
+                                <option value="王一伊">王一伊</option>
+<option value="叶浩軒">叶浩軒</option>
+<option value="伍錦泰">伍錦泰</option>
+<option value="吳宇森">吳宇森</option>
+<option value="呂志宏">呂志宏</option>
+<option value="岑嘉朗">岑嘉朗</option>
+<option value="李文豪">李文豪</option>
+<option value="李嘉兒">李嘉兒</option>
+<option value="林晨妤">林晨妤</option>
+<option value="林紫琪">林紫琪</option>
+<option value="林學柔">林學柔</option>
+<option value="林靜妤">林靜妤</option>
+<option value="洪子茵">洪子茵</option>
+<option value="唐敬添">唐敬添</option>
+<option value="孫紹榮">孫紹榮</option>
+<option value="區綺彤">區綺彤</option>
+<option value="張哲雨">張哲雨</option>
+<option value="張皓寧">張皓寧</option>
+<option value="梁荻欣">梁荻欣</option>
+<option value="陳育霖">陳育霖</option>
+<option value="陳雨村">陳雨村</option>
+<option value="陳梓豪">陳梓豪</option>
+<option value="陳梓鵬">陳梓鵬</option>
+<option value="陸曉潼">陸曉潼</option>
+<option value="麥銘富">麥銘富</option>
+<option value="黃梓瑜">黃梓瑜</option>
+<option value="葉凱琳">葉凱琳</option>
+<option value="劉子軒">劉子軒</option>
+<option value="蔡海泓">蔡海泓</option>
+<option value="蔡傑安">蔡傑安</option>
+<option value="鄭國樺">鄭國樺</option>
+<option value="鄭詠同">鄭詠同</option>
+<option value="盧恩輝">盧恩輝</option>
+<option value="羅莉宜">羅莉宜</option>
+<option value="司徒德宇">司徒德宇</option>
+
+                            </select>
+                        </div>
+                        <div>
+                            <label for="score_2" class="block text-sm font-semibold text-slate-600 mb-1">第 2 位同學，他/她 值多少分 (1~100)：</label>
+                            <input type="password" id="score_2" min="1" max="100" placeholder="請輸入 1-100 分數"
+                                   class="peer-score w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        </div>
+                    </div>
+
+                    <!-- 第 5、6 位同學 (Pair 3) -->
+                    <div class="peer-row p-4 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="peer_3" class="block text-sm font-semibold text-slate-600 mb-1">我要評分的第 3 位同學，他/她是：</label>
+                            <select id="peer_3" class="peer-select w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                                <option value="">-- 請選擇同學 --</option>
+                                <option value="王一伊">王一伊</option>
+<option value="叶浩軒">叶浩軒</option>
+<option value="伍錦泰">伍錦泰</option>
+<option value="吳宇森">吳宇森</option>
+<option value="呂志宏">呂志宏</option>
+<option value="岑嘉朗">岑嘉朗</option>
+<option value="李文豪">李文豪</option>
+<option value="李嘉兒">李嘉兒</option>
+<option value="林晨妤">林晨妤</option>
+<option value="林紫琪">林紫琪</option>
+<option value="林學柔">林學柔</option>
+<option value="林靜妤">林靜妤</option>
+<option value="洪子茵">洪子茵</option>
+<option value="唐敬添">唐敬添</option>
+<option value="孫紹榮">孫紹榮</option>
+<option value="區綺彤">區綺彤</option>
+<option value="張哲雨">張哲雨</option>
+<option value="張皓寧">張皓寧</option>
+<option value="梁荻欣">梁荻欣</option>
+<option value="陳育霖">陳育霖</option>
+<option value="陳雨村">陳雨村</option>
+<option value="陳梓豪">陳梓豪</option>
+<option value="陳梓鵬">陳梓鵬</option>
+<option value="陸曉潼">陸曉潼</option>
+<option value="麥銘富">麥銘富</option>
+<option value="黃梓瑜">黃梓瑜</option>
+<option value="葉凱琳">葉凱琳</option>
+<option value="劉子軒">劉子軒</option>
+<option value="蔡海泓">蔡海泓</option>
+<option value="蔡傑安">蔡傑安</option>
+<option value="鄭國樺">鄭國樺</option>
+<option value="鄭詠同">鄭詠同</option>
+<option value="盧恩輝">盧恩輝</option>
+<option value="羅莉宜">羅莉宜</option>
+<option value="司徒德宇">司徒德宇</option>
+
+                            </select>
+                        </div>
+                        <div>
+                            <label for="score_3" class="block text-sm font-semibold text-slate-600 mb-1">第 3 位同學，他/她 值多少分 (1~100)：</label>
+                            <input type="password" id="score_3" min="1" max="100" placeholder="請輸入 1-100 分數"
+                                   class="peer-score w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        </div>
+                    </div>
+
+                    <!-- 第 7、8 位同學 (Pair 4) -->
+                    <div class="peer-row p-4 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="peer_4" class="block text-sm font-semibold text-slate-600 mb-1">我要評分的第 4 位同學，他/她是：</label>
+                            <select id="peer_4" class="peer-select w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                                <option value="">-- 請選擇同學 --</option>
+                             <option value="王一伊">王一伊</option>
+<option value="叶浩軒">叶浩軒</option>
+<option value="伍錦泰">伍錦泰</option>
+<option value="吳宇森">吳宇森</option>
+<option value="呂志宏">呂志宏</option>
+<option value="岑嘉朗">岑嘉朗</option>
+<option value="李文豪">李文豪</option>
+<option value="李嘉兒">李嘉兒</option>
+<option value="林晨妤">林晨妤</option>
+<option value="林紫琪">林紫琪</option>
+<option value="林學柔">林學柔</option>
+<option value="林靜妤">林靜妤</option>
+<option value="洪子茵">洪子茵</option>
+<option value="唐敬添">唐敬添</option>
+<option value="孫紹榮">孫紹榮</option>
+<option value="區綺彤">區綺彤</option>
+<option value="張哲雨">張哲雨</option>
+<option value="張皓寧">張皓寧</option>
+<option value="梁荻欣">梁荻欣</option>
+<option value="陳育霖">陳育霖</option>
+<option value="陳雨村">陳雨村</option>
+<option value="陳梓豪">陳梓豪</option>
+<option value="陳梓鵬">陳梓鵬</option>
+<option value="陸曉潼">陸曉潼</option>
+<option value="麥銘富">麥銘富</option>
+<option value="黃梓瑜">黃梓瑜</option>
+<option value="葉凱琳">葉凱琳</option>
+<option value="劉子軒">劉子軒</option>
+<option value="蔡海泓">蔡海泓</option>
+<option value="蔡傑安">蔡傑安</option>
+<option value="鄭國樺">鄭國樺</option>
+<option value="鄭詠同">鄭詠同</option>
+<option value="盧恩輝">盧恩輝</option>
+<option value="羅莉宜">羅莉宜</option>
+<option value="司徒德宇">司徒德宇</option>
+
+                            </select>
+                        </div>
+                        <div>
+                            <label for="score_4" class="block text-sm font-semibold text-slate-600 mb-1">第 4 位同學，他/她 值多少分 (1~100)：</label>
+                            <input type="password" id="score_4" min="1" max="100" placeholder="請輸入 1-100 分數"
+                                   class="peer-score w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        </div>
+                    </div>
+
+                    <!-- 第 9、10 位同學 (Pair 5) -->
+                    <div class="peer-row p-4 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="peer_5" class="block text-sm font-semibold text-slate-600 mb-1">我要評分的第 5 位同學，他/她是：</label>
+                            <select id="peer_5" class="peer-select w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                                <option value="">-- 請選擇同學 --</option>
+                           <option value="王一伊">王一伊</option>
+<option value="叶浩軒">叶浩軒</option>
+<option value="伍錦泰">伍錦泰</option>
+<option value="吳宇森">吳宇森</option>
+<option value="呂志宏">呂志宏</option>
+<option value="岑嘉朗">岑嘉朗</option>
+<option value="李文豪">李文豪</option>
+<option value="李嘉兒">李嘉兒</option>
+<option value="林晨妤">林晨妤</option>
+<option value="林紫琪">林紫琪</option>
+<option value="林學柔">林學柔</option>
+<option value="林靜妤">林靜妤</option>
+<option value="洪子茵">洪子茵</option>
+<option value="唐敬添">唐敬添</option>
+<option value="孫紹榮">孫紹榮</option>
+<option value="區綺彤">區綺彤</option>
+<option value="張哲雨">張哲雨</option>
+<option value="張皓寧">張皓寧</option>
+<option value="梁荻欣">梁荻欣</option>
+<option value="陳育霖">陳育霖</option>
+<option value="陳雨村">陳雨村</option>
+<option value="陳梓豪">陳梓豪</option>
+<option value="陳梓鵬">陳梓鵬</option>
+<option value="陸曉潼">陸曉潼</option>
+<option value="麥銘富">麥銘富</option>
+<option value="黃梓瑜">黃梓瑜</option>
+<option value="葉凱琳">葉凱琳</option>
+<option value="劉子軒">劉子軒</option>
+<option value="蔡海泓">蔡海泓</option>
+<option value="蔡傑安">蔡傑安</option>
+<option value="鄭國樺">鄭國樺</option>
+<option value="鄭詠同">鄭詠同</option>
+<option value="盧恩輝">盧恩輝</option>
+<option value="羅莉宜">羅莉宜</option>
+<option value="司徒德宇">司徒德宇</option>
+
+                            </select>
+                        </div>
+                        <div>
+                            <label for="score_5" class="block text-sm font-semibold text-slate-600 mb-1">第 5 位同學，他/她 值多少分 (1~100)：</label>
+                            <input type="password" id="score_5" min="1" max="100" placeholder="請輸入 1-100 分數"
+                                   class="peer-score w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        </div>
+                    </div>
+
+                    <!-- 第 11、12 位同學 (Pair 6) -->
+                    <div class="peer-row p-4 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="peer_6" class="block text-sm font-semibold text-slate-600 mb-1">我要評分的第 6 位同學，他/她是：</label>
+                            <select id="peer_6" class="peer-select w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                                <option value="">-- 請選擇同學 --</option>
+                            <option value="王一伊">王一伊</option>
+<option value="叶浩軒">叶浩軒</option>
+<option value="伍錦泰">伍錦泰</option>
+<option value="吳宇森">吳宇森</option>
+<option value="呂志宏">呂志宏</option>
+<option value="岑嘉朗">岑嘉朗</option>
+<option value="李文豪">李文豪</option>
+<option value="李嘉兒">李嘉兒</option>
+<option value="林晨妤">林晨妤</option>
+<option value="林紫琪">林紫琪</option>
+<option value="林學柔">林學柔</option>
+<option value="林靜妤">林靜妤</option>
+<option value="洪子茵">洪子茵</option>
+<option value="唐敬添">唐敬添</option>
+<option value="孫紹榮">孫紹榮</option>
+<option value="區綺彤">區綺彤</option>
+<option value="張哲雨">張哲雨</option>
+<option value="張皓寧">張皓寧</option>
+<option value="梁荻欣">梁荻欣</option>
+<option value="陳育霖">陳育霖</option>
+<option value="陳雨村">陳雨村</option>
+<option value="陳梓豪">陳梓豪</option>
+<option value="陳梓鵬">陳梓鵬</option>
+<option value="陸曉潼">陸曉潼</option>
+<option value="麥銘富">麥銘富</option>
+<option value="黃梓瑜">黃梓瑜</option>
+<option value="葉凱琳">葉凱琳</option>
+<option value="劉子軒">劉子軒</option>
+<option value="蔡海泓">蔡海泓</option>
+<option value="蔡傑安">蔡傑安</option>
+<option value="鄭國樺">鄭國樺</option>
+<option value="鄭詠同">鄭詠同</option>
+<option value="盧恩輝">盧恩輝</option>
+<option value="羅莉宜">羅莉宜</option>
+<option value="司徒德宇">司徒德宇</option>
+
+                            </select>
+                        </div>
+                        <div>
+                            <label for="score_6" class="block text-sm font-semibold text-slate-600 mb-1">第 6 位同學，他/她 值多少分 (1~100)：</label>
+                            <input type="password" id="score_6" min="1" max="100" placeholder="請輸入 1-100 分數"
+                                   class="peer-score w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 送出狀態與提示訊息 (取代傳統 alert) -->
+            <div id="statusMessage" class="hidden p-4 rounded-lg text-sm font-semibold"></div>
+
+            <!-- 提交按鈕 -->
+            <div class="pt-4">
+                <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex justify-center items-center gap-2">
+                    <span id="btnText">提交評分資料</span>
+                    <span id="loadingSpinner" class="hidden animate-spin inline-block w-4 h-4 border-[2px] border-current border-t-transparent text-white rounded-full"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- JavaScript 邏輯：進行前台驗證與傳送 -->
+    <script>
+        // 【已填寫】：您部署的 Google Apps Script 網頁應用程式 (Web App) URL
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxseknwsU4BePKPbA2PY86fmstat3Dql3nbxxK9faezbNPq_Y7gDgxlTwCj6SkrVhidNw/exec";
+
+        const form = document.getElementById('evaluationForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // --- 控制每一橫行（Peer Row）的聚焦高亮邏輯 (極醒目的琥珀暖黃色調) ---
+        const peerRows = document.querySelectorAll('.peer-row');
+        peerRows.forEach(row => {
+            const selectEl = row.querySelector('.peer-select');
+            const scoreEl = row.querySelector('.peer-score');
+
+            // 根據焦點與下拉選單的值來決定背景樣式
+            function updateRowHighlight() {
+                // 判斷當前焦點是否位於此行的 select 或 score input 中
+                const isFocused = (document.activeElement === selectEl || document.activeElement === scoreEl);
+                // 判斷下拉選單是否已經選中學生
+                const hasSelectedValue = selectEl.value !== "";
+
+                if (isFocused || hasSelectedValue) {
+                    // 變色狀態：極具視覺關注度的暖黃色背景、亮黃邊框以及外發光效果
+                    row.classList.remove('bg-white', 'border-slate-100');
+                    row.classList.add('bg-amber-50/80', 'border-amber-400', 'ring-2', 'ring-amber-200/80');
+                } else {
+                    // 無色狀態（恢復默認）：白色背景與灰色淺邊框
+                    row.classList.remove('bg-amber-50/80', 'border-amber-400', 'ring-2', 'ring-amber-200/80');
+                    row.classList.add('bg-white', 'border-slate-100');
+                }
+            }
+
+            // 綁定事件監聽器
+            selectEl.addEventListener('focus', updateRowHighlight);
+            selectEl.addEventListener('blur', updateRowHighlight);
+            selectEl.addEventListener('change', updateRowHighlight);
+
+            scoreEl.addEventListener('focus', updateRowHighlight);
+            scoreEl.addEventListener('blur', updateRowHighlight);
+            scoreEl.addEventListener('input', updateRowHighlight);
+        });
+
+        // 輔助函式：顯示狀態訊息
+        function showStatus(text, type) {
+            statusMessage.innerText = text;
+            statusMessage.className = "p-4 rounded-lg text-sm font-semibold " + 
+                (type === 'error' ? "bg-red-50 text-red-700 border border-red-200" : "bg-green-50 text-green-700 border border-green-200");
+            statusMessage.classList.remove('hidden');
+        }
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault(); // 阻止表單預設提交動作
+            statusMessage.classList.add('hidden');
+
+            // 讀取個人資料
+            const studentClass = document.getElementById('studentClass').value;
+            const studentSeatNo = parseInt(document.getElementById('studentSeatNo').value, 10);
+            const studentName = document.getElementById('studentName').value.trim();
+            const studentHkmsId = document.getElementById('studentHkmsId').value.trim();
+            const studentHkmsPassword = document.getElementById('studentHkmsPassword').value;
+
+            // 1. 基本防呆驗證
+            if (studentSeatNo < 1 || studentSeatNo > 50) {
+                showStatus("請輸入正確的班內學號 (1~50 限制)！", "error");
+                return;
+            }
+
+            // 🆕 新增驗證：生號必須為 8 位純數字
+            if (!/^\d{8}$/.test(studentHkmsId)) {
+                showStatus("請輸入正確的 8 位數字濠江學生生號！", "error");
+                return;
+            }
+
+            // 🆕 新增驗證：密碼必須正好是 8 位
+            if (studentHkmsPassword.length !== 8) {
+                showStatus("請輸入正確的 8 位濠江密碼！", "error");
+                return;
+            }
+
+            // 讀取 6 位組員與對應分數
+            const evaluations = [];
+            const selectedPeers = new Set(); // 用於檢查是否重複選擇同一人
+            let hasScoreError = false;
+            let filledCount = 0;
+
+            for (let i = 1; i <= 6; i++) {
+                const peerVal = document.getElementById(`peer_${i}`).value;
+                const scoreVal = document.getElementById(`score_${i}`).value.trim();
+
+                // 只要有填其中一個（選了人或填了分數），就需要完整填寫該組
+                if (peerVal !== "" || scoreVal !== "") {
+                    if (peerVal === "" || scoreVal === "") {
+                        showStatus(`第 ${i} 組評分不完整。選了同學就必須給分，給了分就必須選同學。`, "error");
+                        return;
+                    }
+
+                    // 檢查分數是否為合法整數
+                    const scoreInt = parseInt(scoreVal, 10);
+                    if (isNaN(scoreInt) || scoreInt < 1 || scoreInt > 100 || scoreVal !== scoreInt.toString()) {
+                        showStatus(`第 ${i} 位同學的分數必須是 1 至 100 之間的整數。`, "error");
+                        return;
+                    }
+
+                    // 檢查是否重複評分同一個人
+                    if (selectedPeers.has(peerVal)) {
+                        showStatus(`你重複選擇了「${peerVal}」進行評分，請修正。`, "error");
+                        return;
+                    }
+
+                    selectedPeers.add(peerVal);
+                    filledCount++;
+                }
+            }
+
+            // 防呆：學生最少需要評分一個同學
+            if (filledCount === 0) {
+                showStatus("請最少為一位組員進行評分！", "error");
+                return;
+            }
+
+            // 2. 構建要送出的資料 (加上了 🆕 新增的 studentHkmsId 與 studentHkmsPassword)
+            const payload = {
+                studentClass,
+                studentSeatNo,
+                studentName,
+                studentHkmsId,
+                studentHkmsPassword,
+                peer_1: document.getElementById('peer_1').value || "",
+                score_1: document.getElementById('score_1').value || "",
+                peer_2: document.getElementById('peer_2').value || "",
+                score_2: document.getElementById('score_2').value || "",
+                peer_3: document.getElementById('peer_3').value || "",
+                score_3: document.getElementById('score_3').value || "",
+                peer_4: document.getElementById('peer_4').value || "",
+                score_4: document.getElementById('score_4').value || "",
+                peer_5: document.getElementById('peer_5').value || "",
+                score_5: document.getElementById('score_5').value || "",
+                peer_6: document.getElementById('peer_6').value || "",
+                score_6: document.getElementById('score_6').value || ""
+            };
+
+            // 3. 測試環境提示（若未更換 Google Web App 網址）
+            if (GOOGLE_SCRIPT_URL === "" || GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_WEB_APP_URL") {
+                showStatus("🎉 評分提交成功！謝謝你的參與。（前端驗證成功，測試模式已啟動）", "success");
+                console.log("【IT老師除錯資訊】表單驗證成功！以下為準備傳送的 JSON 資料：", payload);
+                form.reset(); // 重置表單，模擬真實提交效果
+                
+                // 重置表單後，主動更新一次所有行的高亮（會全數變回無色）
+                peerRows.forEach(row => {
+                    row.classList.remove('bg-amber-50/80', 'border-amber-400', 'ring-2', 'ring-amber-200/80');
+                    row.classList.add('bg-white', 'border-slate-100');
+                });
+                return;
+            }
+
+            // 4. 開始傳送資料
+            try {
+                // UI 進入載入狀態
+                submitBtn.disabled = true;
+                btnText.innerText = "資料傳送中，請稍候...";
+                loadingSpinner.classList.remove('hidden');
+
+                // 使用 fetch 以 POST 方式送出 JSON
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // 跨網域安全設定
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                // 因為 no-cors 的緣故，我們預設只要沒有拋出 catch 錯誤，即視為傳送成功
+                showStatus("🎉 評分提交成功！謝謝你的參與。", "success");
+                form.reset(); // 重置表單
+                
+                // 重置表單後，手動恢復所有橫行的無色背景
+                peerRows.forEach(row => {
+                    row.classList.remove('bg-amber-50/80', 'border-amber-400', 'ring-2', 'ring-amber-200/80');
+                    row.classList.add('bg-white', 'border-slate-100');
+                });
+                
+            } catch (error) {
+                console.error("Submission Error:", error);
+                showStatus("❌ 傳送失敗，請檢查網路連線或聯絡老師！錯誤訊息：" + error.message, "error");
+            } finally {
+                // UI 恢復正常狀態
+                submitBtn.disabled = false;
+                btnText.innerText = "提交評分資料";
+                loadingSpinner.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
