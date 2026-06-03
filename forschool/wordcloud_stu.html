@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>課堂互動系統 - 學生端</title>
+    <!-- 引入 Tailwind CSS 確保現代化外觀 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Font Awesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 漸變背景與平滑過渡效果 */
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        .card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-3xl mx-auto">
+        <!-- 標頭 -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight sm:text-4xl">
+                <i class="fa-solid fa-graduation-cap text-indigo-600 mr-2"></i>課堂即時互動系統
+            </h1>
+            <p class="mt-2 text-sm text-gray-600">請選擇你的姓名，並在對應的題號輸入老師口頭提問的答案。</p>
+        </header>
+
+        <!-- 學生基本資料卡 -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 mb-6 card">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="flex items-center space-x-3">
+                    <div class="p-3 bg-indigo-100 rounded-full text-indigo-600">
+                        <i class="fa-solid fa-user-graduate text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-900">確認學生身分</h2>
+                        <p class="text-xs text-gray-500">回答送出時會以此姓名記錄在 Excel</p>
+                    </div>
+                </div>
+                <div class="w-full sm:w-64">
+                    <select id="studentName" class="block w-full rounded-lg border-gray-300 bg-gray-50 border p-3 text-gray-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                        <option value="" disabled selected>-- 請選擇你的姓名 --</option>
+                        <!-- 以下姓名你可以自由修改 -->
+                        <option value="陳大文">陳大文</option>
+                        <option value="張小明">張小明</option>
+                        <option value="李美玲">李美玲</option>
+                        <option value="黃家豪">黃家豪</option>
+                        <option value="何子軒">何子軒</option>
+                        <option value="司徒華">司徒華</option>
+                        <option value="關淑怡">關淑怡</option>
+                        <option value="趙志強">趙志強</option>
+                        <option value="林詩雅">林詩雅</option>
+                        <option value="歐陽杰">歐陽杰</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 狀態提示框 (自訂 Modal 訊息，代替瀏覽器原生 alert) -->
+        <div id="toast" class="hidden fixed bottom-5 right-5 z-50 max-w-md bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 transform translate-y-2 opacity-0 transition-all duration-300">
+            <span id="toastIcon" class="text-lg"></span>
+            <span id="toastMessage" class="text-sm font-medium"></span>
+        </div>
+
+        <!-- 隱藏的表單與 iframe：用於徹底繞過 iframe 內 Fetch CORS 重新導向的限制 -->
+        <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+        <form id="submit_form" method="POST" target="hidden_iframe" class="hidden">
+            <input type="hidden" name="studentName" id="form_studentName">
+            <input type="hidden" name="questionNum" id="form_questionNum">
+            <input type="hidden" name="answer" id="form_answer">
+        </form>
+
+        <!-- 10個問題回答區 -->
+        <div class="space-y-4">
+            <!-- 動態生成 10 個問題輸入框 -->
+            <script>
+                const questionsCount = 10;
+                for (let i = 1; i <= questionsCount; i++) {
+                    document.write(`
+                        <div class="bg-white rounded-2xl shadow-md p-5 card border border-gray-100" id="card-${i}">
+                            <div class="flex flex-col space-y-3">
+                                <!-- 題號標籤與控制列 -->
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 font-bold text-sm border border-indigo-200">
+                                            Q${i}
+                                        </span>
+                                        <span class="font-bold text-gray-700">第 ${i} 題</span>
+                                    </div>
+                                    <span id="badge-${i}" class="hidden text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-800 font-semibold">
+                                        <i class="fa-solid fa-circle-check mr-1"></i>已成功傳送
+                                    </span>
+                                </div>
+                                
+                                <!-- 答案多行輸入框 (高度適中，適合寫代碼) -->
+                                <div class="w-full">
+                                    <textarea id="ans-${i}" rows="4"
+                                              class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-gray-800 placeholder-gray-400 font-mono text-sm leading-relaxed" 
+                                              placeholder="請輸入你的解答... (支援多行文本與程式碼)"></textarea>
+                                </div>
+                                
+                                <!-- 送出按鈕 -->
+                                <div class="flex justify-end">
+                                    <button onclick="submitAnswer(${i})" id="btn-${i}"
+                                            class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2.5 border border-transparent text-sm font-semibold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-sm transition duration-150">
+                                        <i class="fa-solid fa-paper-plane mr-2" id="icon-${i}"></i>
+                                        <span id="text-${i}">送答案到老師屏幕</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                }
+            </script>
+        </div>
+        
+        <!-- 頁尾 -->
+        <footer class="mt-12 text-center text-xs text-gray-500">
+            <p>© 2026 課堂互動教學系統. 學生端版面</p>
+        </footer>
+    </div>
+
+    <!-- 交互邏輯 Javascript -->
+    <script>
+        // 您的 Google Apps Script Web App 部署網址 (已安全地硬編碼於此)
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxyScuB1McshIxPAMHT-t54Z_i_9rADd9yr_cDzBZkUCGwNpHd2NwF01tQMm8bXnUT_/exec";
+
+        // 自訂通知 UI (Toast)
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMessage.textContent = message;
+            
+            // 根據類型設定圖示與顏色
+            if (type === 'success') {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400';
+            } else if (type === 'error') {
+                toastIcon.className = 'fa-solid fa-circle-exclamation text-rose-400';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-info text-sky-400';
+            }
+
+            // 顯示 Toast 
+            toast.classList.remove('hidden', 'translate-y-2', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            // 3秒後消失
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.classList.add('hidden'), 300);
+            }, 3000);
+        }
+
+        // 送出答案邏輯
+        function submitAnswer(questionNum) {
+            const studentName = document.getElementById('studentName').value;
+            const answer = document.getElementById(`ans-${questionNum}`).value.trim();
+
+            // 檢查是否選擇姓名
+            if (!studentName) {
+                showToast('請在上方「確認學生身分」選擇您的姓名！', 'error');
+                document.getElementById('studentName').focus();
+                return;
+            }
+
+            // 檢查是否輸入答案
+            if (!answer) {
+                showToast(`請先輸入第 ${questionNum} 題的解答再送出！`, 'error');
+                document.getElementById(`ans-${questionNum}`).focus();
+                return;
+            }
+
+            // 鎖定 UI，防止重複點擊
+            setButtonLoading(questionNum, true);
+
+            // 1. 將資料填入隱藏的表單中
+            const form = document.getElementById('submit_form');
+            form.action = SCRIPT_URL;
+            document.getElementById('form_studentName').value = studentName;
+            document.getElementById('form_questionNum').value = questionNum;
+            document.getElementById('form_answer').value = answer;
+
+            try {
+                // 2. 透過隱藏表單提交資料到隱藏的 iframe (繞過 Fetch CORS/沙盒安全限制)
+                form.submit();
+
+                // 3. 因為 iframe 提交是極速且不被阻擋的，直接在前端進行成功的 UI 反饋
+                setTimeout(() => {
+                    showToast(`第 ${questionNum} 題答案已成功傳送到老師屏幕！`, 'success');
+                    setButtonSuccess(questionNum);
+                }, 1200); // 提供 1.2 秒的傳送加載感，優化體驗
+
+            } catch (error) {
+                console.error('Submission Error:', error);
+                showToast('傳送失敗，請確認網路連線！', 'error');
+                setButtonLoading(questionNum, false);
+            }
+        }
+
+        // 按鈕加載動畫切換
+        function setButtonLoading(questionNum, isLoading) {
+            const btn = document.getElementById(`btn-${questionNum}`);
+            const icon = document.getElementById(`icon-${questionNum}`);
+            const text = document.getElementById(`text-${questionNum}`);
+
+            if (isLoading) {
+                btn.disabled = true;
+                btn.classList.replace('bg-indigo-600', 'bg-indigo-400');
+                btn.classList.add('cursor-not-allowed');
+                icon.className = 'fa-solid fa-spinner fa-spin mr-2';
+                text.textContent = '傳送中...';
+            } else {
+                btn.disabled = false;
+                btn.classList.replace('bg-indigo-400', 'bg-indigo-600');
+                btn.classList.remove('cursor-not-allowed');
+                icon.className = 'fa-solid fa-paper-plane mr-2';
+                text.textContent = '送答案到老師屏幕';
+            }
+        }
+
+        // 成功送出後的按鈕與文本框鎖定樣式
+        function setButtonSuccess(questionNum) {
+            const btn = document.getElementById(`btn-${questionNum}`);
+            const icon = document.getElementById(`icon-${questionNum}`);
+            const text = document.getElementById(`text-${questionNum}`);
+            const textarea = document.getElementById(`ans-${questionNum}`);
+            const badge = document.getElementById(`badge-${questionNum}`);
+            const card = document.getElementById(`card-${questionNum}`);
+
+            // 1. 鎖定按鈕為灰色且不可點擊
+            btn.disabled = true;
+            btn.className = "w-full sm:w-auto inline-flex items-center justify-center px-6 py-2.5 border border-transparent text-sm font-semibold rounded-lg text-white bg-gray-400 cursor-not-allowed shadow-sm transition duration-150";
+            icon.className = 'fa-solid fa-check-double mr-2';
+            text.textContent = '已成功送出';
+
+            // 2. 將文本框設為唯讀，並變更背景為淡灰色，標示已完成
+            textarea.readOnly = true;
+            textarea.classList.add('bg-gray-50', 'text-gray-500', 'cursor-not-allowed');
+            
+            // 3. 顯示「已成功傳送」的小徽章
+            badge.classList.remove('hidden');
+
+            // 4. 卡片微調邊框，提供視覺上的完成感
+            card.classList.add('border-emerald-200', 'bg-emerald-50/10');
+        }
+    </script>
+</body>
+</html>
