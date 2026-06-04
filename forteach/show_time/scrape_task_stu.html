@@ -77,7 +77,7 @@
         <!-- 左側：任務清單與代碼提交區 -->
         <section class="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-xl flex flex-col h-full">
             <h2 class="text-xl font-bold text-blue-400 mb-4 border-b border-gray-700 pb-2 flex justify-between items-center">
-                <h4>任務解答與即時推送<h4>
+                <span><i class="fa-solid fa-list-check mr-2"></i>任務解答與即時推送</span>
                 <button onclick="toggleSetupModal()" class="text-xs text-gray-400 hover:text-yellow-400 transition">
                     <i class="fa-solid fa-gear mr-1"></i>後端設定
                 </button>
@@ -134,9 +134,9 @@
                         <div class="mt-2 rounded overflow-hidden border border-gray-600 focus-within:border-red-400 transition-colors">
                             <textarea id="code-01"></textarea>
                         </div>
-                        <!-- 提示定位與單題送出按鈕區 -->
+                        <!-- 提示定位、單題送出與查看老師答案按鈕區 -->
                         <div class="mt-3 flex flex-wrap gap-2 items-center justify-between">
-                            <div class="flex gap-2">
+                            <div class="flex flex-wrap gap-2">
                                 <button type="button" onclick="showElementLocation(1)" id="test-btn-01" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
                                     <i class="fa-solid fa-eye animate-pulse"></i>
                                     <span>提示元素在哪裡</span>
@@ -144,6 +144,10 @@
                                 <button type="button" onclick="submitSingleCode(1)" id="submit-btn-01" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
                                     <i class="fa-solid fa-paper-plane" id="submit-icon-01"></i>
                                     <span id="submit-text-01">送答案到老師屏幕</span>
+                                </button>
+                                <button type="button" onclick="promptTeacherPassword(1)" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
+                                    <i class="fa-solid fa-key"></i>
+                                    <span>查看老師答案</span>
                                 </button>
                                 <button type="button" onclick="unlockSingleCode(1)" id="unlock-btn-01" class="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 text-white font-bold text-xs rounded transition hidden">
                                     <i class="fa-solid fa-lock-open"></i> 解鎖修改
@@ -171,7 +175,7 @@
                         </div>
                         <!-- 提示定位與單題送出按鈕區 -->
                         <div class="mt-3 flex flex-wrap gap-2 items-center justify-between">
-                            <div class="flex gap-2">
+                            <div class="flex flex-wrap gap-2">
                                 <button type="button" onclick="showElementLocation(2)" id="test-btn-02" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
                                     <i class="fa-solid fa-eye animate-pulse"></i>
                                     <span>提示元素在哪裡</span>
@@ -179,6 +183,10 @@
                                 <button type="button" onclick="submitSingleCode(2)" id="submit-btn-02" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
                                     <i class="fa-solid fa-paper-plane" id="submit-icon-02"></i>
                                     <span id="submit-text-02">送答案到老師屏幕</span>
+                                </button>
+                                <button type="button" onclick="promptTeacherPassword(2)" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
+                                    <i class="fa-solid fa-key"></i>
+                                    <span>查看老師答案</span>
                                 </button>
                                 <button type="button" onclick="unlockSingleCode(2)" id="unlock-btn-02" class="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 text-white font-bold text-xs rounded transition hidden">
                                     <i class="fa-solid fa-lock-open"></i> 解鎖修改
@@ -206,7 +214,7 @@
                         </div>
                         <!-- 提示定位與單題送出按鈕區 -->
                         <div class="mt-3 flex flex-wrap gap-2 items-center justify-between">
-                            <div class="flex gap-2">
+                            <div class="flex flex-wrap gap-2">
                                 <button type="button" onclick="showElementLocation(3)" id="test-btn-03" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
                                     <i class="fa-solid fa-eye animate-pulse"></i>
                                     <span>提示元素在哪裡</span>
@@ -214,6 +222,10 @@
                                 <button type="button" onclick="submitSingleCode(3)" id="submit-btn-03" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
                                     <i class="fa-solid fa-paper-plane" id="submit-icon-03"></i>
                                     <span id="submit-text-03">送答案到老師屏幕</span>
+                                </button>
+                                <button type="button" onclick="promptTeacherPassword(3)" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
+                                    <i class="fa-solid fa-key"></i>
+                                    <span>查看老師答案</span>
                                 </button>
                                 <button type="button" onclick="unlockSingleCode(3)" id="unlock-btn-03" class="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 text-white font-bold text-xs rounded transition hidden">
                                     <i class="fa-solid fa-lock-open"></i> 解鎖修改
@@ -234,14 +246,14 @@
                         <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300" id="icon-04"></i>
                     </div>
                     <div id="body-04" class="task-body mt-2 hidden">
-                        <p class="mt-1 text-xs text-gray-300">目標：獲取側邊欄中所有的書籍分類名稱。</p>
+                        <p class="mt-1 text-xs text-gray-300">目標：獲取側邊欄中所有的書籍分類名稱（側邊欄多餘空格已清除，不需使用 <code>.strip()</code>）。</p>
                         <p id="hint-04" class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：分類目錄結構被設計在側邊欄清單項目中。請觀察書籍分類的清單節點，使用「父子關係選擇器（標籤1 > 標籤2）」定位其超連結，並在迴圈中印出文字。</p>
                         <div class="mt-2 rounded overflow-hidden border border-gray-600 focus-within:border-green-400 transition-colors">
                             <textarea id="code-04"></textarea>
                         </div>
                         <!-- 提示定位與單題送出按鈕區 -->
                         <div class="mt-3 flex flex-wrap gap-2 items-center justify-between">
-                            <div class="flex gap-2">
+                            <div class="flex flex-wrap gap-2">
                                 <button type="button" onclick="showElementLocation(4)" id="test-btn-04" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
                                     <i class="fa-solid fa-eye animate-pulse"></i>
                                     <span>提示元素在哪裡</span>
@@ -249,6 +261,10 @@
                                 <button type="button" onclick="submitSingleCode(4)" id="submit-btn-04" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
                                     <i class="fa-solid fa-paper-plane" id="submit-icon-04"></i>
                                     <span id="submit-text-04">送答案到老師屏幕</span>
+                                </button>
+                                <button type="button" onclick="promptTeacherPassword(4)" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
+                                    <i class="fa-solid fa-key"></i>
+                                    <span>查看老師答案</span>
                                 </button>
                                 <button type="button" onclick="unlockSingleCode(4)" id="unlock-btn-04" class="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 text-white font-bold text-xs rounded transition hidden">
                                     <i class="fa-solid fa-lock-open"></i> 解鎖修改
@@ -276,7 +292,7 @@
                         </div>
                         <!-- 提示定位與單題送出按鈕區 -->
                         <div class="mt-3 flex flex-wrap gap-2 items-center justify-between">
-                            <div class="flex gap-2">
+                            <div class="flex flex-wrap gap-2">
                                 <button type="button" onclick="showElementLocation(5)" id="test-btn-05" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
                                     <i class="fa-solid fa-eye animate-pulse"></i>
                                     <span>提示元素在哪裡</span>
@@ -284,6 +300,10 @@
                                 <button type="button" onclick="submitSingleCode(5)" id="submit-btn-05" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
                                     <i class="fa-solid fa-paper-plane" id="submit-icon-05"></i>
                                     <span id="submit-text-05">送答案到老師屏幕</span>
+                                </button>
+                                <button type="button" onclick="promptTeacherPassword(5)" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
+                                    <i class="fa-solid fa-key"></i>
+                                    <span>查看老師答案</span>
                                 </button>
                                 <button type="button" onclick="unlockSingleCode(5)" id="unlock-btn-05" class="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 text-white font-bold text-xs rounded transition hidden">
                                     <i class="fa-solid fa-lock-open"></i> 解鎖修改
@@ -311,7 +331,7 @@
                         </div>
                         <!-- 提示定位與單題送出按鈕區 -->
                         <div class="mt-3 flex flex-wrap gap-2 items-center justify-between">
-                            <div class="flex gap-2">
+                            <div class="flex flex-wrap gap-2">
                                 <button type="button" onclick="showElementLocation(6)" id="test-btn-06" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
                                     <i class="fa-solid fa-eye animate-pulse"></i>
                                     <span>提示元素在哪裡</span>
@@ -319,6 +339,10 @@
                                 <button type="button" onclick="submitSingleCode(6)" id="submit-btn-06" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
                                     <i class="fa-solid fa-paper-plane" id="submit-icon-06"></i>
                                     <span id="submit-text-06">送答案到老師屏幕</span>
+                                </button>
+                                <button type="button" onclick="promptTeacherPassword(6)" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
+                                    <i class="fa-solid fa-key"></i>
+                                    <span>查看老師答案</span>
                                 </button>
                                 <button type="button" onclick="unlockSingleCode(6)" id="unlock-btn-06" class="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 text-white font-bold text-xs rounded transition hidden">
                                     <i class="fa-solid fa-lock-open"></i> 解鎖修改
@@ -533,6 +557,27 @@
         </div>
     </div>
 
+    <!-- 彈出式模態視窗：自訂提問老師密碼專用視窗 -->
+    <div id="password-modal" class="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-sm w-full shadow-2xl transition-transform transform scale-95">
+            <h3 class="text-lg font-bold text-indigo-400 mb-3 flex items-center">
+                <i class="fa-solid fa-key mr-2"></i>解鎖老師標準答案
+            </h3>
+            <p class="text-xs text-gray-300 mb-4">請輸入老師現場說出來的數字密碼：</p>
+            <input type="text" id="teacher-pwd-input" placeholder="請輸入純數字密碼..." 
+                   class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:none mb-4 font-mono">
+            <div id="pwd-error-msg" class="text-xs text-red-400 mb-4 hidden"></div>
+            <div class="flex space-x-2">
+                <button onclick="confirmPassword()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded text-xs transition">
+                    確認驗證
+                </button>
+                <button onclick="closePasswordModal()" class="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded text-xs transition">
+                    取消
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 老師端串接設定 Modal -->
     <div id="setup-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden overflow-y-auto">
         <div class="bg-gray-800 border-2 border-yellow-500 rounded-lg p-6 max-w-2xl w-full my-8 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -581,6 +626,17 @@
 
         // 儲存已提交的任務編號 (例如: "01", "02")
         let submittedTasks = [];
+        let currentRevealIndex = null; // 記錄當前準備開啟哪一題的標準答案
+
+        // 老師各任務預設標準答案
+        const TEACHER_ANSWERS = {
+            1: 'anslist=soup.select("div>small")\nprint(anslist[0].text)',
+            2: 'anslist=soup.select("h2 span")\nfor x in anslist:\n    print(x.text)',
+            3: 'anslist=soup.select("h3 a")\nfor x in anslist:\n    print(x.text)',
+            4: 'anslist=soup.select("li>a")\nfor x in anslist:\n    print(x.text)',
+            5: 'anslist=soup.select(\'p[class*="Two"]\')\nfor x in anslist:\n    print(x.text)\nprint(len(anslist))',
+            6: 'anslist=soup.select(\'span.price_num\')\ns=0\nfor x in anslist:\n    s=s+int(x.text)\nprint(s)'
+        };
 
         // 頁面初始化載入
         window.onload = function() {
@@ -729,6 +785,82 @@
                 }
             } catch (error) {
                 console.error("定位錯誤", error);
+            }
+        }
+
+        // --- 查看老師答案密碼視窗邏輯 ---
+        function promptTeacherPassword(index) {
+            currentRevealIndex = index;
+            document.getElementById('teacher-pwd-input').value = "";
+            document.getElementById('pwd-error-msg').classList.add('hidden');
+            document.getElementById('pwd-error-msg').innerText = "";
+            document.getElementById('password-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('teacher-pwd-input').focus(), 150);
+        }
+
+        // 新增進度條更新函數定義以修復 ReferenceError 錯誤
+        function updateProgressBar() {
+            const filledCount = submittedTasks.length;
+            
+            // 計算百分比並更新 UI (以6題計算)
+            const percentage = (filledCount / TOTAL_TASKS) * 100;
+            document.getElementById('progress-bar').style.width = percentage + '%';
+            document.getElementById('progress-text').innerText = `${filledCount} / ${TOTAL_TASKS} 題`;
+            
+            // 如果全部完成，進度條顏色變化 (轉成閃耀金色)
+            if(filledCount === TOTAL_TASKS) {
+                document.getElementById('progress-bar').classList.remove('from-blue-500', 'to-green-400');
+                document.getElementById('progress-bar').classList.add('from-yellow-400', 'to-yellow-200');
+            } else {
+                document.getElementById('progress-bar').classList.remove('from-yellow-400', 'to-yellow-200');
+                document.getElementById('progress-bar').classList.add('from-blue-500', 'to-green-400');
+            }
+        }
+
+        function closePasswordModal() {
+            document.getElementById('password-modal').classList.add('hidden');
+        }
+
+        function confirmPassword() {
+            const pwdInput = document.getElementById('teacher-pwd-input').value.trim();
+            const errorDiv = document.getElementById('pwd-error-msg');
+
+            if (!pwdInput) {
+                errorDiv.innerText = "密碼不能為空！";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            // 驗證是否純數字
+            if (!/^\d+$/.test(pwdInput)) {
+                errorDiv.innerText = "請輸入純數字密碼！";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            // 貼心密碼算法驗證：各位數字相加是否能被 7 整除
+            const digits = pwdInput.split('').map(Number);
+            const sum = digits.reduce((acc, curr) => acc + curr, 0);
+
+            if (sum % 7 === 0 && digits.length > 0) {
+                // 通過！解鎖相應的老師標準解答
+                const padIndex = currentRevealIndex.toString().padStart(2, '0');
+                const answerCode = TEACHER_ANSWERS[currentRevealIndex];
+                
+                // 覆寫編輯器代碼
+                cmInstances[`code-${padIndex}`].setValue(answerCode);
+                
+                // 關閉輸入視窗
+                closePasswordModal();
+                
+                // 提示成功
+                showModal(
+                    "<i class='fa-solid fa-circle-check text-green-400 mr-2'></i>驗證成功！",
+                    `恭喜您解鎖成功！任務 ${padIndex} 的老師標準答案已自動載入到代碼框中。`
+                );
+            } else {
+                errorDiv.innerText = "密碼錯誤！請重新輸入。";
+                errorDiv.classList.remove('hidden');
             }
         }
 
@@ -953,25 +1085,6 @@
             updateProgressBar();
         }
 
-        // 答題進度條邏輯：依照「已送出題數」更新進度
-        function updateProgressBar() {
-            const filledCount = submittedTasks.length;
-            
-            // 計算百分比並更新 UI (以6題計算)
-            const percentage = (filledCount / TOTAL_TASKS) * 100;
-            document.getElementById('progress-bar').style.width = percentage + '%';
-            document.getElementById('progress-text').innerText = `${filledCount} / ${TOTAL_TASKS} 題`;
-            
-            // 如果全部完成，進度條顏色變化 (轉成閃耀金色)
-            if(filledCount === TOTAL_TASKS) {
-                document.getElementById('progress-bar').classList.remove('from-blue-500', 'to-green-400');
-                document.getElementById('progress-bar').classList.add('from-yellow-400', 'to-yellow-200');
-            } else {
-                document.getElementById('progress-bar').classList.remove('from-yellow-400', 'to-yellow-200');
-                document.getElementById('progress-bar').classList.add('from-blue-500', 'to-green-400');
-            }
-        }
-
         // --- UI Modal 控制邏輯 ---
         function toggleSetupModal() {
             const modal = document.getElementById('setup-modal');
@@ -979,7 +1092,6 @@
             modal.querySelector('div').classList.remove('scale-95');
         }
 
-        // 儲存設定
         function saveSetup() {
             const urlValue = document.getElementById('web-app-url').value.trim();
             localStorage.setItem('google_sheet_api_url', urlValue);
@@ -999,6 +1111,7 @@
             }, 10);
         }
 
+        // 修正：補回 closeModal 函數以防止按鈕關閉失敗
         function closeModal() {
             const modal = document.getElementById('custom-modal');
             modal.children[0].classList.remove('scale-100');
