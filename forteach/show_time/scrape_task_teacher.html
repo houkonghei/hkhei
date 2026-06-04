@@ -34,6 +34,8 @@
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #1e293b; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        /* 置頂動畫效果 */
+        .row-transition { transition: all 0.5s ease-in-out; }
     </style>
 </head>
 <body class="text-gray-100 min-h-screen flex flex-col justify-between">
@@ -45,7 +47,7 @@
                 <h1 class="text-2xl font-black tracking-wide text-green-400 flex items-center">
                     <i class="fa-solid fa-graduation-cap mr-2"></i>濠江中學：爬蟲任務即時討論屏幕
                 </h1>
-                <p class="text-xs text-slate-400 mt-1">即時同步 Google 試算表，監控各小組的代碼特訓進度</p>
+                <p class="text-xs text-slate-400 mt-1">即時同步 Google 試算表，監控各小組的代碼特訓進度（活躍學生自動置頂）</p>
             </div>
             
             <!-- 控制區 -->
@@ -74,7 +76,7 @@
         <!-- 左側：即時矩陣追蹤板 -->
         <section class="xl:col-span-2 bg-slate-900/80 p-6 rounded-lg border border-slate-800 shadow-2xl">
             <h2 class="text-lg font-bold text-slate-200 mb-4 border-b border-slate-800 pb-2 flex items-center justify-between">
-                <span><i class="fa-solid fa-table-cells mr-2 text-green-400"></i>學生任務追蹤矩陣 (動態名單)</span>
+                <span><i class="fa-solid fa-table-cells mr-2 text-green-400"></i>學生任務追蹤矩陣 (動態置頂排序)</span>
                 <span class="text-xs text-slate-400">點擊完成格 (綠格) 即可展開該組代碼</span>
             </h2>
 
@@ -105,7 +107,7 @@
                 <table class="w-full text-center border-collapse">
                     <thead>
                         <tr class="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-slate-950/50">
-                            <th class="p-3 text-left">組長姓名</th>
+                            <th class="p-3 text-left w-1/6 min-w-[100px]">組長姓名</th>
                             <th class="p-3">任務 01</th>
                             <th class="p-3">任務 02</th>
                             <th class="p-3">任務 03</th>
@@ -116,7 +118,7 @@
                         </tr>
                     </thead>
                     <tbody id="matrix-body" class="divide-y divide-slate-800/50 text-sm">
-                        <tr><td colspan="8" class="p-6 text-slate-500">正在連線至 Google Sheets 讀取 stu_list 名單...</td></tr>
+                        <tr><td colspan="8" class="p-6 text-slate-500">正在連線至 Google Sheets 讀取名單...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -135,11 +137,11 @@
                     <label class="block text-xs font-bold text-slate-400 mb-2">請選擇討論任務：</label>
                     <select id="discuss-task-select" onchange="compareTaskCode()" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500">
                         <option value="01">任務 01：We love being scraped (口號)</option>
-                        <option value="02">任務 02：本頁 20 本書名編號 (列表迴圈)</option>
+                        <option value="02">任務 02：本頁書籍編號 (列表迴圈)</option>
                         <option value="03">任務 03：提取完整書名 (屬性取值)</option>
-                        <option value="04">任務 04：價格過濾與總和 (字串切片與運算)</option>
-                        <option value="05">任務 05：二星書籍統計 (多重 class 匹配)</option>
-                        <option value="06">任務 06：側邊欄分類名稱 (父子關係與 strip)</option>
+                        <option value="04">任務 04：價格過濾與總和 (切片與運算)</option>
+                        <option value="05">任務 05：二星書籍統計 (多重 class)</option>
+                        <option value="06">任務 06：側邊欄分類名稱 (父子與 strip)</option>
                     </select>
                 </div>
 
@@ -230,7 +232,7 @@
                     </li>
                     <li>
                         <strong class="text-yellow-400">確認重新「部署」版本：</strong><br>
-                        修改 Apps Script 後，必須點擊 <strong class="text-white">「部署」 -> 「管理部署」 -> 「編輯」 -> 選擇「新版本」</strong> 後再部署才有效。
+                        修改 Apps Script 後，必須點擊 <strong class="text-white">「部署」 -> 「管理部署」 -> 「編輯(鉛筆圖示)」 -> 選擇「新版本」</strong> 後再部署才有效。
                     </li>
                 </ol>
             </div>
@@ -251,11 +253,10 @@
 
     <!-- 控制指令 -->
     <script>
-        // 使用您最新提供的 API URL
         const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbzX5G610ZL7Xyt0prWR-o1KzytB3NKwW64ut12H7Qmn4O1-vdWfyBdjJHUk-5WcXGl8NA/exec";
         const TOTAL_TASKS = 6;
 
-        let studentList = [];    // 動態存儲從 stu_list 抓下來的學生名單
+        let studentList = [];    // 從 stu_list 抓下來的原始學生名單
         let globalDatabase = []; // 存儲學生的作答紀錄
         let autoRefreshInterval = null;
         let inspectorCodeMirror = null;
@@ -287,7 +288,7 @@
             const webAppUrl = document.getElementById('web-app-url').value.trim() || DEFAULT_API_URL;
             
             try {
-                // 1. 先抓學生名單 stu_list
+                // 1. 抓取名單 stu_list
                 const stuUrl = webAppUrl + (webAppUrl.includes('?') ? '&' : '?') + 'action=getStudents&_ts=' + Date.now();
                 const resStu = await fetch(stuUrl);
                 if (!resStu.ok) throw new Error("Fetch Students Error");
@@ -295,13 +296,13 @@
                 
                 if (Array.isArray(stuData)) {
                     studentList = stuData;
-                    renderMatrixPlaceholder(); // 根據名單動態畫出矩陣
+                    renderMatrixPlaceholder(); 
                 } else {
                     document.getElementById('matrix-body').innerHTML = `<tr><td colspan="8" class="p-6 text-yellow-500">找不到名單，請確認試算表有建立 "stu_list" 工作表。</td></tr>`;
                     studentList = [];
                 }
 
-                // 2. 再抓學生作答紀錄
+                // 2. 抓取作答紀錄
                 await fetchData();
                 document.getElementById('diagnose-banner').classList.add('hidden');
                 
@@ -311,7 +312,7 @@
             }
         }
 
-        // 定期只拉取解答紀錄 (不需要一直拉名單)
+        // 定期拉取解答紀錄
         async function fetchData() {
             if (isDemoMode) return;
             const webAppUrl = document.getElementById('web-app-url').value.trim() || DEFAULT_API_URL;
@@ -328,11 +329,10 @@
                 }
             } catch (error) {
                 console.error("Fetch Data Failed:", error);
-                // 這裡靜默失敗以避免自動更新時畫面閃爍
             }
         }
 
-        // 根據動態名單繪製空矩陣
+        // 繪製空矩陣
         function renderMatrixPlaceholder() {
             const body = document.getElementById('matrix-body');
             body.innerHTML = '';
@@ -352,8 +352,8 @@
                     `;
                 }
                 body.innerHTML += `
-                    <tr class="hover:bg-slate-900/30">
-                        <td class="p-3 text-left font-black text-slate-300 border-b border-slate-800/40">${stuName}</td>
+                    <tr class="hover:bg-slate-900/30 row-transition">
+                        <td class="p-3 text-left font-black text-slate-300 border-b border-slate-800/40 w-1/6 min-w-[100px] truncate max-w-[120px]" title="${stuName}">${stuName}</td>
                         ${cellsHtml}
                         <td class="p-3 border-b border-slate-800/40">
                             <div class="flex items-center space-x-2 justify-center">
@@ -368,49 +368,56 @@
             });
         }
 
-        // 將解答數據映射到動態名單矩陣
+        // 核心邏輯：將解答數據映射到矩陣，修復 "01" 被 Google Sheets 轉成數字 1 的問題，並實作置頂排序
         function updateMatrixUI() {
-            // 先重置所有格子為初始狀態
-            studentList.forEach((stuName, index) => {
-                for(let t=1; t<=TOTAL_TASKS; t++) {
-                    const qNum = t.toString().padStart(2, '0');
-                    const cell = document.getElementById(`cell-${index}-${qNum}`);
-                    if (cell) {
-                        cell.className = "w-full py-2.5 rounded border border-slate-800 text-slate-500 font-mono text-xs cursor-not-allowed transition-all";
-                        cell.innerHTML = `<i class="fa-solid fa-lock mr-1"></i>WAIT`;
-                        cell.removeAttribute("onclick");
-                    }
-                }
-            });
+            if (studentList.length === 0) return;
 
             const teamSubmissionCount = {}; 
             let solvedCount = 0;
             const activeTeamsSet = new Set();
 
+            // 1. 先統計每個學生的作答題數，並強制將 questionNum 補零成兩位數字串 (防 Google Sheet 自動轉型)
             globalDatabase.forEach(row => {
-                // 利用 indexOf 找出該學生的索引位置
+                const leader = row.leaderName;
+                if (!teamSubmissionCount[leader]) {
+                    teamSubmissionCount[leader] = new Set();
+                }
+                const safeQNum = String(row.questionNum).padStart(2, '0');
+                teamSubmissionCount[leader].add(safeQNum);
+            });
+
+            // 2. 進行名單降冪排序：作答越多題的學生排在越前面
+            studentList.sort((a, b) => {
+                const countA = teamSubmissionCount[a] ? teamSubmissionCount[a].size : 0;
+                const countB = teamSubmissionCount[b] ? teamSubmissionCount[b].size : 0;
+                return countB - countA;
+            });
+
+            // 3. 根據排序後的新名單，重新繪製表格
+            renderMatrixPlaceholder();
+
+            // 4. 開始填入數據與亮綠燈
+            globalDatabase.forEach(row => {
                 const stuIndex = studentList.indexOf(row.leaderName);
                 
                 if (stuIndex !== -1) {
                     activeTeamsSet.add(row.leaderName);
-                    const qNum = row.questionNum; 
-                    const cell = document.getElementById(`cell-${stuIndex}-${qNum}`);
+                    // 同樣強制補零
+                    const safeQNum = String(row.questionNum).padStart(2, '0'); 
+                    const cell = document.getElementById(`cell-${stuIndex}-${safeQNum}`);
                     
                     if (cell) {
                         cell.className = "w-full py-2.5 rounded border grid-cell-complete font-bold text-xs cursor-pointer transition-all shadow-md animate-pulse";
                         cell.innerHTML = `<i class="fa-solid fa-code mr-1"></i>檢視代碼`;
-                        cell.setAttribute("onclick", `inspectCode('${row.leaderName}', '${qNum}')`);
+                        cell.setAttribute("onclick", `inspectCode('${row.leaderName}', '${safeQNum}')`);
                     }
-
-                    if (!teamSubmissionCount[stuIndex]) teamSubmissionCount[stuIndex] = new Set();
-                    teamSubmissionCount[stuIndex].add(qNum);
                     solvedCount++;
                 }
             });
 
-            // 更新進度條
+            // 5. 更新進度條
             studentList.forEach((stuName, index) => {
-                const completedSet = teamSubmissionCount[index];
+                const completedSet = teamSubmissionCount[stuName];
                 const count = completedSet ? completedSet.size : 0;
                 const percentage = Math.round((count / TOTAL_TASKS) * 100);
                 
@@ -434,11 +441,13 @@
             document.getElementById('stat-active-teams').innerText = `${activeTeamsSet.size} / ${studentList.length}`;
         }
 
-        // 單題詳情預覽
+        // 單題詳情預覽 (防呆查找時同樣要補零)
         function inspectCode(stuName, qNum) {
-            const row = globalDatabase.find(r => r.leaderName === stuName && r.questionNum === qNum);
+            const padQNum = String(qNum).padStart(2, '0');
+            const row = globalDatabase.find(r => r.leaderName === stuName && String(r.questionNum).padStart(2, '0') === padQNum);
+            
             if (row) {
-                document.getElementById('inspector-title').innerHTML = `<i class="fa-brands fa-python mr-2 text-yellow-400"></i>${stuName}：任務 ${qNum} 解答`;
+                document.getElementById('inspector-title').innerHTML = `<i class="fa-brands fa-python mr-2 text-yellow-400"></i>${stuName}：任務 ${padQNum} 解答`;
                 document.getElementById('inspector-meta').innerText = `提交時間：${new Date(row.timestamp).toLocaleString()}`;
                 document.getElementById('inspector-modal').classList.remove('hidden');
                 
@@ -451,20 +460,19 @@
             document.getElementById('inspector-modal').classList.add('hidden');
         }
 
-        // 縱向對比討論 (按照名單順序排列)
+        // 縱向對比討論 (按照排序後的名單順序排列)
         function compareTaskCode() {
             const selectedQ = document.getElementById('discuss-task-select').value;
             const container = document.getElementById('comparison-container');
             container.innerHTML = '';
 
-            const matchingRows = globalDatabase.filter(r => r.questionNum === selectedQ);
+            const matchingRows = globalDatabase.filter(r => String(r.questionNum).padStart(2, '0') === selectedQ);
             
             if (matchingRows.length === 0) {
                 container.innerHTML = `<p class="text-xs text-slate-500 text-center py-8">本堂課尚未有學生提交該題解答</p>`;
                 return;
             }
 
-            // 依照名單中的順序進行排序
             matchingRows.sort((a,b) => studentList.indexOf(a.leaderName) - studentList.indexOf(b.leaderName));
 
             matchingRows.forEach((row, idx) => {
@@ -509,8 +517,7 @@
                 { timestamp: new Date(), leaderName: "張阿強", questionNum: "01", answer: "import requests\nfrom bs4 import BeautifulSoup\nhtml = requests.get('https://books.toscrape.com/').text\nsoup = BeautifulSoup(html, 'html.parser')\nprint(soup.select('div > small')[0].text)" }
             ];
 
-            renderMatrixPlaceholder();
-            updateMatrixUI();
+            updateMatrixUI(); // 使用重寫過包含排序的新版 UI 生成器
             compareTaskCode();
             
             document.getElementById('refresh-status').innerText = "演示數據模式啟用中";
