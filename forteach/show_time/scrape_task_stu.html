@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>濠江中學爬蟲特訓營 - 老師討論主屏幕</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- CodeMirror (唯讀高亮代碼預覽) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
+
+    <style>
+        body { font-family: 'Courier New', Courier, monospace; background-color: #0f172a; }
+        .grid-cell-complete {
+            background-color: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.4);
+            color: #10b981;
+        }
+        .grid-cell-complete:hover {
+            background-color: rgba(16, 185, 129, 0.3);
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+        }
+        .CodeMirror {
+            height: auto;
+            min-height: 120px;
+            font-size: 13px;
+            border-radius: 6px;
+        }
+        /* 自訂滾動條 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    </style>
+</head>
+<body class="text-gray-100 min-h-screen flex flex-col justify-between">
+
+    <!-- 頂部 Header -->
+    <header class="bg-slate-900 border-b border-slate-800 p-4 shadow-xl">
+        <div class="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-black tracking-wide text-green-400 flex items-center">
+                    <i class="fa-solid fa-graduation-cap mr-2"></i>濠江中學：爬蟲任務即時討論屏幕
+                </h1>
+                <p class="text-xs text-slate-400 mt-1">即時同步 Google 試算表，監控各小組的代碼特訓進度</p>
+            </div>
+            
+            <!-- 控制區 -->
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- API 設定按鈕 -->
+                <button onclick="toggleSetupModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded transition flex items-center gap-1">
+                    <i class="fa-solid fa-link text-yellow-500"></i>串接設定
+                </button>
+                
+                <!-- 手動整理 -->
+                <button onclick="refreshAll()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded transition flex items-center gap-1 shadow-md">
+                    <i class="fa-solid fa-rotate"></i> <span>同步數據</span>
+                </button>
+                
+                <!-- 自動整理開關 -->
+                <div class="flex items-center space-x-2 bg-slate-800 px-3 py-2 rounded border border-slate-700">
+                    <span class="h-2 w-2 bg-green-500 rounded-full animate-ping" id="live-dot"></span>
+                    <span class="text-xs text-slate-300 font-bold" id="refresh-status">自動更新中 (5s)</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-6 flex-grow grid grid-cols-1 xl:grid-cols-3 gap-8">
+        
+        <!-- 左側：即時矩陣追蹤板 -->
+        <section class="xl:col-span-2 bg-slate-900/80 p-6 rounded-lg border border-slate-800 shadow-2xl">
+            <h2 class="text-lg font-bold text-slate-200 mb-4 border-b border-slate-800 pb-2 flex items-center justify-between">
+                <span><i class="fa-solid fa-table-cells mr-2 text-green-400"></i>學生任務追蹤矩陣 (動態名單)</span>
+                <span class="text-xs text-slate-400">點擊完成格 (綠格) 即可展開該組代碼</span>
+            </h2>
+
+            <!-- 診斷 Banner (當 fetch 連線失敗時動態顯示) -->
+            <div id="diagnose-banner" class="mb-5 p-4 bg-red-950/80 border border-red-800 rounded-lg text-xs hidden">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-red-400">
+                    <div class="flex items-start space-x-2">
+                        <i class="fa-solid fa-triangle-exclamation text-base mt-0.5"></i>
+                        <div>
+                            <strong class="text-red-300 font-bold block text-sm">數據同步失敗 (Failed to fetch)</strong>
+                            <p class="mt-1 leading-relaxed">
+                                這通常是因為 Google 權限未開放（部署時未選擇<strong>「所有人/Anyone」</strong>），或是 <strong>stu_list</strong> 工作表設定有誤。您可以點選右側載入模擬數據預覽大屏功能。
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 shrink-0">
+                        <button onclick="enableDemoMode()" class="px-3 py-2 bg-green-700 hover:bg-green-600 text-white font-bold rounded transition text-[11px] flex items-center gap-1 shadow-lg">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>載入模擬數據
+                        </button>
+                        <button onclick="showTroubleshootModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded transition text-[11px]">
+                            排錯指引
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-center border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase bg-slate-950/50">
+                            <th class="p-3 text-left">組長姓名</th>
+                            <th class="p-3">任務 01</th>
+                            <th class="p-3">任務 02</th>
+                            <th class="p-3">任務 03</th>
+                            <th class="p-3">任務 04</th>
+                            <th class="p-3">任務 05</th>
+                            <th class="p-3">任務 06</th>
+                            <th class="p-3 min-w-[80px]">進度</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrix-body" class="divide-y divide-slate-800/50 text-sm">
+                        <tr><td colspan="8" class="p-6 text-slate-500">正在連線至 Google Sheets 讀取 stu_list 名單...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 右側：代碼對比與討論區 -->
+        <section class="bg-slate-900/80 p-6 rounded-lg border border-slate-800 shadow-2xl flex flex-col justify-between h-full min-h-[500px]">
+            <div>
+                <h2 class="text-lg font-bold text-slate-200 mb-4 border-b border-slate-800 pb-2 flex items-center justify-between">
+                    <span><i class="fa-solid fa-code-compare mr-2 text-blue-400"></i>代碼縱向對比討論</span>
+                    <span class="text-xs text-slate-400">對比同一題的不同解法</span>
+                </h2>
+                
+                <!-- 選擇要討論的任務 -->
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-400 mb-2">請選擇討論任務：</label>
+                    <select id="discuss-task-select" onchange="compareTaskCode()" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <option value="01">任務 01：We love being scraped (口號)</option>
+                        <option value="02">任務 02：本頁 20 本書名編號 (列表迴圈)</option>
+                        <option value="03">任務 03：提取完整書名 (屬性取值)</option>
+                        <option value="04">任務 04：價格過濾與總和 (字串切片與運算)</option>
+                        <option value="05">任務 05：二星書籍統計 (多重 class 匹配)</option>
+                        <option value="06">任務 06：側邊欄分類名稱 (父子關係與 strip)</option>
+                    </select>
+                </div>
+
+                <!-- 對比結果區域 -->
+                <div id="comparison-container" class="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
+                    <p class="text-xs text-slate-500 text-center py-8">暫時沒有該題的學生提交代碼</p>
+                </div>
+            </div>
+
+            <!-- 本堂統計 -->
+            <div class="mt-6 pt-4 border-t border-slate-800">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">本堂課特訓概況：</h3>
+                <div class="grid grid-cols-2 gap-3 text-center">
+                    <div class="bg-slate-950/60 p-2.5 rounded border border-slate-800">
+                        <span class="block text-2xl font-black text-green-400" id="stat-solved-count">0</span>
+                        <span class="text-[10px] text-slate-500 uppercase">總解題次數</span>
+                    </div>
+                    <div class="bg-slate-950/60 p-2.5 rounded border border-slate-800">
+                        <span class="block text-2xl font-black text-blue-400" id="stat-active-teams">0 / 0</span>
+                        <span class="text-[10px] text-slate-500 uppercase">活躍學生數</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 彈出式 Modal：檢視單一小組的程式碼詳情 -->
+    <div id="inspector-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-slate-950 border border-slate-800 rounded-lg p-6 max-w-2xl w-full shadow-2xl transition-all duration-300">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
+                <h3 class="text-lg font-black text-green-400 flex items-center" id="inspector-title">
+                    <i class="fa-solid fa-bug mr-2"></i>代碼詳情
+                </h3>
+                <button onclick="closeInspector()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            
+            <p class="text-xs text-slate-400 mb-3" id="inspector-meta">提交時間：無</p>
+            
+            <div class="mb-6 rounded overflow-hidden border border-slate-800">
+                <!-- 唯讀高亮編輯器容器 -->
+                <textarea id="inspector-editor"></textarea>
+            </div>
+
+            <button onclick="closeInspector()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded transition">
+                關閉預覽 (Close)
+            </button>
+        </div>
+    </div>
+
+    <!-- 老師端串接設定 Modal -->
+    <div id="setup-modal" class="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-6 max-w-md w-full shadow-2xl">
+            <h3 class="text-lg font-bold text-yellow-500 mb-3 flex items-center">
+                <i class="fa-solid fa-gears mr-2"></i>老師端 API 串接設定
+            </h3>
+            <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+                請貼上您在 Google Apps Script 部署得到的「網頁應用程式 URL」。
+            </p>
+            <div class="mb-6">
+                <input type="text" id="web-app-url" value="https://script.google.com/macros/s/AKfycbzX5G610ZL7Xyt0prWR-o1KzytB3NKwW64ut12H7Qmn4O1-vdWfyBdjJHUk-5WcXGl8NA/exec" 
+                       class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded text-xs text-white focus:outline-none focus:ring-1 focus:ring-yellow-500">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="saveSetup()" class="flex-1 py-2 bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold rounded transition">儲存並刷新</button>
+                <button onclick="toggleSetupModal()" class="px-4 py-2 bg-slate-800 text-slate-300 font-bold rounded transition">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 排錯與授權引導 Modal -->
+    <div id="troubleshoot-modal" class="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50 hidden overflow-y-auto">
+        <div class="bg-slate-900 border border-red-500 rounded-lg p-6 max-w-lg w-full shadow-2xl my-8">
+            <h3 class="text-lg font-bold text-red-400 mb-3 flex items-center">
+                <i class="fa-solid fa-circle-question mr-2"></i>為什麼會出現 Failed to Fetch？
+            </h3>
+            <div class="text-xs text-slate-300 space-y-3 leading-relaxed">
+                <p>
+                    這是網路請求被阻擋。請檢查您的 <strong class="text-white">Google Apps Script 與試算表</strong>：
+                </p>
+                <ol class="list-decimal list-inside space-y-2 bg-slate-950 p-3 rounded border border-slate-800 text-slate-400">
+                    <li>
+                        <strong class="text-yellow-400">「誰有權限存取」：</strong><br>
+                        在部署設定中，<strong class="text-white">「誰有權限存取 (Who has access)」</strong> 必須選擇 <strong class="text-red-400">「任何人 (Anyone)」</strong>。否則會被 Google 阻擋。
+                    </li>
+                    <li>
+                        <strong class="text-yellow-400">建立 stu_list 工作表：</strong><br>
+                        請確認您的試算表中有一個名為 <strong class="text-white">stu_list</strong> 的工作表，並且 A 欄有填寫學生姓名名單，系統才能產生動態追蹤矩陣。
+                    </li>
+                    <li>
+                        <strong class="text-yellow-400">確認重新「部署」版本：</strong><br>
+                        修改 Apps Script 後，必須點擊 <strong class="text-white">「部署」 -> 「管理部署」 -> 「編輯」 -> 選擇「新版本」</strong> 後再部署才有效。
+                    </li>
+                </ol>
+            </div>
+            <div class="mt-5 flex gap-2">
+                <a id="test-link" href="#" target="_blank" class="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded text-center text-xs transition">
+                    <i class="fa-solid fa-up-right-from-square mr-1"></i>在新分頁測試 API 網址
+                </a>
+                <button onclick="closeTroubleshootModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded transition">
+                    關閉
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center p-6 text-slate-600 text-xs border-t border-slate-900 bg-slate-950">
+        &copy; 2026 濠江中學爬蟲特訓課堂互動討論屏幕. All Rights Reserved.
+    </footer>
+
+    <!-- 控制指令 -->
+    <script>
+        // 使用您最新提供的 API URL
+        const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbzX5G610ZL7Xyt0prWR-o1KzytB3NKwW64ut12H7Qmn4O1-vdWfyBdjJHUk-5WcXGl8NA/exec";
+        const TOTAL_TASKS = 6;
+
+        let studentList = [];    // 動態存儲從 stu_list 抓下來的學生名單
+        let globalDatabase = []; // 存儲學生的作答紀錄
+        let autoRefreshInterval = null;
+        let inspectorCodeMirror = null;
+        let isDemoMode = false; 
+
+        window.onload = function() {
+            const savedUrl = localStorage.getItem('google_sheet_api_url_teacher');
+            document.getElementById('web-app-url').value = savedUrl ? savedUrl : DEFAULT_API_URL;
+            
+            inspectorCodeMirror = CodeMirror.fromTextArea(document.getElementById('inspector-editor'), {
+                mode: "python",
+                theme: "dracula",
+                lineNumbers: true,
+                readOnly: true
+            });
+
+            // 啟動資料拉取流程
+            refreshAll();
+            startAutoRefresh();
+        };
+
+        // 一鍵同步所有資料 (包含名單 + 解答)
+        async function refreshAll() {
+            if (isDemoMode) {
+                enableDemoMode();
+                return;
+            }
+
+            const webAppUrl = document.getElementById('web-app-url').value.trim() || DEFAULT_API_URL;
+            
+            try {
+                // 1. 先抓學生名單 stu_list
+                const stuUrl = webAppUrl + (webAppUrl.includes('?') ? '&' : '?') + 'action=getStudents&_ts=' + Date.now();
+                const resStu = await fetch(stuUrl);
+                if (!resStu.ok) throw new Error("Fetch Students Error");
+                const stuData = await resStu.json();
+                
+                if (Array.isArray(stuData)) {
+                    studentList = stuData;
+                    renderMatrixPlaceholder(); // 根據名單動態畫出矩陣
+                } else {
+                    document.getElementById('matrix-body').innerHTML = `<tr><td colspan="8" class="p-6 text-yellow-500">找不到名單，請確認試算表有建立 "stu_list" 工作表。</td></tr>`;
+                    studentList = [];
+                }
+
+                // 2. 再抓學生作答紀錄
+                await fetchData();
+                document.getElementById('diagnose-banner').classList.add('hidden');
+                
+            } catch (error) {
+                console.error("初始化同步失敗", error);
+                document.getElementById('diagnose-banner').classList.remove('hidden');
+            }
+        }
+
+        // 定期只拉取解答紀錄 (不需要一直拉名單)
+        async function fetchData() {
+            if (isDemoMode) return;
+            const webAppUrl = document.getElementById('web-app-url').value.trim() || DEFAULT_API_URL;
+            try {
+                const ansUrl = webAppUrl + (webAppUrl.includes('?') ? '&' : '?') + '_ts=' + Date.now();
+                const resAns = await fetch(ansUrl);
+                if (!resAns.ok) throw new Error("Fetch Data Error");
+                const ansData = await resAns.json();
+                
+                if (Array.isArray(ansData)) {
+                    globalDatabase = ansData;
+                    updateMatrixUI();
+                    compareTaskCode(); 
+                }
+            } catch (error) {
+                console.error("Fetch Data Failed:", error);
+                // 這裡靜默失敗以避免自動更新時畫面閃爍
+            }
+        }
+
+        // 根據動態名單繪製空矩陣
+        function renderMatrixPlaceholder() {
+            const body = document.getElementById('matrix-body');
+            body.innerHTML = '';
+            
+            if (studentList.length === 0) return;
+
+            studentList.forEach((stuName, index) => {
+                let cellsHtml = '';
+                for(let t=1; t<=TOTAL_TASKS; t++) {
+                    const padTask = t.toString().padStart(2, '0');
+                    cellsHtml += `
+                        <td class="p-3 border-b border-slate-800/40">
+                            <div id="cell-${index}-${padTask}" class="w-full py-2.5 rounded border border-slate-800 text-slate-500 font-mono text-xs cursor-not-allowed transition-all">
+                                <i class="fa-solid fa-lock mr-1"></i>WAIT
+                            </div>
+                        </td>
+                    `;
+                }
+                body.innerHTML += `
+                    <tr class="hover:bg-slate-900/30">
+                        <td class="p-3 text-left font-black text-slate-300 border-b border-slate-800/40">${stuName}</td>
+                        ${cellsHtml}
+                        <td class="p-3 border-b border-slate-800/40">
+                            <div class="flex items-center space-x-2 justify-center">
+                                <div class="w-full max-w-[80px] bg-slate-950 rounded-full h-1.5 border border-slate-800 overflow-hidden">
+                                    <div id="bar-${index}" class="bg-gradient-to-r from-blue-500 to-emerald-400 h-1.5 w-0 transition-all duration-500"></div>
+                                </div>
+                                <span id="percent-${index}" class="text-[10px] font-bold text-slate-400 w-6">0%</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 將解答數據映射到動態名單矩陣
+        function updateMatrixUI() {
+            // 先重置所有格子為初始狀態
+            studentList.forEach((stuName, index) => {
+                for(let t=1; t<=TOTAL_TASKS; t++) {
+                    const qNum = t.toString().padStart(2, '0');
+                    const cell = document.getElementById(`cell-${index}-${qNum}`);
+                    if (cell) {
+                        cell.className = "w-full py-2.5 rounded border border-slate-800 text-slate-500 font-mono text-xs cursor-not-allowed transition-all";
+                        cell.innerHTML = `<i class="fa-solid fa-lock mr-1"></i>WAIT`;
+                        cell.removeAttribute("onclick");
+                    }
+                }
+            });
+
+            const teamSubmissionCount = {}; 
+            let solvedCount = 0;
+            const activeTeamsSet = new Set();
+
+            globalDatabase.forEach(row => {
+                // 利用 indexOf 找出該學生的索引位置
+                const stuIndex = studentList.indexOf(row.leaderName);
+                
+                if (stuIndex !== -1) {
+                    activeTeamsSet.add(row.leaderName);
+                    const qNum = row.questionNum; 
+                    const cell = document.getElementById(`cell-${stuIndex}-${qNum}`);
+                    
+                    if (cell) {
+                        cell.className = "w-full py-2.5 rounded border grid-cell-complete font-bold text-xs cursor-pointer transition-all shadow-md animate-pulse";
+                        cell.innerHTML = `<i class="fa-solid fa-code mr-1"></i>檢視代碼`;
+                        cell.setAttribute("onclick", `inspectCode('${row.leaderName}', '${qNum}')`);
+                    }
+
+                    if (!teamSubmissionCount[stuIndex]) teamSubmissionCount[stuIndex] = new Set();
+                    teamSubmissionCount[stuIndex].add(qNum);
+                    solvedCount++;
+                }
+            });
+
+            // 更新進度條
+            studentList.forEach((stuName, index) => {
+                const completedSet = teamSubmissionCount[index];
+                const count = completedSet ? completedSet.size : 0;
+                const percentage = Math.round((count / TOTAL_TASKS) * 100);
+                
+                const bar = document.getElementById(`bar-${index}`);
+                const percentSpan = document.getElementById(`percent-${index}`);
+                
+                if (bar && percentSpan) {
+                    bar.style.width = percentage + "%";
+                    percentSpan.innerText = percentage + "%";
+                    if (percentage === 100) {
+                        percentSpan.className = "text-[10px] font-black text-yellow-400 w-6";
+                        bar.className = "bg-gradient-to-r from-yellow-400 to-yellow-200 h-1.5 w-full transition-all duration-500";
+                    } else {
+                        percentSpan.className = "text-[10px] font-bold text-slate-400 w-6";
+                        bar.className = `bg-gradient-to-r from-blue-500 to-emerald-400 h-1.5 w-[${percentage}%] transition-all duration-500`;
+                    }
+                }
+            });
+
+            document.getElementById('stat-solved-count').innerText = solvedCount;
+            document.getElementById('stat-active-teams').innerText = `${activeTeamsSet.size} / ${studentList.length}`;
+        }
+
+        // 單題詳情預覽
+        function inspectCode(stuName, qNum) {
+            const row = globalDatabase.find(r => r.leaderName === stuName && r.questionNum === qNum);
+            if (row) {
+                document.getElementById('inspector-title').innerHTML = `<i class="fa-brands fa-python mr-2 text-yellow-400"></i>${stuName}：任務 ${qNum} 解答`;
+                document.getElementById('inspector-meta').innerText = `提交時間：${new Date(row.timestamp).toLocaleString()}`;
+                document.getElementById('inspector-modal').classList.remove('hidden');
+                
+                inspectorCodeMirror.setValue(row.answer);
+                setTimeout(() => inspectorCodeMirror.refresh(), 50);
+            }
+        }
+
+        function closeInspector() {
+            document.getElementById('inspector-modal').classList.add('hidden');
+        }
+
+        // 縱向對比討論 (按照名單順序排列)
+        function compareTaskCode() {
+            const selectedQ = document.getElementById('discuss-task-select').value;
+            const container = document.getElementById('comparison-container');
+            container.innerHTML = '';
+
+            const matchingRows = globalDatabase.filter(r => r.questionNum === selectedQ);
+            
+            if (matchingRows.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-8">本堂課尚未有學生提交該題解答</p>`;
+                return;
+            }
+
+            // 依照名單中的順序進行排序
+            matchingRows.sort((a,b) => studentList.indexOf(a.leaderName) - studentList.indexOf(b.leaderName));
+
+            matchingRows.forEach((row, idx) => {
+                const uniqueId = `compare-editor-${idx}`;
+                container.innerHTML += `
+                    <div class="p-3 bg-slate-950/60 rounded border border-slate-800">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold text-slate-300 flex items-center gap-1">
+                                <span class="h-2 w-2 bg-blue-500 rounded-full"></span>
+                                ${row.leaderName}
+                            </span>
+                            <span class="text-[10px] text-slate-500">${new Date(row.timestamp).toLocaleTimeString()}</span>
+                        </div>
+                        <textarea id="${uniqueId}"></textarea>
+                    </div>
+                `;
+
+                setTimeout(() => {
+                    CodeMirror.fromTextArea(document.getElementById(uniqueId), {
+                        mode: "python",
+                        theme: "dracula",
+                        lineNumbers: false,
+                        readOnly: true
+                    }).setValue(row.answer);
+                }, 10);
+            });
+        }
+
+        // 載入完美模擬數據（防呆/離線展示用）
+        function enableDemoMode() {
+            isDemoMode = true;
+            document.getElementById('diagnose-banner').classList.add('hidden');
+            
+            studentList = ["王小明", "陳大文", "李小華", "張阿強", "林星辰"];
+            
+            globalDatabase = [
+                { timestamp: new Date(), leaderName: "王小明", questionNum: "01", answer: "import requests\nfrom bs4 import BeautifulSoup\nr = requests.get('https://books.toscrape.com/')\nsoup = BeautifulSoup(r.text, 'html.parser')\nans = soup.select('div > small')[0].text\nprint(ans)" },
+                { timestamp: new Date(), leaderName: "王小明", questionNum: "02", answer: "booklist = soup.select('h3 a')\nfor i, book in enumerate(booklist):\n    print(f'{i+1}: {book.text}')" },
+                { timestamp: new Date(), leaderName: "陳大文", questionNum: "01", answer: "import requests\nfrom bs4 import BeautifulSoup\nsoup = BeautifulSoup(requests.get('https://books.toscrape.com/').text, 'html.parser')\nprint(soup.select('div > small')[0].text)" },
+                { timestamp: new Date(), leaderName: "陳大文", questionNum: "05", answer: "print(len(soup.select('.star-rating.Two')))" },
+                { timestamp: new Date(), leaderName: "李小華", questionNum: "03", answer: "for a in soup.select('h3 a'):\n    print(a.get('title'))" },
+                { timestamp: new Date(), leaderName: "張阿強", questionNum: "01", answer: "import requests\nfrom bs4 import BeautifulSoup\nhtml = requests.get('https://books.toscrape.com/').text\nsoup = BeautifulSoup(html, 'html.parser')\nprint(soup.select('div > small')[0].text)" }
+            ];
+
+            renderMatrixPlaceholder();
+            updateMatrixUI();
+            compareTaskCode();
+            
+            document.getElementById('refresh-status').innerText = "演示數據模式啟用中";
+            document.getElementById('live-dot').className = "h-2 w-2 bg-yellow-400 rounded-full animate-pulse";
+        }
+
+        function startAutoRefresh() {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = setInterval(() => { fetchData(); }, 5000);
+        }
+
+        function toggleSetupModal() {
+            document.getElementById('setup-modal').classList.toggle('hidden');
+        }
+
+        function showTroubleshootModal() {
+            const webAppUrl = document.getElementById('web-app-url').value.trim() || DEFAULT_API_URL;
+            document.getElementById('test-link').href = webAppUrl;
+            document.getElementById('troubleshoot-modal').classList.remove('hidden');
+        }
+
+        function closeTroubleshootModal() {
+            document.getElementById('troubleshoot-modal').classList.add('hidden');
+        }
+
+        function saveSetup() {
+            const urlValue = document.getElementById('web-app-url').value.trim();
+            localStorage.setItem('google_sheet_api_url_teacher', urlValue);
+            isDemoMode = false;
+            
+            document.getElementById('refresh-status').innerText = "自動更新中 (5s)";
+            document.getElementById('live-dot').className = "h-2 w-2 bg-green-500 rounded-full animate-ping";
+            
+            toggleSetupModal();
+            refreshAll(); // 設定完成後一鍵強制雙抓取
+        }
+    </script>
+</body>
+</html>
