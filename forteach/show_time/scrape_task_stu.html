@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python 爬蟲特訓營 - Books to Scrape 實戰</title>
+    
+    <!-- Tailwind & FontAwesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- CodeMirror (Python 語法高亮) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
+
+    <style>
+        body { font-family: 'Courier New', Courier, monospace; }
+        .visually-hidden { display: none; }
+        
+        /* 覆寫 CodeMirror 樣式，使其更符合我們的版面設計 */
+        .CodeMirror {
+            height: auto;
+            min-height: 80px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            background-color: #0d1117 !important; /* 更深的背景色 */
+        }
+        .CodeMirror-scroll {
+            min-height: 80px;
+        }
+        /* 自訂滾動條美化 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+
+        /* 本地測試 - 元素高亮閃爍特效 */
+        @keyframes selector-blink {
+            0%, 100% { 
+                outline: 3px solid #eab308; 
+                box-shadow: 0 0 15px rgba(234, 179, 8, 0.8);
+                background-color: rgba(250, 204, 21, 0.25);
+            }
+            50% { 
+                outline: 4px solid #facc15; 
+                box-shadow: 0 0 25px rgba(250, 204, 21, 1);
+                background-color: rgba(250, 204, 21, 0.6);
+            }
+        }
+        .local-highlight {
+            animation: selector-blink 1.2s ease-in-out infinite !important;
+            border-radius: 4px;
+            position: relative;
+            z-index: 40;
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col justify-between">
+
+    <!-- 頂部導航 -->
+    <header class="bg-gray-800 p-4 shadow-lg border-b border-green-500">
+        <div class="container mx-auto flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-green-400 flex items-center">
+                <i class="fa-solid fa-book mr-2"></i>Books to Scrape 爬蟲特訓營 <span class="ml-2 text-xs bg-red-600 text-white font-normal px-2 py-0.5 rounded animate-pulse">單題即時推送版</span>
+            </h1>
+            <span class="text-sm text-gray-400 flex items-center hidden sm:flex">
+                <span class="h-2 w-2 bg-green-500 rounded-full inline-block mr-2 animate-pulse"></span>
+                Books Sandbox Server: 200 OK
+            </span>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-8 flex-grow">
+        
+        <!-- 左側：任務清單與代碼提交區 -->
+        <section class="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-xl flex flex-col h-full">
+            <h2 class="text-xl font-bold text-blue-400 mb-4 border-b border-gray-700 pb-2 flex justify-between items-center">
+                <span><i class="fa-solid fa-list-check mr-2"></i>任務解答與即時推送</span>
+                <button onclick="toggleSetupModal()" class="text-xs text-gray-400 hover:text-yellow-400 transition">
+                    <i class="fa-solid fa-gear mr-1"></i>後端設定
+                </button>
+            </h2>
+            
+            <!-- 答題進度條 (Progress Bar) -->
+            <div class="mb-5">
+                <div class="flex justify-between text-xs text-gray-400 mb-1 font-sans">
+                    <span class="flex items-center"><i class="fa-solid fa-cloud-arrow-up mr-1 text-green-400"></i>已成功送出進度</span>
+                    <span id="progress-text" class="font-bold text-green-400">0 / 6 題</span>
+                </div>
+                <div class="w-full bg-gray-900 rounded-full h-2.5 border border-gray-700 overflow-hidden relative shadow-inner">
+                    <div id="progress-bar" class="bg-gradient-to-r from-blue-500 to-green-400 h-2.5 w-0 transition-all duration-500 ease-out shadow-glow"></div>
+                </div>
+            </div>
+
+            <!-- 學生基本資料填寫：動態讀取 Google Sheets 名單 -->
+            <div class="mb-6 p-4 bg-gray-900 rounded border border-blue-500/30 relative">
+                <!-- 草稿自動儲存提示 -->
+                <div id="save-status" class="absolute top-2 right-2 text-[10px] text-gray-500 hidden">
+                    <i class="fa-solid fa-cloud-arrow-up mr-1"></i>已自動儲存草稿
+                </div>
+                <label class="block text-sm font-bold text-blue-300 mb-2" for="leader-name">
+                    <i class="fa-solid fa-user-tie mr-1"></i> 請選擇組長姓名：
+                </label>
+                <select id="leader-name" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded text-sm text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                    <option value="">-- 正在連線載入名單中... --</option>
+                </select>
+                <div class="flex justify-between items-center mt-2">
+                    <p class="text-xs text-gray-500"><i class="fa-solid fa-circle-info mr-1"></i>名單由系統即時從雲端同步。</p>
+                    <button type="button" onclick="loadStudentList()" class="text-[10px] text-blue-400 hover:text-blue-300"><i class="fa-solid fa-rotate mr-1"></i>重新整理名單</button>
+                </div>
+            </div>
+
+            <p class="text-sm text-gray-300 mb-6 font-sans">
+                同學你好，請使用 <code class="text-yellow-400 bg-gray-700 px-1 rounded">soup.select()</code> 解析右側的「Books to Scrape 模擬網站」。<br>
+                <span class="text-green-400 text-xs"><i class="fa-solid fa-lightbulb mr-1 mt-2"></i>點擊題目即可展開。寫好單題後點選<strong>「送答案到老師屏幕」</strong>，老師的大螢幕就會即時亮起你們的進度喔！</span>
+            </p>
+
+            <form id="submission-form" class="space-y-4">
+                
+                <!-- 任務 01 -->
+                <div id="task-wrapper-01" class="task-wrapper p-4 bg-gray-700 rounded border-l-4 border-red-500 transition-all duration-300">
+                    <div class="cursor-pointer flex justify-between items-center group" onclick="toggleAccordion(1)">
+                        <div class="flex items-center space-x-2">
+                            <span id="badge-01" class="text-[10px] bg-gray-800 text-gray-400 px-2 py-0.5 rounded font-bold uppercase">未送出</span>
+                            <div class="font-bold text-red-400 text-sm group-hover:text-red-300 transition">任務 01：提取 We love being scraped 的口號。</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300 rotate-180" id="icon-01"></i>
+                    </div>
+                    <div id="body-01" class="task-body mt-2">
+                        <p class="mt-1 text-xs text-gray-300">目標：獲取網站頂部導航條或標題區下方的口號文字：<strong class="text-white">"We love being scraped!"</strong>。</p>
+                        <p id="hint-01" class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：口號藏在特定容器下的 small 標籤，試試：<code>soup.select("div &gt; small")</code>。</p>
+                        <div class="mt-2 rounded overflow-hidden border border-gray-600 focus-within:border-red-400 transition-colors">
+                            <textarea id="code-01"></textarea>
+                        </div>
+                        <!-- 本地測試與單題送出按鈕區 -->
+                        <div class="mt-3 flex flex-wrap gap-2 items-center justify-between">
+                            <div class="flex gap-2">
+                                <button type="button" onclick="runLocalTest(1)" id="test-btn-01" class="px-3 py-1.5 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-bold text-xs rounded transition flex items-center space-x-1">
+                                    <i class="fa-solid fa-vial"></i>
+                                    <span>本地測試</span>
+                                </button>
+                                <button type="button" onclick="submitSingleCode(1)" id="submit-btn-01" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
+                                    <i class="fa-solid fa-paper-plane" id="submit-icon-01"></i>
+                                    <span id="submit-text-01">送答案到老師屏幕</span>
+                                </button>
+                                <button type="button" onclick="unlockSingleCode(1)" id="unlock-btn-01" class="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 text-white font-bold text-xs rounded transition hidden">
+                                    <i class="fa-solid fa-lock-open"></i> 解鎖修改
+                                </button>
+                            </div>
+                            <span id="test-status-01" class="text-[11px] text-gray-400"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 任務 02 -->
+                <div id="task-wrapper-02" class="task-wrapper p-4 bg-gray-700 rounded border-l-4 border-orange-500 transition-all duration-300">
+                    <div class="cursor-pointer flex justify-between items-center group" onclick="toggleAccordion(2)">
+                        <div class="flex items-center space-x-2">
+                            <span id="badge-02" class="text-[10px] bg-gray-800 text-gray-400 px-2 py-0.5 rounded font-bold uppercase">未送出</span>
+                            <div class="font-bold text-orange-400 text-sm group-hover:text-orange-300 transition">任務 02：提取本頁書籍名稱並給予編號。</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300" id="icon-02"></i>
+                    </div>
+                    <div id="body-02" class="task-body mt-2 hidden">
+                        <p class="mt-1 text-xs text-gray-300">目標：獲取右側展示的所有書本名稱，在 Python 端使用迴圈印出編號與書名（注意：網頁展示的文字較長時可能會被省略成 ...）。</p>
+                        <p id="hint-02" class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：每本書都被包在 <code>h3</code> 裡面的 <code>a</code> 標籤中，試試用 <code>soup.select('h3 a')</code>，再以 <code>for i in range(...)</code> 跑迴圈印出編號與 <code>.text</code>。</p>
+                        <div class="mt-2 rounded overflow-hidden border border-gray-600 focus-within:border-orange-400 transition-colors">
+                            <textarea id="code-02"></textarea>
+                        </div>
+                        <!-- 本地測試與單題送出按鈕區 -->
+                        <div class="mt-3 flex flex-wrap gap-2 items-center justify-between">
+                            <div class="flex gap-2">
+                                <button type="button" onclick="runLocalTest(2)" id="test-btn-02" class="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-bold text-xs rounded transition flex items-center space-x-1">
+                                    <i class="fa-solid fa-vial"></i>
+                                    <span>本地測試</span>
+                                </button>
+                                <button type="button" onclick="submitSingleCode(2)" id="submit-btn-02" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
+                                    <i class="fa-solid fa-paper-plane" id="submit-icon-02"></i>
+                                    <span id="submit-text-02">送答案到老師屏幕</span>
+                                </button>
+                                <button type="button" onclick="unlockSingleCode(2)" id="unlock-btn-02" class="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 text-white font-bold text-xs rounded transition hidden">
+                                    <i class="fa-solid fa-lock-open"></i> 解鎖修改
+                                </button>
+                            </div>
+                            <span id="test-status-02" class="text-[11px] text-gray-400"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 任務 03 -->
+                <div id="task-wrapper-03" class="task-wrapper p-4 bg-gray-700 rounded border-l-4 border-yellow-500 transition-all duration-300">
+                    <div class="cursor-pointer flex justify-between items-center group" onclick="toggleAccordion(3)">
+                        <div class="flex items-center space-x-2">
+                            <span id="badge-03" class="text-[10px] bg-gray-800 text-gray-400 px-2 py-0.5 rounded font-bold uppercase">未送出</span>
+                            <div class="font-bold text-yellow-400 text-sm group-hover:text-yellow-300 transition">任務 03：提取完整書名（隱藏在 HTML 屬性中）。</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300" id="icon-03"></i>
+                    </div>
+                    <div id="body-03" class="task-body mt-2 hidden">
+                        <p class="mt-1 text-xs text-gray-300">目標：當書名太長時，<code>.text</code> 會顯示省略號。請提取隱藏在 <code>&lt;a&gt;</code> 標籤內部的完整書名（即 <code>title</code> 屬性的內容）。</p>
+                        <p id="hint-03" class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：可以使用 <code>soup.select('h3 a')</code> 找到所有連結物件，並使用 Python 字典取值語法 <code>x["title"]</code> 提取完整內容。</p>
+                        <div class="mt-2 rounded overflow-hidden border border-gray-600 focus-within:border-yellow-400 transition-colors">
+                            <textarea id="code-03"></textarea>
+                        </div>
+                        <!-- 本地測試與單題送出按鈕區 -->
+                        <div class="mt-3 flex flex-wrap gap-2 items-center justify-between">
+                            <div class="flex gap-2">
+                                <button type="button" onclick="runLocalTest(3)" id="test-btn-03" class="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 active:bg-yellow-750 text-gray-900 font-bold text-xs rounded transition flex items-center space-x-1">
+                                    <i class="fa-solid fa-vial"></i>
+                                    <span>本地測試</span>
+                                </button>
+                                <button type="button" onclick="submitSingleCode(3)" id="submit-btn-03" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
+                                    <i class="fa-solid fa-paper-plane" id="submit-icon-03"></i>
+                                    <span id="submit-text-03">送答案到老師屏幕</span>
+                                </button>
+                                <button type="button" onclick="unlockSingleCode(3)" id="unlock-btn-03" class="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 text-white font-bold text-xs rounded transition hidden">
+                                    <i class="fa-solid fa-lock-open"></i> 解鎖修改
+                                </button>
+                            </div>
+                            <span id="test-status-03" class="text-[11px] text-gray-400"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 任務 04 -->
+                <div id="task-wrapper-04" class="task-wrapper p-4 bg-gray-700 rounded border-l-4 border-green-500 transition-all duration-300">
+                    <div class="cursor-pointer flex justify-between items-center group" onclick="toggleAccordion(4)">
+                        <div class="flex items-center space-x-2">
+                            <span id="badge-04" class="text-[10px] bg-gray-800 text-gray-400 px-2 py-0.5 rounded font-bold uppercase">未送出</span>
+                            <div class="font-bold text-green-400 text-sm group-hover:text-green-300 transition">任務 04：提取各個書本價格，以及價格的總和。</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300" id="icon-04"></i>
+                    </div>
+                    <div id="body-04" class="task-body mt-2 hidden">
+                        <p class="mt-1 text-xs text-gray-300">目標：提取網頁中所有書籍價格，刨除英鎊符號 `£`，將價格轉換為浮點數（float）並計算這一頁書籍的總價格。</p>
+                        <p id="hint-04" class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：書籍價格標籤的 class 是 <code>price_color</code>。提取後使用切片 <code>bp.text[1:]</code> 跳過第一個貨幣符號，再用 <code>float()</code> 轉換累加。</p>
+                        <div class="mt-2 rounded overflow-hidden border border-gray-600 focus-within:border-green-400 transition-colors">
+                            <textarea id="code-04"></textarea>
+                        </div>
+                        <!-- 本地測試與單題送出按鈕區 -->
+                        <div class="mt-3 flex flex-wrap gap-2 items-center justify-between">
+                            <div class="flex gap-2">
+                                <button type="button" onclick="runLocalTest(4)" id="test-btn-04" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold text-xs rounded transition flex items-center space-x-1">
+                                    <i class="fa-solid fa-vial"></i>
+                                    <span>本地測試</span>
+                                </button>
+                                <button type="button" onclick="submitSingleCode(4)" id="submit-btn-04" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
+                                    <i class="fa-solid fa-paper-plane" id="submit-icon-04"></i>
+                                    <span id="submit-text-04">送答案到老師屏幕</span>
+                                </button>
+                                <button type="button" onclick="unlockSingleCode(4)" id="unlock-btn-04" class="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 text-white font-bold text-xs rounded transition hidden">
+                                    <i class="fa-solid fa-lock-open"></i> 解鎖修改
+                                </button>
+                            </div>
+                            <span id="test-status-04" class="text-[11px] text-gray-400"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 任務 05 -->
+                <div id="task-wrapper-05" class="task-wrapper p-4 bg-gray-700 rounded border-l-4 border-teal-500 transition-all duration-300">
+                    <div class="cursor-pointer flex justify-between items-center group" onclick="toggleAccordion(5)">
+                        <div class="flex items-center space-x-2">
+                            <span id="badge-05" class="text-[10px] bg-gray-800 text-gray-400 px-2 py-0.5 rounded font-bold uppercase">未送出</span>
+                            <div class="font-bold text-teal-400 text-sm group-hover:text-teal-300 transition">任務 05：計算評分為「二星 (Two)」的書本項目共有多少本。</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300" id="icon-05"></i>
+                    </div>
+                    <div id="body-05" class="task-body mt-2 hidden">
+                        <p class="mt-1 text-xs text-gray-300">目標：Books to Scrape 網頁使用 class 表示星級評分（如 One, Two, Three...）。請統計本頁面共有幾本書得到了「二星」評分。</p>
+                        <p id="hint-05" class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：二星書籍段落同時有 <code>star-rating</code> 與 <code>Two</code> 這兩個 class。在 CSS 選擇器中，多重 class 連寫如 <code>p.star-rating.Two</code>，再用 <code>len()</code> 計算列表長度。</p>
+                        <div class="mt-2 rounded overflow-hidden border border-gray-600 focus-within:border-teal-400 transition-colors">
+                            <textarea id="code-05"></textarea>
+                        </div>
+                        <!-- 本地測試與單題送出按鈕區 -->
+                        <div class="mt-3 flex flex-wrap gap-2 items-center justify-between">
+                            <div class="flex gap-2">
+                                <button type="button" onclick="runLocalTest(5)" id="test-btn-05" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-500 active:bg-teal-700 text-white font-bold text-xs rounded transition flex items-center space-x-1">
+                                    <i class="fa-solid fa-vial"></i>
+                                    <span>本地測試</span>
+                                </button>
+                                <button type="button" onclick="submitSingleCode(5)" id="submit-btn-05" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
+                                    <i class="fa-solid fa-paper-plane" id="submit-icon-05"></i>
+                                    <span id="submit-text-05">送答案到老師屏幕</span>
+                                </button>
+                                <button type="button" onclick="unlockSingleCode(5)" id="unlock-btn-05" class="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 text-white font-bold text-xs rounded transition hidden">
+                                    <i class="fa-solid fa-lock-open"></i> 解鎖修改
+                                </button>
+                            </div>
+                            <span id="test-status-05" class="text-[11px] text-gray-400"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 任務 06 -->
+                <div id="task-wrapper-06" class="task-wrapper p-4 bg-gray-700 rounded border-l-4 border-blue-500 transition-all duration-300">
+                    <div class="cursor-pointer flex justify-between items-center group" onclick="toggleAccordion(6)">
+                        <div class="flex items-center space-x-2">
+                            <span id="badge-06" class="text-[10px] bg-gray-800 text-gray-400 px-2 py-0.5 rounded font-bold uppercase">未送出</span>
+                            <div class="font-bold text-blue-400 text-sm group-hover:text-blue-300 transition">任務 06：提取左側的書籍分類欄目。</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300" id="icon-06"></i>
+                    </div>
+                    <div id="body-06" class="task-body mt-2 hidden">
+                        <p class="mt-1 text-xs text-gray-300">目標：獲取側邊欄中所有的書籍分類名稱。注意：獲取文字時記得剔除多餘的空白換行字元。</p>
+                        <p id="hint-06" class="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2 hidden"><i class="fa-solid fa-circle-info text-blue-300 mr-1"></i> 提示：可以使用父子關係選擇器 <code>li &gt; a</code> 來定位分類選單的超連結，在 Python 中使用 <code>.text.strip()</code> 函數來完美清除多餘空格。</p>
+                        <div class="mt-2 rounded overflow-hidden border border-gray-600 focus-within:border-blue-400 transition-colors">
+                            <textarea id="code-06"></textarea>
+                        </div>
+                        <!-- 本地測試與單題送出按鈕區 -->
+                        <div class="mt-3 flex flex-wrap gap-2 items-center justify-between">
+                            <div class="flex gap-2">
+                                <button type="button" onclick="runLocalTest(6)" id="test-btn-06" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold text-xs rounded transition flex items-center space-x-1">
+                                    <i class="fa-solid fa-vial"></i>
+                                    <span>本地測試</span>
+                                </button>
+                                <button type="button" onclick="submitSingleCode(6)" id="submit-btn-06" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow">
+                                    <i class="fa-solid fa-paper-plane" id="submit-icon-06"></i>
+                                    <span id="submit-text-06">送答案到老師屏幕</span>
+                                </button>
+                                <button type="button" onclick="unlockSingleCode(6)" id="unlock-btn-06" class="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 text-white font-bold text-xs rounded transition hidden">
+                                    <i class="fa-solid fa-lock-open"></i> 解鎖修改
+                                </button>
+                            </div>
+                            <span id="test-status-06" class="text-[11px] text-gray-400"></span>
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+        </section>
+
+        <!-- 右側：模擬資料區 (精確模擬 books.toscrape.com 的 HTML 與樣式結構) -->
+        <section id="target-zone" class="bg-gray-100 text-gray-800 rounded-lg shadow-xl relative overflow-y-auto h-[100vh] lg:h-[calc(100vh-140px)] sticky top-6 font-sans">
+            
+            <!-- 網站頂部 Header -->
+            <div class="bg-white border-b border-gray-200 py-6 px-8 flex flex-col justify-between items-start">
+                <h1 class="text-3xl font-light text-gray-700 tracking-wide font-serif">
+                    <span class="font-bold text-gray-800">Books</span> to Scrape
+                </h1>
+                <!-- 任務 01 目標：We love being scraped! -->
+                <div class="mt-1 text-sm text-gray-500 border-t border-gray-100 pt-1 w-full flex justify-between items-center">
+                    <div><small class="text-gray-400 italic">"We love being scraped!"</small></div>
+                    <span class="text-[10px] bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded">Scrape Sandbox v1.2</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row min-h-[500px]">
+                
+                <!-- 側邊欄 (任務 06 目標區) -->
+                <aside class="w-full md:w-1/4 bg-white p-6 border-r border-gray-200">
+                    <h3 class="text-sm font-bold uppercase text-gray-400 tracking-wider pb-2 border-b border-gray-100 mb-4">Books Category</h3>
+                    <ul class="space-y-2 text-xs font-semibold text-teal-600">
+                        <li><a href="#" class="hover:text-teal-800 block py-1 pl-2 bg-gray-50 rounded">
+                            Travel
+                        </a></li>
+                        <li><a href="#" class="hover:text-teal-800 block py-1 pl-2">
+                            Mystery
+                        </a></li>
+                        <li><a href="#" class="hover:text-teal-800 block py-1 pl-2">
+                            Historical Fiction
+                        </a></li>
+                        <li><a href="#" class="hover:text-teal-800 block py-1 pl-2">
+                            Sequential Art
+                        </a></li>
+                        <li><a href="#" class="hover:text-teal-800 block py-1 pl-2">
+                            Classics
+                        </a></li>
+                        <li><a href="#" class="hover:text-teal-800 block py-1 pl-2">
+                            Nonfiction
+                        </a></li>
+                        <li><a href="#" class="hover:text-teal-800 block py-1 pl-2">
+                            Music
+                        </a></li>
+                    </ul>
+                </aside>
+
+                <!-- 主要書籍網格 (任務 2, 3, 4, 5 目標區) -->
+                <main class="flex-grow p-6">
+                    <div class="border-b border-gray-200 pb-3 mb-6 flex justify-between items-center">
+                        <h2 class="text-lg font-normal text-gray-600">All Products (Page 1)</h2>
+                        <span class="text-xs text-gray-400">Showing 6 of 20 results</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                        
+                        <!-- Book 1 (二星) -->
+                        <div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">
+                                [Book Cover]
+                            </div>
+                            <div class="mb-3">
+                                <p class="star-rating Two text-yellow-500 text-xs mb-1">
+                                    <i class="fa-solid fa-star"></i>
+                                    <i class="fa-solid fa-star"></i>                                    
+                                    <span class="text-[10px] text-gray-400 ml-1">(Two)</span>
+                                </p>
+                                <!-- 任務02 & 03 目標 -->
+                                <h3 class="text-xs font-bold text-gray-800">
+                                    <a href="#" title="A Light in the Attic" class="hover:underline text-teal-600">A Light in the ...</a>
+                                </h3>
+                            </div>
+                            <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
+                                <!-- 任務04 目標 -->
+                                <p class="price_color text-sm font-bold text-gray-900">£51.77</p>
+                                <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold">In stock</span>
+                            </div>
+                        </div>
+
+                        <!-- Book 2 (一星) -->
+                        <div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">
+                                [Book Cover]
+                            </div>
+                            <div class="mb-3">
+                                <p class="star-rating One text-yellow-500 text-xs mb-1">
+                                    <i class="fa-solid fa-star"></i>
+                                    <span class="text-[10px] text-gray-400 ml-1">(One)</span>
+                                </p>
+                                <h3 class="text-xs font-bold text-gray-800">
+                                    <a href="#" title="Tipping the Velvet" class="hover:underline text-teal-600">Tipping the Velvet</a>
+                                </h3>
+                            </div>
+                            <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
+                                <p class="price_color text-sm font-bold text-gray-900">£53.74</p>
+                                <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold">In stock</span>
+                            </div>
+                        </div>
+
+                        <!-- Book 3 (二星) -->
+                        <div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">
+                                [Book Cover]
+                            </div>
+                            <div class="mb-3">
+                                <p class="star-rating Two text-yellow-500 text-xs mb-1">
+                                    <i class="fa-solid fa-star"></i>
+                                    <i class="fa-solid fa-star"></i>
+                                    <span class="text-[10px] text-gray-400 ml-1">(Two)</span>
+                                </p>
+                                <h3 class="text-xs font-bold text-gray-800">
+                                    <a href="#" title="Soumission" class="hover:underline text-teal-600">Soumission</a>
+                                </h3>
+                            </div>
+                            <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
+                                <p class="price_color text-sm font-bold text-gray-900">£50.10</p>
+                                <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold">In stock</span>
+                            </div>
+                        </div>
+
+                        <!-- Book 4 (四星) -->
+                        <div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">
+                                [Book Cover]
+                            </div>
+                            <div class="mb-3">
+                                <p class="star-rating Four text-yellow-500 text-xs mb-1">
+                                    <i class="fa-solid fa-star"></i>
+                                    <i class="fa-solid fa-star"></i>
+                                    <i class="fa-solid fa-star"></i>
+                                    <i class="fa-solid fa-star"></i>
+                                    <span class="text-[10px] text-gray-400 ml-1">(Four)</span>
+                                </p>
+                                <h3 class="text-xs font-bold text-gray-800">
+                                    <a href="#" title="Sharp Objects" class="hover:underline text-teal-600">Sharp Objects</a>
+                                </h3>
+                            </div>
+                            <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
+                                <p class="price_color text-sm font-bold text-gray-900">£47.82</p>
+                                <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold">In stock</span>
+                            </div>
+                        </div>
+
+                        <!-- Book 5 (二星) -->
+                        <div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">
+                                [Book Cover]
+                            </div>
+                            <div class="mb-3">
+                                <p class="star-rating Two text-yellow-500 text-xs mb-1">
+                                    <i class="fa-solid fa-star"></i>
+                                    <i class="fa-solid fa-star"></i>
+                                    <span class="text-[10px] text-gray-400 ml-1">(Two)</span>
+                                </p>
+                                <h3 class="text-xs font-bold text-gray-800">
+                                    <a href="#" title="Sapiens: A Brief History of Humankind" class="hover:underline text-teal-600">Sapiens: A Brief ...</a>
+                                </h3>
+                            </div>
+                            <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
+                                <p class="price_color text-sm font-bold text-gray-900">£54.23</p>
+                                <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold">In stock</span>
+                            </div>
+                        </div>
+
+                        <!-- Book 6 (二星) -->
+                        <div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">
+                                [Book Cover]
+                            </div>
+                            <div class="mb-3">
+                                <p class="star-rating Two text-yellow-500 text-xs mb-1">
+                                    <i class="fa-solid fa-star"></i>
+                                    <i class="fa-solid fa-star"></i>
+                                    <span class="text-[10px] text-gray-400 ml-1">(Two)</span>
+                                </p>
+                                <h3 class="text-xs font-bold text-gray-800">
+                                    <a href="#" title="The Requiem Red" class="hover:underline text-teal-600">The Requiem Red</a>
+                                </h3>
+                            </div>
+                            <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
+                                <p class="price_color text-sm font-bold text-gray-900">£22.65</p>
+                                <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold">In stock</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </main>
+            </div>
+        </section>
+    </main>
+
+    <!-- 彈出式模態視窗：自訂提示/通知 -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-md w-full shadow-2xl transition-transform transform scale-95">
+            <h3 class="text-xl font-bold text-green-400 mb-3 flex items-center" id="modal-title">
+                <i class="fa-solid fa-circle-info mr-2"></i>系統提示
+            </h3>
+            <p class="text-sm text-gray-300 mb-6 whitespace-pre-line" id="modal-body">提示內容</p>
+            <button onclick="closeModal()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded transition">
+                確定 (OK)
+            </button>
+        </div>
+    </div>
+
+    <!-- 老師端串接設定 Modal -->
+    <div id="setup-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden overflow-y-auto">
+        <div class="bg-gray-800 border-2 border-yellow-500 rounded-lg p-6 max-w-2xl w-full my-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-yellow-400 flex items-center">
+                    <i class="fa-solid fa-gears mr-2"></i>老師後端設定 (Google Sheet API)
+                </h3>
+                <button onclick="toggleSetupModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            
+            <p class="text-xs text-gray-300 mb-4 leading-relaxed">
+                此處設定會直接保存在這台電腦的瀏覽器 (LocalStorage) 中，學生開啟網頁時預設不會看到。
+            </p>
+
+            <!-- 網址設定 -->
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-blue-300 mb-2" for="web-app-url">
+                    Google Apps Script 網頁應用程式 URL：
+                </label>
+                <input type="text" id="web-app-url" value="https://script.google.com/macros/s/AKfycbzX5G610ZL7Xyt0prWR-o1KzytB3NKwW64ut12H7Qmn4O1-vdWfyBdjJHUk-5WcXGl8NA/exec" placeholder="https://script.google.com/macros/s/.../exec" 
+                       class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded text-xs text-white focus:ring-1 focus:ring-yellow-400 focus:outline-none">
+            </div>
+
+            <div class="mt-6 flex space-x-2">
+                <button onclick="saveSetup()" class="flex-1 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-gray-900 font-extrabold rounded transition">
+                    儲存設定 (Save)
+                </button>
+                <button onclick="toggleSetupModal()" class="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded transition">
+                    關閉 (Close)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center p-6 text-gray-500 text-sm mt-8 border-t border-gray-800 bg-gray-950">
+        <p>&copy; 2026 Books to Scrape 爬蟲特訓營. Designed for Python Education.</p>
+        <p class="text-xs text-gray-600 mt-1">若要變更 Google Sheet 接收端，請點選上方任務清單旁的「後端設定」齒輪。</p>
+    </footer>
+
+    <!-- 邏輯 Script 控制 -->
+    <script>
+        // 預設 API URL
+        const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbzX5G610ZL7Xyt0prWR-o1KzytB3NKwW64ut12H7Qmn4O1-vdWfyBdjJHUk-5WcXGl8NA/exec";
+        const TOTAL_TASKS = 6; 
+        const cmInstances = {}; 
+
+        // 儲存已提交的任務編號 (例如: "01", "02")
+        let submittedTasks = [];
+
+        // 頁面初始化載入
+        window.onload = function() {
+            // 1. 初始化 API 網址
+            const savedUrl = localStorage.getItem('google_sheet_api_url');
+            document.getElementById('web-app-url').value = savedUrl ? savedUrl : DEFAULT_API_URL;
+            
+            // 2. 初始化 CodeMirror 編輯器 (Python語法高亮)
+            initCodeMirrorEditors();
+            
+            // 3. 綁定組長姓名輸入框的變更事件，以儲存草稿
+            document.getElementById('leader-name').addEventListener('change', () => {
+                saveDraft();
+            });
+            
+            // 4. 非同步向 Google Sheets 抓取學生名單
+            loadStudentList().then(() => {
+                // 5. 檢查是否有本地草稿，進行資料還原 (必須等名單載入後才還原)
+                loadDraft();
+            });
+        };
+
+        // 從 Google Sheets 動態載入組長名單
+        async function loadStudentList() {
+            const select = document.getElementById('leader-name');
+            const webAppUrl = document.getElementById('web-app-url').value.trim() || DEFAULT_API_URL;
+            
+            select.innerHTML = '<option value="">-- 正在連線載入名單中... --</option>';
+            
+            try {
+                // 加上 action=getStudents 參數，要求 GAS 回傳名單
+                const cacheBustedUrl = webAppUrl + (webAppUrl.includes('?') ? '&' : '?') + 'action=getStudents&_ts=' + Date.now();
+                
+                const res = await fetch(cacheBustedUrl);
+                if (!res.ok) throw new Error("HTTP error " + res.status);
+                const data = await res.json();
+                
+                select.innerHTML = '<option value="">-- 請選擇組長姓名 (Please Select) --</option>';
+                
+                if (Array.isArray(data)) {
+                    data.forEach(name => {
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        opt.textContent = name;
+                        select.appendChild(opt);
+                    });
+                } else if (data.status === 'error') {
+                    select.innerHTML = '<option value="">-- 名單載入失敗，請確認試算表設定 --</option>';
+                    console.error(data.message);
+                }
+            } catch(err) {
+                console.error("載入名單失敗", err);
+                select.innerHTML = '<option value="">-- 網路連線錯誤，無法載入名單 --</option>';
+            }
+        }
+
+        // 初始化所有 CodeMirror 編輯器
+        function initCodeMirrorEditors() {
+            for(let i=1; i<=TOTAL_TASKS; i++) {
+                const padIndex = i.toString().padStart(2, '0');
+                const textarea = document.getElementById(`code-${padIndex}`);
+                
+                // 創建 CodeMirror 實體
+                const editor = CodeMirror.fromTextArea(textarea, {
+                    mode: "python",
+                    theme: "dracula",
+                    lineNumbers: false, 
+                    indentUnit: 4,
+                    matchBrackets: true,
+                    placeholder: "# 請在此貼上 Python 代碼..." 
+                });
+                cmInstances[`code-${padIndex}`] = editor;
+
+                // 綁定編輯器變更事件：自動儲存草稿
+                editor.on("change", () => {
+                    saveDraft();
+                });
+
+                // 綁定焦點事件：觸發聚光燈效果與提示展開
+                editor.on("focus", () => {
+                    const wrapper = document.getElementById(`task-wrapper-${padIndex}`);
+                    wrapper.classList.add('shadow-xl', 'border-l-8', 'bg-gray-800');
+                    document.getElementById(`hint-${padIndex}`).classList.remove('hidden');
+                });
+                editor.on("blur", () => {
+                    const wrapper = document.getElementById(`task-wrapper-${padIndex}`);
+                    wrapper.classList.remove('shadow-xl', 'border-l-8', 'bg-gray-800');
+                    document.getElementById(`hint-${padIndex}`).classList.add('hidden');
+                });
+            }
+        }
+
+        // 本地測試邏輯：解析學生的 BS4 代碼，並在右側高亮對應 DOM 元素
+        function runLocalTest(index) {
+            const padIndex = index.toString().padStart(2, '0');
+            const code = cmInstances[`code-${padIndex}`].getValue();
+            const statusSpan = document.getElementById(`test-status-${padIndex}`);
+
+            // 1. 清除上一次的高亮效果
+            document.querySelectorAll('.local-highlight').forEach(el => {
+                el.classList.remove('local-highlight');
+            });
+
+            // 2. 防呆：檢查是否輸入了程式碼
+            if (!code.trim()) {
+                statusSpan.className = "text-[11px] font-sans font-bold text-yellow-500 animate-pulse";
+                statusSpan.innerHTML = "<i class='fa-solid fa-triangle-exclamation mr-1'></i>請先輸入 Python 程式碼！";
+                return;
+            }
+
+            // 3. 正則表達式：自動捕捉 soup.select('...') 或 select("...") 內的字串內容
+            const selectRegex = /select\(\s*(['"`])(.*?)\1\s*\)/;
+            const match = code.match(selectRegex);
+
+            if (!match || !match[2]) {
+                statusSpan.className = "text-[11px] font-sans font-bold text-red-400";
+                statusSpan.innerHTML = "<i class='fa-solid fa-circle-xmark mr-1'></i>未偵測到正確的 soup.select() 語法！";
+                return;
+            }
+
+            const selector = match[2].trim();
+
+            try {
+                // 4. 在右側「模擬資料區」檢索該 CSS 選擇器
+                const matchedElements = document.querySelectorAll('#target-zone ' + selector);
+
+                if (matchedElements.length === 0) {
+                    statusSpan.className = "text-[11px] font-sans font-bold text-orange-400";
+                    statusSpan.innerHTML = `<i class='fa-solid fa-circle-exclamation mr-1'></i>已捕獲選擇器 "${selector}"，但右側查無相符元素。`;
+                } else {
+                    // 5. 成功匹配：為元素加上高亮 CSS
+                    statusSpan.className = "text-[11px] font-sans font-bold text-green-400";
+                    statusSpan.innerHTML = `<i class='fa-solid fa-circle-check mr-1'></i>成功！選擇器 "${selector}" 匹配到 ${matchedElements.length} 個節點。`;
+
+                    matchedElements.forEach(el => {
+                        el.classList.add('local-highlight');
+                    });
+
+                    // 6. 3.5 秒後自動解除閃爍高亮，還原版面
+                    setTimeout(() => {
+                        matchedElements.forEach(el => {
+                            el.classList.remove('local-highlight');
+                        });
+                    }, 3500);
+                }
+
+            } catch (error) {
+                // 7. 防呆：CSS 選擇器語法不合規
+                statusSpan.className = "text-[11px] font-sans font-bold text-red-400";
+                statusSpan.innerHTML = `<i class='fa-solid fa-triangle-exclamation mr-1'></i>無效的選擇器語法："${selector}"`;
+            }
+        }
+
+        // --- 單題提交邏輯 ---
+        async function submitSingleCode(index) {
+            const padIndex = index.toString().padStart(2, '0');
+            const leaderName = document.getElementById('leader-name').value.trim();
+            const webAppUrl = document.getElementById('web-app-url').value.trim() || DEFAULT_API_URL;
+            const code = cmInstances[`code-${padIndex}`].getValue().trim();
+            const statusSpan = document.getElementById(`test-status-${padIndex}`);
+
+            // 1. 防呆檢查：是否選擇了組別
+            if (!leaderName) {
+                showModal("<i class='fa-solid fa-user-tie text-yellow-400 mr-2'></i>組長未選擇", "請先在網頁上方下拉選單選擇「您的組長姓名」，否則老師在大屏幕上不知道這份答案是誰寫的喔！");
+                document.getElementById('leader-name').focus();
+                return;
+            }
+
+            // 2. 防呆檢查：該題程式碼是否填寫
+            if (!code) {
+                statusSpan.className = "text-[11px] font-sans font-bold text-red-400 animate-pulse";
+                statusSpan.innerHTML = "<i class='fa-solid fa-triangle-exclamation mr-1'></i>此題代碼為空，請填寫後再行提交！";
+                return;
+            }
+
+            // 3. UI 狀態更新：更改按鈕為提交中
+            setSubmitButtonState(index, 'submitting');
+
+            const payload = {
+                leaderName: leaderName,
+                questionNum: padIndex, // 提交任務編號，例如 "01"
+                answer: code
+            };
+
+            try {
+                // 發送 POST 請求至 Google Sheets API (即時單題)
+                // 採用 no-cors 來避免跨網域預檢阻擋
+                await fetch(webAppUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 為了極致安全避開 preflight 使用 text/plain，APPS SCRIPT 仍可 parse
+                    body: JSON.stringify(payload)
+                });
+
+                // 提交成功處理
+                statusSpan.className = "text-[11px] font-sans font-bold text-green-400";
+                statusSpan.innerHTML = `<i class='fa-solid fa-circle-check mr-1'></i>任務 ${padIndex} 成功即時送出！`;
+
+                // 把此題序加入已提交清單
+                if (!submittedTasks.includes(padIndex)) {
+                    submittedTasks.push(padIndex);
+                }
+
+                // 鎖定該題編輯器與按鈕，更新完成徽章
+                lockTaskUI(index);
+                
+                // 儲存最新的提交狀態
+                saveDraft();
+                
+                // 更新頂部課堂任務進度條
+                updateProgressBar();
+
+            } catch (error) {
+                console.error(error);
+                statusSpan.className = "text-[11px] font-sans font-bold text-red-400";
+                statusSpan.innerHTML = `<i class='fa-solid fa-circle-xmark mr-1'></i>送出失敗：${error.message}`;
+                setSubmitButtonState(index, 'idle');
+            }
+        }
+
+        // 解鎖單題讓學生重新修改提交
+        function unlockSingleCode(index) {
+            const padIndex = index.toString().padStart(2, '0');
+            
+            // 1. 從已提交清單中移除
+            submittedTasks = submittedTasks.filter(item => item !== padIndex);
+            
+            // 2. 解鎖編輯器與重置按鈕狀態
+            unlockTaskUI(index);
+            
+            // 3. 儲存快取與更新進度條
+            saveDraft();
+            updateProgressBar();
+            
+            const statusSpan = document.getElementById(`test-status-${padIndex}`);
+            statusSpan.className = "text-[11px] font-sans font-bold text-yellow-400";
+            statusSpan.innerHTML = `<i class='fa-solid fa-lock-open mr-1'></i>已解鎖修改，完成後請點選送出按鈕重新推送。`;
+        }
+
+        // 鎖定題目 UI
+        function lockTaskUI(index) {
+            const padIndex = index.toString().padStart(2, '0');
+            const editor = cmInstances[`code-${padIndex}`];
+            
+            // 1. 設置 CodeMirror 為唯讀模式
+            editor.setOption("readOnly", true);
+            editor.getWrapperElement().classList.add('bg-gray-800', 'opacity-80', 'cursor-not-allowed');
+
+            // 2. 徽章轉為「已送出」
+            const badge = document.getElementById(`badge-${padIndex}`);
+            badge.className = "text-[10px] bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded font-bold uppercase";
+            badge.innerText = "已送出";
+
+            // 3. 隱藏送出按鈕，顯示解鎖按鈕
+            document.getElementById(`submit-btn-${padIndex}`).classList.add('hidden');
+            document.getElementById(`unlock-btn-${padIndex}`).classList.remove('hidden');
+        }
+
+        // 解鎖題目 UI
+        function unlockTaskUI(index) {
+            const padIndex = index.toString().padStart(2, '0');
+            const editor = cmInstances[`code-${padIndex}`];
+            
+            // 1. 恢復編輯器狀態
+            editor.setOption("readOnly", false);
+            editor.getWrapperElement().classList.remove('bg-gray-800', 'opacity-80', 'cursor-not-allowed');
+
+            // 2. 徽章復原為「未送出」
+            const badge = document.getElementById(`badge-${padIndex}`);
+            badge.className = "text-[10px] bg-gray-800 text-gray-400 px-2 py-0.5 rounded font-bold uppercase";
+            badge.innerText = "已修改";
+
+            // 3. 恢復按鈕顯示
+            document.getElementById(`submit-btn-${padIndex}`).classList.remove('hidden');
+            document.getElementById(`unlock-btn-${padIndex}`).classList.add('hidden');
+            setSubmitButtonState(index, 'idle');
+        }
+
+        // 控制送出按鈕的樣式狀態
+        function setSubmitButtonState(index, state) {
+            const padIndex = index.toString().padStart(2, '0');
+            const btn = document.getElementById(`submit-btn-${padIndex}`);
+            const icon = document.getElementById(`submit-icon-${padIndex}`);
+            const text = document.getElementById(`submit-text-${padIndex}`);
+
+            if (state === 'submitting') {
+                btn.disabled = true;
+                btn.className = "px-3 py-1.5 bg-gray-600 text-gray-300 font-bold text-xs rounded cursor-not-allowed flex items-center space-x-1";
+                icon.className = "fa-solid fa-spinner animate-spin";
+                text.innerText = "正在傳送...";
+            } else if (state === 'idle') {
+                btn.disabled = false;
+                btn.className = "px-3 py-1.5 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold text-xs rounded transition flex items-center space-x-1 shadow";
+                icon.className = "fa-solid fa-paper-plane";
+                text.innerText = "送答案到老師屏幕";
+            }
+        }
+
+        // 手風琴展開/收合邏輯
+        function toggleAccordion(index) {
+            const padIndex = index.toString().padStart(2, '0');
+            const body = document.getElementById(`body-${padIndex}`);
+            const icon = document.getElementById(`icon-${padIndex}`);
+            
+            if(body.classList.contains('hidden')) {
+                body.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+                // CodeMirror 在隱藏的 div 顯示後需要 refresh，否則游標與文字會錯位
+                setTimeout(() => cmInstances[`code-${padIndex}`].refresh(), 10);
+            } else {
+                body.classList.add('hidden');
+                icon.classList.remove('rotate-180');
+            }
+        }
+
+        // 自動儲稿至 LocalStorage
+        function saveDraft() {
+            const draft = {
+                leaderName: document.getElementById('leader-name').value,
+                submittedTasks: submittedTasks // 記錄已提交題目的陣列
+            };
+            for(let i=1; i<=TOTAL_TASKS; i++) {
+                const padIndex = i.toString().padStart(2, '0');
+                draft[`code-${padIndex}`] = cmInstances[`code-${padIndex}`].getValue();
+            }
+            localStorage.setItem('books_crawler_draft_data_instant', JSON.stringify(draft));
+            
+            // 顯示右上角自動儲存小提示
+            const statusIndicator = document.getElementById('save-status');
+            statusIndicator.classList.remove('hidden');
+            setTimeout(() => statusIndicator.classList.add('hidden'), 2000);
+        }
+
+        // 載入草稿資料與已提交鎖定狀態
+        function loadDraft() {
+            const draftStr = localStorage.getItem('books_crawler_draft_data_instant');
+            if(draftStr) {
+                try {
+                    const draft = JSON.parse(draftStr);
+                    
+                    // 等待下拉選單載入完成後，恢復選擇的組長姓名
+                    if(draft.leaderName) {
+                        const selectElement = document.getElementById('leader-name');
+                        // 檢查選項中是否存在該名字
+                        let optionExists = Array.from(selectElement.options).some(opt => opt.value === draft.leaderName);
+                        if(optionExists) {
+                            selectElement.value = draft.leaderName;
+                        }
+                    }
+                    
+                    // 還原已送出的題目記錄
+                    if(draft.submittedTasks) {
+                        submittedTasks = draft.submittedTasks;
+                    }
+
+                    for(let i=1; i<=TOTAL_TASKS; i++) {
+                        const padIndex = i.toString().padStart(2, '0');
+                        // 還原程式碼內容
+                        if(draft[`code-${padIndex}`]) {
+                            cmInstances[`code-${padIndex}`].setValue(draft[`code-${padIndex}`]);
+                        }
+                        // 還原已送出題目的鎖定狀態
+                        if (submittedTasks.includes(padIndex)) {
+                            lockTaskUI(i);
+                        }
+                    }
+                } catch(e) {
+                    console.error("讀取草稿與提交狀態失敗", e);
+                }
+            }
+            // 載入完畢後更新一次課堂任務進度條
+            updateProgressBar();
+        }
+
+        // 答題進度條邏輯：依照「已送出題數」更新進度
+        function updateProgressBar() {
+            const filledCount = submittedTasks.length;
+            
+            // 計算百分比並更新 UI (以6題計算)
+            const percentage = (filledCount / TOTAL_TASKS) * 100;
+            document.getElementById('progress-bar').style.width = percentage + '%';
+            document.getElementById('progress-text').innerText = `${filledCount} / ${TOTAL_TASKS} 題`;
+            
+            // 如果全部完成，進度條顏色變化 (轉成閃耀金色)
+            if(filledCount === TOTAL_TASKS) {
+                document.getElementById('progress-bar').classList.remove('from-blue-500', 'to-green-400');
+                document.getElementById('progress-bar').classList.add('from-yellow-400', 'to-yellow-200');
+            } else {
+                document.getElementById('progress-bar').classList.remove('from-yellow-400', 'to-yellow-200');
+                document.getElementById('progress-bar').classList.add('from-blue-500', 'to-green-400');
+            }
+        }
+
+        // --- UI Modal 控制邏輯 ---
+        function toggleSetupModal() {
+            const modal = document.getElementById('setup-modal');
+            modal.classList.toggle('hidden');
+            modal.querySelector('div').classList.remove('scale-95');
+        }
+
+        function saveSetup() {
+            const urlValue = document.getElementById('web-app-url').value.trim();
+            localStorage.setItem('google_sheet_api_url', urlValue);
+            showModal("設定成功", "Google Apps Script 網址已儲存至本地瀏覽器中！\n即將為您重新載入組長名單。");
+            toggleSetupModal();
+            loadStudentList(); // 設定完新網址後，立刻重新抓取名單
+        }
+
+        function showModal(title, body) {
+            document.getElementById('modal-title').innerHTML = title;
+            document.getElementById('modal-body').innerText = body;
+            const modal = document.getElementById('custom-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.children[0].classList.remove('scale-95');
+                modal.children[0].classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('custom-modal');
+            modal.children[0].classList.remove('scale-100');
+            modal.children[0].classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 150);
+        }
+    </script>
+</body>
+</html>
