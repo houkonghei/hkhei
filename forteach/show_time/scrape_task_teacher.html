@@ -30,6 +30,13 @@
             font-size: 13px;
             border-radius: 6px;
         }
+        /* 新增：專門針對中央彈出視窗的代碼放大，字體放大兩倍以上，方便大螢幕觀看 */
+        #inspector-modal .CodeMirror {
+            font-size: 28px;
+            line-height: 1.6;
+            min-height: 400px;
+            max-height: 65vh;
+        }
         /* 自訂滾動條 */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #1e293b; }
@@ -65,7 +72,7 @@
                 <!-- 自動整理開關 -->
                 <div class="flex items-center space-x-2 bg-slate-800 px-3 py-2 rounded border border-slate-700">
                     <span class="h-2 w-2 bg-green-500 rounded-full animate-ping" id="live-dot"></span>
-                    <span class="text-xs text-slate-300 font-bold" id="refresh-status">自動更新中 (5s)</span>
+                    <span class="text-xs text-slate-300 font-bold" id="refresh-status">自動更新中 (10s)</span>
                 </div>
             </div>
         </div>
@@ -86,10 +93,11 @@
                     <div class="flex items-start space-x-2">
                         <i class="fa-solid fa-triangle-exclamation text-base mt-0.5"></i>
                         <div>
-                            <strong class="text-red-300 font-bold block text-sm">數據同步失敗 (Failed to fetch)</strong>
+                            <strong class="text-red-300 font-bold block text-sm">數據同步失敗</strong>
                             <p class="mt-1 leading-relaxed">
                                 這通常是因為 Google 權限未開放（部署時未選擇<strong>「所有人/Anyone」</strong>），或是 <strong>stu_list</strong> 工作表設定有誤。您可以點選右側載入模擬數據預覽大屏功能。
                             </p>
+                            <p id="error-detail" class="mt-1 text-[11px] text-yellow-400 font-mono"></p>
                         </div>
                     </div>
                     <div class="flex gap-2 shrink-0">
@@ -170,22 +178,26 @@
 
     <!-- 彈出式 Modal：檢視單一小組的程式碼詳情 -->
     <div id="inspector-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-slate-950 border border-slate-800 rounded-lg p-6 max-w-2xl w-full shadow-2xl transition-all duration-300">
-            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
-                <h3 class="text-lg font-black text-green-400 flex items-center" id="inspector-title">
-                    <i class="fa-solid fa-bug mr-2"></i>代碼詳情
+        <!-- 修改：將 max-w-2xl 擴大為 max-w-6xl，大幅加寬彈出視窗 -->
+        <div class="bg-slate-950 border border-slate-800 rounded-lg p-8 max-w-6xl w-full shadow-2xl transition-all duration-300">
+            <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-800">
+                <!-- 修改：放大標題字型 -->
+                <h3 class="text-3xl font-black text-green-400 flex items-center" id="inspector-title">
+                    <i class="fa-solid fa-bug mr-3"></i>代碼詳情
                 </h3>
-                <button onclick="closeInspector()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <button onclick="closeInspector()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-3xl"></i></button>
             </div>
             
-            <p class="text-xs text-slate-400 mb-3" id="inspector-meta">提交時間：無</p>
+            <!-- 修改：放大時間戳記字型 -->
+            <p class="text-base text-slate-400 mb-4" id="inspector-meta">提交時間：無</p>
             
-            <div class="mb-6 rounded overflow-hidden border border-slate-800">
+            <div class="mb-8 rounded overflow-hidden border border-slate-800 shadow-inner">
                 <!-- 唯讀高亮編輯器容器 -->
                 <textarea id="inspector-editor"></textarea>
             </div>
 
-            <button onclick="closeInspector()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded transition">
+            <!-- 修改：放大按鈕尺寸 -->
+            <button onclick="closeInspector()" class="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold text-lg rounded transition">
                 關閉預覽 (Close)
             </button>
         </div>
@@ -290,13 +302,26 @@
             try {
                 // 1. 抓取名單 stu_list
                 const stuUrl = webAppUrl + (webAppUrl.includes('?') ? '&' : '?') + 'action=getStudents&_ts=' + Date.now();
-                const resStu = await fetch(stuUrl);
-                if (!resStu.ok) throw new Error("Fetch Students Error");
-                const stuData = await resStu.json();
+                const resStu = await fetch(stuUrl, { redirect: 'follow' });
+                
+                if (!resStu.ok) {
+                    throw new Error(`HTTP ${resStu.status}`);
+                }
+                
+                const textStu = await resStu.text();
+                let stuData;
+                try {
+                    stuData = JSON.parse(textStu);
+                } catch (e) {
+                    throw new Error("回傳的不是有效的資料格式。這通常代表權限未設為「所有人(Anyone)」，或 API 網址設定錯誤。");
+                }
                 
                 if (Array.isArray(stuData)) {
                     studentList = stuData;
                     renderMatrixPlaceholder(); 
+                } else if (stuData.status === 'error') {
+                    document.getElementById('matrix-body').innerHTML = `<tr><td colspan="8" class="p-6 text-yellow-500">載入錯誤：${stuData.message}</td></tr>`;
+                    studentList = [];
                 } else {
                     document.getElementById('matrix-body').innerHTML = `<tr><td colspan="8" class="p-6 text-yellow-500">找不到名單，請確認試算表有建立 "stu_list" 工作表。</td></tr>`;
                     studentList = [];
@@ -309,6 +334,7 @@
             } catch (error) {
                 console.error("初始化同步失敗", error);
                 document.getElementById('diagnose-banner').classList.remove('hidden');
+                document.getElementById('error-detail').innerText = "錯誤詳情：" + error.message;
             }
         }
 
@@ -318,17 +344,31 @@
             const webAppUrl = document.getElementById('web-app-url').value.trim() || DEFAULT_API_URL;
             try {
                 const ansUrl = webAppUrl + (webAppUrl.includes('?') ? '&' : '?') + '_ts=' + Date.now();
-                const resAns = await fetch(ansUrl);
-                if (!resAns.ok) throw new Error("Fetch Data Error");
-                const ansData = await resAns.json();
+                const resAns = await fetch(ansUrl, { redirect: 'follow' });
+                
+                if (!resAns.ok) {
+                    throw new Error(`HTTP ${resAns.status}`);
+                }
+                
+                const textAns = await resAns.text();
+                let ansData;
+                try {
+                    ansData = JSON.parse(textAns);
+                } catch (e) {
+                    throw new Error("回傳的不是有效的資料格式。");
+                }
                 
                 if (Array.isArray(ansData)) {
                     globalDatabase = ansData;
                     updateMatrixUI();
                     compareTaskCode(); 
+                } else if (ansData.status === 'error') {
+                    console.error("後端回報錯誤:", ansData.message);
                 }
             } catch (error) {
                 console.error("Fetch Data Failed:", error);
+                document.getElementById('diagnose-banner').classList.remove('hidden');
+                document.getElementById('error-detail').innerText = "錯誤詳情：" + error.message;
             }
         }
 
@@ -526,7 +566,7 @@
 
         function startAutoRefresh() {
             if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-            autoRefreshInterval = setInterval(() => { fetchData(); }, 5000);
+            autoRefreshInterval = setInterval(() => { fetchData(); }, 10000); // 改為10秒刷新一次，減輕後端負擔
         }
 
         function toggleSetupModal() {
@@ -548,7 +588,7 @@
             localStorage.setItem('google_sheet_api_url_teacher', urlValue);
             isDemoMode = false;
             
-            document.getElementById('refresh-status').innerText = "自動更新中 (5s)";
+            document.getElementById('refresh-status').innerText = "自動更新中 (10s)";
             document.getElementById('live-dot').className = "h-2 w-2 bg-green-500 rounded-full animate-ping";
             
             toggleSetupModal();
