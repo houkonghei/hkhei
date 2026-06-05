@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -50,7 +49,6 @@
                 a: "x y w h" 
             },
             10: { 
-                // 💡 已修正：將原本的 "left_check" 改為 'left_check'，避免引號衝突破版
                 q: "not laneDetect.get_ld_return_result('left_check')這句話什麼意思?", 
                 a: "不是左邊有白線" 
             }
@@ -119,6 +117,9 @@
             <input type="hidden" name="studentName" id="form_studentName">
             <input type="hidden" name="questionNum" id="form_questionNum">
             <input type="hidden" name="answer" id="form_answer">
+            <!-- 用於老師端更新名冊的管理指令 -->
+            <input type="hidden" name="action" id="form_action">
+            <input type="hidden" name="namesList" id="form_namesList">
         </form>
 
         <!-- 10個問題回答區 -->
@@ -161,8 +162,8 @@
                                                 <i class="fa-solid fa-key text-gray-400 text-xs"></i>
                                             </div>
                                             <input type="text" id="pass-${i}" 
-                                                   class="block w-28 pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-center placeholder-gray-400" 
-                                                   placeholder="輸入解碼密碼">
+                                                   class="block w-32 pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-center placeholder-gray-400 lowercase" 
+                                                   placeholder="輸入英文解密碼">
                                         </div>
                                         <button onclick="unlockAnswer(${i})" 
                                                 class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-white text-xs font-bold rounded-lg shadow-sm transition">
@@ -196,13 +197,52 @@
         
         <!-- 頁尾 -->
         <footer class="mt-12 text-center text-xs text-gray-500">
-            <p>© 2026 課堂互動教學系統. 學生端版面</p>
+            <p>
+                © 2026 課堂互動教學系統. 學生端版面 
+                <!-- 💡 老師的秘密入口：點擊這個 1.5px 的極淡色小點即可彈出名單更新視窗 -->
+                <span onclick="showAdminModal()" class="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full cursor-pointer ml-1 opacity-20 hover:opacity-100 transition" title="System Settings"></span>
+            </p>
         </footer>
+    </div>
+
+    <!-- ⚙️ 老師秘密彈窗 (Modal)：方便直接貼上整欄姓名 -->
+    <div id="adminModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" onclick="hideAdminModal()"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <div class="inline-block align-middle bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full border border-slate-100">
+                <div class="bg-slate-800 px-6 py-4 flex justify-between items-center text-white">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-users-gear text-lg text-indigo-400"></i>
+                        <h3 class="text-lg font-bold">⚙️ 快速更新雲端學生名冊</h3>
+                    </div>
+                    <button onclick="hideAdminModal()" class="text-white hover:text-slate-300 transition">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 bg-slate-50">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">請貼上最新的學生名單（每行一位學生姓名）：</label>
+                    <textarea id="newStudentNames" rows="12" 
+                              class="w-full p-4 font-mono text-sm text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner overflow-y-auto placeholder-slate-400 leading-relaxed"
+                              placeholder="張三&#10;李四&#10;王五&#10;陳大文&#10;張小明"></textarea>
+                    <p class="text-2xs text-rose-500 font-semibold mt-2"><i class="fa-solid fa-triangle-exclamation mr-1"></i>警告：按下確認後，Google 試算表原有的舊名單將會被覆寫清除！</p>
+                </div>
+                <div class="bg-slate-100 px-6 py-4 flex justify-between items-center border-t border-slate-200">
+                    <button onclick="hideAdminModal()" class="px-4 py-2 bg-slate-300 hover:bg-slate-400 text-slate-700 text-xs font-bold rounded-lg transition shadow-sm">
+                        取消
+                    </button>
+                    <button id="adminConfirmBtn" onclick="submitNewStudentList()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-sm">
+                        確認更新名單
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- 交互邏輯 Javascript -->
     <script>
-        // 您的 Google Apps Script Web App 部署網址 (已安全地硬編碼於此)
+        // 您的 Google Apps Script Web App 部署網址
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxyScuB1McshIxPAMHT-t54Z_i_9rADd9yr_cDzBZkUCGwNpHd2NwF01tQMm8bXnUT_/exec";
 
         // 頁面一載入時，立刻向後端 Google 試算表動態同步並生成最新學生名冊
@@ -290,6 +330,10 @@
             document.getElementById('form_studentName').value = studentName;
             document.getElementById('form_questionNum').value = questionNum;
             document.getElementById('form_answer').value = answer;
+            
+            // 清除行政指令欄位，防止正常作答誤送
+            document.getElementById('form_action').value = "";
+            document.getElementById('form_namesList').value = "";
 
             try {
                 // 2. 透過隱藏表單提交資料到隱藏的 iframe (完美繞過 CORS/沙盒限制)
@@ -299,7 +343,7 @@
                 setTimeout(() => {
                     showToast(`第 ${questionNum} 題答案已成功傳送到老師屏幕！`, 'success');
                     setButtonSuccess(questionNum);
-                }, 1200); // 1.2 秒的加載感，讓體驗更真實
+                }, 1200);
 
             } catch (error) {
                 console.error('Submission Error:', error);
@@ -308,20 +352,20 @@
             }
         }
 
-        // 🔑 老師參考答案解鎖邏輯 (驗證數字之和能被 11 整除，且不重複使用)
+        // 🔑 老師參考答案解鎖邏輯 (💡 已升級：小寫英文代數相加能被 7 整除)
         function unlockAnswer(questionNum) {
             const passInput = document.getElementById(`pass-${questionNum}`);
-            const password = passInput.value.trim();
+            const password = passInput.value.trim().toLowerCase(); // 自動過濾大小寫
 
             if (!password) {
-                showToast("請先輸入解碼密碼！", "error");
+                showToast("請先輸入英文解碼密碼！", "error");
                 passInput.focus();
                 return;
             }
 
-            // 1. 格式檢查：密碼必須完全由數字組成
-            if (!/^\d+$/.test(password)) {
-                showToast("密碼格式不正確，必須全部為數字！", "error");
+            // 1. 格式檢查：密碼必須完全由小寫英文字母組成
+            if (!/^[a-z]+$/.test(password)) {
+                showToast("密碼格式不正確，必須全部為英文字母！", "error");
                 passInput.value = "";
                 passInput.focus();
                 return;
@@ -335,14 +379,14 @@
                 return;
             }
 
-            // 3. 演算法校驗：計算所有數位之和
+            // 3. 演算法校驗：計算所有英文字母的數值之和 (a=1, b=2, c=3... 即 ASCII 碼 - 96)
             let sum = 0;
             for (let i = 0; i < password.length; i++) {
-                sum += parseInt(password[i], 10);
+                sum += (password.charCodeAt(i) - 96);
             }
 
-            // 4. 整除校驗 (數字和能被 11 整除且和大於 0)
-            if (sum > 0 && sum % 11 === 0) {
+            
+            if (sum > 0 && sum % 7 === 0) {
                 // 驗證成功！記錄密碼防止重複使用
                 usedPasswords.add(password);
 
@@ -362,9 +406,66 @@
                 showToast(`Q${questionNum} 參考解答已成功解密開啟！`, "success");
             } else {
                 // 驗證失敗
-                showToast("解碼失敗！密碼不正確，請重新確認老師所說的數字。", "error");
+                showToast("解碼失敗！密碼不正確，請重新確認老師所說的英文字母。", "error");
                 passInput.value = "";
                 passInput.focus();
+            }
+        }
+
+        // ⚙️ 老師端名冊管理 Modal 控制
+        function showAdminModal() {
+            document.getElementById('adminModal').classList.remove('hidden');
+            document.getElementById('newStudentNames').focus();
+        }
+
+        function hideAdminModal() {
+            document.getElementById('adminModal').classList.add('hidden');
+        }
+
+        // 送出一筆全新的學生名單覆蓋舊名單
+        function submitNewStudentList() {
+            const textarea = document.getElementById('newStudentNames');
+            const namesList = textarea.value.trim();
+
+            if (!namesList) {
+                showToast('請先輸入至少一個學生姓名！', 'error');
+                textarea.focus();
+                return;
+            }
+
+            const confirmBtn = document.getElementById('adminConfirmBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>更新中...';
+
+            // 1. 將行政管理指令填入隱藏的表單中
+            const form = document.getElementById('submit_form');
+            form.action = SCRIPT_URL;
+            document.getElementById('form_studentName').value = "ADMIN_CMD";
+            document.getElementById('form_questionNum').value = "0";
+            document.getElementById('form_answer').value = "UPDATE_STUDENT_LIST";
+            
+            // 設定管理參數指令
+            document.getElementById('form_action').value = "updateStudentList";
+            document.getElementById('form_namesList').value = namesList;
+
+            try {
+                // 2. 透過隱藏表單提交
+                form.submit();
+
+                // 3. 在前端模擬完成狀態，並在 1.5 秒後重新整理網頁拉取新名單
+                setTimeout(() => {
+                    showToast('學生名單已成功向雲端發送更新！網頁即將自動重新整理...', 'success');
+                    hideAdminModal();
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                }, 1200);
+
+            } catch (error) {
+                console.error('Submission Error:', error);
+                showToast('雲端名單更新失敗，請確認網路連線！', 'error');
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '確認更新名單';
             }
         }
 
