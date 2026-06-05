@@ -54,7 +54,8 @@
             }
         };
 
-        // 用於存放已成功被學生拿來解鎖過的密碼（防止一碼多用）
+        // 💡 記憶體變數：用於存放已成功被學生解鎖過的密碼。
+        // 當瀏覽器分頁關閉、或重新整理網頁時，此變數將被完全清空，適合下一位學生重新使用。
         const usedPasswords = new Set();
     </script>
 
@@ -305,7 +306,7 @@
             }
         }
 
-        // 🔑 老師參考答案解鎖邏輯 (驗證數字之和能被 7 整除，且不重複使用)
+        // 🔑 老師參考答案解鎖邏輯 (驗證數字之和能被 11 整除，且不重複使用)
         function unlockAnswer(questionNum) {
             const passInput = document.getElementById(`pass-${questionNum}`);
             const password = passInput.value.trim();
@@ -338,8 +339,8 @@
                 sum += parseInt(password[i], 10);
             }
 
-            // 4. 整除校驗 (數字和能被 7 整除且和大於 0)
-            if (sum > 0 && sum % 7 === 0) {
+            // 4. 整除校驗 (💡 已修正：改為數字和能被 11 整除且和大於 0，大幅提升破解難度)
+            if (sum > 0 && sum % 11 === 0) {
                 // 驗證成功！記錄密碼防止重複使用
                 usedPasswords.add(password);
 
