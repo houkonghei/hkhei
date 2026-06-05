@@ -56,12 +56,17 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold text-slate-800">課堂即時互動討論控制台</h1>
-                    <p class="text-xs text-slate-500">即時監控全班答題狀況與代碼收集</p>
+                    <p class="text-xs text-slate-500">點擊學生答案卡片可直接切換對/錯扣分狀態</p>
                 </div>
             </div>
             
             <!-- 控制區 -->
             <div class="flex flex-wrap items-center gap-3">
+                <!-- 📊 匯出成績表按鈕 -->
+                <button onclick="showExportModal()" class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-bold rounded-lg shadow-md transition transform active:scale-95">
+                    <i class="fa-solid fa-file-excel mr-2 text-base"></i>📊 匯出成績表
+                </button>
+
                 <!-- 🎲 隨機抽人按鈕 -->
                 <button onclick="randomDraw()" class="random-btn-active inline-flex items-center px-4 py-2 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-sm font-bold rounded-lg shadow-md transition transform active:scale-95">
                     <i class="fa-solid fa-dice mr-2 text-base"></i>🎲 隨機抽答案
@@ -173,7 +178,7 @@
                         <i class="fa-solid fa-chart-pie mr-1.5"></i>統計與詞雲
                     </button>
                     <button onclick="switchView('tracker')" id="viewBtn-tracker" class="inline-flex items-center px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition">
-                        <i class="fa-solid fa-table-cells mr-1.5"></i>全題型未交追蹤
+                        <i class="fa-solid fa-table-cells mr-1.5"></i>全班各題成績矩陣
                     </button>
                 </div>
             </div>
@@ -233,7 +238,7 @@
                     </div>
                 </div>
 
-                <!-- 3. 全題型未交追蹤視圖 -->
+                <!-- 3. 全題型交叉答題與分數矩陣視圖 -->
                 <div id="view-tracker" class="hidden flex-grow flex-col">
                     <!-- 內容將由 JavaScript 動態灌入 -->
                 </div>
@@ -241,6 +246,40 @@
             </div>
         </div>
     </main>
+
+    <!-- 📊 成績匯出彈窗 (Excel Tab 分隔格式) -->
+    <div id="exportModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <!-- 背景遮罩 -->
+            <div class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" onclick="hideExportModal()"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <!-- 彈窗主體 -->
+            <div class="inline-block align-middle bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl w-full border border-slate-100">
+                <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-file-excel text-lg text-emerald-300"></i>
+                        <h3 class="text-lg font-bold">📊 匯出學生成績表 (Excel 格式)</h3>
+                    </div>
+                    <button onclick="hideExportModal()" class="text-white hover:text-indigo-200 transition">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 bg-slate-50">
+                    <p class="text-xs text-slate-500 mb-3">已為您自動轉換為 <strong>Tab 鍵（\t）分隔格式</strong>。直接點擊下方「一鍵複製」按鈕，隨後在您的 Excel 試算表中任意儲存格按下 <strong>Ctrl+V</strong> 貼上，數據即會自動在各個欄位對齊！</p>
+                    <textarea id="exportTextarea" readonly class="w-full h-80 p-4 font-mono text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none shadow-inner overflow-auto whitespace-pre"></textarea>
+                </div>
+                <div class="bg-slate-100 px-6 py-4 flex justify-between items-center border-t border-slate-200">
+                    <button id="copyExportBtn" onclick="copyExportedText()" class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg shadow-sm transition">
+                        <i class="fa-regular fa-copy mr-2"></i>一鍵複製
+                    </button>
+                    <button onclick="hideExportModal()" class="inline-flex items-center px-5 py-2 bg-slate-300 hover:bg-slate-400 text-slate-700 text-sm font-semibold rounded-lg shadow-sm transition">
+                        關閉視窗
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- 焦點放大討論視窗 -->
     <div id="spotlightModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
@@ -385,11 +424,40 @@
             });
         }
 
+        // 💡 獲取學生某題的評分 (若未手動設定，有交則預設 1 分，沒交則為 0 分)
+        function getStudentGrade(studentName, qNum) {
+            const sheetName = `第 ${qNum} 題`;
+            const rawAnswers = serverData[sheetName] || [];
+            const hasSubmitted = rawAnswers.some(item => String(item["學生姓名"] || "").trim() === studentName);
+            
+            if (!hasSubmitted) return "未交"; // 沒交代表無分數
+            
+            // 讀取老師手動打的分數
+            const key = `grade_${studentName}_Q${qNum}`;
+            const saved = localStorage.getItem(key);
+            if (saved === null) return 1; // 💡 預設有提交就是對的，得 1 分
+            return parseInt(saved, 10);
+        }
+
+        // 💡 設定學生評分並寫入 localStorage
+        function setStudentGrade(studentName, qNum, score) {
+            const key = `grade_${studentName}_Q${qNum}`;
+            localStorage.setItem(key, score);
+            updateDashboard(); // 實時更新 dashboard 的統計與矩陣
+        }
+
+        // 💡 切換學生對/錯狀態 (1變0, 0變1)
+        function toggleGrade(studentName, qNum) {
+            const currentScore = getStudentGrade(studentName, qNum);
+            const newScore = currentScore === 1 ? 0 : 1;
+            setStudentGrade(studentName, qNum, newScore);
+            showToast(`${studentName} 第 Q${qNum} 題已設為 ${newScore === 1 ? '✔ 有分' : '❌ 扣分'}`, 'success');
+        }
+
         function updateDashboard() {
             for (let i = 1; i <= 10; i++) {
                 const sheetName = `第 ${i} 題`;
                 const list = serverData[sheetName] || [];
-                // 💡 安全性修正：強制將「學生姓名」轉為字串
                 const uniqueStudents = [...new Set(list.map(item => String(item["學生姓名"] || "").trim()).filter(Boolean))];
                 const count = uniqueStudents.length;
 
@@ -438,7 +506,6 @@
             renderCurrentQuestionData();
         }
 
-        // 💡 安全性修正：強制將「學生姓名」轉為字串以防萬一
         function getLatestAnswers(list) {
             const map = new Map();
             list.forEach(item => {
@@ -487,14 +554,13 @@
             }
         }
 
-        // --- 1. 卡片視圖 ---
+        // --- 1. 卡片視圖 (極簡點擊空白改卷 + 滑鼠動態反饋，已依據 image_d08023.png 徹底移除底下提示文字) ---
         function renderCards(answers) {
             const grid = document.getElementById('cardsGrid');
             grid.innerHTML = '';
             window.currentAnswersList = [];
 
             answers.forEach((item, index) => {
-                // 💡 重大安全修正：將答案 `ans` 與姓名 `name` 強制轉成字串，防堵純數字答案（如 65）使 includes() 崩潰
                 const name = String(item["學生姓名"] || "").trim();
                 const ans = String(item["回答內容"] || "");
                 window.currentAnswersList.push(ans);
@@ -509,29 +575,34 @@
 
                 const isCode = ans.includes('\n') || ans.includes('def ') || ans.includes('import ') || ans.includes('print(') || ans.includes(' = ');
 
+                // 💡 讀取該學生這題的得分 (預設 1)
+                const score = getStudentGrade(name, currentQuestion);
+
                 const cardHtml = `
-                    <div onclick="safeSpotlight(${index}, '${name}', '${timeStr}')" class="bg-slate-50 hover:bg-indigo-50/10 rounded-xl p-4 border border-slate-100 hover:border-indigo-100 transition-all shadow-2xs relative flex flex-col justify-between card-element cursor-pointer group" data-student="${name}" data-answer="${ans.replace(/"/g, '&quot;')}">
+                    <div onclick="toggleGrade('${name}', ${currentQuestion})" class="rounded-xl p-4 border transition-all duration-200 relative flex flex-col justify-between card-element cursor-pointer group hover:scale-[1.01] hover:shadow-md
+                        ${score === 1 
+                            ? 'bg-slate-50 hover:bg-indigo-50 border-slate-100 hover:border-indigo-300' 
+                            : 'bg-rose-50 hover:bg-rose-100/70 border-rose-200 hover:border-rose-300'}" 
+                        data-student="${name}" data-answer="${ans.replace(/"/g, '&quot;')}">
                         <div>
                             <div class="flex items-center justify-between mb-2.5">
                                 <div class="flex items-center space-x-2">
-                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                    <span class="font-bold text-sm text-slate-800">${name}</span>
+                                    <span class="w-2.5 h-2.5 rounded-full ${score === 1 ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+                                    <span class="font-extrabold text-sm text-slate-800">${name}</span>
                                 </div>
                                 <div class="flex items-center space-x-1.5" onclick="event.stopPropagation()">
                                     <span class="text-2xs text-slate-400 font-mono mr-1">${timeStr}</span>
-                                    <button onclick="safeSpotlight(${index}, '${name}', '${timeStr}')" class="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-white border border-transparent hover:border-slate-200 shadow-3xs transition" title="放大討論">
+                                    <!-- 🔍 放大焦點按鈕 -->
+                                    <button onclick="event.stopPropagation(); safeSpotlight(${index}, '${name}', '${timeStr}')" class="text-slate-400 hover:text-indigo-600 p-1.5 rounded-md hover:bg-white border border-transparent hover:border-slate-200 shadow-3xs transition" title="放大討論">
                                         <i class="fa-solid fa-expand"></i>
                                     </button>
-                                    <button onclick="safeCopyToClipboard(this, ${index})" class="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-white border border-transparent hover:border-slate-200 shadow-3xs transition" title="複製內容">
+                                    <!-- 📋 複製內容按鈕 -->
+                                    <button onclick="event.stopPropagation(); safeCopyToClipboard(this, ${index})" class="text-slate-400 hover:text-indigo-600 p-1.5 rounded-md hover:bg-white border border-transparent hover:border-slate-200 shadow-3xs transition" title="複製內容">
                                         <i class="fa-regular fa-copy"></i>
                                     </button>
                                 </div>
                             </div>
                             <div class="text-xs text-slate-700 whitespace-pre-wrap ${isCode ? 'font-mono bg-slate-950 text-slate-100 p-3 rounded-lg max-h-[180px] overflow-y-auto leading-relaxed' : 'bg-white p-3 rounded-lg border border-slate-200/60 leading-relaxed'}">${escapeHtml(ans)}</div>
-                        </div>
-                        <div class="mt-2.5 pt-2 border-t border-slate-100 flex justify-between items-center text-3xs text-slate-400 opacity-0 group-hover:opacity-100 transition">
-                            <span>點擊卡片任何地方以全螢幕討論</span>
-                            <span class="text-indigo-500 font-bold"><i class="fa-solid fa-magnifying-glass-plus mr-1"></i>放大焦點</span>
                         </div>
                     </div>
                 `;
@@ -582,7 +653,6 @@
             const wordFreq = {};
 
             answers.forEach(item => {
-                // 💡 安全性修正：強制轉成字串，防止 .trim() 在純數字時報錯
                 const ans = String(item["回答內容"] || "").trim();
                 if (!ans) return;
 
@@ -676,7 +746,7 @@
             });
         }
 
-        // --- 3. 全題型交叉答題狀態進度矩陣 ---
+        // --- 3. 全班各題成績矩陣 ---
         function renderTrackerMatrix() {
             const container = document.getElementById('view-tracker');
             container.innerHTML = ''; 
@@ -694,14 +764,16 @@
             let tableHtml = `
                 <div class="mb-4 p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-r-lg flex justify-between items-center flex-wrap gap-3">
                     <p class="text-xs text-indigo-950 font-semibold">
-                        <i class="fa-solid fa-table-cells mr-1.5 text-indigo-600"></i>全班答題進度矩陣：實時橫向追蹤每位同學在「每一道題」的完成狀態。
+                        <i class="fa-solid fa-table-cells mr-1.5 text-indigo-600"></i>全班課堂成績大看板：橫向展示每位同學在「Q1 ~ Q10」的所有得分情況與總分。
                     </p>
-                    <span class="text-3xs bg-white text-slate-600 font-bold px-2 py-1 rounded border border-slate-200 shadow-3xs">
-                        綠色 <i class="fa-solid fa-check text-emerald-600 mx-0.5"></i> = 已提交 | 灰色 <i class="fa-solid fa-minus text-slate-400 mx-0.5"></i> = 未交
-                    </span>
+                    <div class="flex items-center space-x-2 text-3xs">
+                        <span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded border border-emerald-200 shadow-3xs">1分 (正確)</span>
+                        <span class="bg-rose-100 text-rose-800 font-bold px-2 py-1 rounded border border-rose-200 shadow-3xs">0分 (扣分)</span>
+                        <span class="bg-slate-100 text-slate-500 font-bold px-2 py-1 rounded border border-slate-200 shadow-3xs">未交</span>
+                    </div>
                 </div>
                 <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-3xs bg-white">
-                    <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
+                    <table class="min-w-full divide-y divide-slate-200 text-left text-sm font-medium">
                         <thead class="bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider sticky top-0">
                             <tr>
                                 <th class="px-4 py-3.5 font-bold">學生姓名</th>
@@ -710,7 +782,7 @@
                 tableHtml += `<th class="px-2 py-3.5 text-center font-bold">Q${q}</th>`;
             }
             tableHtml += `
-                                <th class="px-4 py-3.5 text-center font-bold w-32">完成進度</th>
+                                <th class="px-4 py-3.5 text-center font-bold w-32">目前總積分</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 text-slate-700" id="matrixTbody">
@@ -722,46 +794,40 @@
             container.innerHTML = tableHtml;
             const tbody = document.getElementById('matrixTbody');
 
-            const submissionMaps = {};
-            for (let q = 1; q <= 10; q++) {
-                const sheetName = `第 ${q} 題`;
-                const rawAnswers = serverData[sheetName] || [];
-                // 💡 安全性修正：對比人名時一律轉為 String
-                submissionMaps[q] = new Set(rawAnswers.map(item => String(item["學生姓名"] || "").trim()).filter(Boolean));
-            }
-
             ALL_STUDENTS.forEach(student => {
                 let rowHtml = `
                     <tr class="hover:bg-slate-50/70 transition">
                         <td class="px-4 py-3 font-bold text-slate-800">${student}</td>
                 `;
                 
-                let submittedCount = 0;
+                let totalScore = 0;
                 
                 for(let q = 1; q <= 10; q++) {
-                    const hasSubmitted = submissionMaps[q].has(student);
-                    if(hasSubmitted) submittedCount++;
+                    const status = getStudentGrade(student, q);
 
-                    rowHtml += `
-                        <td class="px-2 py-3 text-center">
-                            ${hasSubmitted 
-                                ? `<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-extrabold" title="第 ${q} 題：已提交"><i class="fa-solid fa-check"></i></span>`
-                                : `<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 text-xs" title="第 ${q} 題：尚未提交"><i class="fa-solid fa-minus"></i></span>`
-                            }
-                        </td>
-                    `;
+                    let statusCell = "";
+                    if (status === "未交") {
+                        statusCell = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 text-slate-400 text-2xs" title="Q${q}：未提交">➖</span>`;
+                    } else if (status === 1) {
+                        totalScore += 1;
+                        statusCell = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 text-2xs font-extrabold" title="Q${q}：得 1 分 (正確)"><i class="fa-solid fa-check"></i></span>`;
+                    } else if (status === 0) {
+                        statusCell = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-rose-100 text-rose-800 text-2xs font-extrabold" title="Q${q}：得 0 分 (錯誤)"><i class="fa-solid fa-xmark"></i></span>`;
+                    }
+
+                    rowHtml += `<td class="px-2 py-3 text-center">${statusCell}</td>`;
                 }
 
-                const percent = Math.round((submittedCount / 10) * 100);
+                const percent = Math.round((totalScore / 10) * 100);
                 
                 let progressBadgeColor = 'bg-slate-100 text-slate-600';
-                if (submittedCount === 10) progressBadgeColor = 'bg-emerald-100 text-emerald-800 font-bold border border-emerald-200';
-                else if (submittedCount >= 5) progressBadgeColor = 'bg-indigo-50 text-indigo-700 font-medium border border-indigo-100';
+                if (totalScore === 10) progressBadgeColor = 'bg-emerald-100 text-emerald-800 font-extrabold border border-emerald-200';
+                else if (totalScore >= 5) progressBadgeColor = 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-100';
 
                 rowHtml += `
                         <td class="px-4 py-3 text-center">
                             <div class="flex items-center justify-center space-x-2">
-                                <span class="text-xs px-2 py-0.5 rounded-md ${progressBadgeColor} font-mono">${submittedCount}/10</span>
+                                <span class="text-xs px-2 py-0.5 rounded-md ${progressBadgeColor} font-mono">${totalScore} 分</span>
                                 <div class="w-12 bg-slate-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
                                     <div class="bg-indigo-600 h-1.5 transition-all duration-500" style="width: ${percent}%"></div>
                                 </div>
@@ -773,10 +839,60 @@
             });
         }
 
+        // --- 📊 成績匯出模組 (已依據 image_d08069.png 徹底將 "未交" 替代為大寫 "X") ---
+        function showExportModal() {
+            const textarea = document.getElementById('exportTextarea');
+            
+            // 💡 生成標準 Tab 分隔純文字格式，並使用大寫 "X" 代表未交，優化 Excel 的貼上與對齊
+            let text = "學生姓名\tQ1\tQ2\tQ3\tQ4\tQ5\tQ6\tQ7\tQ8\tQ9\tQ10\t總分\n";
+            
+            ALL_STUDENTS.forEach(student => {
+                let row = student;
+                let total = 0;
+                
+                for(let q = 1; q <= 10; q++) {
+                    const status = getStudentGrade(student, q);
+                    if (status === "未交") {
+                        row += "\tX"; // 💡 已修正：不再輸出「未交」中文字，改用大寫 "X" 以維護 Excel 排版對齊的美觀！
+                    } else {
+                        row += `\t${status}`;
+                        total += status;
+                    }
+                }
+                row += `\t${total}\n`;
+                text += row;
+            });
+            
+            textarea.value = text;
+            document.getElementById('exportModal').classList.remove('hidden');
+        }
+
+        function hideExportModal() {
+            document.getElementById('exportModal').classList.add('hidden');
+        }
+
+        function copyExportedText() {
+            const textarea = document.getElementById('exportTextarea');
+            const btn = document.getElementById('copyExportBtn');
+            const originalHtml = btn.innerHTML;
+            
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                btn.className = "inline-flex items-center px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 text-sm font-bold rounded-lg shadow-sm transition";
+                btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i>已成功複製';
+                showToast('已複製學生成績表，直接去 Excel 按 Ctrl+V 貼上即可！', 'success');
+                setTimeout(() => {
+                    btn.className = "inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg shadow-sm transition";
+                    btn.innerHTML = originalHtml;
+                }, 2000);
+            } catch (err) {
+                showToast('複製失敗！請手動在文字框內全選複製。', 'error');
+            }
+        }
+
         // --- 焦點放大討論視窗控制器 ---
         function safeSpotlight(index, name, timeStr) {
-            if (event) event.stopPropagation();
-
             const answerText = window.currentAnswersList[index] || "";
             activeSpotlightAnswer = answerText;
 
@@ -911,6 +1027,7 @@
             });
         }
 
+        // 一鍵複製答案到剪貼簿
         function copyToClipboard(btn, text) {
             const textarea = document.createElement('textarea');
             textarea.value = text;
