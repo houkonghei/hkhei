@@ -4,10 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>課堂互動系統 - 學生端</title>
-    <!-- 引入 Tailwind CSS 確保現代化外觀 -->
+    <!-- 引入 Tailwind CSS 確保現代化與響應式外觀 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 Font Awesome 圖示 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 💡 老師專屬：在這裡修改您的提問題目與參考解答 -->
+    <script>
+        const TEACHER_DATA = {
+            1: { 
+                q: "澳門的人口大約是多少？", 
+                a: "大約 68.3 萬人（根據近年最新統計數據，介於 65 萬至 70 萬人之間均屬合理）。" 
+            },
+            2: { 
+                q: "請寫出一個能印出 1 到 10 數字的 Python 迴圈代碼。", 
+                a: "for i in range(1, 11):\n    print(i)" 
+            },
+            3: { 
+                q: "網頁開發的三大核心技術（前端黃金三角）是什麼？", 
+                a: "1. HTML（定義結構與內容）\n2. CSS（設計網頁外觀樣式）\n3. JavaScript（控制動態交互行為）" 
+            },
+            4: { 
+                q: "在 Python 中，List（列表）的宣告方式與特點是什麼？", 
+                a: "使用中括號 [] 宣告。特點是有序、可變（Mutable）、且允許存放重複的元素。" 
+            },
+            5: { 
+                q: "澳門的官方語言是什麼？", 
+                a: "根據《基本法》，澳門的官方語言是中文（繁體字）與葡萄牙文。" 
+            },
+            6: { 
+                q: "請寫出在 Python 中定義一個名為 calculate_area 函式的語法骨架。", 
+                a: "def calculate_area(width, height):\n    # 在此處編寫計算邏輯\n    return width * height" 
+            },
+            7: { 
+                q: "請簡述什麼是 CSS Grid（網格佈局）？", 
+                a: "Grid 是一種二維（網格）佈局系統，能夠同時對「行 (Rows)」與「列 (Columns)」進行強大的排版控制。" 
+            },
+            8: { 
+                q: "在 JavaScript 中，const 與 let 宣告變數有何不同？", 
+                a: "let 用於宣告可以被重新賦值的變數；const 則用於宣告唯讀的常數，一經賦值便無法修改。兩者都具有區塊作用域。" 
+            },
+            9: { 
+                q: "請寫出 Python 讀取名為 data.txt 文字檔案的安全寫法。", 
+                a: "with open('data.txt', 'r', encoding='utf-8') as f:\n    content = f.read()\n# 使用 with 語句可在讀取完畢後自動關閉檔案" 
+            },
+            10: { 
+                q: "請簡單解釋什麼是 API（應用程式介面）？", 
+                a: "API 是一組定義好的規則與協議，它扮演著橋樑的角色，允許不同的軟體或系統之間彼此進行通訊與資料交換。" 
+            }
+        };
+
+        // 用於存放已成功被學生拿來解鎖過的密碼（防止一碼多用）
+        const usedPasswords = new Set();
+    </script>
+
     <style>
         /* 漸變背景與平滑過渡效果 */
         body {
@@ -25,7 +75,7 @@
 </head>
 <body class="py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-3xl mx-auto">
-        <!-- 標頭 -->
+        <!-- 標頭區區塊 -->
         <header class="text-center mb-8">
             <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight sm:text-4xl">
                 <i class="fa-solid fa-graduation-cap text-indigo-600 mr-2"></i>課堂即時互動系統
@@ -74,6 +124,7 @@
             <script>
                 const questionsCount = 10;
                 for (let i = 1; i <= questionsCount; i++) {
+                    const questionObj = TEACHER_DATA[i] || { q: `第 ${i} 題 (口頭提問)`, a: "" };
                     document.write(`
                         <div class="bg-white rounded-2xl shadow-md p-5 card border border-gray-100" id="card-${i}">
                             <div class="flex flex-col space-y-3">
@@ -83,7 +134,7 @@
                                         <span class="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 font-bold text-sm border border-indigo-200">
                                             Q${i}
                                         </span>
-                                        <span class="font-bold text-gray-700">第 ${i} 題</span>
+                                        <span class="font-bold text-gray-700">${questionObj.q}</span>
                                     </div>
                                     <span id="badge-${i}" class="hidden text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-800 font-semibold">
                                         <i class="fa-solid fa-circle-check mr-1"></i>已成功傳送
@@ -97,13 +148,41 @@
                                               placeholder="請輸入你的解答... (支援多行文字與程式碼)"></textarea>
                                 </div>
                                 
-                                <!-- 送出按鈕 -->
-                                <div class="flex justify-end">
-                                    <button onclick="submitAnswer(${i})" id="btn-${i}"
-                                            class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2.5 border border-transparent text-sm font-semibold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-sm transition duration-150">
-                                        <i class="fa-solid fa-paper-plane mr-2" id="icon-${i}"></i>
-                                        <span id="text-${i}">送答案到老師屏幕</span>
-                                    </button>
+                                <!-- 送出按鈕與老師參考答案解鎖區 -->
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-slate-100">
+                                    
+                                    <!-- 🔑 老師參考答案解密區 -->
+                                    <div class="flex items-center space-x-2" id="unlock-area-${i}">
+                                        <div class="relative rounded-md shadow-xs">
+                                            <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                                                <i class="fa-solid fa-key text-gray-400 text-xs"></i>
+                                            </div>
+                                            <input type="text" id="pass-${i}" 
+                                                   class="block w-28 pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-center placeholder-gray-400" 
+                                                   placeholder="輸入解碼密碼">
+                                        </div>
+                                        <button onclick="unlockAnswer(${i})" 
+                                                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-white text-xs font-bold rounded-lg shadow-sm transition">
+                                            解鎖老師答案
+                                        </button>
+                                    </div>
+
+                                    <!-- 答案顯示區 (預設隱藏) -->
+                                    <div id="teacher-ans-box-${i}" class="hidden flex-1 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-left">
+                                        <p class="text-xs font-bold text-emerald-800 mb-1">
+                                            <i class="fa-solid fa-circle-check mr-1"></i>老師的參考答案：
+                                        </p>
+                                        <pre id="teacher-ans-text-${i}" class="text-xs text-emerald-950 font-mono whitespace-pre-wrap leading-relaxed bg-white/60 p-2.5 rounded-lg border border-emerald-100/50"></pre>
+                                    </div>
+
+                                    <!-- 送出按鈕 -->
+                                    <div class="flex justify-end sm:w-auto w-full">
+                                        <button onclick="submitAnswer(${i})" id="btn-${i}"
+                                                class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2 border border-transparent text-sm font-semibold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-sm transition duration-150">
+                                            <i class="fa-solid fa-paper-plane mr-2" id="icon-${i}"></i>
+                                            <span id="text-${i}">送答案到老師屏幕</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -223,6 +302,66 @@
                 console.error('Submission Error:', error);
                 showToast('傳送失敗，請確認網路連線！', 'error');
                 setButtonLoading(questionNum, false);
+            }
+        }
+
+        // 🔑 老師參考答案解鎖邏輯 (驗證數字之和能被 7 整除，且不重複使用)
+        function unlockAnswer(questionNum) {
+            const passInput = document.getElementById(`pass-${questionNum}`);
+            const password = passInput.value.trim();
+
+            if (!password) {
+                showToast("請先輸入解碼密碼！", "error");
+                passInput.focus();
+                return;
+            }
+
+            // 1. 格式檢查：密碼必須完全由數字組成
+            if (!/^\d+$/.test(password)) {
+                showToast("密碼格式不正確，必須全部為數字！", "error");
+                passInput.value = "";
+                passInput.focus();
+                return;
+            }
+
+            // 2. 重複使用檢查：檢查密碼是否已被解鎖過其他題目
+            if (usedPasswords.has(password)) {
+                showToast("此密碼已被使用過！為維持公平，每組密碼僅能使用一次，請向老師獲取新密碼。", "error");
+                passInput.value = "";
+                passInput.focus();
+                return;
+            }
+
+            // 3. 演算法校驗：計算所有數位之和
+            let sum = 0;
+            for (let i = 0; i < password.length; i++) {
+                sum += parseInt(password[i], 10);
+            }
+
+            // 4. 整除校驗 (數字和能被 7 整除且和大於 0)
+            if (sum > 0 && sum % 7 === 0) {
+                // 驗證成功！記錄密碼防止重複使用
+                usedPasswords.add(password);
+
+                // 獲取該題目的解答內容
+                const qData = TEACHER_DATA[questionNum];
+                const solution = qData ? qData.a : "此題無設定參考解答。";
+
+                // UI 更新：隱藏解鎖輸入區，顯示解密後的答案
+                document.getElementById(`unlock-area-${questionNum}`).classList.add("hidden");
+                
+                const ansBox = document.getElementById(`teacher-ans-box-${questionNum}`);
+                const ansText = document.getElementById(`teacher-ans-text-${questionNum}`);
+                
+                ansText.textContent = solution;
+                ansBox.classList.remove("hidden");
+
+                showToast(`Q${questionNum} 參考解答已成功解密開啟！`, "success");
+            } else {
+                // 驗證失敗
+                showToast("解碼失敗！密碼不正確，請重新確認老師所說的數字。", "error");
+                passInput.value = "";
+                passInput.focus();
             }
         }
 
