@@ -827,32 +827,32 @@
                 return;
             }
 
-            // 算法升級：各位數字相加是否能被 11 整除
+          
             const digits = pwdInput.split('').map(Number);
             const sum = digits.reduce((acc, curr) => acc + curr, 0);
 
             if (sum % 11 === 0 && digits.length > 0) {
-                // 將該密碼標記為已使用
+             
                 usedPwds.push(pwdInput);
                 sessionStorage.setItem('used_teacher_passwords', JSON.stringify(usedPwds));
 
-                // 通過！解鎖相應的老師標準解答
+             
                 const padIndex = currentRevealIndex.toString().padStart(2, '0');
                 const answerCode = TEACHER_ANSWERS[currentRevealIndex];
                 
-                // 覆寫編輯器代碼
+           
                 cmInstances[`code-${padIndex}`].setValue(answerCode);
                 
-                // 關閉輸入視窗
+                
                 closePasswordModal();
                 
-                // 提示成功
+               
                 showModal(
                     "<i class='fa-solid fa-circle-check text-green-400 mr-2'></i>驗證成功！",
                     `恭喜您解鎖成功！任務 ${padIndex} 的老師標準答案已自動載入到代碼框中。`
                 );
             } else {
-                errorDiv.innerText = "密碼錯誤！請重新輸入。";
+                errorDiv.innerText = "錯誤！請重新輸入。";
                 errorDiv.classList.remove('hidden');
             }
         }
