@@ -356,15 +356,13 @@
             </form>
         </section>
 
-        <!-- 右側：模擬資料區 (精確模擬 books.toscrape.com 的 HTML 與樣式結構) -->
+        <!-- 右側：模擬資料區 -->
         <section id="target-zone" class="bg-gray-100 text-gray-800 rounded-lg shadow-xl relative overflow-y-auto h-[100vh] lg:h-[calc(100vh-140px)] sticky top-6 font-sans">
-            
             <!-- 網站頂部 Header -->
             <div class="bg-white border-b border-gray-200 py-6 px-8 flex flex-col justify-between items-start">
                 <h1 class="text-3xl font-light text-gray-700 tracking-wide font-serif">
                     <span class="font-bold text-gray-800">Books</span> to Scrape
                 </h1>
-                <!-- 任務 01 目標：We love being scraped! -->
                 <div class="mt-1 text-sm text-gray-500 border-t border-gray-100 pt-1 w-full flex justify-between items-center font-sans">
                     <div><small class="text-gray-400 italic">"We love being scraped!"</small></div>
                     <span class="text-[10px] bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded">Scrape Sandbox v1.3</span>
@@ -372,8 +370,6 @@
             </div>
 
             <div class="flex flex-col md:flex-row min-h-[500px]">
-                
-                <!-- 側邊欄 (任務 04 目標區 - 移除了所有不必要的空格與空行，方便學生抓取) -->
                 <aside class="w-full md:w-1/4 bg-white p-6 border-r border-gray-200">
                     <h3 class="text-sm font-bold uppercase text-gray-400 tracking-wider pb-2 border-b border-gray-100 mb-4">Books Category</h3>
                     <ul class="space-y-2 text-xs font-semibold text-teal-600">
@@ -387,34 +383,27 @@
                     </ul>
                 </aside>
 
-                <!-- 主要書籍網格 (任務 2, 3, 5, 6 目標區) -->
                 <main class="flex-grow p-6">
                     <div class="border-b border-gray-200 pb-3 mb-6 flex justify-between items-center">
-                        <!-- 任務 02 目標：.page-num 標籤，提供 Page 1 讓學生直接獲取 -->
                         <h2 class="text-lg font-normal text-gray-600">All Products (<span class="page-num font-bold text-teal-600">Page 1</span>)</h2>
                         <span class="text-xs text-gray-400">Showing 6 of 20 results</span>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                        
                         <!-- Book 1 (二星) -->
                         <div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition flex flex-col justify-between">
-                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">
-                                [Book Cover]
-                            </div>
+                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">[Book Cover]</div>
                             <div class="mb-3">
                                 <p class="star-rating Two text-yellow-500 text-xs mb-1">
                                     <i class="fa-solid fa-star"></i>
                                     <i class="fa-solid fa-star"></i>                                    
                                     <span class="text-[10px] text-gray-400 ml-1">(Two)</span>
                                 </p>
-                                <!-- 任務 03 目標：書名簡短化，取消 title 屬性 -->
                                 <h3 class="text-xs font-bold text-gray-800">
                                     <a href="#" class="hover:underline text-teal-600">A Light in the Attic</a>
                                 </h3>
                             </div>
                             <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
-                                <!-- 任務 06 目標：純整數，取消 £ 貨幣符號與小數點 -->
                                 <p class="price_color text-sm font-bold text-gray-900">
                                     <span class="currency text-xs text-gray-400 mr-0.5">$</span><span class="price_num">151</span>
                                 </p>
@@ -424,9 +413,7 @@
 
                         <!-- Book 2 (一星) -->
                         <div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition flex flex-col justify-between">
-                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">
-                                [Book Cover]
-                            </div>
+                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">[Book Cover]</div>
                             <div class="mb-3">
                                 <p class="star-rating One text-yellow-500 text-xs mb-1">
                                     <i class="fa-solid fa-star"></i>
@@ -446,9 +433,7 @@
 
                         <!-- Book 3 (二星) -->
                         <div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition flex flex-col justify-between">
-                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">
-                                [Book Cover]
-                            </div>
+                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">[Book Cover]</div>
                             <div class="mb-3">
                                 <p class="star-rating Two text-yellow-500 text-xs mb-1">
                                     <i class="fa-solid fa-star"></i>
@@ -469,9 +454,7 @@
 
                         <!-- Book 4 (四星) -->
                         <div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition flex flex-col justify-between">
-                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">
-                                [Book Cover]
-                            </div>
+                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">[Book Cover]</div>
                             <div class="mb-3">
                                 <p class="star-rating Four text-yellow-500 text-xs mb-1">
                                     <i class="fa-solid fa-star"></i>
@@ -494,9 +477,7 @@
 
                         <!-- Book 5 (二星) -->
                         <div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition flex flex-col justify-between">
-                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">
-                                [Book Cover]
-                            </div>
+                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">[Book Cover]</div>
                             <div class="mb-3">
                                 <p class="star-rating Two text-yellow-500 text-xs mb-1">
                                     <i class="fa-solid fa-star"></i>
@@ -517,9 +498,7 @@
 
                         <!-- Book 6 (二星) -->
                         <div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition flex flex-col justify-between">
-                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">
-                                [Book Cover]
-                            </div>
+                            <div class="w-full h-36 bg-gray-100 rounded mb-4 flex items-center justify-center text-gray-400 text-xs italic">[Book Cover]</div>
                             <div class="mb-3">
                                 <p class="star-rating Two text-yellow-500 text-xs mb-1">
                                     <i class="fa-solid fa-star"></i>
@@ -565,7 +544,7 @@
             </h3>
             <p class="text-xs text-gray-300 mb-4">請輸入老師現場說出來的數字密碼：</p>
             <input type="text" id="teacher-pwd-input" placeholder="請輸入純數字密碼..." 
-                   class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:none mb-4 font-mono">
+                   class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none mb-4 font-mono">
             <div id="pwd-error-msg" class="text-xs text-red-400 mb-4 hidden"></div>
             <div class="flex space-x-2">
                 <button onclick="confirmPassword()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded text-xs transition">
@@ -729,22 +708,22 @@
             }
         }
 
-        // 新增：「提示元素在哪裡」高亮定位與自動滾動機制
+        // 「提示元素在哪裡」高亮定位與自動滾動機制
         function showElementLocation(index) {
             const padIndex = index.toString().padStart(2, '0');
             const statusSpan = document.getElementById(`test-status-${padIndex}`);
 
-            // 1. 定義 6 個任務在右側模擬網頁中的真實 CSS 選擇器目標
+            // 定義 6 個任務在右側模擬網頁中的真實 CSS 選擇器目標
             const taskTargetSelectors = {
                 1: "#target-zone small.text-gray-400.italic", // 任務 01: We love being scraped (口號)
                 2: "#target-zone .page-num",                  // 任務 02: Page 1 (頁碼)
                 3: "#target-zone h3 a",                       // 任務 03: 書籍名稱超連結
                 4: "#target-zone aside li a",                 // 任務 04: 分類欄目
                 5: "#target-zone p.star-rating.Two",          // 任務 05: 二星書籍段落
-                6: "#target-zone .price_color .price_num"     // 【修正】：高亮閃爍目標精確指向 price_num 標籤
+                6: "#target-zone .price_color .price_num"     // 高亮閃爍目標精確指向 price_num 標籤
             };
 
-            // 2. 清除上一次所有高亮效果
+            // 清除上一次所有高亮效果
             document.querySelectorAll('.local-highlight').forEach(el => {
                 el.classList.remove('local-highlight');
             });
@@ -753,19 +732,19 @@
             if (!selector) return;
 
             try {
-                // 3. 搜尋右側模擬網頁中的目標節點
+                // 搜尋右側模擬網頁中的目標節點
                 const matchedElements = document.querySelectorAll(selector);
 
                 if (matchedElements.length === 0) {
                     statusSpan.className = "text-[11px] font-sans font-bold text-orange-400";
                     statusSpan.innerHTML = `<i class="fa-solid fa-circle-exclamation mr-1"></i>系統找不到目標元素，請檢查網頁結構。`;
                 } else {
-                    // 4. 為所有符合目標的節點套用黃色脈衝發光特效
+                    // 為所有符合目標的節點套用黃色脈衝發光特效
                     matchedElements.forEach(el => {
                         el.classList.add('local-highlight');
                     });
 
-                    // 5. 智慧自動滾動 (Auto-Scroll) 聚焦到第一個目標元素，並對齊在畫面中央
+                    // 智慧自動滾動 (Auto-Scroll) 聚焦到第一個目標元素，並對齊在畫面中央
                     matchedElements[0].scrollIntoView({
                         behavior: 'smooth',
                         block: 'center'
@@ -774,7 +753,7 @@
                     statusSpan.className = "text-[11px] font-sans font-bold text-yellow-400 animate-pulse";
                     statusSpan.innerHTML = `<i class="fa-solid fa-location-dot mr-1"></i>已在右側黃色閃爍標註並對齊！(${matchedElements.length} 個節點)`;
 
-                    // 6. 4.5 秒後自動解除發光，保持版面整潔
+                    // 4.5 秒後自動解除發光，保持版面整潔
                     setTimeout(() => {
                         matchedElements.forEach(el => {
                             el.classList.remove('local-highlight');
@@ -788,7 +767,7 @@
             }
         }
 
-        // --- 查看老師答案密碼視窗邏輯 ---
+        // 查看老師答案密碼視窗邏輯
         function promptTeacherPassword(index) {
             currentRevealIndex = index;
             document.getElementById('teacher-pwd-input').value = "";
@@ -798,7 +777,7 @@
             setTimeout(() => document.getElementById('teacher-pwd-input').focus(), 150);
         }
 
-        // 新增進度條更新函數定義以修復 ReferenceError 錯誤
+        // 進度條更新函數定義
         function updateProgressBar() {
             const filledCount = submittedTasks.length;
             
@@ -817,10 +796,12 @@
             }
         }
 
+        // 關閉提問密碼視窗
         function closePasswordModal() {
             document.getElementById('password-modal').classList.add('hidden');
         }
 
+        // 驗證老師密碼
         function confirmPassword() {
             const pwdInput = document.getElementById('teacher-pwd-input').value.trim();
             const errorDiv = document.getElementById('pwd-error-msg');
@@ -838,11 +819,23 @@
                 return;
             }
 
-            // 貼心密碼算法驗證：各位數字相加是否能被 7 整除
+            // 安全防作弊：限制該組數字密碼單次使用 (Session 層級)
+            const usedPwds = JSON.parse(sessionStorage.getItem('used_teacher_passwords') || '[]');
+            if (usedPwds.includes(pwdInput)) {
+                errorDiv.innerText = "此密碼已被使用過，請跟老師取得新的密碼！";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            // 算法升級：各位數字相加是否能被 11 整除
             const digits = pwdInput.split('').map(Number);
             const sum = digits.reduce((acc, curr) => acc + curr, 0);
 
-            if (sum % 7 === 0 && digits.length > 0) {
+            if (sum % 11 === 0 && digits.length > 0) {
+                // 將該密碼標記為已使用
+                usedPwds.push(pwdInput);
+                sessionStorage.setItem('used_teacher_passwords', JSON.stringify(usedPwds));
+
                 // 通過！解鎖相應的老師標準解答
                 const padIndex = currentRevealIndex.toString().padStart(2, '0');
                 const answerCode = TEACHER_ANSWERS[currentRevealIndex];
@@ -864,7 +857,69 @@
             }
         }
 
-        // --- 單題提交邏輯 ---
+        // 自動儲稿至 LocalStorage
+        function saveDraft() {
+            const draft = {
+                leaderName: document.getElementById('leader-name').value,
+                submittedTasks: submittedTasks // 記錄已提交題目的陣列
+            };
+            for(let i=1; i<=TOTAL_TASKS; i++) {
+                const padIndex = i.toString().padStart(2, '0');
+                if (cmInstances[`code-${padIndex}`]) {
+                    draft[`code-${padIndex}`] = cmInstances[`code-${padIndex}`].getValue();
+                }
+            }
+            localStorage.setItem('books_crawler_draft_data_instant', JSON.stringify(draft));
+            
+            // 顯示右上角自動儲存小提示
+            const statusIndicator = document.getElementById('save-status');
+            if (statusIndicator) {
+                statusIndicator.classList.remove('hidden');
+                setTimeout(() => statusIndicator.classList.add('hidden'), 2000);
+            }
+        }
+
+        // 載入草稿資料與已提交鎖定狀態
+        function loadDraft() {
+            const draftStr = localStorage.getItem('books_crawler_draft_data_instant');
+            if(draftStr) {
+                try {
+                    const draft = JSON.parse(draftStr);
+                    
+                    // 等待下拉選單載入完成後，恢復選擇的組長姓名
+                    if(draft.leaderName) {
+                        const selectElement = document.getElementById('leader-name');
+                        let optionExists = Array.from(selectElement.options).some(opt => opt.value === draft.leaderName);
+                        if(optionExists) {
+                            selectElement.value = draft.leaderName;
+                        }
+                    }
+                    
+                    // 還原已送出的題目記錄
+                    if(draft.submittedTasks) {
+                        submittedTasks = draft.submittedTasks;
+                    }
+
+                    for(let i=1; i<=TOTAL_TASKS; i++) {
+                        const padIndex = i.toString().padStart(2, '0');
+                        // 還原程式碼內容
+                        if(draft[`code-${padIndex}`] !== undefined && cmInstances[`code-${padIndex}`]) {
+                            cmInstances[`code-${padIndex}`].setValue(draft[`code-${padIndex}`]);
+                        }
+                        // 還原已送出題目的鎖定狀態
+                        if (submittedTasks.includes(padIndex)) {
+                            lockTaskUI(i);
+                        }
+                    }
+                } catch(e) {
+                    console.error("讀取草稿與提交狀態失敗", e);
+                }
+            }
+            // 載入完畢後更新一次課堂任務進度條
+            updateProgressBar();
+        }
+
+        // 單題提交邏輯
         async function submitSingleCode(index) {
             const padIndex = index.toString().padStart(2, '0');
             const leaderName = document.getElementById('leader-name').value.trim();
@@ -901,7 +956,7 @@
                 await fetch(webAppUrl, {
                     method: 'POST',
                     mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 為了極致安全避開 preflight 使用 text/plain，APPS SCRIPT 仍可 parse
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
 
@@ -935,13 +990,13 @@
         function unlockSingleCode(index) {
             const padIndex = index.toString().padStart(2, '0');
             
-            // 1. 從已提交清單中移除
+            // 從已提交清單中移除
             submittedTasks = submittedTasks.filter(item => item !== padIndex);
             
-            // 2. 解鎖編輯器與重置按鈕狀態
+            // 解鎖編輯器與重置按鈕狀態
             unlockTaskUI(index);
             
-            // 3. 儲存快取與更新進度條
+            // 儲存快取與更新進度條
             saveDraft();
             updateProgressBar();
             
@@ -955,16 +1010,13 @@
             const padIndex = index.toString().padStart(2, '0');
             const editor = cmInstances[`code-${padIndex}`];
             
-            // 1. 設置 CodeMirror 為唯讀模式
             editor.setOption("readOnly", true);
             editor.getWrapperElement().classList.add('bg-gray-800', 'opacity-80', 'cursor-not-allowed');
 
-            // 2. 徽章轉為「已送出」
             const badge = document.getElementById(`badge-${padIndex}`);
             badge.className = "text-[10px] bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded font-bold uppercase";
             badge.innerText = "已送出";
 
-            // 3. 隱藏送出按鈕，顯示解鎖按鈕
             document.getElementById(`submit-btn-${padIndex}`).classList.add('hidden');
             document.getElementById(`unlock-btn-${padIndex}`).classList.remove('hidden');
         }
@@ -974,16 +1026,13 @@
             const padIndex = index.toString().padStart(2, '0');
             const editor = cmInstances[`code-${padIndex}`];
             
-            // 1. 恢復編輯器狀態
             editor.setOption("readOnly", false);
             editor.getWrapperElement().classList.remove('bg-gray-800', 'opacity-80', 'cursor-not-allowed');
 
-            // 2. 徽章復原為「未送出」
             const badge = document.getElementById(`badge-${padIndex}`);
             badge.className = "text-[10px] bg-gray-800 text-gray-400 px-2 py-0.5 rounded font-bold uppercase";
             badge.innerText = "已修改";
 
-            // 3. 恢復按鈕顯示
             document.getElementById(`submit-btn-${padIndex}`).classList.remove('hidden');
             document.getElementById(`unlock-btn-${padIndex}`).classList.add('hidden');
             setSubmitButtonState(index, 'idle');
@@ -1018,7 +1067,6 @@
             if(body.classList.contains('hidden')) {
                 body.classList.remove('hidden');
                 icon.classList.add('rotate-180');
-                // CodeMirror 在隱藏的 div 顯示後需要 refresh，否則游標與文字會錯位
                 setTimeout(() => cmInstances[`code-${padIndex}`].refresh(), 10);
             } else {
                 body.classList.add('hidden');
@@ -1026,66 +1074,7 @@
             }
         }
 
-        // 自動儲稿至 LocalStorage
-        function saveDraft() {
-            const draft = {
-                leaderName: document.getElementById('leader-name').value,
-                submittedTasks: submittedTasks // 記錄已提交題目的陣列
-            };
-            for(let i=1; i<=TOTAL_TASKS; i++) {
-                const padIndex = i.toString().padStart(2, '0');
-                draft[`code-${padIndex}`] = cmInstances[`code-${padIndex}`].getValue();
-            }
-            localStorage.setItem('books_crawler_draft_data_instant', JSON.stringify(draft));
-            
-            // 顯示右上角自動儲存小提示
-            const statusIndicator = document.getElementById('save-status');
-            statusIndicator.classList.remove('hidden');
-            setTimeout(() => statusIndicator.classList.add('hidden'), 2000);
-        }
-
-        // 載入草稿資料與已提交鎖定狀態
-        function loadDraft() {
-            const draftStr = localStorage.getItem('books_crawler_draft_data_instant');
-            if(draftStr) {
-                try {
-                    const draft = JSON.parse(draftStr);
-                    
-                    // 等待下拉選單載入完成後，恢復選擇的組長姓名
-                    if(draft.leaderName) {
-                        const selectElement = document.getElementById('leader-name');
-                        // 檢查選項中是否存在該名字
-                        let optionExists = Array.from(selectElement.options).some(opt => opt.value === draft.leaderName);
-                        if(optionExists) {
-                            selectElement.value = draft.leaderName;
-                        }
-                    }
-                    
-                    // 還原已送出的題目記錄
-                    if(draft.submittedTasks) {
-                        submittedTasks = draft.submittedTasks;
-                    }
-
-                    for(let i=1; i<=TOTAL_TASKS; i++) {
-                        const padIndex = i.toString().padStart(2, '0');
-                        // 還原程式碼內容
-                        if(draft[`code-${padIndex}`]) {
-                            cmInstances[`code-${padIndex}`].setValue(draft[`code-${padIndex}`]);
-                        }
-                        // 還原已送出題目的鎖定狀態
-                        if (submittedTasks.includes(padIndex)) {
-                            lockTaskUI(i);
-                        }
-                    }
-                } catch(e) {
-                    console.error("讀取草稿與提交狀態失敗", e);
-                }
-            }
-            // 載入完畢後更新一次課堂任務進度條
-            updateProgressBar();
-        }
-
-        // --- UI Modal 控制邏輯 ---
+        // UI Modal 控制邏輯
         function toggleSetupModal() {
             const modal = document.getElementById('setup-modal');
             modal.classList.toggle('hidden');
@@ -1097,7 +1086,7 @@
             localStorage.setItem('google_sheet_api_url', urlValue);
             showModal("設定成功", "Google Apps Script 網址已儲存至本地瀏覽器中！\n即將為您重新載入組長名單。");
             toggleSetupModal();
-            loadStudentList(); // 設定完新網址後，立刻重新抓取名單
+            loadStudentList(); 
         }
 
         function showModal(title, body) {
@@ -1111,7 +1100,6 @@
             }, 10);
         }
 
-        // 修正：補回 closeModal 函數以防止按鈕關閉失敗
         function closeModal() {
             const modal = document.getElementById('custom-modal');
             modal.children[0].classList.remove('scale-100');
