@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -49,7 +50,8 @@
                 a: "x y w h" 
             },
             10: { 
-                q: "not laneDetect.get_ld_return_result("left_check")這句話什麼意思?", 
+                // 💡 已修正：將原本的 "left_check" 改為 'left_check'，避免引號衝突破版
+                q: "not laneDetect.get_ld_return_result('left_check')這句話什麼意思?", 
                 a: "不是左邊有白線" 
             }
         };
@@ -142,7 +144,7 @@
                                     </span>
                                 </div>
                                 
-                                <!-- 答案多行輸入框 (高度適中，支援代碼寫作) -->
+                                <!-- 答案多行輸入框 -->
                                 <div class="w-full">
                                     <textarea id="ans-${i}" rows="4"
                                               class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-gray-800 placeholder-gray-400 font-mono text-sm leading-relaxed" 
@@ -339,7 +341,7 @@
                 sum += parseInt(password[i], 10);
             }
 
-            // 4. 整除校驗 (💡 已修正：改為數字和能被 11 整除且和大於 0，大幅提升破解難度)
+            // 4. 整除校驗 (數字和能被 11 整除且和大於 0)
             if (sum > 0 && sum % 11 === 0) {
                 // 驗證成功！記錄密碼防止重複使用
                 usedPasswords.add(password);
