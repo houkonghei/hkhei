@@ -9,53 +9,10 @@
     <!-- 引入 Font Awesome 圖示 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- 💡 老師專屬：在這裡修改您的提問題目與參考解答 -->
     <script>
-        const TEACHER_DATA = {
-            1: { 
-                q: "suno音樂你做了没有?(YES/NO)", 
-                a: "YES" 
-            },
-            2: { 
-                q: "SUNO音樂占分比如何?", 
-                a: "半次大測" 
-            },
-            3: { 
-                q: "自動駕駛有多少級?幾級到幾級?", 
-                a: "L0~L6" 
-            },
-            4: { 
-                q: "為什麼白色線偵測用左右 (80,100) 速度, 不使用(-100,100)速度", 
-                a: "---" 
-            },
-            5: { 
-                q: "馬達初始化的整條代碼指令是?", 
-                a: "motor.init()" 
-            },
-            6: { 
-                q: "引入馬達模块對應python指令?", 
-                a: "from cocorobo_AI import motor" 
-            },
-            7: { 
-                q: "LAB是一種什麼顏色模型?", 
-                a: "---" 
-            },
-            8: { 
-                q: "camera.set_status(0,True)啟用了什麼功能?", 
-                a: "倒轉" 
-            },
-            9: { 
-                q: "AI識別顏色後返回的對象find_color_result內含哪幾個元素?", 
-                a: "x y w h" 
-            },
-            10: { 
-                q: "not laneDetect.get_ld_return_result('left_check')這句話什麼意思?", 
-                a: "不是左邊有白線" 
-            }
-        };
-
-        // 💡 記憶體變數：用於存放已成功被學生解鎖過的密碼。
-        // 當瀏覽器分頁關閉、或重新整理網頁時，此變數將被完全清空，適合下一位學生重新使用。
+        // 全域動態題庫結構快取
+        let TEACHER_DATA = {};
+        // 記憶體變數：解鎖過答案的密碼集合（分頁關閉或整理後即歸零）
         const usedPasswords = new Set();
     </script>
 
@@ -76,7 +33,7 @@
 </head>
 <body class="py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-3xl mx-auto">
-        <!-- 標頭區區塊 -->
+        <!-- 標頭區 -->
         <header class="text-center mb-8">
             <h1 class="text-3xl font-extrabold text-gray-800 tracking-tight sm:text-4xl">
                 <i class="fa-solid fa-graduation-cap text-indigo-600 mr-2"></i>課堂即時互動系統
@@ -84,7 +41,7 @@
             <p class="mt-2 text-sm text-gray-600">請確認您的姓名，並在對應的題號輸入老師口頭提問的答案。</p>
         </header>
 
-        <!-- 學生基本資料卡 (動態自雲端載入) -->
+        <!-- 學生基本資料卡 -->
         <div class="bg-white rounded-2xl shadow-xl p-6 mb-6 card">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div class="flex items-center space-x-3">
@@ -97,7 +54,6 @@
                     </div>
                 </div>
                 <div class="w-full sm:w-64">
-                    <!-- 💡 此下拉選單的選項將在網頁載入時，自動從試算表的「學生名冊」分頁獲取並生成 -->
                     <select id="studentName" class="block w-full rounded-lg border-gray-300 bg-gray-50 border p-3 text-gray-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
                         <option value="" disabled selected>-- 正在連線載入名冊... --</option>
                     </select>
@@ -111,101 +67,95 @@
             <span id="toastMessage" class="text-sm font-medium"></span>
         </div>
 
-        <!-- 隱藏的表單與 iframe：用於 100% 繞過 iframe 內 Fetch CORS 重新導向被瀏覽器阻擋的限制 -->
+        <!-- 隱藏表單：用於發送資料，100% 繞過 iframe 與 CORS 限制 -->
         <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
         <form id="submit_form" method="POST" target="hidden_iframe" class="hidden">
             <input type="hidden" name="studentName" id="form_studentName">
             <input type="hidden" name="questionNum" id="form_questionNum">
             <input type="hidden" name="answer" id="form_answer">
-            <!-- 用於老師端更新名冊的管理指令 -->
+            <!-- 老師端行政特殊指令欄位 -->
             <input type="hidden" name="action" id="form_action">
             <input type="hidden" name="namesList" id="form_namesList">
+            <input type="hidden" name="questionsList" id="form_questionsList">
+            <input type="hidden" name="answersList" id="form_answersList">
         </form>
 
-        <!-- 10個問題回答區 -->
-        <div class="space-y-4">
-            <!-- 動態生成 10 個問題輸入區 -->
-            <script>
-                const questionsCount = 10;
-                for (let i = 1; i <= questionsCount; i++) {
-                    const questionObj = TEACHER_DATA[i] || { q: `第 ${i} 題 (口頭提問)`, a: "" };
-                    document.write(`
-                        <div class="bg-white rounded-2xl shadow-md p-5 card border border-gray-100" id="card-${i}">
-                            <div class="flex flex-col space-y-3">
-                                <!-- 題號標籤與控制列 -->
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center space-x-3">
-                                        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 font-bold text-sm border border-indigo-200">
-                                            Q${i}
-                                        </span>
-                                        <span class="font-bold text-gray-700">${questionObj.q}</span>
-                                    </div>
-                                    <span id="badge-${i}" class="hidden text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-800 font-semibold">
-                                        <i class="fa-solid fa-circle-check mr-1"></i>已成功傳送
-                                    </span>
-                                </div>
-                                
-                                <!-- 答案多行輸入框 -->
-                                <div class="w-full">
-                                    <textarea id="ans-${i}" rows="4"
-                                              class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-gray-800 placeholder-gray-400 font-mono text-sm leading-relaxed" 
-                                              placeholder="請輸入你的解答... (支援多行文字與程式碼)"></textarea>
-                                </div>
-                                
-                                <!-- 送出按鈕與老師參考答案解鎖區 -->
-                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-slate-100">
-                                    
-                                    <!-- 🔑 老師參考答案解密區 -->
-                                    <div class="flex items-center space-x-2" id="unlock-area-${i}">
-                                        <div class="relative rounded-md shadow-xs">
-                                            <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                                                <i class="fa-solid fa-key text-gray-400 text-xs"></i>
-                                            </div>
-                                            <input type="text" id="pass-${i}" 
-                                                   class="block w-32 pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-center placeholder-gray-400 lowercase" 
-                                                   placeholder="輸入英文解密碼">
-                                        </div>
-                                        <button onclick="unlockAnswer(${i})" 
-                                                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-white text-xs font-bold rounded-lg shadow-sm transition">
-                                            解鎖老師答案
-                                        </button>
-                                    </div>
-
-                                    <!-- 答案顯示區 (預設隱藏) -->
-                                    <div id="teacher-ans-box-${i}" class="hidden flex-1 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-left">
-                                        <p class="text-xs font-bold text-emerald-800 mb-1">
-                                            <i class="fa-solid fa-circle-check mr-1"></i>老師的參考答案：
-                                        </p>
-                                        <pre id="teacher-ans-text-${i}" class="text-xs text-emerald-950 font-mono whitespace-pre-wrap leading-relaxed bg-white/60 p-2.5 rounded-lg border border-emerald-100/50"></pre>
-                                    </div>
-
-                                    <!-- 送出按鈕 -->
-                                    <div class="flex justify-end sm:w-auto w-full">
-                                        <button onclick="submitAnswer(${i})" id="btn-${i}"
-                                                class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2 border border-transparent text-sm font-semibold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-sm transition duration-150">
-                                            <i class="fa-solid fa-paper-plane mr-2" id="icon-${i}"></i>
-                                            <span id="text-${i}">送答案到老師屏幕</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `);
-                }
-            </script>
+        <!-- 10個問題動態回答區 -->
+        <div id="questionsContainer" class="space-y-4">
+            <!-- 載入中骨架屏動畫 -->
+            <div class="bg-white rounded-2xl p-8 text-center shadow-md animate-pulse">
+                <i class="fa-solid fa-spinner fa-spin text-3xl text-indigo-600 mb-3"></i>
+                <p class="text-sm text-slate-500 font-medium">正在連線獲取最新的課堂題目庫...</p>
+            </div>
         </div>
         
         <!-- 頁尾 -->
-        <footer class="mt-12 text-center text-xs text-gray-500">
-            <p>
-                © 2026 課堂互動教學系統. 學生端版面 
-                <!-- 💡 老師的秘密入口：點擊這個 1.5px 的極淡色小點即可彈出名單更新視窗 -->
-                <span onclick="showAdminModal()" class="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full cursor-pointer ml-1 opacity-20 hover:opacity-100 transition" title="System Settings"></span>
-            </p>
+        <!-- 💡 已優化：將上下內縮白區間由 pt-8 pb-8（32px）升級改為 pt-[82px] pb-[82px]（各增加 50px），徹底隱蔽秘密控制入口 -->
+        <footer class="mt-12 pt-[82px] pb-[82px] text-center text-xs">
+            <!-- 💡 已修改：原 justify-center 改為 justify-start，並利用 pl-[30px] 精確靠左留白 30 像素 -->
+            <div class="flex items-center justify-start space-x-2 pl-[30px]">
+                <!-- 💡 秘密入口一：點擊左側 1.5px 小圓點 ➜ 彈出快速更換「題庫與參考答案」視窗 -->
+                <span onclick="showQuestionBankModal()" class="inline-block w-1.5 h-1.5 bg-slate-400 rounded-full cursor-pointer opacity-10 hover:opacity-100 transition" title="Question Bank Control"></span>
+                <!-- 💡 秘密文字：將版權文字改為 "-----"，並套用超低對比顏色 text-slate-400/10，創造近乎透明的迷彩感 -->
+                <span class="text-slate-400/10 font-mono tracking-widest select-none">-----</span>
+                <!-- 💡 秘密入口二：點擊右側 1.5px 小圓點 ➜ 彈出快速更換「學生名冊」視窗 -->
+                <span onclick="showAdminModal()" class="inline-block w-1.5 h-1.5 bg-slate-400 rounded-full cursor-pointer opacity-10 hover:opacity-100 transition" title="Student List Control"></span>
+            </div>
         </footer>
     </div>
 
-    <!-- ⚙️ 老師秘密彈窗 (Modal)：方便直接貼上整欄姓名 -->
+    <!-- ⚙️ 老師秘密彈窗 1：更新題目與答案 (左邊10個題目，右邊10個答案多行文本框) -->
+    <div id="questionBankModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" onclick="hideQuestionBankModal()"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <div class="inline-block align-middle bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl w-full border border-slate-100">
+                <div class="bg-indigo-900 px-6 py-4 flex justify-between items-center text-white">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-folder-open text-lg text-amber-400"></i>
+                        <h3 class="text-lg font-bold">⚙️ 快速更新題庫與答案 ( question_bank )</h3>
+                    </div>
+                    <button onclick="hideQuestionBankModal()" class="text-white hover:text-slate-300 transition">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                <!-- 題庫大滾動視窗 -->
+                <div class="p-6 bg-slate-50 max-h-[60vh] overflow-y-auto space-y-4">
+                    <p class="text-xs text-slate-500 border-b border-slate-200 pb-2 mb-2">直接在下方各題欄位內輸入。支援 Enter 換行，儲存後會完美保留縮排。若題目不滿 10 題，其餘留空即可。</p>
+                    <script>
+                        for (let q = 1; q <= 10; q++) {
+                            document.write(`
+                                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+                                    <span class="text-xs font-extrabold text-indigo-600 block mb-2">第 ${q} 題設定</span>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-2xs font-bold text-slate-400 mb-1">題目內容</label>
+                                            <textarea id="modal-q-${q}" rows="4" class="w-full p-2.5 font-mono text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-400 leading-normal" placeholder="輸入題目（支援換行與程式碼代碼）..."></textarea>
+                                        </div>
+                                        <div>
+                                            <label class="block text-2xs font-bold text-slate-400 mb-1">老師參考答案</label>
+                                            <textarea id="modal-a-${q}" rows="4" class="w-full p-2.5 font-mono text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-400 leading-normal" placeholder="輸入解鎖後的答案..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            `);
+                        }
+                    </script>
+                </div>
+                <div class="bg-slate-100 px-6 py-4 flex justify-between items-center border-t border-slate-200">
+                    <button onclick="hideQuestionBankModal()" class="px-4 py-2 bg-slate-300 hover:bg-slate-400 text-slate-700 text-xs font-bold rounded-lg transition shadow-sm">
+                        取消
+                    </button>
+                    <button id="qBankConfirmBtn" onclick="submitNewQuestionBank()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-sm">
+                        確認更新題庫
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ⚙️ 老師秘密彈窗 2：更新學生名冊 (多行文本框) -->
     <div id="adminModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
         <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" onclick="hideAdminModal()"></div>
@@ -240,12 +190,12 @@
         </div>
     </div>
 
-    <!-- 交互邏輯 Javascript -->
+    <!-- 互動 JavaScript 運作邏輯 -->
     <script>
         // 您的 Google Apps Script Web App 部署網址
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxyScuB1McshIxPAMHT-t54Z_i_9rADd9yr_cDzBZkUCGwNpHd2NwF01tQMm8bXnUT_/exec";
 
-        // 頁面一載入時，立刻向後端 Google 試算表動態同步並生成最新學生名冊
+        // 頁面一載入時，立刻向後端 Google 試算表動態同步並生成最新學生名冊與題目內容
         window.onload = function() {
             const select = document.getElementById('studentName');
             
@@ -255,8 +205,8 @@
             })
             .then(res => res.json())
             .then(data => {
+                // 1. 動態填充學生名冊
                 select.innerHTML = '<option value="" disabled selected>-- 請選擇你的姓名 --</option>';
-                // 檢查是否有回傳動態名冊
                 if (data._studentList && data._studentList.length > 0) {
                     data._studentList.forEach(name => {
                         const option = document.createElement('option');
@@ -266,13 +216,101 @@
                     });
                 } else {
                     select.innerHTML = '<option value="" disabled selected>-- 雲端尚未設定名冊 --</option>';
-                    showToast('發現試算表內無學生名冊，請在試算表中維護「學生名冊」分頁。', 'info');
                 }
+
+                // 2. 動態渲染 question_bank 題目大版塊
+                const questionsContainer = document.getElementById('questionsContainer');
+                questionsContainer.innerHTML = ''; // 清空骨架屏
+                
+                for (let i = 1; i <= 10; i++) {
+                    const questionObj = data._questionBank && data._questionBank[i-1] 
+                        ? data._questionBank[i-1] 
+                        : { q: `第 ${i} 題 (口頭提問)`, a: "" };
+                    
+                    // 將題目與解答快取寫入本地全域結構，供隨後解碼比對
+                    TEACHER_DATA[i] = questionObj;
+                    
+                    // 💡 進階格式化判定：如果題目內部包含 Python 縮排等特徵，套用 mono 代碼專用容器
+                    const containsCode = questionObj.q.includes('for ') || questionObj.q.includes('import ') || questionObj.q.includes('def ') || questionObj.q.includes('print(') || questionObj.q.includes(':') || questionObj.q.includes('\n');
+                    
+                    const cardHtml = `
+                        <div class="bg-white rounded-2xl shadow-md p-5 card border border-gray-100" id="card-${i}">
+                            <div class="flex flex-col space-y-3">
+                                <!-- 題號標籤與控制列 -->
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-start space-x-3 flex-1 min-w-0 mr-3">
+                                        <span class="flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 font-bold text-sm border border-indigo-200">
+                                            Q${i}
+                                        </span>
+                                        <!-- 💡 核心優化：套用 whitespace-pre-wrap 保留 ASCII 10 換行，並依題型動態呈現 Python 編程字體 -->
+                                        <div class="font-semibold text-gray-700 whitespace-pre-wrap leading-relaxed flex-1 ${containsCode ? 'font-mono bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/50 text-xs text-slate-800' : 'text-sm pt-1'}">${escapeHtml(questionObj.q)}</div>
+                                    </div>
+                                    <span id="badge-${i}" class="hidden flex-shrink-0 text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-800 font-semibold">
+                                        <i class="fa-solid fa-circle-check mr-1"></i>已傳送
+                                    </span>
+                                </div>
+                                
+                                <!-- 答案多行輸入框 -->
+                                <div class="w-full">
+                                    <textarea id="ans-${i}" rows="4"
+                                              class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-gray-800 placeholder-gray-400 font-mono text-sm leading-relaxed" 
+                                              placeholder="請輸入你的解答... (支援多行文字與程式碼)"></textarea>
+                                </div>
+                                
+                                <!-- 送出按鈕與參考答案解鎖區 -->
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-slate-100">
+                                    
+                                    <!-- 🔑 老師參考答案解密區 -->
+                                    <div class="flex items-center space-x-2" id="unlock-area-${i}">
+                                        <div class="relative rounded-md shadow-xs">
+                                            <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                                                <i class="fa-solid fa-key text-gray-400 text-xs"></i>
+                                            </div>
+                                            <input type="text" id="pass-${i}" 
+                                                   class="block w-32 pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-center placeholder-gray-400 lowercase animate-pulse" 
+                                                   placeholder="輸入英文解密碼">
+                                        </div>
+                                        <button onclick="unlockAnswer(${i})" 
+                                                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-white text-xs font-bold rounded-lg shadow-sm transition">
+                                            解鎖老師答案
+                                        </button>
+                                    </div>
+
+                                    <!-- 答案顯示區 (預設隱藏) -->
+                                    <div id="teacher-ans-box-${i}" class="hidden flex-1 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-left">
+                                        <p class="text-xs font-bold text-emerald-800 mb-1">
+                                            <i class="fa-solid fa-circle-check mr-1"></i>老師的參考答案：
+                                        </p>
+                                        <pre id="teacher-ans-text-${i}" class="text-xs text-emerald-950 font-mono whitespace-pre-wrap leading-relaxed bg-white/60 p-2.5 rounded-lg border border-emerald-100/50"></pre>
+                                    </div>
+
+                                    <!-- 送出按鈕 -->
+                                    <div class="flex justify-end sm:w-auto w-full">
+                                        <button onclick="submitAnswer(${i})" id="btn-${i}"
+                                                class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2 border border-transparent text-sm font-semibold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-sm transition duration-150">
+                                            <i class="fa-solid fa-paper-plane mr-2" id="icon-${i}"></i>
+                                            <span id="text-${i}">送答案到老師屏幕</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    questionsContainer.insertAdjacentHTML('beforeend', cardHtml);
+                }
+                
+                showToast('已完成雲端最新題庫與學生名冊之同步！', 'success');
             })
             .catch(err => {
-                console.error("名單載入失敗：", err);
-                select.innerHTML = '<option value="" disabled selected>-- 載入失敗，請重新整理 --</option>';
-                showToast('無法取得學生名單，請確認網路連線或 API 網址是否正確！', 'error');
+                console.error("初始化同步發生故障：", err);
+                const container = document.getElementById('questionsContainer');
+                container.innerHTML = `
+                    <div class="bg-rose-50 text-rose-800 rounded-2xl p-6 text-center border border-rose-100 shadow">
+                        <i class="fa-solid fa-circle-exclamation text-2xl mb-2"></i>
+                        <p class="text-sm font-bold">同步連線失敗</p>
+                        <p class="text-2xs text-rose-500 mt-1">請確認您的 Apps Script 是否成功部署成「新版本」並擁有外部讀取權限。</p>
+                    </div>
+                `;
             });
         };
 
@@ -307,55 +345,48 @@
             const studentName = document.getElementById('studentName').value;
             const answer = document.getElementById(`ans-${questionNum}`).value.trim();
 
-            // 檢查是否選擇姓名
             if (!studentName) {
                 showToast('請在上方「確認學生身分」選擇您的姓名！', 'error');
                 document.getElementById('studentName').focus();
                 return;
             }
 
-            // 檢查是否輸入答案
             if (!answer) {
                 showToast(`請先輸入第 ${questionNum} 題的解答再送出！`, 'error');
                 document.getElementById(`ans-${questionNum}`).focus();
                 return;
             }
 
-            // 鎖定 UI，防止重複點擊
             setButtonLoading(questionNum, true);
 
-            // 1. 將資料填入隱藏的表單中
             const form = document.getElementById('submit_form');
             form.action = SCRIPT_URL;
             document.getElementById('form_studentName').value = studentName;
             document.getElementById('form_questionNum').value = questionNum;
             document.getElementById('form_answer').value = answer;
             
-            // 清除行政指令欄位，防止正常作答誤送
+            // 清除行政管理特殊指令
             document.getElementById('form_action').value = "";
             document.getElementById('form_namesList').value = "";
+            document.getElementById('form_questionsList').value = "";
+            document.getElementById('form_answersList').value = "";
 
             try {
-                // 2. 透過隱藏表單提交資料到隱藏的 iframe (完美繞過 CORS/沙盒限制)
                 form.submit();
-
-                // 3. 由於 iframe 提交是極速且不可阻擋的，直接在前端進行成功的 UI 變更反饋
                 setTimeout(() => {
                     showToast(`第 ${questionNum} 題答案已成功傳送到老師屏幕！`, 'success');
                     setButtonSuccess(questionNum);
                 }, 1200);
-
             } catch (error) {
-                console.error('Submission Error:', error);
                 showToast('傳送失敗，請確認網路連線！', 'error');
                 setButtonLoading(questionNum, false);
             }
         }
 
-        // 🔑 老師參考答案解鎖邏輯 (💡 已升級：小寫英文代數相加能被 7 整除)
+        // 🔑 老師參考答案解鎖邏輯 (驗證字母累加值能被 7 整除，且不重複使用)
         function unlockAnswer(questionNum) {
             const passInput = document.getElementById(`pass-${questionNum}`);
-            const password = passInput.value.trim().toLowerCase(); // 自動過濾大小寫
+            const password = passInput.value.trim().toLowerCase();
 
             if (!password) {
                 showToast("請先輸入英文解碼密碼！", "error");
@@ -363,7 +394,6 @@
                 return;
             }
 
-            // 1. 格式檢查：密碼必須完全由小寫英文字母組成
             if (!/^[a-z]+$/.test(password)) {
                 showToast("密碼格式不正確，必須全部為英文字母！", "error");
                 passInput.value = "";
@@ -371,7 +401,6 @@
                 return;
             }
 
-            // 2. 重複使用檢查：檢查密碼是否已被解鎖過其他題目
             if (usedPasswords.has(password)) {
                 showToast("此密碼已被使用過！為維持公平，每組密碼僅能使用一次，請向老師獲取新密碼。", "error");
                 passInput.value = "";
@@ -379,22 +408,17 @@
                 return;
             }
 
-            // 3. 演算法校驗：計算所有英文字母的數值之和 (a=1, b=2, c=3... 即 ASCII 碼 - 96)
             let sum = 0;
             for (let i = 0; i < password.length; i++) {
                 sum += (password.charCodeAt(i) - 96);
             }
 
-            
             if (sum > 0 && sum % 7 === 0) {
-                // 驗證成功！記錄密碼防止重複使用
                 usedPasswords.add(password);
 
-                // 獲取該題目的解答內容
                 const qData = TEACHER_DATA[questionNum];
                 const solution = qData ? qData.a : "此題無設定參考解答。";
 
-                // UI 更新：隱藏解鎖輸入區，顯示解密後的答案
                 document.getElementById(`unlock-area-${questionNum}`).classList.add("hidden");
                 
                 const ansBox = document.getElementById(`teacher-ans-box-${questionNum}`);
@@ -405,14 +429,70 @@
 
                 showToast(`Q${questionNum} 參考解答已成功解密開啟！`, "success");
             } else {
-                // 驗證失敗
                 showToast("解碼失敗！密碼不正確，請重新確認老師所說的英文字母。", "error");
                 passInput.value = "";
                 passInput.focus();
             }
         }
 
-        // ⚙️ 老師端名冊管理 Modal 控制
+        // ⚙️ 老師端 1：題庫與參考答案動態設定 Modal 控制器
+        function showQuestionBankModal() {
+            // 自動預載目前的題庫與解答至文本框
+            for (let i = 1; i <= 10; i++) {
+                const qInput = document.getElementById(`modal-q-${i}`);
+                const aInput = document.getElementById(`modal-a-${i}`);
+                if (qInput && aInput && TEACHER_DATA[i]) {
+                    qInput.value = TEACHER_DATA[i].q || "";
+                    aInput.value = TEACHER_DATA[i].a || "";
+                }
+            }
+            document.getElementById('questionBankModal').classList.remove('hidden');
+        }
+
+        function hideQuestionBankModal() {
+            document.getElementById('questionBankModal').classList.add('hidden');
+        }
+
+        // 行政提交覆寫題庫 (使用 JSON 封裝多行資料)
+        function submitNewQuestionBank() {
+            const questions = [];
+            const answers = [];
+            
+            for (let i = 1; i <= 10; i++) {
+                questions.push(document.getElementById(`modal-q-${i}`).value);
+                answers.push(document.getElementById(`modal-a-${i}`).value);
+            }
+
+            const confirmBtn = document.getElementById('qBankConfirmBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>更新中...';
+
+            const form = document.getElementById('submit_form');
+            form.action = SCRIPT_URL;
+            document.getElementById('form_studentName').value = "ADMIN_CMD";
+            document.getElementById('form_questionNum').value = "0";
+            document.getElementById('form_answer').value = "UPDATE_QUESTION_BANK";
+            
+            // 行政指令參數設定
+            document.getElementById('form_action').value = "updateQuestionBank";
+            document.getElementById('form_questionsList').value = JSON.stringify(questions);
+            document.getElementById('form_answersList').value = JSON.stringify(answers);
+
+            try {
+                form.submit();
+                setTimeout(() => {
+                    showToast('最新題目庫已成功更新並覆寫至雲端！網頁正在重新整理...', 'success');
+                    hideQuestionBankModal();
+                    setTimeout(() => { location.reload(); }, 1500);
+                }, 1200);
+            } catch (error) {
+                showToast('題庫更新失敗，請確認網路連線！', 'error');
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '確認更新題庫';
+            }
+        }
+
+        // ⚙️ 老師端 2：學生名冊設定 Modal 控制器
         function showAdminModal() {
             document.getElementById('adminModal').classList.remove('hidden');
             document.getElementById('newStudentNames').focus();
@@ -422,7 +502,7 @@
             document.getElementById('adminModal').classList.add('hidden');
         }
 
-        // 送出一筆全新的學生名單覆蓋舊名單
+        // 行政提交覆寫學生名冊
         function submitNewStudentList() {
             const textarea = document.getElementById('newStudentNames');
             const namesList = textarea.value.trim();
@@ -437,39 +517,30 @@
             confirmBtn.disabled = true;
             confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>更新中...';
 
-            // 1. 將行政管理指令填入隱藏的表單中
             const form = document.getElementById('submit_form');
             form.action = SCRIPT_URL;
             document.getElementById('form_studentName').value = "ADMIN_CMD";
             document.getElementById('form_questionNum').value = "0";
             document.getElementById('form_answer').value = "UPDATE_STUDENT_LIST";
             
-            // 設定管理參數指令
             document.getElementById('form_action').value = "updateStudentList";
             document.getElementById('form_namesList').value = namesList;
 
             try {
-                // 2. 透過隱藏表單提交
                 form.submit();
-
-                // 3. 在前端模擬完成狀態，並在 1.5 秒後重新整理網頁拉取新名單
                 setTimeout(() => {
                     showToast('學生名單已成功向雲端發送更新！網頁即將自動重新整理...', 'success');
                     hideAdminModal();
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1500);
+                    setTimeout(() => { location.reload(); }, 1500);
                 }, 1200);
-
             } catch (error) {
-                console.error('Submission Error:', error);
                 showToast('雲端名單更新失敗，請確認網路連線！', 'error');
                 confirmBtn.disabled = false;
                 confirmBtn.innerHTML = '確認更新名單';
             }
         }
 
-        // 按鈕加載動畫切換
+        // 按鈕加載動畫
         function setButtonLoading(questionNum, isLoading) {
             const btn = document.getElementById(`btn-${questionNum}`);
             const icon = document.getElementById(`icon-${questionNum}`);
@@ -490,7 +561,7 @@
             }
         }
 
-        // 成功送出後的按鈕與文本框鎖定樣式
+        // 成功送出後的按鈕與文字框鎖定樣式
         function setButtonSuccess(questionNum) {
             const btn = document.getElementById(`btn-${questionNum}`);
             const icon = document.getElementById(`icon-${questionNum}`);
@@ -499,21 +570,23 @@
             const badge = document.getElementById(`badge-${questionNum}`);
             const card = document.getElementById(`card-${questionNum}`);
 
-            // 1. 鎖定按鈕為灰色且不可點擊
             btn.disabled = true;
             btn.className = "w-full sm:w-auto inline-flex items-center justify-center px-6 py-2.5 border border-transparent text-sm font-semibold rounded-lg text-white bg-gray-400 cursor-not-allowed shadow-sm transition duration-150";
             icon.className = 'fa-solid fa-check-double mr-2';
             text.textContent = '已成功送出';
 
-            // 2. 將文本框設為唯讀，並變更背景為淡灰色，標示已完成
             textarea.readOnly = true;
             textarea.classList.add('bg-gray-50', 'text-gray-500', 'cursor-not-allowed');
             
-            // 3. 顯示「已成功傳送」的小徽章
             badge.classList.remove('hidden');
-
-            // 4. 卡片微調邊框，提供視覺上的完成感
             card.classList.add('border-emerald-200', 'bg-emerald-50/10');
+        }
+
+        // 安全跳過字串中的 HTML 格式（防 XSS 注入）
+        function escapeHtml(string) {
+            return String(string).replace(/[&<>"']/g, function (s) {
+                return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[s];
+            });
         }
     </script>
 </body>
