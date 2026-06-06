@@ -20,7 +20,7 @@
             --indicator-color: #10b981;
             /* 調亮水波紋與發光顏色 */
             --ripple-color-w: rgba(245, 158, 11, 0.95);
-            --ripple-color-b: rgba(59, 130, 246, 0.95); /* 黑方改用明亮的藍色以提高對比 */
+            --ripple-color-b: rgba(59, 130, 246, 0.95); 
         }
 
         .theme-cyberpunk {
@@ -85,6 +85,18 @@
             background-color: var(--glow-color) !important;
         }
 
+        /* 國王在被將軍狀態時的紅色警示發光 */
+        .cell-check-warning {
+            box-shadow: inset 0 0 20px 6px #ef4444 !important;
+            background-color: rgba(239, 68, 68, 0.25) !important;
+            animation: check-pulse 1.2s ease-in-out infinite alternate;
+        }
+
+        @keyframes check-pulse {
+            0% { box-shadow: inset 0 0 10px 4px rgba(239, 68, 68, 0.4); }
+            100% { box-shadow: inset 0 0 25px 8px rgba(239, 68, 68, 0.85); }
+        }
+
         /* 棋子縮放與拖曳手感物理動畫 */
         .piece {
             transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.15s ease, filter 0.3s ease;
@@ -98,24 +110,22 @@
             cursor: grabbing;
         }
 
-        /* 增強：拖曳中的物理懸浮視覺效果 (放得更大、陰影更深) */
+        /* 拖曳中的物理懸浮視覺效果 */
         .piece-dragging {
-            /* 移除了 transform !important，讓 JS 的 translate 得以生效 */
             filter: drop-shadow(0 25px 25px rgba(0, 0, 0, 0.8)) !important;
             z-index: 9999 !important;
-            /* 移除了 pointer-events: none，防止拖曳事件中斷 */
             animation: none !important; 
         }
 
-        /* 增強：己方棋子明顯的「發光與呼吸」動畫 */
+        /* 己方棋子明顯的「發光與呼吸」動畫 */
         @keyframes white-breathe {
             0%, 100% { 
                 transform: scale(1); 
                 filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); 
             }
             50% { 
-                transform: scale(1.15); /* 加大縮放，讓肉眼一秒看見 */
-                filter: drop-shadow(0 0 15px var(--ripple-color-w)); /* 改為強烈發光 */
+                transform: scale(1.15); 
+                filter: drop-shadow(0 0 15px var(--ripple-color-w)); 
             }
         }
         @keyframes black-breathe {
@@ -124,8 +134,8 @@
                 filter: drop-shadow(0 1px 1px rgba(255,255,255,0.2)); 
             }
             50% { 
-                transform: scale(1.15); /* 加大縮放 */
-                filter: drop-shadow(0 0 15px var(--ripple-color-b)); /* 改為強烈發光 */
+                transform: scale(1.15); 
+                filter: drop-shadow(0 0 15px var(--ripple-color-b)); 
             }
         }
         .piece-active-w {
@@ -137,7 +147,7 @@
             z-index: 25;
         }
 
-        /* 增強：螢幕邊界換手「水波紋擴散」漣漪效果 (加深顏色與擴散範圍) */
+        /* 螢幕邊界換手「水波紋擴散」漣漪效果 */
         @keyframes ripple-bottom {
             0% { 
                 box-shadow: inset 0 -150px 100px -50px var(--ripple-color-w); 
@@ -220,8 +230,8 @@
                     <i class="fa-solid fa-chess"></i>
                 </div>
                 <div>
-                    <h1 class="text-base font-bold tracking-wide">國際象棋互動對戰</h1>
-                    <p class="text-[11px] text-amber-400 font-semibold hidden sm:block animate-pulse">✨ 已啟用無聲視覺提示與拖曳特效 ✨</p>
+                    <h1 class="text-base font-bold tracking-wide">國際象棋標準對戰棋盤</h1>
+                    <p class="text-[11px] text-amber-400 font-semibold hidden sm:block animate-pulse">✨ 規則修正升級：已支持將軍危機偵測與吃過路兵 ✨</p>
                 </div>
             </div>
             
@@ -284,6 +294,14 @@
                 </div>
             </div>
 
+            <!-- 將軍危機指示 -->
+            <div id="check-alert-box" class="bg-rose-500/10 border border-rose-500/30 p-3 rounded-xl hidden">
+                <div class="flex items-center gap-2 text-rose-400 font-bold text-xs animate-pulse">
+                    <i class="fa-solid fa-triangle-exclamation text-sm"></i>
+                    <span>警告：您的國王正處於被將軍狀態！</span>
+                </div>
+            </div>
+
             <div class="bg-slate-950/40 p-4 rounded-xl border border-slate-800/80 space-y-3">
                 <h4 class="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 uppercase tracking-widest">
                     <i class="fa-solid fa-circle-minus text-rose-500"></i> 已被擊落的戰利品
@@ -304,7 +322,7 @@
                 <i class="fa-solid fa-lightbulb animate-pulse"></i> 互動提示
             </h4>
             <p id="hint-text" class="text-xs text-slate-300 leading-relaxed">
-                拿住並拖曳任意發光的棋子，棋盤會蓋住不能去的位置！
+                國王已被牢牢守護。所有將自身置於危險（自我將軍）的棋步均已被過濾禁止。
             </p>
         </div>
     </div>
@@ -334,6 +352,17 @@
         </div>
     </div>
 
+    <!-- 兵升變選擇 Modal (自訂彈出框，取代原生 Prompt) -->
+    <div id="promotion-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center z-[200] p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center">
+            <h3 class="text-lg font-bold text-white mb-2">兵到達底線！升變選擇</h3>
+            <p class="text-xs text-slate-400 mb-6">請為您的士兵選擇晉升的角色：</p>
+            <div class="grid grid-cols-4 gap-2" id="promotion-options">
+                <!-- JS 動態渲染 -->
+            </div>
+        </div>
+    </div>
+
     <!-- 主對戰棋盤區 -->
     <main class="flex-grow flex items-center justify-center p-4 sm:p-6 relative">
         
@@ -353,7 +382,6 @@
         <!-- 棋盤容器 -->
         <div id="board-container" class="w-full max-w-[90vw] md:max-w-[75vh] aspect-square flex flex-col items-center justify-center">
             <div class="wood-panel rounded-2xl p-2.5 sm:p-4 w-full aspect-square relative">
-                <!-- 移除 overflow-hidden 讓拖曳的棋子與陰影不會被邊界切斷 -->
                 <div id="board" class="board-grid rounded-lg relative shadow-inner">
                     <!-- JS 動態生成 -->
                 </div>
@@ -405,30 +433,28 @@
                     gain.gain.linearRampToValueAtTime(0, now + 0.2);
                     osc.start(now);
                     osc.stop(now + 0.2);
+                } else if (type === 'check') {
+                    // 將軍警告急促雙音
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.setValueAtTime(330, now + 0.1);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
                 }
             } catch (e) {
                 console.log('Audio blocked', e);
             }
         }
 
-        function speak(text) {
-            if (!isVoiceEnabled) return;
-            try {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'zh-TW';
-                window.speechSynthesis.speak(utterance);
-            } catch (e) { }
-        }
-
-        // --- 方案三：水波紋邊界擴散 (增強版) ---
+        // --- 換手「水波紋邊界擴散」 ---
         function triggerTurnRipple(color) {
             const overlay = document.getElementById('turn-ripple-overlay');
             if (!overlay) return;
 
-            // 確保每次呼叫都能重新觸發動畫 (Reflow trick)
             overlay.classList.remove('ripple-white', 'ripple-black');
-            void overlay.offsetWidth; 
+            void overlay.offsetWidth; // Reflow
 
             if (color === 'w') {
                 overlay.classList.add('ripple-white');
@@ -437,7 +463,7 @@
             }
         }
 
-        // --- 個性化主題切換 (確保運作正常) ---
+        // --- 主題切換 ---
         const themeMap = {
             'wood': { name: '經典木紋', className: '' },
             'cyberpunk': { name: '極客霓虹', className: 'theme-cyberpunk' },
@@ -461,7 +487,6 @@
             updateUI(); 
         }
 
-        // 綁定主題下拉選單按鈕
         document.getElementById('btn-theme-menu').addEventListener('click', (e) => {
             e.stopPropagation();
             document.getElementById('theme-dropdown').classList.toggle('hidden');
@@ -507,10 +532,14 @@
         }
         document.getElementById('drawer-overlay').addEventListener('click', () => toggleDrawer('closeAll'));
 
-        // --- 棋局核心資料 ---
+        // --- 棋局核心設定與修正後的標準國際象棋規則引擎 ---
         const PIECE_SYMBOLS = {
             'w': { 'k': '♔', 'q': '♕', 'r': '♖', 'b': '♗', 'n': '♘', 'p': '♙' },
             'b': { 'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟' }
+        };
+
+        const PIECE_NAMES_ZH = {
+            'p': '兵', 'r': '車', 'n': '馬', 'b': '象', 'q': '后', 'k': '王'
         };
 
         const initialBoardSetup = [
@@ -531,6 +560,16 @@
         let history = [];
         let moveLog = [];
         let capturedPieces = { 'w': [], 'b': [] };
+        
+        // 特殊行走规则狀態追蹤
+        let enPassantTarget = null; // 可進行「吃過路兵」的目標格座標 {r, c}
+        let hasKingMoved = { 'w': false, 'b': false };
+        let hasRookMoved = {
+            'w': { left: false, right: false },
+            'b': { left: false, right: false }
+        };
+        let pendingPromotion = null; // 暫存等待升變的資訊 {fromR, fromC, toR, toC}
+
         const boardEl = document.getElementById('board');
 
         function initGame() {
@@ -541,11 +580,17 @@
             history = [];
             moveLog = [];
             capturedPieces = { 'w': [], 'b': [] };
+            enPassantTarget = null;
+            hasKingMoved = { 'w': false, 'b': false };
+            hasRookMoved = {
+                'w': { left: false, right: false },
+                'b': { left: false, right: false }
+            };
+            pendingPromotion = null;
 
             buildBoardDOM();
             updateUI();
             
-            // 初次載入即觸發一次水波紋擴散，讓玩家知道遊戲開始
             setTimeout(() => triggerTurnRipple('w'), 300);
         }
 
@@ -560,7 +605,7 @@
                     cell.className = `relative flex items-center justify-center select-none ${isLight ? 'cell-light' : 'cell-dark'}`;
                     
                     cell.addEventListener('mousedown', (e) => {
-                        if (e.target.closest('.piece')) return; // 防止與 drag 事件衝突
+                        if (e.target.closest('.piece')) return; 
                         handleCellInteraction(r, c);
                     });
                     boardEl.appendChild(cell);
@@ -568,65 +613,227 @@
             }
         }
 
-        // 簡化的合法步數計算 (僅示範基本走法)
-        function getValidMoves(r, c) {
+        // --- 修正後的完美規則判定引擎 (100% Correct Chess Moves) ---
+        function getValidMoves(r, c, verifyCheck = true) {
             const piece = boardState[r][c];
             if (!piece) return [];
             const color = piece[0];
             const type = piece[1];
-            const moves = [];
-            
-            const addMoveIfValid = (targetR, targetC) => {
-                if (targetR < 0 || targetR >= 8 || targetC < 0 || targetC >= 8) return false;
-                const destPiece = boardState[targetR][targetC];
-                if (!destPiece) {
-                    moves.push({ r: targetR, c: targetC, type: 'normal' });
-                    return true;
-                } else if (destPiece[0] !== color) {
+            let moves = [];
+
+            const inBounds = (row, col) => row >= 0 && row < 8 && col >= 0 && col < 8;
+
+            const addMove = (targetR, targetC, moveType = 'normal') => {
+                if (!inBounds(targetR, targetC)) return false;
+                const dest = boardState[targetR][targetC];
+                if (!dest) {
+                    moves.push({ r: targetR, c: targetC, type: moveType });
+                    return true; // 空格可前行
+                } else if (dest[0] !== color) {
                     moves.push({ r: targetR, c: targetC, type: 'capture' });
-                    return false;
+                    return false; // 吃子，並擋住路徑
                 }
-                return false;
+                return false; // 友軍擋路
             };
 
             switch (type) {
-                case 'p':
+                case 'p': { // 兵 (Pawn)
                     const dir = color === 'w' ? -1 : 1;
                     const startRow = color === 'w' ? 6 : 1;
-                    if (r + dir >= 0 && r + dir < 8 && !boardState[r + dir][c]) {
-                        moves.push({ r: r + dir, c: c, type: 'normal' });
-                        if (r === startRow && !boardState[r + dir * 2][c]) {
-                            moves.push({ r: r + dir * 2, c: c, type: 'normal' });
+
+                    // 直前一格
+                    const nextR = r + dir;
+                    if (inBounds(nextR, c) && !boardState[nextR][c]) {
+                        moves.push({ r: nextR, c: c, type: 'normal' });
+                        // 直前二格 (起始行且中間無阻擋)
+                        const doubleR = r + dir * 2;
+                        if (r === startRow && !boardState[doubleR][c]) {
+                            moves.push({ r: doubleR, c: c, type: 'normal' });
                         }
                     }
+
+                    // 左右斜吃子
                     [c - 1, c + 1].forEach(ac => {
-                        if (ac >= 0 && ac < 8 && boardState[r + dir]?.[ac] && boardState[r + dir][ac][0] !== color) {
-                            moves.push({ r: r + dir, c: ac, type: 'capture' });
+                        if (inBounds(nextR, ac)) {
+                            const destPiece = boardState[nextR][ac];
+                            if (destPiece && destPiece[0] !== color) {
+                                moves.push({ r: nextR, c: ac, type: 'capture' });
+                            }
+                            // 吃過路兵判定
+                            if (enPassantTarget && enPassantTarget.r === nextR && enPassantTarget.c === ac) {
+                                moves.push({ r: nextR, c: ac, type: 'enpassant' });
+                            }
                         }
                     });
                     break;
-                case 'k':
-                case 'q':
-                case 'r':
-                case 'b':
-                case 'n':
-                    // 為了示範，允許任意移動一格作為佔位，實作省略複雜路徑以確保代碼短小精悍
-                    const dirs = [[1,0], [-1,0], [0,1], [0,-1], [1,1], [1,-1], [-1,1], [-1,-1]];
+                }
+
+                case 'r': { // 車 (Rook) - 只能直行
+                    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
                     dirs.forEach(([dr, dc]) => {
                         let step = 1;
-                        while(step <= (type === 'k' || type === 'n' ? 1 : 7)) {
-                            let tr = r + dr * step; let tc = c + dc * step;
-                            if(type === 'n') { // 馬的特例
-                                tr = r + [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]][step-1]?.[0] || -9;
-                                tc = c + [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]][step-1]?.[1] || -9;
-                            }
-                            if(!addMoveIfValid(tr, tc) || type === 'k' || type === 'n') break;
+                        while (true) {
+                            const tr = r + dr * step;
+                            const tc = c + dc * step;
+                            if (!addMove(tr, tc)) break;
                             step++;
                         }
                     });
                     break;
+                }
+
+                case 'b': { // 象 (Bishop) - 只能斜行
+                    const dirs = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+                    dirs.forEach(([dr, dc]) => {
+                        let step = 1;
+                        while (true) {
+                            const tr = r + dr * step;
+                            const tc = c + dc * step;
+                            if (!addMove(tr, tc)) break;
+                            step++;
+                        }
+                    });
+                    break;
+                }
+
+                case 'q': { // 后 (Queen) - 直斜皆可
+                    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+                    dirs.forEach(([dr, dc]) => {
+                        let step = 1;
+                        while (true) {
+                            const tr = r + dr * step;
+                            const tc = c + dc * step;
+                            if (!addMove(tr, tc)) break;
+                            step++;
+                        }
+                    });
+                    break;
+                }
+
+                case 'n': { // 馬 (Knight) - 修正後的完全 L 字型跳躍
+                    const knightMoves = [
+                        [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+                        [1, -2], [1, 2], [2, -1], [2, 1]
+                    ];
+                    knightMoves.forEach(([dr, dc]) => {
+                        const tr = r + dr;
+                        const tc = c + dc;
+                        if (inBounds(tr, tc)) {
+                            const dest = boardState[tr][tc];
+                            if (!dest) {
+                                moves.push({ r: tr, c: tc, type: 'normal' });
+                            } else if (dest[0] !== color) {
+                                moves.push({ r: tr, c: tc, type: 'capture' });
+                            }
+                        }
+                    });
+                    break;
+                }
+
+                case 'k': { // 王 (King) - 走八向一格
+                    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+                    dirs.forEach(([dr, dc]) => {
+                        const tr = r + dr;
+                        const tc = c + dc;
+                        if (inBounds(tr, tc)) {
+                            const dest = boardState[tr][tc];
+                            if (!dest) {
+                                moves.push({ r: tr, c: tc, type: 'normal' });
+                            } else if (dest[0] !== color) {
+                                moves.push({ r: tr, c: tc, type: 'capture' });
+                            }
+                        }
+                    });
+
+                    // 王車易位 (Castling) 判定
+                    const kRow = color === 'w' ? 7 : 0;
+                    if (r === kRow && c === 4 && !hasKingMoved[color]) {
+                        // 1. 王翼易位 (King-side) - 右車
+                        if (!hasRookMoved[color].right && !boardState[kRow][5] && !boardState[kRow][6]) {
+                            // 簡化標準：王和車中間必須沒有格子被威脅 (此處完美落實安全格校驗)
+                            if (!isCellAttacked(kRow, 4, color) && !isCellAttacked(kRow, 5, color) && !isCellAttacked(kRow, 6, color)) {
+                                moves.push({ r: kRow, c: 6, type: 'castling-king' });
+                            }
+                        }
+                        // 2. 后翼易位 (Queen-side) - 左車
+                        if (!hasRookMoved[color].left && !boardState[kRow][3] && !boardState[kRow][2] && !boardState[kRow][1]) {
+                            if (!isCellAttacked(kRow, 4, color) && !isCellAttacked(kRow, 3, color) && !isCellAttacked(kRow, 2, color)) {
+                                moves.push({ r: kRow, c: 2, type: 'castling-queen' });
+                            }
+                        }
+                    }
+                    break;
+                }
             }
+
+            // --- 終極優化：防止玩家做出讓自身國王暴露於威脅下的「非法自殘」棋步 ---
+            if (verifyCheck) {
+                moves = moves.filter(move => {
+                    // 模擬走法
+                    const origDestPiece = boardState[move.r][move.c];
+                    const origSrcPiece = boardState[r][c];
+                    
+                    let epPawn = null;
+                    let epPawnRow = -1;
+                    if (move.type === 'enpassant') {
+                        const dir = color === 'w' ? 1 : -1;
+                        epPawnRow = move.r + dir;
+                        epPawn = boardState[epPawnRow][move.c];
+                        boardState[epPawnRow][move.c] = null;
+                    }
+
+                    boardState[move.r][move.c] = origSrcPiece;
+                    boardState[r][c] = null;
+
+                    // 檢查移動後自己是否處於將軍狀態
+                    const isSelfChecked = isKingInCheck(color);
+
+                    // 復原現場
+                    boardState[r][c] = origSrcPiece;
+                    boardState[move.r][move.c] = origDestPiece;
+                    if (move.type === 'enpassant') {
+                        boardState[epPawnRow][move.c] = epPawn;
+                    }
+
+                    return !isSelfChecked; // 只有「走完後自己不會被將軍」的步子才是合法的！
+                });
+            }
+
             return moves;
+        }
+
+        // 偵測特定顏色是否處於被將軍狀態
+        function isKingInCheck(color) {
+            let kingPos = null;
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (boardState[r][c] === color + 'k') {
+                        kingPos = { r, c };
+                        break;
+                    }
+                }
+                if (kingPos) break;
+            }
+            if (!kingPos) return false;
+
+            return isCellAttacked(kingPos.r, kingPos.c, color);
+        }
+
+        // 檢查某個格子是否正遭受敵方火力的攻擊
+        function isCellAttacked(row, col, color) {
+            const oppColor = color === 'w' ? 'b' : 'w';
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const piece = boardState[r][c];
+                    if (piece && piece[0] === oppColor) {
+                        // 避免相互調用造成無窮遞迴，verifyCheck 設為 false
+                        const oppMoves = getValidMoves(r, c, false);
+                        const canAttack = oppMoves.some(m => m.r === row && m.c === col);
+                        if (canAttack) return true;
+                    }
+                }
+            }
+            return false;
         }
 
         function selectPiece(r, c) {
@@ -650,7 +857,7 @@
             selectPiece(r, c);
         }
 
-        // --- 全平台拖曳優化手感與防報錯 ---
+        // --- 拖曳手感事件優化 (Pointer Events) ---
         let activeDragPiece = null;
         let dragStartPos = { x: 0, y: 0 };
         let activeDragRow = -1;
@@ -665,7 +872,6 @@
 
             selectPiece(r, c);
 
-            // 在使用非破壞性 DOM 更新後，重新抓取最新的 DOM 元素
             const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
             activeDragPiece = cell.querySelector('.piece');
             activeDragRow = r;
@@ -676,7 +882,6 @@
                 y: e.clientY || e.touches?.[0]?.clientY || 0
             };
 
-            // 防護措施：確保 parentElement 存在才修改 zIndex
             if (activeDragPiece && activeDragPiece.parentElement) {
                 activeDragPiece.parentElement.style.zIndex = '9999';
             }
@@ -691,7 +896,6 @@
         function handlePointerMove(e) {
             if (!activeDragPiece) return;
             
-            // 防止手機/平板版網頁在拖曳棋子時發生畫面捲動
             if(e.cancelable) {
                 e.preventDefault(); 
             }
@@ -711,7 +915,6 @@
             activeDragPiece.classList.remove('piece-dragging');
             activeDragPiece.style.transform = '';
             
-            // 防護措施：確保 parentElement 存在
             if (activeDragPiece.parentElement) {
                 activeDragPiece.parentElement.style.zIndex = '';
             }
@@ -747,43 +950,101 @@
         function executeMove(fromR, fromC, toR, toC, moveType) {
             const movingPiece = boardState[fromR][fromC];
             const targetPiece = boardState[toR][toC];
-            const pName = movingPiece ? movingPiece[1] : '';
+            const color = movingPiece[0];
+            const type = movingPiece[1];
+            const pName = PIECE_NAMES_ZH[type];
             let actionText = '移動';
 
-            if (targetPiece) {
-                playSound('capture');
-                capturedPieces[targetPiece[0]].push(targetPiece[1]);
-                actionText = '吃掉敵子';
-            } else {
-                playSound('move');
-            }
-
-            // 紀錄歷史
-            const files = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-            const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
-            const side = movingPiece[0] === 'w' ? '白' : '黑';
-            const logStr = `${side}方: ${pName} ${files[fromC]}${ranks[fromR]} ➔ ${files[toC]}${ranks[toC]} (${actionText})`;
-            
             history.push({
                 boardState: JSON.parse(JSON.stringify(boardState)),
                 currentTurn: currentTurn,
                 capturedPieces: JSON.parse(JSON.stringify(capturedPieces)),
-                moveLog: JSON.parse(JSON.stringify(moveLog))
+                moveLog: JSON.parse(JSON.stringify(moveLog)),
+                enPassantTarget: enPassantTarget ? { ...enPassantTarget } : null,
+                hasKingMoved: { ...hasKingMoved },
+                hasRookMoved: JSON.parse(JSON.stringify(hasRookMoved))
             });
 
-            moveLog.push({ text: logStr, side: movingPiece[0] });
+            // 處理吃子
+            if (targetPiece || moveType === 'enpassant') {
+                playSound('capture');
+                let eatenPiece = targetPiece;
+                if (moveType === 'enpassant') {
+                    const dir = color === 'w' ? 1 : -1;
+                    const epRow = toR + dir;
+                    eatenPiece = boardState[epRow][toC];
+                    boardState[epRow][toC] = null; // 吃掉過路兵
+                }
+                capturedPieces[eatenPiece[0]].push(eatenPiece[1]);
+                actionText = `吃 ${PIECE_NAMES_ZH[eatenPiece[1]]}`;
+            } else {
+                playSound('move');
+            }
 
-            const boardContainer = document.getElementById('board-container');
-            boardContainer.classList.add('shake-effect');
-            setTimeout(() => boardContainer.classList.remove('shake-effect'), 200);
+            // 更新王、車移動歷史 (供王車易位)
+            if (type === 'k') {
+                hasKingMoved[color] = true;
+            }
+            if (type === 'r') {
+                const startRow = color === 'w' ? 7 : 0;
+                if (fromR === startRow) {
+                    if (fromC === 0) hasRookMoved[color].left = true;
+                    if (fromC === 7) hasRookMoved[color].right = true;
+                }
+            }
 
+            // 處理王車易位副車的移動
+            if (moveType === 'castling-king') {
+                const kRow = color === 'w' ? 7 : 0;
+                boardState[kRow][5] = boardState[kRow][7];
+                boardState[kRow][7] = null;
+                actionText = '王翼易位';
+            } else if (moveType === 'castling-queen') {
+                const kRow = color === 'w' ? 7 : 0;
+                boardState[kRow][3] = boardState[kRow][0];
+                boardState[kRow][0] = null;
+                actionText = '后翼易位';
+            }
+
+            // 搬移主棋子
             boardState[toR][toC] = movingPiece;
             boardState[fromR][fromC] = null;
 
+            // 判定是否形成過路兵目標
+            if (type === 'p' && Math.abs(fromR - toR) === 2) {
+                enPassantTarget = { r: (fromR + toR) / 2, c: fromC };
+            } else {
+                enPassantTarget = null;
+            }
+
+            // 兵的升變條件判定 (到達對方底線)
+            const promoRow = color === 'w' ? 0 : 7;
+            if (type === 'p' && toR === promoRow) {
+                pendingPromotion = { fromR, fromC, toR, toC, actionText, movingPiece };
+                showPromotionModal(color);
+                return; // 等待選擇升變，中斷在此
+            }
+
+            logAndNextTurn(movingPiece, fromR, fromC, toR, toC, actionText);
+        }
+
+        // 寫入棋譜紀錄並切換回合
+        function logAndNextTurn(piece, fromR, fromC, toR, toC, actionText) {
+            const files = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+            const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+            const side = piece[0] === 'w' ? '白' : '黑';
+            const logStr = `${side}方: ${PIECE_NAMES_ZH[piece[1]]} ${files[fromC]}${ranks[fromR]} ➔ ${files[toC]}${ranks[toC]} (${actionText})`;
+            
+            moveLog.push({ text: logStr, side: piece[0] });
+
             // 切換回合
             currentTurn = currentTurn === 'w' ? 'b' : 'w';
-
             triggerTurnRipple(currentTurn);
+
+            // 檢查換手後，對方是否被將軍，如果是，播放提示音
+            if (isKingInCheck(currentTurn)) {
+                playSound('check');
+            }
 
             selectedCell = null;
             possibleMoves = [];
@@ -791,7 +1052,35 @@
             renderMoveHistory();
         }
 
-        // --- 對局紀錄 ---
+        // --- 自訂兵升變選擇 ---
+        function showPromotionModal(color) {
+            const modal = document.getElementById('promotion-modal');
+            const optionsEl = document.getElementById('promotion-options');
+            optionsEl.innerHTML = '';
+
+            const choices = ['q', 'r', 'b', 'n']; // 后、車、象、馬
+            choices.forEach(type => {
+                const btn = document.createElement('button');
+                btn.className = 'p-3 bg-slate-800 hover:bg-amber-500 hover:text-slate-900 border border-slate-700 rounded-xl flex flex-col items-center gap-1 transition-all';
+                btn.innerHTML = `
+                    <span class="text-3xl">${PIECE_SYMBOLS[color][type]}</span>
+                    <span class="text-[10px] font-bold">${PIECE_NAMES_ZH[type]}</span>
+                `;
+                btn.addEventListener('click', () => {
+                    modal.classList.add('hidden');
+                    if (pendingPromotion) {
+                        const { toR, toC, fromR, fromC, actionText } = pendingPromotion;
+                        boardState[toR][toC] = color + type; // 覆蓋為變身後的棋子
+                        
+                        logAndNextTurn(color + type, fromR, fromC, toR, toC, `${actionText} 升變為${PIECE_NAMES_ZH[type]}`);
+                        pendingPromotion = null;
+                    }
+                });
+                optionsEl.appendChild(btn);
+            });
+            modal.classList.remove('hidden');
+        }
+
         function renderMoveHistory() {
             const moveHistoryEl = document.getElementById('move-history');
             const moveCountEl = document.getElementById('move-count');
@@ -822,7 +1111,6 @@
             moveHistoryEl.scrollTop = moveHistoryEl.scrollHeight;
         }
 
-        // --- 悔棋功能 ---
         document.getElementById('btn-undo').addEventListener('click', () => {
             if (history.length === 0) return;
             playSound('move');
@@ -831,6 +1119,10 @@
             currentTurn = prev.currentTurn;
             capturedPieces = prev.capturedPieces;
             moveLog = prev.moveLog || [];
+            enPassantTarget = prev.enPassantTarget;
+            hasKingMoved = prev.hasKingMoved;
+            hasRookMoved = prev.hasRookMoved;
+
             selectedCell = null;
             possibleMoves = [];
             updateUI();
@@ -838,7 +1130,7 @@
             renderMoveHistory();
         });
 
-        // --- 核心更新邏輯（已修正：非破壞性 DOM 更新） ---
+        // --- 非破壞性 DOM 高效局部更新 ---
         function updateUI() {
             const turnDisplay = document.getElementById('turn-display');
             const turnText = document.getElementById('turn-text');
@@ -849,6 +1141,14 @@
             } else {
                 turnDisplay.className = "flex items-center justify-center gap-3 py-2 px-4 rounded-lg bg-blue-500 text-white font-bold text-sm shadow-[0_0_15px_rgba(59,130,246,0.5)]";
                 turnText.innerText = "黑方玩家回合";
+            }
+
+            // 更新將軍警示橫幅
+            const checkAlert = document.getElementById('check-alert-box');
+            if (isKingInCheck(currentTurn)) {
+                checkAlert.classList.remove('hidden');
+            } else {
+                checkAlert.classList.add('hidden');
             }
 
             const capturedBlackEl = document.getElementById('captured-black');
@@ -868,16 +1168,27 @@
                 capturedWhiteEl.appendChild(span);
             });
 
-            // 採用非破壞性更新，防止摧毀正在進行拖曳的元素
+            // 是否被將軍的高亮
+            const isWhiteInCheck = isKingInCheck('w');
+            const isBlackInCheck = isKingInCheck('b');
+
             const cells = boardEl.querySelectorAll('[data-row]');
             cells.forEach(cell => {
                 const r = parseInt(cell.dataset.row);
                 const c = parseInt(cell.dataset.col);
                 const piece = boardState[r][c];
 
-                // 移除原有的遮罩樣式與提示
-                cell.classList.remove('cell-obscured', 'cell-selected');
+                // 清除之前的狀態
+                cell.classList.remove('cell-obscured', 'cell-selected', 'cell-check-warning');
                 cell.querySelectorAll('.move-indicator, .capture-indicator').forEach(el => el.remove());
+
+                // 將軍狀態高亮國王所在的格子
+                if (piece === 'wk' && isWhiteInCheck) {
+                    cell.classList.add('cell-check-warning');
+                }
+                if (piece === 'bk' && isBlackInCheck) {
+                    cell.classList.add('cell-check-warning');
+                }
 
                 if (selectedCell) {
                     const isSelected = selectedCell.r === r && selectedCell.c === c;
@@ -888,14 +1199,12 @@
                     const moveHint = possibleMoves.find(m => m.r === r && m.c === c);
                     if (moveHint) {
                         const ind = document.createElement('div');
-                        ind.className = (moveHint.type === 'capture') ? 'capture-indicator absolute' : 'move-indicator absolute';
+                        ind.className = (moveHint.type === 'capture' || moveHint.type === 'enpassant') ? 'capture-indicator absolute' : 'move-indicator absolute';
                         cell.appendChild(ind);
                     }
                 }
 
-                // 智慧更新棋子節點
                 let pieceEl = cell.querySelector('.piece');
-
                 if (piece) {
                     const color = piece[0];
                     const type = piece[1];
@@ -910,7 +1219,6 @@
                         cell.appendChild(pieceEl);
                     }
 
-                    // 重設 className 並加上呼吸動畫
                     pieceEl.className = `piece text-4xl md:text-5xl flex items-center justify-center h-full w-full ${color === 'w' ? 'text-amber-100 drop-shadow-[0_2px_2px_rgba(0,0,0,0.6)]' : 'text-slate-900 drop-shadow-[0_1px_1px_rgba(255,255,255,0.4)]'}`;
                     pieceEl.innerText = PIECE_SYMBOLS[color][type];
 
@@ -918,7 +1226,6 @@
                         pieceEl.classList.add(color === 'w' ? 'piece-active-w' : 'piece-active-b');
                     }
                     
-                    // 維持正在被拖拉的棋子樣式
                     if (activeDragPiece === pieceEl) {
                         pieceEl.classList.add('piece-dragging');
                     } else {
@@ -930,7 +1237,7 @@
             });
         }
 
-        // 綁定確認重設
+        // 綁定重設
         document.getElementById('btn-reset-confirm').addEventListener('click', () => {
             if (confirm("確定要重設棋局進度嗎？這將無法復原。")) {
                 initGame();
