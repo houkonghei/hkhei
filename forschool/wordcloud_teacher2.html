@@ -56,7 +56,7 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold text-slate-800">課堂即時互動討論控制台</h1>
-                    <p class="text-xs text-slate-500">點擊學生答案卡片可直接切換對/錯扣分狀態</p>
+                    <p class="text-xs text-slate-500">即時監控全班答題狀況、代碼收集與實時改卷計分</p>
                 </div>
             </div>
             
@@ -162,15 +162,16 @@
         <!-- 右側：主展示看板 -->
         <div class="flex-grow flex flex-col gap-4">
             
-            <!-- 大字顯示當前題號 -->
+            <!-- 大字顯示當前題號 (💡 已升級：當前題號與具體問題內容連動) -->
             <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <span class="text-xs font-bold text-indigo-600 uppercase tracking-widest" id="currentQuestionSubtitle">QUESTION BOARD</span>
-                    <h2 class="text-xl font-bold text-slate-800" id="currentQuestionTitle">第 1 題 討論看板</h2>
+                <div class="flex-1 min-w-0">
+                    <span class="text-xs font-bold text-indigo-600 uppercase tracking-widest" id="currentQuestionSubtitle">QUESTION 1</span>
+                    <!-- 💡 高亮標題：這裡將會動態注入 question_bank 中的真實提問內容 -->
+                    <h2 class="text-lg font-extrabold text-slate-800 mt-0.5 leading-relaxed whitespace-pre-wrap" id="currentQuestionTitle">載入題目中...</h2>
                 </div>
                 
                 <!-- 視圖切換按鈕組 -->
-                <div class="inline-flex rounded-lg p-1 bg-slate-100 border border-slate-200 overflow-x-auto">
+                <div class="inline-flex rounded-lg p-1 bg-slate-100 border border-slate-200 overflow-x-auto flex-shrink-0">
                     <button onclick="switchView('cards')" id="viewBtn-cards" class="inline-flex items-center px-3.5 py-1.5 rounded-md text-xs font-bold text-slate-700 bg-white shadow-sm transition">
                         <i class="fa-solid fa-grip mr-1.5 text-indigo-500"></i>答案卡片
                     </button>
@@ -247,41 +248,7 @@
         </div>
     </main>
 
-    <!-- 📊 成績匯出彈窗 (Excel Tab 分隔格式) -->
-    <div id="exportModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
-        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <!-- 背景遮罩 -->
-            <div class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" onclick="hideExportModal()"></div>
-            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            
-            <!-- 彈窗主體 -->
-            <div class="inline-block align-middle bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl w-full border border-slate-100">
-                <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white">
-                    <div class="flex items-center space-x-2">
-                        <i class="fa-solid fa-file-excel text-lg text-emerald-300"></i>
-                        <h3 class="text-lg font-bold">📊 匯出學生成績表 (Excel 格式)</h3>
-                    </div>
-                    <button onclick="hideExportModal()" class="text-white hover:text-indigo-200 transition">
-                        <i class="fa-solid fa-xmark text-xl"></i>
-                    </button>
-                </div>
-                <div class="p-6 bg-slate-50">
-                    <p class="text-xs text-slate-500 mb-3">已為您自動轉換為 <strong>Tab 鍵（\t）分隔格式</strong>。直接點擊下方「一鍵複製」按鈕，隨後在您的 Excel 試算表中任意儲存格按下 <strong>Ctrl+V</strong> 貼上，數據即會自動在各個欄位對齊！</p>
-                    <textarea id="exportTextarea" readonly class="w-full h-80 p-4 font-mono text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none shadow-inner overflow-auto whitespace-pre"></textarea>
-                </div>
-                <div class="bg-slate-100 px-6 py-4 flex justify-between items-center border-t border-slate-200">
-                    <button id="copyExportBtn" onclick="copyExportedText()" class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg shadow-sm transition">
-                        <i class="fa-regular fa-copy mr-2"></i>一鍵複製
-                    </button>
-                    <button onclick="hideExportModal()" class="inline-flex items-center px-5 py-2 bg-slate-300 hover:bg-slate-400 text-slate-700 text-sm font-semibold rounded-lg shadow-sm transition">
-                        關閉視窗
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 焦點放大討論視窗 -->
+    <!-- 焦點放大討論視窗 (Spotlight) -->
     <div id="spotlightModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
         <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div class="fixed inset-0 bg-slate-900 bg-opacity-85 transition-opacity" onclick="hideSpotlight()"></div>
@@ -309,8 +276,12 @@
                         </div>
                     </div>
                     <div class="my-4">
+                        <!-- 💡 焦點彈窗內題目呈現：以極細字和淡雅斜體，不搶占主要答案注意力 -->
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">對應題目</span>
+                        <div id="spotlightQuestionHeader" class="text-xs italic text-slate-500/50 bg-slate-100/50 p-2.5 rounded-lg mb-4 whitespace-pre-wrap select-none leading-relaxed border border-slate-200/20">-</div>
+                        
                         <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">回答內容</span>
-                        <div id="spotlightContent" class="text-2xl font-medium text-slate-800 bg-white p-6 rounded-xl border border-slate-200 whitespace-pre-wrap leading-relaxed shadow-inner overflow-y-auto max-h-[450px]"></div>
+                        <div id="spotlightContent" class="text-2xl font-medium text-slate-800 bg-white p-6 rounded-xl border border-slate-200 whitespace-pre-wrap leading-relaxed shadow-inner overflow-y-auto max-h-[350px]"></div>
                     </div>
                 </div>
                 <div class="bg-slate-100 px-6 py-4 flex justify-between items-center border-t border-slate-200">
@@ -367,6 +338,7 @@
         let SCRIPT_URL = localStorage.getItem('teacher_script_url') || DEFAULT_URL;
         
         let ALL_STUDENTS = [];
+        let QUESTION_BANK = [];     // 💡 新增：存放從雲端同步回來的題庫
         let serverData = {};       
         let currentQuestion = 1;   
         let currentView = 'cards';  
@@ -410,6 +382,9 @@
                 if (data._studentList) {
                     ALL_STUDENTS = data._studentList;
                 }
+                if (data._questionBank) {
+                    QUESTION_BANK = data._questionBank;
+                }
                 updateDashboard();
                 showToast('雲端數據同步成功！', 'success');
             })
@@ -435,7 +410,7 @@
             // 讀取老師手動打的分數
             const key = `grade_${studentName}_Q${qNum}`;
             const saved = localStorage.getItem(key);
-            if (saved === null) return 1; // 💡 預設有提交就是對的，得 1 分
+            if (saved === null) return 1; // 預設有提交就是對的，得 1 分
             return parseInt(saved, 10);
         }
 
@@ -484,7 +459,6 @@
                     tab.classList.remove('tab-active');
                 }
             }
-            document.getElementById('currentQuestionTitle').textContent = `第 ${num} 題 討論看板`;
             renderCurrentQuestionData();
         }
 
@@ -522,6 +496,11 @@
             const rawAnswers = serverData[sheetName] || [];
             const cleanAnswers = getLatestAnswers(rawAnswers);
 
+            // 💡 題目與標題連動更新
+            const qObj = QUESTION_BANK[currentQuestion - 1] || { q: `第 ${currentQuestion} 題` };
+            document.getElementById('currentQuestionSubtitle').textContent = `QUESTION ${currentQuestion}`;
+            document.getElementById('currentQuestionTitle').textContent = qObj.q;
+
             const submittedCount = cleanAnswers.length;
             const totalCount = ALL_STUDENTS.length;
             document.getElementById('submittedCount').textContent = submittedCount;
@@ -554,11 +533,15 @@
             }
         }
 
-        // --- 1. 卡片視圖 (極簡點擊空白改卷 + 滑鼠動態反饋，已依據 image_d08023.png 徹底移除底下提示文字) ---
+        // --- 1. 卡片視圖 (極簡點擊空白改卷 + 題目隱藏浮水印) ---
         function renderCards(answers) {
             const grid = document.getElementById('cardsGrid');
             grid.innerHTML = '';
             window.currentAnswersList = [];
+
+            // 獲取目前題目的內容
+            const qObj = QUESTION_BANK[currentQuestion - 1] || { q: "" };
+            const questionText = qObj.q || "";
 
             answers.forEach((item, index) => {
                 const name = String(item["學生姓名"] || "").trim();
@@ -575,17 +558,26 @@
 
                 const isCode = ans.includes('\n') || ans.includes('def ') || ans.includes('import ') || ans.includes('print(') || ans.includes(' = ');
 
-                // 💡 讀取該學生這題的得分 (預設 1)
+                // 讀取該學生這題的得分 (預設 1)
                 const score = getStudentGrade(name, currentQuestion);
 
                 const cardHtml = `
-                    <div onclick="toggleGrade('${name}', ${currentQuestion})" class="rounded-xl p-4 border transition-all duration-200 relative flex flex-col justify-between card-element cursor-pointer group hover:scale-[1.01] hover:shadow-md
+                    <div onclick="toggleGrade('${name}', ${currentQuestion})" class="rounded-xl p-4 border transition-all shadow-2xs relative flex flex-col justify-between card-element cursor-pointer group hover:scale-[1.01] duration-150
                         ${score === 1 
-                            ? 'bg-slate-50 hover:bg-indigo-50 border-slate-100 hover:border-indigo-300' 
-                            : 'bg-rose-50 hover:bg-rose-100/70 border-rose-200 hover:border-rose-300'}" 
+                            ? 'bg-slate-50 hover:bg-indigo-50/10 border-slate-100 hover:border-indigo-100' 
+                            : 'bg-rose-50 hover:bg-rose-100/80 border-rose-200 hover:border-rose-300'}" 
                         data-student="${name}" data-answer="${ans.replace(/"/g, '&quot;')}">
                         <div>
-                            <div class="flex items-center justify-between mb-2.5">
+                            <!-- 💡 題目隱藏浮水印：使用極細、低對比顏色，不搶占主要答案注意力。滑鼠懸停時會微微亮起。 -->
+                            <div class="text-[10px] select-none pointer-events-none mb-1.5 truncate transition-all duration-200 leading-normal border-b pb-1 font-mono tracking-tight
+                                ${score === 1 
+                                    ? 'text-slate-400/20 group-hover:text-slate-400/40 border-slate-200/20' 
+                                    : 'text-rose-400/20 group-hover:text-rose-400/40 border-rose-200/20'}"
+                                title="${escapeHtml(questionText)}">
+                                Q: ${escapeHtml(questionText)}
+                            </div>
+
+                            <div class="flex items-center justify-between mb-2">
                                 <div class="flex items-center space-x-2">
                                     <span class="w-2.5 h-2.5 rounded-full ${score === 1 ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
                                     <span class="font-extrabold text-sm text-slate-800">${name}</span>
@@ -839,11 +831,11 @@
             });
         }
 
-        // --- 📊 成績匯出模組 (已依據 image_d08069.png 徹底將 "未交" 替代為大寫 "X") ---
+        // --- 📊 成績匯出模組 (Excel / Tab 分隔文字) ---
         function showExportModal() {
             const textarea = document.getElementById('exportTextarea');
             
-            // 💡 生成標準 Tab 分隔純文字格式，並使用大寫 "X" 代表未交，優化 Excel 的貼上與對齊
+            // 💡 覆寫：未交在純文字中自動轉換為 "X" 以完美對齊 Excel
             let text = "學生姓名\tQ1\tQ2\tQ3\tQ4\tQ5\tQ6\tQ7\tQ8\tQ9\tQ10\t總分\n";
             
             ALL_STUDENTS.forEach(student => {
@@ -853,7 +845,7 @@
                 for(let q = 1; q <= 10; q++) {
                     const status = getStudentGrade(student, q);
                     if (status === "未交") {
-                        row += "\tX"; // 💡 已修正：不再輸出「未交」中文字，改用大寫 "X" 以維護 Excel 排版對齊的美觀！
+                        row += "\tX"; // 💡 已修正：未交在文字中以大寫 X 展示
                     } else {
                         row += `\t${status}`;
                         total += status;
@@ -891,21 +883,26 @@
             }
         }
 
-        // --- 焦點放大討論視窗控制器 ---
+        // --- 焦點放大討論視窗控制器 (Spotlight) ---
         function safeSpotlight(index, name, timeStr) {
             const answerText = window.currentAnswersList[index] || "";
             activeSpotlightAnswer = answerText;
 
+            // 💡 題目放大鏡內題目對應：獲取當前題目的內容並呈現在 Spotlight 視窗
+            const qObj = QUESTION_BANK[currentQuestion - 1] || { q: "" };
+            const questionText = qObj.q || "";
+
             document.getElementById('spotlightStudentName').textContent = name;
             document.getElementById('spotlightTime').textContent = timeStr;
+            document.getElementById('spotlightQuestionHeader').textContent = `Q: ${questionText}`;
             
             const isCode = answerText.includes('\n') || answerText.includes('def ') || answerText.includes('import ') || answerText.includes('print(') || answerText.includes(' = ');
             const contentBox = document.getElementById('spotlightContent');
             
             if (isCode) {
-                contentBox.className = "text-xl font-mono bg-slate-950 text-slate-100 p-6 rounded-xl border border-slate-800 whitespace-pre leading-relaxed shadow-inner overflow-auto max-h-[450px]";
+                contentBox.className = "text-xl font-mono bg-slate-950 text-slate-100 p-6 rounded-xl border border-slate-800 whitespace-pre leading-relaxed shadow-inner overflow-auto max-h-[350px]";
             } else {
-                contentBox.className = "text-2xl font-semibold text-slate-800 bg-white p-6 rounded-xl border border-slate-200 whitespace-pre-wrap leading-relaxed shadow-inner overflow-y-auto max-h-[450px]";
+                contentBox.className = "text-2xl font-semibold text-slate-800 bg-white p-6 rounded-xl border border-slate-200 whitespace-pre-wrap leading-relaxed shadow-inner overflow-y-auto max-h-[350px]";
             }
             contentBox.innerHTML = escapeHtml(answerText);
             document.getElementById('spotlightModal').classList.remove('hidden');
@@ -956,7 +953,7 @@
                 const tempIndex = Math.floor(Math.random() * cleanAnswers.length);
                 const randomStudent = cleanAnswers[tempIndex];
                 
-                showToast(`🎲 滾動名單中: ${randomStudent["學生姓名"]}`, 'info');
+                showToast("🎲 滾動名單中: " + randomStudent["學生姓名"], "info");
                 counter++;
 
                 if (counter > 6) {
@@ -980,7 +977,7 @@
                     }
 
                     setTimeout(() => {
-                        showToast(`🎉 恭喜抽中 ${chosen["學生姓名"]} 的回答！`, 'success');
+                        showToast("🎉 恭喜抽中 " + chosen["學生姓名"] + " 的回答！", "success");
                         safeSpotlight(finalIndexInList, chosen["學生姓名"], timeStr);
                     }, 500);
                 }
