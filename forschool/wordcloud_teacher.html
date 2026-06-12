@@ -248,6 +248,40 @@
         </div>
     </main>
 
+    <!-- 📊 成績匯出彈窗 (Excel Tab 分隔格式) (💡 已防屏蔽、Null值防範優化) -->
+    <div id="gradeReportBox" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <!-- 背景遮罩 -->
+            <div class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" onclick="hideExportModal()"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <!-- 彈窗主體 -->
+            <div class="inline-block align-middle bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl w-full border border-slate-100">
+                <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-file-excel text-lg text-emerald-300"></i>
+                        <h3 class="text-lg font-bold">📊 匯出學生成績表 (Excel 格式)</h3>
+                    </div>
+                    <button onclick="hideExportModal()" class="text-white hover:text-slate-300 transition">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 bg-slate-50">
+                    <p class="text-xs text-slate-500 mb-3">已為您自動轉換為 <strong>Tab 鍵（\t）分隔格式</strong>。直接點擊下方「一鍵複製」按鈕，隨後在您的 Excel 試算表中任意儲存格按下 <strong>Ctrl+V</strong> 貼上，數據即會自動在各個欄位對齊！</p>
+                    <textarea id="txtGradeReportOutput" readonly class="w-full h-80 p-4 font-mono text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none shadow-inner overflow-auto whitespace-pre"></textarea>
+                </div>
+                <div class="bg-slate-100 px-6 py-4 flex justify-between items-center border-t border-slate-200">
+                    <button id="btnCopyReport" onclick="copyExportedText()" class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg shadow-sm transition">
+                        <i class="fa-regular fa-copy mr-2"></i>一鍵複製
+                    </button>
+                    <button onclick="hideExportModal()" class="inline-flex items-center px-5 py-2 bg-slate-300 hover:bg-slate-400 text-slate-700 text-sm font-semibold rounded-lg shadow-sm transition">
+                        關閉視窗
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 焦點放大討論視窗 (Spotlight) -->
     <div id="spotlightModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
         <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -338,7 +372,7 @@
         let SCRIPT_URL = localStorage.getItem('teacher_script_url') || DEFAULT_URL;
         
         let ALL_STUDENTS = [];
-        let QUESTION_BANK = [];     // 💡 新增：存放從雲端同步回來的題庫
+        let QUESTION_BANK = [];     // 存放從雲端同步回來的題庫
         let serverData = {};       
         let currentQuestion = 1;   
         let currentView = 'cards';  
@@ -833,7 +867,11 @@
 
         // --- 📊 成績匯出模組 (Excel / Tab 分隔文字) ---
         function showExportModal() {
-            const textarea = document.getElementById('exportTextarea');
+            const textarea = document.getElementById('txtGradeReportOutput');
+            if (!textarea) {
+                showToast("未找到匯出文本框元件，可能已被廣告攔截器屏蔽！", "error");
+                return;
+            }
             
             // 💡 覆寫：未交在純文字中自動轉換為 "X" 以完美對齊 Excel
             let text = "學生姓名\tQ1\tQ2\tQ3\tQ4\tQ5\tQ6\tQ7\tQ8\tQ9\tQ10\t總分\n";
@@ -856,28 +894,45 @@
             });
             
             textarea.value = text;
-            document.getElementById('exportModal').classList.remove('hidden');
+            
+            const modal = document.getElementById('gradeReportBox');
+            if (modal) {
+                modal.classList.remove('hidden');
+            } else {
+                showToast("未找到匯出彈窗，請確認頁面完整性或關閉 AdBlocker！", "error");
+            }
         }
 
         function hideExportModal() {
-            document.getElementById('exportModal').classList.add('hidden');
+            const modal = document.getElementById('gradeReportBox');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
         }
 
         function copyExportedText() {
-            const textarea = document.getElementById('exportTextarea');
-            const btn = document.getElementById('copyExportBtn');
-            const originalHtml = btn.innerHTML;
+            const textarea = document.getElementById('txtGradeReportOutput');
+            if (!textarea) {
+                showToast("未找到複製文字框！", "error");
+                return;
+            }
+            const btn = document.getElementById('btnCopyReport');
+            const originalHtml = btn ? btn.innerHTML : '';
             
             textarea.select();
             try {
                 document.execCommand('copy');
-                btn.className = "inline-flex items-center px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 text-sm font-bold rounded-lg shadow-sm transition";
-                btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i>已成功複製';
+                if (btn) {
+                    btn.className = "inline-flex items-center px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 text-sm font-bold rounded-lg shadow-sm transition";
+                    btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i>已成功複製';
+                }
                 showToast('已複製學生成績表，直接去 Excel 按 Ctrl+V 貼上即可！', 'success');
-                setTimeout(() => {
-                    btn.className = "inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg shadow-sm transition";
-                    btn.innerHTML = originalHtml;
-                }, 2000);
+                if (btn) {
+                    setTimeout(() => {
+                        btn.className = "inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg shadow-sm transition";
+                        btn.innerHTML = originalHtml;
+                    }, 2000);
+                }
             } catch (err) {
                 showToast('複製失敗！請手動在文字框內全選複製。', 'error');
             }
