@@ -25,7 +25,7 @@
 
         <form id="evaluationForm" class="p-6 sm:p-8 space-y-8">
 
-            <!-- 第三處修改：新增網頁上方「防看輸入準則」說明文字 -->
+            <!-- 防看輸入準則說明文字 -->
             <div class="bg-indigo-50 border border-indigo-200 p-5 rounded-xl space-y-2">
                 <h3 class="text-sm font-bold text-indigo-900 flex items-center gap-2">
                     <span>🔒 防偷看特別輸入準則（重要必看）：</span>
@@ -35,7 +35,7 @@
                     <li><strong>你可以輸入任意長度的數字</strong>來混淆視聽！系統會<strong>自動擷取你輸入的【最後兩位數字】</strong>作為最終評分（分數範圍為 1~99 分）。</li>
                     <li><em>輸入範例：</em>
                         <ul class="list-none pl-5 mt-1 space-y-1">
-                            <li>若想評 <strong>90</strong> 分：你可以輸入 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">12425390</code>（只取最後位「90」）</li>
+                            <li>若想評 <strong>90</strong> 分：你可以輸入 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">12425390</code>（只取最後兩位「90」）</li>
                             <li>若想評 <strong>85</strong> 分：你可以輸入 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">85</code> 或 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">9999985</code></li>
                             <li>若想評 <strong>5</strong> 分：你可以直接輸入 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">5</code> 或輸入 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">1234505</code></li>
                         </ul>
@@ -114,7 +114,7 @@
                     <!-- 第 1、2 位同學 (Pair 1) -->
                     <div class="peer-row p-4 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label for="peer_1" class="block text-sm font-semibold text-slate-600 mb-1">我要評分的第 1 位同學，他/她是：</label>
+                            <label for="peer_1" class="block text-sm font-semibold text-slate-600 mb-1">裝我要評分的第 1 位同學，他/她是：</label>
                             <select id="peer_1" class="peer-select w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
                                 <option value="">-- 請選擇同學 --</option>
                                 <!-- 【IT老師提示】：請在此處替換成你班上的學生名單 -->
@@ -126,7 +126,6 @@
                             </select>
                         </div>
                         <div>
-                            <!-- 第二處修改：標籤改為 (1~99) 且 placeholder 提示干擾輸入 -->
                             <label for="score_1" class="block text-sm font-semibold text-slate-600 mb-1">第 1 位同學，他/她 值多少分 (1~99)：</label>
                             <input type="password" id="score_1" placeholder="可輸入一長串隨機數字干擾"
                                    class="peer-score w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
@@ -249,55 +248,131 @@
         </form>
     </div>
 
-    <!-- ⚙️ 老師專用設定按鈕：實心白底搭配淺灰邊框與微陰影，既美觀好找，又不會讓學生起疑心 -->
-    <button type="button" onclick="openGeneratorModal()" title="學生名單生成器" class="fixed bottom-4 right-4 z-40 w-10 h-10 rounded-full flex items-center justify-center bg-white hover:bg-slate-100 border border-slate-200 text-slate-400 hover:text-slate-600 shadow-sm transition-all duration-200 cursor-pointer">
+    <!-- ⚙️ 老師專用管理控制台按鈕 -->
+    <button type="button" onclick="openAdminModal()" title="教師管理主控台" class="fixed bottom-4 right-4 z-40 w-10 h-10 rounded-full flex items-center justify-center bg-white hover:bg-slate-100 border border-slate-200 text-slate-400 hover:text-slate-600 shadow-sm transition-all duration-200 cursor-pointer">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
         </svg>
     </button>
 
-    <!-- 🆕 新增：名單生成器彈出式視窗 (Modal) -->
-    <div id="generatorModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden transform scale-95 transition-all duration-300" id="generatorModalContainer">
+    <!-- 教師管理主控台彈出式視窗 -->
+    <div id="adminModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-100 overflow-hidden transform scale-95 transition-all duration-300 flex flex-col max-h-[85vh]" id="adminModalContainer">
+            
             <!-- Modal Header -->
-            <div class="bg-slate-800 p-5 text-white flex justify-between items-center">
+            <div class="bg-slate-800 p-5 text-white flex justify-between items-center shrink-0">
                 <div>
                     <h3 class="text-lg font-bold flex items-center gap-1.5">
-                        <span>🛠️ 學生名單 HTML 生成器</span>
+                        <span>🛠️ 教師專用管理主控台</span>
                     </h3>
-                    <p class="text-xs text-slate-300 mt-0.5">輸入學生姓名，自動產生 &lt;option&gt; 代碼，方便您複製修改 HTML</p>
+                    <p class="text-xs text-slate-300 mt-0.5">進行學生名單維護與小組互評成績即時統計分析</p>
                 </div>
-                <button type="button" onclick="closeGeneratorModal()" class="text-white hover:text-slate-300 transition focus:outline-none">
+                <button type="button" onclick="closeAdminModal()" class="text-white hover:text-slate-300 transition focus:outline-none">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
             
-            <!-- Modal Body -->
-            <div class="p-6 space-y-4">
-                <div>
-                    <label for="rawNamesInput" class="block text-sm font-semibold text-slate-700 mb-1">請貼上全班姓名（每行一個，以 Enter 分隔）：</label>
-                    <textarea id="rawNamesInput" rows="5" placeholder="陳大文&#10;王小明&#10;李美玲" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 transition font-mono"></textarea>
+            <!-- 關卡 1：密碼鎖畫面 (🔒 已修改：隱藏完整提示，僅留 jp 字樣) -->
+            <div id="adminLockScreen" class="p-8 flex flex-col items-center justify-center space-y-4 shrink-0">
+                <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
                 </div>
-                
-                <div class="flex gap-2">
-                    <button type="button" onclick="generateOptionTags()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition">
-                        產生 HTML 代碼
+                <div class="text-center">
+                    <h4 class="font-bold text-slate-700">安全驗證保護</h4>
+                    <p class="text-xs text-slate-400 mt-1">此區塊包含敏感評分數據，請輸入教師密碼（密碼提示：jp）</p>
+                </div>
+                <div class="w-full max-w-xs flex gap-2">
+                    <input type="password" id="adminPasswordInput" placeholder="請輸入密碼" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 transition">
+                    <button type="button" onclick="verifyAdminPassword()" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold px-4 py-2 rounded-lg text-sm transition">驗證</button>
+                </div>
+                <div id="lockErrorMsg" class="hidden text-xs text-red-600 font-semibold bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">密碼錯誤，請重新輸入！</div>
+            </div>
+
+            <!-- 關卡 2：解鎖後的主控台內容 -->
+            <div id="adminConsoleContent" class="hidden flex-1 flex flex-col overflow-hidden">
+                <!-- 頁籤導覽列 (Tabs) -->
+                <div class="flex border-b border-slate-200 bg-slate-50 shrink-0">
+                    <button type="button" id="tabBtnGenerator" onclick="switchAdminTab('generator')" class="flex-1 py-3 text-sm font-semibold text-slate-700 border-b-2 border-slate-800 bg-white">
+                        📝 學生名單生成器
+                    </button>
+                    <button type="button" id="tabBtnStats" onclick="switchAdminTab('stats')" class="flex-1 py-3 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:bg-slate-100/50">
+                        📊 成績即時統計表
                     </button>
                 </div>
 
-                <div id="generatedOutputContainer" class="hidden space-y-2">
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-semibold text-slate-600">產生的 HTML 代碼：</span>
-                        <button type="button" onclick="copyGeneratedCode()" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold py-1 px-2.5 rounded border border-blue-200 transition">
-                            複製代碼
+                <!-- 各分頁主體區塊 -->
+                <div class="flex-1 p-6 overflow-y-auto min-h-0">
+                    
+                    <!-- 分頁一：名單生成器 -->
+                    <div id="tabContentGenerator" class="space-y-4">
+                        <div>
+                            <label for="rawNamesInput" class="block text-sm font-semibold text-slate-700 mb-1">請貼上全班姓名（每行一個，以 Enter 分隔）：</label>
+                            <textarea id="rawNamesInput" rows="5" placeholder="陳大文&#10;王小明&#10;李美玲" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 transition font-mono"></textarea>
+                        </div>
+                        <button type="button" onclick="generateOptionTags()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition">
+                            產生 HTML 代碼
                         </button>
+                        <div id="generatedOutputContainer" class="hidden space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-semibold text-slate-600">產生的 HTML 代碼：</span>
+                                <button type="button" onclick="copyGeneratedCode()" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold py-1 px-2.5 rounded border border-blue-200 transition">
+                                    複製代碼
+                                </button>
+                            </div>
+                            <textarea id="generatedOutputCode" readonly rows="5" class="w-full rounded-lg border border-slate-300 bg-slate-50 p-3 text-xs font-mono text-slate-700 focus:outline-none"></textarea>
+                            <p id="copyStatusText" class="hidden text-xs text-green-600 font-semibold">✓ 複製成功！您可以直接貼到 HTML 原始碼中替換學生名單了。</p>
+                        </div>
                     </div>
-                    <!-- 唯讀代碼顯示框 -->
-                    <textarea id="generatedOutputCode" readonly rows="5" class="w-full rounded-lg border border-slate-300 bg-slate-50 p-3 text-xs font-mono text-slate-700 focus:outline-none"></textarea>
-                    <p id="copyStatusText" class="hidden text-xs text-green-600 font-semibold">✓ 複製成功！您可以直接貼到 HTML 原始碼中替換學生名單了。</p>
+
+                    <!-- 分頁二：成績即時統計表 -->
+                    <div id="tabContentStats" class="space-y-4 hidden">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <p class="text-xs text-slate-500">系統將自動獲取 Google 試算表原始數據，並依據<strong>【學生生號】</strong>進行去重（若同一學生提交多次，僅保留最新的那一筆記錄），進而計算每位被評組員的得分。</p>
+                            <button type="button" onclick="fetchAndCalculateGrades()" class="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-1.5 transition">
+                                <span id="syncBtnText">🔄 點此同步最新成績</span>
+                                <span id="syncSpinner" class="hidden animate-spin inline-block w-3.5 h-3.5 border-[2px] border-current border-t-transparent text-white rounded-full"></span>
+                            </button>
+                        </div>
+
+                        <!-- 錯誤提示區 -->
+                        <div id="statsErrorMsg" class="hidden p-3 bg-red-50 border border-red-200 text-xs text-red-600 rounded-lg"></div>
+
+                        <!-- 數據展示表格 -->
+                        <div id="statsResultsWrapper" class="hidden space-y-4">
+                            <div class="flex justify-between items-center">
+                                <span id="totalEffectiveRecords" class="text-xs font-semibold text-slate-600">有效評分人數 (去重後)：0 人</span>
+                                <button type="button" onclick="exportStatsToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-1.5 px-3 rounded-lg flex items-center gap-1 transition">
+                                    📥 匯出 Excel (CSV)
+                                </button>
+                            </div>
+
+                            <div class="border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr class="bg-slate-100 border-b border-slate-200 text-slate-600">
+                                            <th class="py-3 px-4 font-semibold">被評組員姓名</th>
+                                            <th class="py-3 px-4 font-semibold">有效被評次數</th>
+                                            <th class="py-3 px-4 font-semibold">總得分</th>
+                                            <th class="py-3 px-4 font-semibold text-blue-600">平均分數 (1~99)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="statsTableBody" class="divide-y divide-slate-100 bg-white text-slate-700">
+                                        <!-- 動態生成表格行 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 無數據占位 -->
+                        <div id="statsNoDataPlaceholder" class="p-8 text-center text-xs text-slate-400 bg-slate-50 border border-dashed border-slate-200 rounded-xl">
+                            尚未同步數據。請先點選右上方的「點此同步最新成績」按鈕。
+                        </div>
+                    </div>
+
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -312,6 +387,9 @@
         const loadingSpinner = document.getElementById('loadingSpinner');
         const statusMessage = document.getElementById('statusMessage');
 
+        // 全域儲存變數，用於儲存和匯出統計結果
+        let calculatedGradesData = [];
+
         // --- 控制每一橫行（Peer Row）的聚焦高亮邏輯 (極醒目的琥珀暖黃色調) ---
         const peerRows = document.querySelectorAll('.peer-row');
         peerRows.forEach(row => {
@@ -320,17 +398,13 @@
 
             // 根據焦點與下拉選單的值來決定背景樣式
             function updateRowHighlight() {
-                // 判斷當前焦點是否位於此行的 select 或 score input 中
                 const isFocused = (document.activeElement === selectEl || document.activeElement === scoreEl);
-                // 判斷下拉選單是否已經選中學生
                 const hasSelectedValue = selectEl.value !== "";
 
                 if (isFocused || hasSelectedValue) {
-                    // 變色狀態：極具視覺關注度的暖黃色背景、亮黃邊框以及外發光效果
                     row.classList.remove('bg-white', 'border-slate-100');
                     row.classList.add('bg-amber-50/80', 'border-amber-400', 'ring-2', 'ring-amber-200/80');
                 } else {
-                    // 無色狀態（恢復默認）：白色背景與灰色淺邊框
                     row.classList.remove('bg-amber-50/80', 'border-amber-400', 'ring-2', 'ring-amber-200/80');
                     row.classList.add('bg-white', 'border-slate-100');
                 }
@@ -346,7 +420,7 @@
             scoreEl.addEventListener('input', updateRowHighlight);
         });
 
-        // 輔助函式：顯示狀態訊息
+        // 輔育函式：顯示狀態訊息
         function showStatus(text, type) {
             statusMessage.innerText = text;
             statusMessage.className = "p-4 rounded-lg text-sm font-semibold " + 
@@ -354,42 +428,85 @@
             statusMessage.classList.remove('hidden');
         }
 
-        // 新增輔助函式：從輸入的長數字串中，安全提取末一或二位數並轉為 1-99 整數
+        // 輔助函式：從輸入的長數字串中，安全提取末一或二位數並轉為 1-99 整數
         function extractFinalScore(rawVal) {
             const cleanStr = rawVal.trim();
             if (!cleanStr) return null;
             
-            // 移除非數字字元（只允許純數字輸入，防呆用）
             const numericStr = cleanStr.replace(/\D/g, '');
             if (!numericStr) return NaN;
 
-            // 擷取最後一到兩位數
             const lastTwo = numericStr.length >= 2 ? numericStr.slice(-2) : numericStr;
             return parseInt(lastTwo, 10);
         }
 
-        // 🆕 新增：名單生成器 Modal 控制邏輯
-        function openGeneratorModal() {
-            const modal = document.getElementById('generatorModal');
-            const container = document.getElementById('generatorModalContainer');
-            modal.classList.remove('hidden');
+        // ==========================================
+        //        ⚙️ 老師專用管理控制台 核心邏輯
+        // ==========================================
+        const adminModal = document.getElementById('adminModal');
+        const adminModalContainer = document.getElementById('adminModalContainer');
+        const adminLockScreen = document.getElementById('adminLockScreen');
+        const adminConsoleContent = document.getElementById('adminConsoleContent');
+        const adminPasswordInput = document.getElementById('adminPasswordInput');
+        const lockErrorMsg = document.getElementById('lockErrorMsg');
+
+        // 開啟控制台 (每次預設都需要重新解鎖)
+        function openAdminModal() {
+            adminPasswordInput.value = "";
+            lockErrorMsg.classList.add('hidden');
+            adminLockScreen.classList.remove('hidden');
+            adminConsoleContent.classList.add('hidden');
+            
+            adminModal.classList.remove('hidden');
             setTimeout(() => {
-                container.classList.remove('scale-95');
-                container.classList.add('scale-100');
+                adminModalContainer.classList.remove('scale-95');
+                adminModalContainer.classList.add('scale-100');
             }, 50);
         }
 
-        function closeGeneratorModal() {
-            const modal = document.getElementById('generatorModal');
-            const container = document.getElementById('generatorModalContainer');
-            container.classList.remove('scale-100');
-            container.classList.add('scale-95');
+        // 關閉控制台
+        function closeAdminModal() {
+            adminModalContainer.classList.remove('scale-100');
+            adminModalContainer.classList.add('scale-95');
             setTimeout(() => {
-                modal.classList.add('hidden');
+                adminModal.classList.add('hidden');
             }, 150);
         }
 
-        // 🆕 新增：自動轉換為 <option> 代碼
+        // 密碼驗證邏輯 (🔒 已修改：密碼更新為 jphu00)
+        function verifyAdminPassword() {
+            const inputVal = adminPasswordInput.value;
+            if (inputVal === "jphu00") {
+                lockErrorMsg.classList.add('hidden');
+                adminLockScreen.classList.add('hidden');
+                adminConsoleContent.classList.remove('hidden');
+                switchAdminTab('generator'); // 解鎖後預設顯示第一個分頁
+            } else {
+                lockErrorMsg.classList.remove('hidden');
+            }
+        }
+
+        // 分頁切換 (Tab Switcher)
+        function switchAdminTab(tabName) {
+            const tabBtnGenerator = document.getElementById('tabBtnGenerator');
+            const tabBtnStats = document.getElementById('tabBtnStats');
+            const tabContentGenerator = document.getElementById('tabContentGenerator');
+            const tabContentStats = document.getElementById('tabContentStats');
+
+            if (tabName === 'generator') {
+                tabBtnGenerator.className = "flex-1 py-3 text-sm font-semibold text-slate-800 border-b-2 border-slate-800 bg-white";
+                tabBtnStats.className = "flex-1 py-3 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:bg-slate-100/50";
+                tabContentGenerator.classList.remove('hidden');
+                tabContentStats.classList.add('hidden');
+            } else if (tabName === 'stats') {
+                tabBtnStats.className = "flex-1 py-3 text-sm font-semibold text-slate-800 border-b-2 border-slate-800 bg-white";
+                tabBtnGenerator.className = "flex-1 py-3 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:bg-slate-100/50";
+                tabContentStats.classList.remove('hidden');
+                tabContentGenerator.classList.add('hidden');
+            }
+        }
+
+        // 名單產生核心邏輯
         function generateOptionTags() {
             const rawNames = document.getElementById('rawNamesInput').value;
             const outputContainer = document.getElementById('generatedOutputContainer');
@@ -416,26 +533,217 @@
             outputContainer.classList.remove('hidden');
         }
 
-        // 🆕 新增：一鍵複製代碼功能 (符合 iframe 安全規範)
+        // 一鍵複製
         function copyGeneratedCode() {
             const outputCode = document.getElementById('generatedOutputCode');
             outputCode.select();
-            outputCode.setSelectionRange(0, 99999); // 支援行動端
+            outputCode.setSelectionRange(0, 99999);
 
             try {
-                // 使用傳統 execCommand('copy') 保證跨環境相容性
                 const successful = document.execCommand('copy');
                 if (successful) {
-                    const copyStatusText = document.getElementById('copyStatusText');
-                    copyStatusText.classList.remove('hidden');
+                    document.getElementById('copyStatusText').classList.remove('hidden');
                 } else {
-                    alert("複製失敗，請手動全選複製。");
+                    alert("複製失敗，請手動複製。");
                 }
             } catch (err) {
-                alert("瀏覽器不支援自動複製，請手動複製。");
+                alert("瀏覽器不支援，請手動複製。");
             }
         }
 
+        // 用於繞過沙盒 CORS 限制的 JSONP 請求函式
+        function fetchJSONP(url) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+                const script = document.createElement('script');
+                
+                // 設置全域回調函數
+                window[callbackName] = function(data) {
+                    cleanup();
+                    resolve(data);
+                };
+                
+                // 錯誤處理
+                script.onerror = function() {
+                    cleanup();
+                    reject(new Error("JSONP 請求加載失敗。請檢查連線或確認 Apps Script 設置！"));
+                };
+                
+                function cleanup() {
+                    if (script.parentNode) {
+                        script.parentNode.removeChild(script);
+                    }
+                    delete window[callbackName];
+                }
+                
+                // 串接 callback 參數
+                const joinChar = url.indexOf('?') === -1 ? '?' : '&';
+                script.src = `${url}${joinChar}callback=${callbackName}`;
+                document.body.appendChild(script);
+            });
+        }
+
+        // ==========================================
+        //      互評成績拉取與統計核心計算邏輯 (已修復 CORS 與 數值類型調用 .trim() 限制)
+        // ==========================================
+        async function fetchAndCalculateGrades() {
+            const syncBtnText = document.getElementById('syncBtnText');
+            const syncSpinner = document.getElementById('syncSpinner');
+            const statsErrorMsg = document.getElementById('statsErrorMsg');
+            const statsResultsWrapper = document.getElementById('statsResultsWrapper');
+            const statsNoDataPlaceholder = document.getElementById('statsNoDataPlaceholder');
+            const statsTableBody = document.getElementById('statsTableBody');
+            const totalEffectiveRecords = document.getElementById('totalEffectiveRecords');
+
+            statsErrorMsg.classList.add('hidden');
+            
+            if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_WEB_APP_URL") {
+                statsErrorMsg.innerText = "❌ 尚未配置有效的 Google Apps Script 網址，無法拉取雲端數據。";
+                statsErrorMsg.classList.remove('hidden');
+                return;
+            }
+
+            // 開啟載入中動畫
+            syncSpinner.classList.remove('hidden');
+            syncBtnText.innerText = "正在向 Spreadsheet 拉取數據...";
+
+            try {
+                let rawData;
+
+                // 優化：首先試用常規 Fetch (適用於部署至同域或已妥善設置 CORS 的環境)
+                try {
+                    const response = await fetch(GOOGLE_SCRIPT_URL);
+                    if (response.ok) {
+                        rawData = await response.json();
+                    } else {
+                        throw new Error("常規 Fetch 失敗，狀態碼非 200 OK");
+                    }
+                } catch (fetchError) {
+                    console.warn("⚠️ 常規 Fetch 受阻，正在切換為沙盒專用 JSONP 協議獲取數據...", fetchError);
+                    // 降級：自動採用 JSONP 模式以完全避開沙盒 CORS Sandbox 阻擋
+                    rawData = await fetchJSONP(GOOGLE_SCRIPT_URL);
+                }
+
+                if (!Array.isArray(rawData) || rawData.length === 0) {
+                    statsNoDataPlaceholder.innerText = "📭 試算表目前是空的，尚未有任何評分紀錄。";
+                    statsNoDataPlaceholder.classList.remove('hidden');
+                    statsResultsWrapper.classList.add('hidden');
+                    return;
+                }
+
+                // 核心去重邏輯：只保留「最新那次」
+                const latestSubmissionMap = new Map();
+
+                rawData.forEach(row => {
+                    // 安全修正：確保 row.studentHkmsId 先轉為 String 再進行 .trim()，避免當其為數值類型時出錯
+                    const hasId = (row.studentHkmsId !== undefined && row.studentHkmsId !== null && row.studentHkmsId !== "");
+                    const submitterKey = hasId ? String(row.studentHkmsId).trim() : `${row.studentClass}_${row.studentSeatNo}`;
+                    if (!submitterKey) return;
+
+                    // 最新提交覆蓋舊提交記錄
+                    latestSubmissionMap.set(submitterKey, row);
+                });
+
+                // 更新介面上的有效提交人數量
+                totalEffectiveRecords.innerText = `有效評分學生人數 (已去重)：${latestSubmissionMap.size} 人`;
+
+                // 累加每個被評分同學的成績
+                const classmateScores = {};
+
+                latestSubmissionMap.forEach(row => {
+                    for (let i = 1; i <= 6; i++) {
+                        // 安全修正：確保 row[`peer_${i}`] 先轉為 String 再進行 .trim()
+                        const peerName = (row[`peer_${i}`] !== undefined && row[`peer_${i}`] !== null) ? String(row[`peer_${i}`]).trim() : "";
+                        const rawScore = row[`score_${i}`];
+
+                        if (peerName && rawScore !== undefined && rawScore !== "") {
+                            const scoreNum = parseInt(rawScore, 10);
+                            if (!isNaN(scoreNum)) {
+                                if (!classmateScores[peerName]) {
+                                    classmateScores[peerName] = { total: 0, count: 0 };
+                                }
+                                classmateScores[peerName].total += scoreNum;
+                                classmateScores[peerName].count += 1;
+                            }
+                        }
+                    }
+                });
+
+                // 格式化為表格呈現的數組
+                calculatedGradesData = Object.keys(classmateScores).map(name => {
+                    const stats = classmateScores[name];
+                    const avg = stats.count > 0 ? (stats.total / stats.count).toFixed(2) : "0.00";
+                    return {
+                        name: name,
+                        count: stats.count,
+                        total: stats.total,
+                        average: parseFloat(avg)
+                    };
+                });
+
+                // 依據平均分高到低排序
+                calculatedGradesData.sort((a, b) => b.average - a.average);
+
+                // 渲染表格 rows
+                statsTableBody.innerHTML = "";
+                if (calculatedGradesData.length === 0) {
+                    statsTableBody.innerHTML = `<tr><td colspan="4" class="py-4 px-4 text-center text-slate-400">雖然有提交，但解析後無有效的組員評分數據。</td></tr>`;
+                } else {
+                    calculatedGradesData.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.className = "hover:bg-slate-50 transition";
+                        tr.innerHTML = `
+                            <td class="py-3 px-4 font-medium text-slate-800">${item.name}</td>
+                            <td class="py-3 px-4 text-slate-500">${item.count} 次</td>
+                            <td class="py-3 px-4 text-slate-500">${item.total} 分</td>
+                            <td class="py-3 px-4 font-bold text-blue-600">${item.average.toFixed(2)} 分</td>
+                        `;
+                        statsTableBody.appendChild(tr);
+                    });
+                }
+
+                // 切換顯示狀態
+                statsNoDataPlaceholder.classList.add('hidden');
+                statsResultsWrapper.classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Fetch stats error:", error);
+                statsErrorMsg.innerText = `❌ 拉取或統計失敗！錯誤原因：${error.message}\n提示：如果您已更新試算表數據，請務必確認您的 Apps Script doGet 中具有 callback 支援。`;
+                statsErrorMsg.classList.remove('hidden');
+            } finally {
+                // 恢復同步按鈕狀態
+                syncSpinner.classList.add('hidden');
+                syncBtnText.innerText = "🔄 點此同步最新成績";
+            }
+        }
+
+        // 一鍵將統計好的結果匯出為 CSV
+        function exportStatsToCSV() {
+            if (calculatedGradesData.length === 0) {
+                alert("目前沒有任何統計成績數據可以導出！");
+                return;
+            }
+
+            let csvContent = "\uFEFF";
+            csvContent += "被評同學姓名,有效被評次數,總得分,平均分數(1~99)\n";
+
+            calculatedGradesData.forEach(item => {
+                csvContent += `"${item.name}",${item.count},${item.total},${item.average.toFixed(2)}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `組員互評成績統計結果_${new Date().toLocaleDateString().replace(/\//g, '-')}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // ==========================================
+        //               原有表單提交邏輯
+        // ==========================================
         form.addEventListener('submit', async function(e) {
             e.preventDefault(); // 阻止表單預設提交動作
             statusMessage.classList.add('hidden');
@@ -500,7 +808,7 @@
 
                     // 檢查是否重複評分同一個人
                     if (selectedPeers.has(peerVal)) {
-                        showStatus(`你重複選擇了「${peerVal}」進行評分，請修正。`, "error");
+                        showStatus("你重複選擇了「" + peerVal + "」進行評分，請修正。", "error");
                         return;
                     }
 
