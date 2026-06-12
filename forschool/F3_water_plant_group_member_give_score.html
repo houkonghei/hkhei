@@ -20,10 +20,28 @@
         <!-- 頁首與標題 -->
         <div class="bg-gradient-to-r py-8 px-6 text-center border-b border-slate-100">
             <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800">小組活動組員互評系統</h1>
-            <p class="mt-2 text-sm text-slate-500">請認真且客觀地為你的組員評分。為了保護隱私，分數輸入框已進行加密隱藏。</p>
+            <p class="mt-2 text-sm text-slate-500">請認真且客觀地為你的組員評分。分數輸入框已進行加密隱藏。</p>
         </div>
 
         <form id="evaluationForm" class="p-6 sm:p-8 space-y-8">
+
+            <!-- 🆕 第三處修改：新增網頁上方「防看輸入準則」說明文字 -->
+            <div class="bg-indigo-50 border border-indigo-200 p-5 rounded-xl space-y-2">
+                <h3 class="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                    <span>🔒 防偷看特別輸入準則（重要必看）：</span>
+                </h3>
+                <ul class="list-disc list-inside text-xs text-indigo-800 space-y-1 leading-relaxed">
+                    <li>為了防止身旁的組員偷看你的評分，分數輸入框採用<strong>密碼隱密格式</strong>呈現。</li>
+                    <li><strong>你可以輸入任意長度的數字</strong>來混淆視聽！系統會<strong>自動擷取你輸入的【最後兩位數字】</strong>作為最終評分（分數範圍為 1~99 分）。</li>
+                    <li><em>輸入範例：</em>
+                        <ul class="list-none pl-5 mt-1 space-y-1">
+                            <li>若想評 <strong>90</strong> 分：你可以輸入 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">12425390</code>（只取最後兩位「90」）</li>
+                            <li>若想評 <strong>85</strong> 分：你可以輸入 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">85</code> 或 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">9999985</code></li>
+                            <li>若想評 <strong>5</strong> 分：你可以直接輸入 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">5</code> 或輸入 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">1234505</code></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
             
             <!-- 第一部分：評分學生個人資料 -->
             <div class="bg-slate-50 p-5 rounded-xl border border-slate-200/60 space-y-4">
@@ -40,10 +58,10 @@
                         <select id="studentClass" required class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
                             <option value="">-- 請選擇班別 --</option>
                             <!-- 【IT老師提示】：你可以在下方自行修改或增加班別名稱 -->
-                            <option value="初三2班">初三2班</option>
-                            <option value="XXX">XXX 班</option>
-                            <option value="YYY">YYY 班</option>
-                            <option value="ZZZ">ZZZ 班</option>
+                            <option value="7A">7A 班</option>
+                            <option value="7B">7B 班</option>
+                            <option value="8A">8A 班</option>
+                            <option value="8B">8B 班</option>
                         </select>
                     </div>
 
@@ -57,12 +75,12 @@
                     <!-- 學生姓名 -->
                     <div>
                         <label for="studentName" class="block text-sm font-semibold text-slate-600 mb-1">學生姓名：</label>
-                        <input type="text" id="studentName" required placeholder="請輸入中文"
+                        <input type="text" id="studentName" required placeholder="請輸入中文或英文姓名"
                                class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
                     </div>
                 </div>
 
-                <!-- 🆕 新增項目：濠江 HKMS 生號與密碼 (兩欄並排) -->
+                <!-- 新增項目：濠江 HKMS 生號與密碼 (兩欄並排) -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-200/60">
                     <!-- 濠江 HKMS 8位學生生號 -->
                     <div>
@@ -87,7 +105,7 @@
                     組員評分表 (最多評分 6 位同學)
                 </h2>
                 <p class="text-xs text-amber-600 bg-amber-50 border border-amber-100 p-3 rounded-lg">
-                    💡 提示：請勿重複評分同一位同學。分數請輸入 1 至 100 之間的整數。輸入的分數會以 <strong>••••</strong> 密碼格式顯示，身旁的同學不會看見。
+                    💡 提示：請勿重複評分同一位同學。分數請輸入正整數（最終系統僅取您輸入內容的<strong>末尾兩位</strong>作為 <strong>1~99</strong> 的評分分數）。
                 </p>
 
                 <!-- 評分小組區塊 (重複 6 組，共 12 個項目) -->
@@ -100,47 +118,17 @@
                             <select id="peer_1" class="peer-select w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
                                 <option value="">-- 請選擇同學 --</option>
                                 <!-- 【IT老師提示】：請在此處替換成你班上的學生名單 -->
-                                <option value="王一伊">王一伊</option>
-<option value="叶浩軒">叶浩軒</option>
-<option value="伍錦泰">伍錦泰</option>
-<option value="吳宇森">吳宇森</option>
-<option value="呂志宏">呂志宏</option>
-<option value="岑嘉朗">岑嘉朗</option>
-<option value="李文豪">李文豪</option>
-<option value="李嘉兒">李嘉兒</option>
-<option value="林晨妤">林晨妤</option>
-<option value="林紫琪">林紫琪</option>
-<option value="林學柔">林學柔</option>
-<option value="林靜妤">林靜妤</option>
-<option value="洪子茵">洪子茵</option>
-<option value="唐敬添">唐敬添</option>
-<option value="孫紹榮">孫紹榮</option>
-<option value="區綺彤">區綺彤</option>
-<option value="張哲雨">張哲雨</option>
-<option value="張皓寧">張皓寧</option>
-<option value="梁荻欣">梁荻欣</option>
-<option value="陳育霖">陳育霖</option>
-<option value="陳雨村">陳雨村</option>
-<option value="陳梓豪">陳梓豪</option>
-<option value="陳梓鵬">陳梓鵬</option>
-<option value="陸曉潼">陸曉潼</option>
-<option value="麥銘富">麥銘富</option>
-<option value="黃梓瑜">黃梓瑜</option>
-<option value="葉凱琳">葉凱琳</option>
-<option value="劉子軒">劉子軒</option>
-<option value="蔡海泓">蔡海泓</option>
-<option value="蔡傑安">蔡傑安</option>
-<option value="鄭國樺">鄭國樺</option>
-<option value="鄭詠同">鄭詠同</option>
-<option value="盧恩輝">盧恩輝</option>
-<option value="羅莉宜">羅莉宜</option>
-<option value="司徒德宇">司徒德宇</option>
-
+                                <option value="陳大文">陳大文</option>
+                                <option value="張小明">張小明</option>
+                                <option value="李美玲">李美玲</option>
+                                <option value="王小華">王小華</option>
+                                <option value="黃家豪">黃家豪</option>
                             </select>
                         </div>
                         <div>
-                            <label for="score_1" class="block text-sm font-semibold text-slate-600 mb-1">第 1 位同學，他/她 值多少分 (1~100)：</label>
-                            <input type="password" id="score_1" min="1" max="100" placeholder="請輸入 1-100 分數"
+                            <!-- 🆕 第二處修改：標籤改為 (1~99) 且 placeholder 提示干擾輸入 -->
+                            <label for="score_1" class="block text-sm font-semibold text-slate-600 mb-1">第 1 位同學，他/她 值多少分 (1~99)：</label>
+                            <input type="password" id="score_1" placeholder="可輸入一長串隨機數字干擾"
                                    class="peer-score w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                     </div>
@@ -151,47 +139,16 @@
                             <label for="peer_2" class="block text-sm font-semibold text-slate-600 mb-1">我要評分的第 2 位同學，他/她是：</label>
                             <select id="peer_2" class="peer-select w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
                                 <option value="">-- 請選擇同學 --</option>
-                                <option value="王一伊">王一伊</option>
-<option value="叶浩軒">叶浩軒</option>
-<option value="伍錦泰">伍錦泰</option>
-<option value="吳宇森">吳宇森</option>
-<option value="呂志宏">呂志宏</option>
-<option value="岑嘉朗">岑嘉朗</option>
-<option value="李文豪">李文豪</option>
-<option value="李嘉兒">李嘉兒</option>
-<option value="林晨妤">林晨妤</option>
-<option value="林紫琪">林紫琪</option>
-<option value="林學柔">林學柔</option>
-<option value="林靜妤">林靜妤</option>
-<option value="洪子茵">洪子茵</option>
-<option value="唐敬添">唐敬添</option>
-<option value="孫紹榮">孫紹榮</option>
-<option value="區綺彤">區綺彤</option>
-<option value="張哲雨">張哲雨</option>
-<option value="張皓寧">張皓寧</option>
-<option value="梁荻欣">梁荻欣</option>
-<option value="陳育霖">陳育霖</option>
-<option value="陳雨村">陳雨村</option>
-<option value="陳梓豪">陳梓豪</option>
-<option value="陳梓鵬">陳梓鵬</option>
-<option value="陸曉潼">陸曉潼</option>
-<option value="麥銘富">麥銘富</option>
-<option value="黃梓瑜">黃梓瑜</option>
-<option value="葉凱琳">葉凱琳</option>
-<option value="劉子軒">劉子軒</option>
-<option value="蔡海泓">蔡海泓</option>
-<option value="蔡傑安">蔡傑安</option>
-<option value="鄭國樺">鄭國樺</option>
-<option value="鄭詠同">鄭詠同</option>
-<option value="盧恩輝">盧恩輝</option>
-<option value="羅莉宜">羅莉宜</option>
-<option value="司徒德宇">司徒德宇</option>
-
+                                <option value="陳大文">陳大文</option>
+                                <option value="張小明">張小明</option>
+                                <option value="李美玲">李美玲</option>
+                                <option value="王小華">王小華</option>
+                                <option value="黃家豪">黃家豪</option>
                             </select>
                         </div>
                         <div>
-                            <label for="score_2" class="block text-sm font-semibold text-slate-600 mb-1">第 2 位同學，他/她 值多少分 (1~100)：</label>
-                            <input type="password" id="score_2" min="1" max="100" placeholder="請輸入 1-100 分數"
+                            <label for="score_2" class="block text-sm font-semibold text-slate-600 mb-1">第 2 位同學，他/她 值多少分 (1~99)：</label>
+                            <input type="password" id="score_2" placeholder="可輸入一長串隨機數字干擾"
                                    class="peer-score w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                     </div>
@@ -202,47 +159,16 @@
                             <label for="peer_3" class="block text-sm font-semibold text-slate-600 mb-1">我要評分的第 3 位同學，他/她是：</label>
                             <select id="peer_3" class="peer-select w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
                                 <option value="">-- 請選擇同學 --</option>
-                                <option value="王一伊">王一伊</option>
-<option value="叶浩軒">叶浩軒</option>
-<option value="伍錦泰">伍錦泰</option>
-<option value="吳宇森">吳宇森</option>
-<option value="呂志宏">呂志宏</option>
-<option value="岑嘉朗">岑嘉朗</option>
-<option value="李文豪">李文豪</option>
-<option value="李嘉兒">李嘉兒</option>
-<option value="林晨妤">林晨妤</option>
-<option value="林紫琪">林紫琪</option>
-<option value="林學柔">林學柔</option>
-<option value="林靜妤">林靜妤</option>
-<option value="洪子茵">洪子茵</option>
-<option value="唐敬添">唐敬添</option>
-<option value="孫紹榮">孫紹榮</option>
-<option value="區綺彤">區綺彤</option>
-<option value="張哲雨">張哲雨</option>
-<option value="張皓寧">張皓寧</option>
-<option value="梁荻欣">梁荻欣</option>
-<option value="陳育霖">陳育霖</option>
-<option value="陳雨村">陳雨村</option>
-<option value="陳梓豪">陳梓豪</option>
-<option value="陳梓鵬">陳梓鵬</option>
-<option value="陸曉潼">陸曉潼</option>
-<option value="麥銘富">麥銘富</option>
-<option value="黃梓瑜">黃梓瑜</option>
-<option value="葉凱琳">葉凱琳</option>
-<option value="劉子軒">劉子軒</option>
-<option value="蔡海泓">蔡海泓</option>
-<option value="蔡傑安">蔡傑安</option>
-<option value="鄭國樺">鄭國樺</option>
-<option value="鄭詠同">鄭詠同</option>
-<option value="盧恩輝">盧恩輝</option>
-<option value="羅莉宜">羅莉宜</option>
-<option value="司徒德宇">司徒德宇</option>
-
+                                <option value="陳大文">陳大文</option>
+                                <option value="張小明">張小明</option>
+                                <option value="李美玲">李美玲</option>
+                                <option value="王小華">王小華</option>
+                                <option value="黃家豪">黃家豪</option>
                             </select>
                         </div>
                         <div>
-                            <label for="score_3" class="block text-sm font-semibold text-slate-600 mb-1">第 3 位同學，他/她 值多少分 (1~100)：</label>
-                            <input type="password" id="score_3" min="1" max="100" placeholder="請輸入 1-100 分數"
+                            <label for="score_3" class="block text-sm font-semibold text-slate-600 mb-1">第 3 位同學，他/她 值多少分 (1~99)：</label>
+                            <input type="password" id="score_3" placeholder="可輸入一長串隨機數字干擾"
                                    class="peer-score w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                     </div>
@@ -253,47 +179,16 @@
                             <label for="peer_4" class="block text-sm font-semibold text-slate-600 mb-1">我要評分的第 4 位同學，他/她是：</label>
                             <select id="peer_4" class="peer-select w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
                                 <option value="">-- 請選擇同學 --</option>
-                             <option value="王一伊">王一伊</option>
-<option value="叶浩軒">叶浩軒</option>
-<option value="伍錦泰">伍錦泰</option>
-<option value="吳宇森">吳宇森</option>
-<option value="呂志宏">呂志宏</option>
-<option value="岑嘉朗">岑嘉朗</option>
-<option value="李文豪">李文豪</option>
-<option value="李嘉兒">李嘉兒</option>
-<option value="林晨妤">林晨妤</option>
-<option value="林紫琪">林紫琪</option>
-<option value="林學柔">林學柔</option>
-<option value="林靜妤">林靜妤</option>
-<option value="洪子茵">洪子茵</option>
-<option value="唐敬添">唐敬添</option>
-<option value="孫紹榮">孫紹榮</option>
-<option value="區綺彤">區綺彤</option>
-<option value="張哲雨">張哲雨</option>
-<option value="張皓寧">張皓寧</option>
-<option value="梁荻欣">梁荻欣</option>
-<option value="陳育霖">陳育霖</option>
-<option value="陳雨村">陳雨村</option>
-<option value="陳梓豪">陳梓豪</option>
-<option value="陳梓鵬">陳梓鵬</option>
-<option value="陸曉潼">陸曉潼</option>
-<option value="麥銘富">麥銘富</option>
-<option value="黃梓瑜">黃梓瑜</option>
-<option value="葉凱琳">葉凱琳</option>
-<option value="劉子軒">劉子軒</option>
-<option value="蔡海泓">蔡海泓</option>
-<option value="蔡傑安">蔡傑安</option>
-<option value="鄭國樺">鄭國樺</option>
-<option value="鄭詠同">鄭詠同</option>
-<option value="盧恩輝">盧恩輝</option>
-<option value="羅莉宜">羅莉宜</option>
-<option value="司徒德宇">司徒德宇</option>
-
+                                <option value="陳大文">陳大文</option>
+                                <option value="張小明">張小明</option>
+                                <option value="李美玲">李美玲</option>
+                                <option value="王小華">王小華</option>
+                                <option value="黃家豪">黃家豪</option>
                             </select>
                         </div>
                         <div>
-                            <label for="score_4" class="block text-sm font-semibold text-slate-600 mb-1">第 4 位同學，他/她 值多少分 (1~100)：</label>
-                            <input type="password" id="score_4" min="1" max="100" placeholder="請輸入 1-100 分數"
+                            <label for="score_4" class="block text-sm font-semibold text-slate-600 mb-1">第 4 位同學，他/她 值多少分 (1~99)：</label>
+                            <input type="password" id="score_4" placeholder="可輸入一長串隨機數字干擾"
                                    class="peer-score w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                     </div>
@@ -304,47 +199,16 @@
                             <label for="peer_5" class="block text-sm font-semibold text-slate-600 mb-1">我要評分的第 5 位同學，他/她是：</label>
                             <select id="peer_5" class="peer-select w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
                                 <option value="">-- 請選擇同學 --</option>
-                           <option value="王一伊">王一伊</option>
-<option value="叶浩軒">叶浩軒</option>
-<option value="伍錦泰">伍錦泰</option>
-<option value="吳宇森">吳宇森</option>
-<option value="呂志宏">呂志宏</option>
-<option value="岑嘉朗">岑嘉朗</option>
-<option value="李文豪">李文豪</option>
-<option value="李嘉兒">李嘉兒</option>
-<option value="林晨妤">林晨妤</option>
-<option value="林紫琪">林紫琪</option>
-<option value="林學柔">林學柔</option>
-<option value="林靜妤">林靜妤</option>
-<option value="洪子茵">洪子茵</option>
-<option value="唐敬添">唐敬添</option>
-<option value="孫紹榮">孫紹榮</option>
-<option value="區綺彤">區綺彤</option>
-<option value="張哲雨">張哲雨</option>
-<option value="張皓寧">張皓寧</option>
-<option value="梁荻欣">梁荻欣</option>
-<option value="陳育霖">陳育霖</option>
-<option value="陳雨村">陳雨村</option>
-<option value="陳梓豪">陳梓豪</option>
-<option value="陳梓鵬">陳梓鵬</option>
-<option value="陸曉潼">陸曉潼</option>
-<option value="麥銘富">麥銘富</option>
-<option value="黃梓瑜">黃梓瑜</option>
-<option value="葉凱琳">葉凱琳</option>
-<option value="劉子軒">劉子軒</option>
-<option value="蔡海泓">蔡海泓</option>
-<option value="蔡傑安">蔡傑安</option>
-<option value="鄭國樺">鄭國樺</option>
-<option value="鄭詠同">鄭詠同</option>
-<option value="盧恩輝">盧恩輝</option>
-<option value="羅莉宜">羅莉宜</option>
-<option value="司徒德宇">司徒德宇</option>
-
+                                <option value="陳大文">陳大文</option>
+                                <option value="張小明">張小明</option>
+                                <option value="李美玲">李美玲</option>
+                                <option value="王小華">王小華</option>
+                                <option value="黃家豪">黃家豪</option>
                             </select>
                         </div>
                         <div>
-                            <label for="score_5" class="block text-sm font-semibold text-slate-600 mb-1">第 5 位同學，他/她 值多少分 (1~100)：</label>
-                            <input type="password" id="score_5" min="1" max="100" placeholder="請輸入 1-100 分數"
+                            <label for="score_5" class="block text-sm font-semibold text-slate-600 mb-1">第 5 位同學，他/她 值多少分 (1~99)：</label>
+                            <input type="password" id="score_5" placeholder="可輸入一長串隨機數字干擾"
                                    class="peer-score w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                     </div>
@@ -355,47 +219,16 @@
                             <label for="peer_6" class="block text-sm font-semibold text-slate-600 mb-1">我要評分的第 6 位同學，他/她是：</label>
                             <select id="peer_6" class="peer-select w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
                                 <option value="">-- 請選擇同學 --</option>
-                            <option value="王一伊">王一伊</option>
-<option value="叶浩軒">叶浩軒</option>
-<option value="伍錦泰">伍錦泰</option>
-<option value="吳宇森">吳宇森</option>
-<option value="呂志宏">呂志宏</option>
-<option value="岑嘉朗">岑嘉朗</option>
-<option value="李文豪">李文豪</option>
-<option value="李嘉兒">李嘉兒</option>
-<option value="林晨妤">林晨妤</option>
-<option value="林紫琪">林紫琪</option>
-<option value="林學柔">林學柔</option>
-<option value="林靜妤">林靜妤</option>
-<option value="洪子茵">洪子茵</option>
-<option value="唐敬添">唐敬添</option>
-<option value="孫紹榮">孫紹榮</option>
-<option value="區綺彤">區綺彤</option>
-<option value="張哲雨">張哲雨</option>
-<option value="張皓寧">張皓寧</option>
-<option value="梁荻欣">梁荻欣</option>
-<option value="陳育霖">陳育霖</option>
-<option value="陳雨村">陳雨村</option>
-<option value="陳梓豪">陳梓豪</option>
-<option value="陳梓鵬">陳梓鵬</option>
-<option value="陸曉潼">陸曉潼</option>
-<option value="麥銘富">麥銘富</option>
-<option value="黃梓瑜">黃梓瑜</option>
-<option value="葉凱琳">葉凱琳</option>
-<option value="劉子軒">劉子軒</option>
-<option value="蔡海泓">蔡海泓</option>
-<option value="蔡傑安">蔡傑安</option>
-<option value="鄭國樺">鄭國樺</option>
-<option value="鄭詠同">鄭詠同</option>
-<option value="盧恩輝">盧恩輝</option>
-<option value="羅莉宜">羅莉宜</option>
-<option value="司徒德宇">司徒德宇</option>
-
+                                <option value="陳大文">陳大文</option>
+                                <option value="張小明">張小明</option>
+                                <option value="李美玲">李美玲</option>
+                                <option value="王小華">王小華</option>
+                                <option value="黃家豪">黃家豪</option>
                             </select>
                         </div>
                         <div>
-                            <label for="score_6" class="block text-sm font-semibold text-slate-600 mb-1">第 6 位同學，他/她 值多少分 (1~100)：</label>
-                            <input type="password" id="score_6" min="1" max="100" placeholder="請輸入 1-100 分數"
+                            <label for="score_6" class="block text-sm font-semibold text-slate-600 mb-1">第 6 位同學，他/她 值多少分 (1~99)：</label>
+                            <input type="password" id="score_6" placeholder="可輸入一長串隨機數字干擾"
                                    class="peer-score w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                     </div>
@@ -403,7 +236,7 @@
                 </div>
             </div>
 
-            <!-- 送出狀態與提示訊息 (取代傳統 alert) -->
+            <!-- 送出狀態與提示訊息 -->
             <div id="statusMessage" class="hidden p-4 rounded-lg text-sm font-semibold"></div>
 
             <!-- 提交按鈕 -->
@@ -469,6 +302,20 @@
             statusMessage.classList.remove('hidden');
         }
 
+        // 🆕 新增輔助函式：從輸入的長數字串中，安全提取末一或二位數並轉為 1-99 整數
+        function extractFinalScore(rawVal) {
+            const cleanStr = rawVal.trim();
+            if (!cleanStr) return null;
+            
+            // 移除非數字字元（只允許純數字輸入，防呆用）
+            const numericStr = cleanStr.replace(/\D/g, '');
+            if (!numericStr) return NaN;
+
+            // 擷取最後一到兩位數
+            const lastTwo = numericStr.length >= 2 ? numericStr.slice(-2) : numericStr;
+            return parseInt(lastTwo, 10);
+        }
+
         form.addEventListener('submit', async function(e) {
             e.preventDefault(); // 阻止表單預設提交動作
             statusMessage.classList.add('hidden');
@@ -486,13 +333,13 @@
                 return;
             }
 
-            // 🆕 新增驗證：生號必須為 8 位純數字
+            // 新增驗證：生號必須為 8 位純數字
             if (!/^\d{8}$/.test(studentHkmsId)) {
                 showStatus("請輸入正確的 8 位數字濠江學生生號！", "error");
                 return;
             }
 
-            // 🆕 新增驗證：密碼必須正好是 8 位
+            // 新增驗證：密碼必須正好是 8 位
             if (studentHkmsPassword.length !== 8) {
                 showStatus("請輸入正確的 8 位濠江密碼！", "error");
                 return;
@@ -501,24 +348,33 @@
             // 讀取 6 位組員與對應分數
             const evaluations = [];
             const selectedPeers = new Set(); // 用於檢查是否重複選擇同一人
-            let hasScoreError = false;
             let filledCount = 0;
+
+            // 用於儲存最終處理（擷取末位）後的數值分數
+            const finalScores = {};
 
             for (let i = 1; i <= 6; i++) {
                 const peerVal = document.getElementById(`peer_${i}`).value;
-                const scoreVal = document.getElementById(`score_${i}`).value.trim();
+                const scoreValRaw = document.getElementById(`score_${i}`).value;
 
                 // 只要有填其中一個（選了人或填了分數），就需要完整填寫該組
-                if (peerVal !== "" || scoreVal !== "") {
-                    if (peerVal === "" || scoreVal === "") {
+                if (peerVal !== "" || scoreValRaw.trim() !== "") {
+                    if (peerVal === "" || scoreValRaw.trim() === "") {
                         showStatus(`第 ${i} 組評分不完整。選了同學就必須給分，給了分就必須選同學。`, "error");
                         return;
                     }
 
-                    // 檢查分數是否為合法整數
-                    const scoreInt = parseInt(scoreVal, 10);
-                    if (isNaN(scoreInt) || scoreInt < 1 || scoreInt > 100 || scoreVal !== scoreInt.toString()) {
-                        showStatus(`第 ${i} 位同學的分數必須是 1 至 100 之間的整數。`, "error");
+                    // 🆕 擷取並轉換最後兩位分數（支援長數字與1-99分限制）
+                    const finalScoreInt = extractFinalScore(scoreValRaw);
+                    
+                    if (isNaN(finalScoreInt)) {
+                        showStatus(`第 ${i} 位同學的分數必須輸入為純整數數字（例如：12425390 混淆長數）！`, "error");
+                        return;
+                    }
+
+                    // 驗證範圍是否在 1 到 99 之間
+                    if (finalScoreInt < 1 || finalScoreInt > 99) {
+                        showStatus(`第 ${i} 位同學的最終折合分數（你輸入的末位兩碼「${isNaN(finalScoreInt) ? '無' : finalScoreInt}」）必須在 1 至 99 分之間！`, "error");
                         return;
                     }
 
@@ -529,7 +385,10 @@
                     }
 
                     selectedPeers.add(peerVal);
+                    finalScores[i] = finalScoreInt.toString(); // 保存最終傳送的乾淨分數
                     filledCount++;
+                } else {
+                    finalScores[i] = ""; // 沒有填寫的組別保持空白
                 }
             }
 
@@ -539,7 +398,7 @@
                 return;
             }
 
-            // 2. 構建要送出的資料 (加上了 🆕 新增的 studentHkmsId 與 studentHkmsPassword)
+            // 2. 構建要送出的資料 (傳送的是轉換後乾淨、不含干擾長數字的 finalScores)
             const payload = {
                 studentClass,
                 studentSeatNo,
@@ -547,23 +406,23 @@
                 studentHkmsId,
                 studentHkmsPassword,
                 peer_1: document.getElementById('peer_1').value || "",
-                score_1: document.getElementById('score_1').value || "",
+                score_1: finalScores[1],
                 peer_2: document.getElementById('peer_2').value || "",
-                score_2: document.getElementById('score_2').value || "",
+                score_2: finalScores[2],
                 peer_3: document.getElementById('peer_3').value || "",
-                score_3: document.getElementById('score_3').value || "",
+                score_3: finalScores[3],
                 peer_4: document.getElementById('peer_4').value || "",
-                score_4: document.getElementById('score_4').value || "",
+                score_4: finalScores[4],
                 peer_5: document.getElementById('peer_5').value || "",
-                score_5: document.getElementById('score_5').value || "",
+                score_5: finalScores[5],
                 peer_6: document.getElementById('peer_6').value || "",
-                score_6: document.getElementById('score_6').value || ""
+                score_6: finalScores[6]
             };
 
             // 3. 測試環境提示（若未更換 Google Web App 網址）
             if (GOOGLE_SCRIPT_URL === "" || GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_WEB_APP_URL") {
                 showStatus("🎉 評分提交成功！謝謝你的參與。（前端驗證成功，測試模式已啟動）", "success");
-                console.log("【IT老師除錯資訊】表單驗證成功！以下為準備傳送的 JSON 資料：", payload);
+                console.log("【IT老師除錯資訊】表單驗證成功！以下為準備傳送的 JSON 資料（分數已自動擷取末位）：", payload);
                 form.reset(); // 重置表單，模擬真實提交效果
                 
                 // 重置表單後，主動更新一次所有行的高亮（會全數變回無色）
