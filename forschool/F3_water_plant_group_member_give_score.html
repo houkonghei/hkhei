@@ -14,7 +14,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen py-8 px-4 sm:px-6 lg:px-8 font-sans">
+<body class="bg-slate-50 min-h-screen py-8 px-4 sm:px-6 lg:px-8 font-sans pb-24">
     <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
         
         <!-- 頁首與標題 -->
@@ -25,7 +25,7 @@
 
         <form id="evaluationForm" class="p-6 sm:p-8 space-y-8">
 
-            <!-- 🆕 第三處修改：新增網頁上方「防看輸入準則」說明文字 -->
+            <!-- 第三處修改：新增網頁上方「防看輸入準則」說明文字 -->
             <div class="bg-indigo-50 border border-indigo-200 p-5 rounded-xl space-y-2">
                 <h3 class="text-sm font-bold text-indigo-900 flex items-center gap-2">
                     <span>🔒 防偷看特別輸入準則（重要必看）：</span>
@@ -35,7 +35,7 @@
                     <li><strong>你可以輸入任意長度的數字</strong>來混淆視聽！系統會<strong>自動擷取你輸入的【最後兩位數字】</strong>作為最終評分（分數範圍為 1~99 分）。</li>
                     <li><em>輸入範例：</em>
                         <ul class="list-none pl-5 mt-1 space-y-1">
-                            <li>若想評 <strong>90</strong> 分：你可以輸入 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">12425390</code>（只取最後兩位「90」）</li>
+                            <li>若想評 <strong>90</strong> 分：你可以輸入 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">12425390</code>（只取最後位「90」）</li>
                             <li>若想評 <strong>85</strong> 分：你可以輸入 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">85</code> 或 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">9999985</code></li>
                             <li>若想評 <strong>5</strong> 分：你可以直接輸入 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">5</code> 或輸入 <code class="bg-indigo-100 px-1.5 py-0.5 rounded font-mono font-bold">1234505</code></li>
                         </ul>
@@ -126,7 +126,7 @@
                             </select>
                         </div>
                         <div>
-                            <!-- 🆕 第二處修改：標籤改為 (1~99) 且 placeholder 提示干擾輸入 -->
+                            <!-- 第二處修改：標籤改為 (1~99) 且 placeholder 提示干擾輸入 -->
                             <label for="score_1" class="block text-sm font-semibold text-slate-600 mb-1">第 1 位同學，他/她 值多少分 (1~99)：</label>
                             <input type="password" id="score_1" placeholder="可輸入一長串隨機數字干擾"
                                    class="peer-score w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
@@ -249,6 +249,58 @@
         </form>
     </div>
 
+    <!-- ⚙️ 老師專用設定按鈕：實心白底搭配淺灰邊框與微陰影，既美觀好找，又不會讓學生起疑心 -->
+    <button type="button" onclick="openGeneratorModal()" title="學生名單生成器" class="fixed bottom-4 right-4 z-40 w-10 h-10 rounded-full flex items-center justify-center bg-white hover:bg-slate-100 border border-slate-200 text-slate-400 hover:text-slate-600 shadow-sm transition-all duration-200 cursor-pointer">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+    </button>
+
+    <!-- 🆕 新增：名單生成器彈出式視窗 (Modal) -->
+    <div id="generatorModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden transform scale-95 transition-all duration-300" id="generatorModalContainer">
+            <!-- Modal Header -->
+            <div class="bg-slate-800 p-5 text-white flex justify-between items-center">
+                <div>
+                    <h3 class="text-lg font-bold flex items-center gap-1.5">
+                        <span>🛠️ 學生名單 HTML 生成器</span>
+                    </h3>
+                    <p class="text-xs text-slate-300 mt-0.5">輸入學生姓名，自動產生 &lt;option&gt; 代碼，方便您複製修改 HTML</p>
+                </div>
+                <button type="button" onclick="closeGeneratorModal()" class="text-white hover:text-slate-300 transition focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="p-6 space-y-4">
+                <div>
+                    <label for="rawNamesInput" class="block text-sm font-semibold text-slate-700 mb-1">請貼上全班姓名（每行一個，以 Enter 分隔）：</label>
+                    <textarea id="rawNamesInput" rows="5" placeholder="陳大文&#10;王小明&#10;李美玲" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 transition font-mono"></textarea>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button type="button" onclick="generateOptionTags()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition">
+                        產生 HTML 代碼
+                    </button>
+                </div>
+
+                <div id="generatedOutputContainer" class="hidden space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-semibold text-slate-600">產生的 HTML 代碼：</span>
+                        <button type="button" onclick="copyGeneratedCode()" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold py-1 px-2.5 rounded border border-blue-200 transition">
+                            複製代碼
+                        </button>
+                    </div>
+                    <!-- 唯讀代碼顯示框 -->
+                    <textarea id="generatedOutputCode" readonly rows="5" class="w-full rounded-lg border border-slate-300 bg-slate-50 p-3 text-xs font-mono text-slate-700 focus:outline-none"></textarea>
+                    <p id="copyStatusText" class="hidden text-xs text-green-600 font-semibold">✓ 複製成功！您可以直接貼到 HTML 原始碼中替換學生名單了。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript 邏輯：進行前台驗證與傳送 -->
     <script>
         // 【已填寫】：您部署的 Google Apps Script 網頁應用程式 (Web App) URL
@@ -302,7 +354,7 @@
             statusMessage.classList.remove('hidden');
         }
 
-        // 🆕 新增輔助函式：從輸入的長數字串中，安全提取末一或二位數並轉為 1-99 整數
+        // 新增輔助函式：從輸入的長數字串中，安全提取末一或二位數並轉為 1-99 整數
         function extractFinalScore(rawVal) {
             const cleanStr = rawVal.trim();
             if (!cleanStr) return null;
@@ -314,6 +366,74 @@
             // 擷取最後一到兩位數
             const lastTwo = numericStr.length >= 2 ? numericStr.slice(-2) : numericStr;
             return parseInt(lastTwo, 10);
+        }
+
+        // 🆕 新增：名單生成器 Modal 控制邏輯
+        function openGeneratorModal() {
+            const modal = document.getElementById('generatorModal');
+            const container = document.getElementById('generatorModalContainer');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                container.classList.remove('scale-95');
+                container.classList.add('scale-100');
+            }, 50);
+        }
+
+        function closeGeneratorModal() {
+            const modal = document.getElementById('generatorModal');
+            const container = document.getElementById('generatorModalContainer');
+            container.classList.remove('scale-100');
+            container.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 150);
+        }
+
+        // 🆕 新增：自動轉換為 <option> 代碼
+        function generateOptionTags() {
+            const rawNames = document.getElementById('rawNamesInput').value;
+            const outputContainer = document.getElementById('generatedOutputContainer');
+            const outputCode = document.getElementById('generatedOutputCode');
+            const copyStatusText = document.getElementById('copyStatusText');
+            
+            copyStatusText.classList.add('hidden');
+
+            if (!rawNames.trim()) {
+                alert("請先輸入姓名！");
+                return;
+            }
+
+            const lines = rawNames.split('\n');
+            let result = '';
+            lines.forEach(line => {
+                const name = line.trim();
+                if (name) {
+                    result += `<option value="${name}">${name}</option>\n`;
+                }
+            });
+
+            outputCode.value = result;
+            outputContainer.classList.remove('hidden');
+        }
+
+        // 🆕 新增：一鍵複製代碼功能 (符合 iframe 安全規範)
+        function copyGeneratedCode() {
+            const outputCode = document.getElementById('generatedOutputCode');
+            outputCode.select();
+            outputCode.setSelectionRange(0, 99999); // 支援行動端
+
+            try {
+                // 使用傳統 execCommand('copy') 保證跨環境相容性
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    const copyStatusText = document.getElementById('copyStatusText');
+                    copyStatusText.classList.remove('hidden');
+                } else {
+                    alert("複製失敗，請手動全選複製。");
+                }
+            } catch (err) {
+                alert("瀏覽器不支援自動複製，請手動複製。");
+            }
         }
 
         form.addEventListener('submit', async function(e) {
@@ -364,7 +484,7 @@
                         return;
                     }
 
-                    // 🆕 擷取並轉換最後兩位分數（支援長數字與1-99分限制）
+                    // 擷取並轉換最後兩位分數（支援長數字與1-99分限制）
                     const finalScoreInt = extractFinalScore(scoreValRaw);
                     
                     if (isNaN(finalScoreInt)) {
