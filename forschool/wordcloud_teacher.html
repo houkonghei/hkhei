@@ -205,9 +205,15 @@
                 <!-- 1. 卡片清單視圖 -->
                 <div id="view-cards" class="hidden flex-grow flex-col">
                     <div class="mb-4 flex flex-col sm:flex-row gap-3 items-center justify-between">
-                        <div class="relative w-full sm:w-72">
-                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400"></i>
-                            <input type="text" id="cardSearch" oninput="filterCards()" placeholder="搜尋答案或學生姓名..." class="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <div class="flex flex-col sm:flex-row gap-3 items-center w-full sm:w-auto">
+                            <div class="relative w-full sm:w-72">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400"></i>
+                                <input type="text" id="cardSearch" oninput="filterCards()" placeholder="搜尋答案或學生姓名..." class="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <!-- 💡 新增功能：本題學生全錯快速標記按鈕 -->
+                            <button onclick="markAllAsWrong()" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-xs font-bold text-rose-700 rounded-lg shadow-2xs transition">
+                                <i class="fa-solid fa-user-xmark mr-1.5"></i>本題全設不給分 (0分)
+                            </button>
                         </div>
                         <span class="text-xs text-slate-500" id="cardCountText">顯示 0 個解答</span>
                     </div>
@@ -229,7 +235,13 @@
                     </div>
 
                     <div class="w-full lg:w-[350px] flex-shrink-0 bg-slate-50 rounded-xl p-4 border border-slate-100 flex flex-col">
-                        <h4 class="text-xs font-bold text-slate-600 mb-3 border-b border-slate-200 pb-2"><i class="fa-solid fa-cloud mr-1.5 text-indigo-500"></i>詞雲分佈</h4>
+                        <!-- 💡 詞雲標題增加「全螢幕放大」按鈕 -->
+                        <h4 class="text-xs font-bold text-slate-600 mb-3 border-b border-slate-200 pb-2 flex justify-between items-center">
+                            <span><i class="fa-solid fa-cloud mr-1.5 text-indigo-500"></i>詞雲分佈</span>
+                            <button onclick="showLargeWordCloud()" class="text-indigo-600 hover:text-indigo-800 transition text-2xs font-extrabold flex items-center gap-1">
+                                <i class="fa-solid fa-expand"></i> 放大大屏幕
+                            </button>
+                        </h4>
                         <div class="flex-grow relative flex items-center justify-center bg-white rounded-lg border border-slate-200/50 min-h-[220px]">
                             <canvas id="wordcloud-canvas" class="w-full h-full min-h-[220px] max-h-[300px]"></canvas>
                         </div>
@@ -248,7 +260,7 @@
         </div>
     </main>
 
-    <!-- 📊 成績匯出彈窗 (Excel Tab 分隔格式) (💡 已防屏蔽、Null值防範優化) -->
+    <!-- 📊 成績匯出彈窗 (Excel Tab 分隔格式) -->
     <div id="gradeReportBox" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
         <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <!-- 背景遮罩 -->
@@ -262,7 +274,7 @@
                         <i class="fa-solid fa-file-excel text-lg text-emerald-300"></i>
                         <h3 class="text-lg font-bold">📊 匯出學生成績表 (Excel 格式)</h3>
                     </div>
-                    <button onclick="hideExportModal()" class="text-white hover:text-slate-300 transition">
+                    <button onclick="hideExportModal()" class="text-white hover:text-indigo-200 transition">
                         <i class="fa-solid fa-xmark text-xl"></i>
                     </button>
                 </div>
@@ -275,6 +287,36 @@
                         <i class="fa-regular fa-copy mr-2"></i>一鍵複製
                     </button>
                     <button onclick="hideExportModal()" class="inline-flex items-center px-5 py-2 bg-slate-300 hover:bg-slate-400 text-slate-700 text-sm font-semibold rounded-lg shadow-sm transition">
+                        關閉視窗
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ☁️ 詞雲全螢幕放大視窗 -->
+    <div id="wordcloudLargeModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-slate-900 bg-opacity-90 transition-opacity" onclick="hideLargeWordCloud()"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <div class="inline-block align-middle bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl w-full border border-slate-100">
+                <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-cloud text-lg text-amber-300 animate-pulse"></i>
+                        <h3 class="text-lg font-bold">☁️ 全螢幕課堂詞雲大看板 - QUESTION <span id="largeCloudQNum">1</span></h3>
+                    </div>
+                    <button onclick="hideLargeWordCloud()" class="text-white hover:text-indigo-200 transition">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 bg-slate-50 flex flex-col items-center justify-center">
+                    <div class="w-full bg-white rounded-2xl border border-slate-200 p-4 shadow-inner relative flex items-center justify-center" style="height: 60vh;">
+                        <canvas id="wordcloud-canvas-large" class="w-full h-full" style="min-height: 450px;"></canvas>
+                    </div>
+                </div>
+                <div class="bg-slate-100 px-6 py-4 flex justify-end items-center border-t border-slate-200">
+                    <button onclick="hideLargeWordCloud()" class="inline-flex items-center px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm transition">
                         關閉視窗
                     </button>
                 </div>
@@ -379,6 +421,8 @@
         let autoRefreshInterval = null;
         let isAutoRefreshOn = true;
 
+        let activeCloudList = [];   // 💡 新增：快取目前生成的詞雲清單
+
         window.currentAnswersList = [];
         let activeSpotlightAnswer = ""; 
 
@@ -461,6 +505,26 @@
             const newScore = currentScore === 1 ? 0 : 1;
             setStudentGrade(studentName, qNum, newScore);
             showToast(`${studentName} 第 Q${qNum} 題已設為 ${newScore === 1 ? '✔ 有分' : '❌ 扣分'}`, 'success');
+        }
+
+        // 💡 新增功能：將本題所有已交學生一鍵設為 0 分 (不給分)
+        function markAllAsWrong() {
+            const sheetName = `第 ${currentQuestion} 題`;
+            const rawAnswers = serverData[sheetName] || [];
+            const cleanAnswers = getLatestAnswers(rawAnswers);
+            if (cleanAnswers.length === 0) {
+                showToast('目前本題尚無學生提交答案，無法執行！', 'error');
+                return;
+            }
+            cleanAnswers.forEach(item => {
+                const name = String(item["學生姓名"] || "").trim();
+                if (name) {
+                    const key = `grade_${name}_Q${currentQuestion}`;
+                    localStorage.setItem(key, 0);
+                }
+            });
+            updateDashboard();
+            showToast(`已將目前本題所有已交學生的答案設為「0分 (不給分)」！`, 'success');
         }
 
         function updateDashboard() {
@@ -570,6 +634,7 @@
         // --- 1. 卡片視圖 (極簡點擊空白改卷 + 題目隱藏浮水印) ---
         function renderCards(answers) {
             const grid = document.getElementById('cardsGrid');
+            if (!grid) return;
             grid.innerHTML = '';
             window.currentAnswersList = [];
 
@@ -672,6 +737,7 @@
             const wordListContainer = document.getElementById('wordList');
             const barChartContainer = document.getElementById('barChartContainer');
             
+            if (!wordListContainer || !barChartContainer) return;
             wordListContainer.innerHTML = '';
             barChartContainer.innerHTML = '';
 
@@ -719,6 +785,7 @@
                 });
             }
 
+            if (!canvas) return;
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const parent = canvas.parentElement;
@@ -728,6 +795,7 @@
             const wordList = Object.entries(wordFreq).sort((a, b) => b[1] - a[1]);
 
             if (wordList.length === 0) {
+                activeCloudList = []; // 清空快取
                 ctx.font = '14px system-ui';
                 ctx.fillStyle = '#94a3b8';
                 ctx.textAlign = 'center';
@@ -740,6 +808,9 @@
                 const size = 12 + (freq / maxFreq) * 24;
                 return [word, size];
             });
+
+            // 💡 快取雲端詞頻清單，供放大看板使用
+            activeCloudList = cloudList;
 
             WordCloud(canvas, {
                 list: cloudList,
@@ -772,9 +843,65 @@
             });
         }
 
+        // --- 💡 新增功能：全螢幕詞雲大看板控制 ---
+        function showLargeWordCloud() {
+            const modal = document.getElementById('wordcloudLargeModal');
+            if (!modal) return;
+            document.getElementById('largeCloudQNum').textContent = currentQuestion;
+            modal.classList.remove('hidden');
+            
+            // 延遲一下確保 DOM 載入且寬度計算正確
+            setTimeout(() => {
+                const canvas = document.getElementById('wordcloud-canvas-large');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const parent = canvas.parentElement;
+                canvas.width = parent.clientWidth;
+                canvas.height = parent.clientHeight;
+                
+                if (activeCloudList.length === 0) {
+                    ctx.font = '20px system-ui';
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('目前無適合詞雲分析的簡短答案。', canvas.width/2, canvas.height/2);
+                    return;
+                }
+                
+                WordCloud(canvas, {
+                    list: activeCloudList,
+                    gridSize: 8,
+                    weightFactor: 1.5, // 放大字體尺寸
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    color: function (word, weight) {
+                        const colors = ['#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+                        return colors[Math.floor(Math.random() * colors.length)];
+                    },
+                    backgroundColor: 'transparent',
+                    rotateRatio: 0,
+                    click: function(item) {
+                        const keyword = item[0];
+                        hideLargeWordCloud();
+                        switchView('cards');
+                        const searchInput = document.getElementById('cardSearch');
+                        if (searchInput) {
+                            searchInput.value = keyword;
+                            filterCards();
+                        }
+                    }
+                });
+            }, 100);
+        }
+
+        function hideLargeWordCloud() {
+            const modal = document.getElementById('wordcloudLargeModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
         // --- 3. 全班各題成績矩陣 ---
         function renderTrackerMatrix() {
             const container = document.getElementById('view-tracker');
+            if (!container) return;
             container.innerHTML = ''; 
 
             if (ALL_STUDENTS.length === 0) {
@@ -861,7 +988,7 @@
                         </td>
                     </tr>
                 `;
-                tbody.insertAdjacentHTML('beforeend', rowHtml);
+                if (tbody) tbody.insertAdjacentHTML('beforeend', rowHtml);
             });
         }
 
