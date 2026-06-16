@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>A4 字卡專業生成器 Pro 2.3 (完美修復空白頁)</title>
+    <title>A4 字卡專業生成器 Pro 2.4 (智能單行自適應版)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         /* 全局基礎基礎設定 */
@@ -52,12 +52,12 @@
         .a4-page { 
             background: white; 
             width: 210mm; 
-            height: 280mm; /* 💡 終極修正：縮減至 280mm，留出 17mm 絕對安全邊際，徹底杜絕自動溢出 */
+            height: 280mm; /* 保留安全邊際，徹底杜絕 PDF 產生空白頁 */
             box-sizing: border-box; 
             box-shadow: 0 0 10px rgba(0,0,0,0.1); 
             display: grid; 
             padding: 10mm; 
-            page-break-inside: avoid; /* 防止內部元件被切斷 */
+            page-break-inside: avoid; 
         }
         
         /* 字卡格子樣式 */
@@ -68,10 +68,16 @@
             align-items: center; 
             text-align: center; 
             font-weight: bold; 
-            padding: 10px; 
-            word-break: break-all; 
+            padding: 5px 12px; /* 稍微縮小上下 padding，加寬左右邊距確保邊緣美觀 */
+            box-sizing: border-box;
             overflow: hidden; 
             background-color: #fff;
+        }
+
+        /* 💡 關鍵修正：強制讓內部的文字不要換行，這樣 JS 才能精確偵測到寬度溢出 */
+        .card-content {
+            white-space: nowrap;
+            display: inline-block;
         }
 
         /* 瀏覽器原生打印設定 (Ctrl + P) 專用相容 */
@@ -87,7 +93,7 @@
 <body>
 
     <div class="no-print">
-        <h2>🃏 A4 字卡專業生成器 Pro 2.3 (完美修復版)</h2>
+        <h2>🃏 A4 字卡專業生成器 Pro 2.4 (智能單行自適應版)</h2>
         
         <div class="controls">
             <div>
@@ -109,7 +115,7 @@
             </div>
             
             <div>
-                <label>2. 字體大小：</label>
+                <label>2. 基本字體大小：</label>
                 <select id="fontSize"></select>
             </div>
 
@@ -174,7 +180,7 @@
 
         function generate() {
             const count = parseInt(cardCountSelect.value);
-            const size = fontSizeSelect.value + 'px';
+            const startFontSize = parseInt(fontSizeSelect.value);
             const spacing = letterSpacingSelect.value;
             const words = document.getElementById('wordsInput').value.split('\n').map(s=>s.trim()).filter(s=>s!=='');
             const container = document.getElementById('previewContainer');
@@ -189,6 +195,7 @@
             const layout = gridLayouts[count];
             const pages = Math.ceil(words.length / count);
 
+            // 1. 先把所有頁面和格子結構渲染到 DOM 中（這樣才有實際寬度可以量測）
             for (let p = 0; p < pages; p++) {
                 const page = document.createElement('div');
                 page.className = 'a4-page';
@@ -198,19 +205,47 @@
                 for (let i = 0; i < count; i++) {
                     const card = document.createElement('div');
                     card.className = 'card';
-                    card.style.fontSize = size;
-                    card.style.letterSpacing = spacing;
                     
-                    if (parseInt(spacing) > 0) {
-                        card.style.paddingLeft = spacing; 
-                    }
-
                     const wordIdx = p * count + i;
-                    card.textContent = words[wordIdx] || '';
+                    const wordText = words[wordIdx] || '';
+
+                    if (wordText) {
+                        const contentSpan = document.createElement('span');
+                        contentSpan.className = 'card-content';
+                        contentSpan.textContent = wordText;
+                        contentSpan.style.letterSpacing = spacing;
+                        
+                        if (parseInt(spacing) > 0) {
+                            contentSpan.style.paddingLeft = spacing; 
+                        }
+                        
+                        card.appendChild(contentSpan);
+                    }
+                    
                     page.appendChild(card);
                 }
                 container.appendChild(page);
             }
+
+            // 2. 💡 核心演算：動態檢查每個格子的文字是否溢出，並精確縮小字體
+            const cards = container.querySelectorAll('.card');
+            cards.forEach(card => {
+                const span = card.querySelector('.card-content');
+                if (!span) return;
+
+                let currentSize = startFontSize;
+                span.style.fontSize = currentSize + 'px';
+
+                // 獲取格子的可用最大寬度（扣除左右 padding 的安全範圍，約保留 90% 寬度）
+                const maxAllowedWidth = card.clientWidth - 24; 
+
+                // 當文字實際寬度大於格子可容納寬度，且字體大於 10px 時，執行縮小迴圈
+                while (span.offsetWidth > maxAllowedWidth && currentSize > 10) {
+                    currentSize -= 1; // 每次縮小 1px
+                    span.style.fontSize = currentSize + 'px';
+                }
+            });
+
             return true;
         }
 
@@ -228,8 +263,7 @@
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true, logging: false },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                /* 💡 關鍵修正：指定只在遇到 .a4-page 元素前才換頁，徹底杜絕 html2pdf 內部高度計算錯誤導致的空白頁 */
-                pagebreak: { mode: 'specify', before: '.a4-page' } 
+                pagebreak: { mode: 'specify', before: '.a4-page' }
             };
             
             html2pdf().set(opt).from(element).save();
