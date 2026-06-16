@@ -38,43 +38,53 @@
             border-radius: 3px;
         }
         
-        /* 骰子巨型震動投擲動畫 */
-        @keyframes roll3D {
-            0% { transform: scale(1) rotate(0deg); filter: blur(0px); }
-            15% { transform: scale(1.3) rotate(-20deg) translateY(-15px); filter: blur(1px); }
-            30% { transform: scale(1.4) rotate(45deg) translateY(-25px); filter: blur(2px); }
-            50% { transform: scale(1.5) rotate(-90deg) translateY(-35px); filter: blur(3px); }
-            70% { transform: scale(1.3) rotate(180deg) translateY(-15px); filter: blur(1.5px); }
-            85% { transform: scale(0.9) rotate(270deg) translateY(5px); }
-            100% { transform: scale(1) rotate(360deg); filter: blur(0px); }
+        /* --- 巨型 3D 骰子物理震顫動畫 --- */
+        @keyframes diceShake {
+            0% { transform: scale(1) rotate(0deg); }
+            15% { transform: scale(1.15) rotate(-15deg) translateY(-10px); }
+            30% { transform: scale(1.15) rotate(15deg) translateY(-10px); }
+            45% { transform: scale(1.1) rotate(-10deg) translateY(-5deg); }
+            60% { transform: scale(1.1) rotate(10deg) translateY(-5deg); }
+            75% { transform: scale(1.05) rotate(-5deg); }
+            100% { transform: scale(1) rotate(0deg); }
         }
-        .dice-rolling {
-            animation: roll3D 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite;
-        }
-        
-        /* 棋子跳躍拋物線 3D 動畫 */
-        @keyframes jumpArc {
-            0% { transform: scale(1) translateY(0); z-index: 30; }
-            50% { transform: scale(1.4) translateY(-35px); z-index: 30; filter: drop-shadow(0 20px 10px rgba(0,0,0,0.5)); }
-            100% { transform: scale(1) translateY(0); z-index: 20; }
-        }
-        .jump-active {
-            animation: jumpArc 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        .dice-shake {
+            animation: diceShake 0.7s cubic-bezier(.36,.07,.19,.97) both;
         }
 
-        /* Token pulsating glow animation to stand out */
+        /* --- 拋物線單格跳躍動畫 --- */
+        @keyframes hop {
+            0% { transform: translateY(0) scale(1.1); z-index: 30; }
+            50% { transform: translateY(-24px) scale(1.4); z-index: 30; }
+            100% { transform: translateY(0) scale(1.1); z-index: 30; }
+        }
+        .hop-animation {
+            animation: hop 0.28s ease-out;
+        }
+
+        /* --- 呼吸光環 --- */
         @keyframes pulseGlow {
-            0%, 100% { box-shadow: 0 0 12px rgba(255,255,255,0.6); }
-            50% { box-shadow: 0 0 25px rgba(255,255,255,1); }
+            0%, 100% { transform: scale(1.1); box-shadow: 0 0 12px rgba(255,255,255,0.5); }
+            50% { transform: scale(1.2); box-shadow: 0 0 25px rgba(255,255,255,0.95); }
         }
         .pulsing-token {
-            animation: pulseGlow 1.5s infinite ease-in-out;
+            animation: pulseGlow 1.8s infinite ease-in-out;
+            transform-origin: center;
         }
     </style>
 </head>
-<body class="min-h-screen text-slate-100 p-3 sm:p-6 flex flex-col items-center justify-start overflow-x-hidden">
+<body class="min-h-screen text-slate-100 p-3 sm:p-6 flex flex-col items-center justify-start overflow-x-hidden select-none">
 
-    <!-- 遊戲內建精美自訂通知提示框（取代傳統瀏覽器 alert） -->
+    <!-- 全新：巨型事件震撼特效橫幅 (Event Splash) -->
+    <div id="event-splash" class="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-300 hidden">
+        <div id="event-splash-content" class="transform scale-50 transition-transform duration-500 bg-slate-900/95 border-4 rounded-3xl p-8 text-center shadow-2xl max-w-lg w-full backdrop-blur-md">
+            <div id="event-splash-icon" class="text-7xl mb-4 animate-bounce">✨</div>
+            <h2 id="event-splash-title" class="title-font text-4xl sm:text-5xl font-black mb-3 drop-shadow-lg">事件名稱</h2>
+            <p id="event-splash-desc" class="text-xl text-slate-200 font-bold">事件描述</p>
+        </div>
+    </div>
+
+    <!-- 遊戲內建精美自訂通知提示框 -->
     <div id="game-notification" class="fixed top-6 z-50 transform -translate-y-24 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 bg-slate-800/95 border-2 border-amber-400 rounded-2xl px-6 py-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)] max-w-md w-full">
         <div id="notification-icon" class="text-2xl text-amber-400">
             <i class="fa-solid fa-circle-info animate-bounce"></i>
@@ -118,15 +128,15 @@
                     重新連線
                 </button>
             </div>
-            <p class="text-[10px] text-slate-400">提示：已為您預設填入您的 Google 魔法網址。如果未來更換了試算表部署連結，可在此手動替換。若無網路或未設定，系統會自動使用內置的 75+ 魔法單字開戰。</p>
+            <p class="text-[10px] text-slate-400">提示：已預設填入您的 Google 魔法網址。若無網路或未設定，系統會自動使用內置的 75+ 魔法單字開戰。</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <!-- 勇者 1 -->
-            <div class="bg-slate-900/60 p-4 rounded-xl border border-rose-500/30">
+            <div class="bg-slate-900/60 p-4 rounded-xl border border-rose-500/30 font-bold">
                 <div class="flex items-center gap-3 mb-4">
                     <span class="w-8 h-8 rounded-full bg-rose-600 flex items-center justify-center text-white font-bold">1P</span>
-                    <h3 class="text-rose-400 font-bold text-lg">紅色勇者</h3>
+                    <h3 class="text-rose-400 font-bold text-lg">紅色勇者 (A)</h3>
                 </div>
                 <div class="space-y-3">
                     <div>
@@ -148,10 +158,10 @@
             </div>
 
             <!-- 勇者 2 -->
-            <div class="bg-slate-950/60 p-4 rounded-xl border border-sky-500/30">
+            <div class="bg-slate-900/60 p-4 rounded-xl border border-sky-500/30 font-bold">
                 <div class="flex items-center gap-3 mb-4">
                     <span class="w-8 h-8 rounded-full bg-sky-600 flex items-center justify-center text-white font-bold">2P</span>
-                    <h3 class="text-sky-400 font-bold text-lg">藍色勇者</h3>
+                    <h3 class="text-sky-400 font-bold text-lg">藍色勇者 (B)</h3>
                 </div>
                 <div class="space-y-3">
                     <div>
@@ -179,7 +189,7 @@
         </div>
     </div>
 
-    <!-- 遊戲主畫面容器 (初始隱藏) -->
+    <!-- 遊戲主畫面容器 -->
     <div id="game-arena" class="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-6 items-start hidden">
         
         <!-- 左側：100格棋盤 (佔 7 格) -->
@@ -190,12 +200,16 @@
                     <!-- 由 JavaScript 動態生成 100 格 -->
                 </div>
                 
-                <!-- 棋盤網格上層定位的玩家棋子 (Tokens) - 棋子巨型化、Q彈發光 -->
-                <div id="p1-token" class="absolute w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-rose-500 to-rose-700 border-4 border-white shadow-2xl flex items-center justify-center text-2xl sm:text-3xl font-black text-white transition-all duration-300 ease-out z-20 pulsing-token">
+                <!-- 玩家棋子 - 放大1.5倍並帶有 Q彈 拋物線與高亮呼吸效果 -->
+                <div id="p1-token" class="absolute w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-rose-500 to-rose-700 border-3 border-white shadow-xl shadow-rose-600/60 flex items-center justify-center text-xl sm:text-2xl font-black text-white transition-all duration-300 ease-out z-20 pulsing-token">
                     ⚔️
+                    <!-- 1P 狀態小徽章 -->
+                    <div id="p1-buff-badge" class="absolute -top-1.5 -right-1.5 bg-yellow-400 text-slate-900 text-[10px] w-5 h-5 rounded-full border border-white flex items-center justify-center font-black hidden"></div>
                 </div>
-                <div id="p2-token" class="absolute w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-sky-500 to-sky-700 border-4 border-white shadow-2xl flex items-center justify-center text-2xl sm:text-3xl font-black text-white transition-all duration-300 ease-out z-20 pulsing-token">
+                <div id="p2-token" class="absolute w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-sky-500 to-sky-700 border-3 border-white shadow-xl shadow-sky-600/60 flex items-center justify-center text-xl sm:text-2xl font-black text-white transition-all duration-300 ease-out z-20 pulsing-token">
                     🔮
+                    <!-- 2P 狀態小徽章 -->
+                    <div id="p2-buff-badge" class="absolute -top-1.5 -right-1.5 bg-yellow-400 text-slate-900 text-[10px] w-5 h-5 rounded-full border border-white flex items-center justify-center font-black hidden"></div>
                 </div>
             </div>
             
@@ -208,7 +222,7 @@
             </div>
         </div>
 
-        <!-- 右側：控制台、巨型骰子、日誌 (佔 5 格) -->
+        <!-- 右側：控制台、骰子、日誌 (佔 5 格) -->
         <div class="lg:col-span-5 xl:col-span-4 space-y-4">
             
             <!-- 當前玩家狀態卡片 -->
@@ -224,16 +238,20 @@
                     <div>
                         <h3 id="current-player-name" class="text-2xl font-black text-rose-200 font-bold">聖殿騎士</h3>
                         <p class="text-xs text-slate-300">目前位置：第 <span id="current-player-pos" class="font-bold text-yellow-300 text-sm">1</span> 格</p>
+                        <!-- 狀態提示（如：雙倍前進/護盾已開啟） -->
+                        <div id="player-buff-status" class="text-[11px] text-yellow-300 font-bold mt-1 hidden flex items-center gap-1">
+                            <i class="fa-solid fa-sparkles"></i> <span>已獲得雙倍狀態</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- 巨型骰子與操作按鈕 -->
-                <div class="flex flex-col items-center bg-slate-900/65 p-5 rounded-2xl border border-slate-700 gap-4">
-                    <!-- 骰子巨型化、金色流光 -->
-                    <div id="dice-container" class="relative w-28 h-28 bg-gradient-to-br from-slate-800 to-slate-950 border-4 border-amber-400 rounded-2xl flex items-center justify-center shadow-2xl select-none transform transition-transform duration-200">
-                        <span id="dice-view" class="title-font font-black text-amber-300 text-6xl drop-shadow-[0_4px_12px_rgba(251,191,36,0.5)]">🎲</span>
+                <!-- 骰子與操作按鈕 - 骰子放大至 2.8 倍，視覺更加明顯 -->
+                <div class="flex items-center justify-around bg-slate-900/60 p-4 rounded-xl border border-slate-700 gap-4">
+                    <!-- 巨大化 3D 骰子 -->
+                    <div id="dice-container" class="relative w-24 h-24 sm:w-28 sm:h-28 bg-gradient-to-br from-slate-700 to-slate-800 border-3 border-amber-400 rounded-2xl flex items-center justify-center shadow-2xl select-none">
+                        <span id="dice-view" class="title-font font-black text-amber-300 text-5xl sm:text-6xl drop-shadow-[0_4px_6px_rgba(0,0,0,0.5)]">🎲</span>
                     </div>
-                    <button id="roll-btn" onclick="rollDice()" class="w-full py-4 bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-350 hover:to-yellow-450 text-slate-900 font-black tracking-widest text-lg rounded-xl shadow-lg hover:shadow-yellow-500/20 active:scale-95 transition-all duration-150 relative">
+                    <button id="roll-btn" onclick="rollDice()" class="flex-1 py-6 bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-350 hover:to-yellow-450 text-slate-900 font-black tracking-widest text-lg rounded-xl shadow-lg hover:shadow-yellow-500/10 active:scale-95 transition-all duration-150 relative">
                         擲骰子前進 🎲 <span class="absolute right-3 bottom-1.5 text-[9px] opacity-65 font-bold tracking-normal hidden sm:inline">(Space/Enter)</span>
                     </button>
                 </div>
@@ -245,9 +263,9 @@
                     <h4 class="font-bold text-xs text-amber-400 tracking-widest uppercase flex items-center gap-1.5">
                         <i class="fa-solid fa-scroll"></i> 冒險日誌
                     </h4>
-                    <span class="text-[10px] text-slate-400 font-bold">Battle Log</span>
+                    <span class="text-[10px] text-slate-400 font-bold font-mono">Battle Log</span>
                 </div>
-                <div id="log-box" class="h-44 overflow-y-auto space-y-1.5 pr-1 text-xs">
+                <div id="log-box" class="h-44 overflow-y-auto space-y-1.5 pr-1 text-xs font-bold">
                     <div class="text-emerald-400 font-bold">❖ 冒險隊伍已集結，從勇者營地出發！</div>
                 </div>
             </div>
@@ -297,7 +315,7 @@
                 <p id="duel-zh-hint" class="text-3xl font-black text-amber-300 drop-shadow mt-2">-- 載入中 --</p>
             </div>
 
-            <!-- 聽發音互動區 -->
+            <!-- 聽發音互動區 (無限次聽寫，每次一口氣朗讀3次) -->
             <div class="flex flex-col items-center gap-1.5 mb-5">
                 <button id="speak-btn" onclick="playDuelVoice()" class="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-400 hover:from-amber-450 hover:to-yellow-350 text-slate-900 text-3xl shadow-lg shadow-amber-400/20 active:scale-90 transition transform flex items-center justify-center">
                     <i class="fa-solid fa-volume-high"></i>
@@ -307,10 +325,10 @@
                 </p>
             </div>
 
-            <!-- 輸入與提交 -->
+            <!-- 輸入與提交 (小寫顯示、自動焦點、支援 Enter 按鈕) -->
             <div class="space-y-4">
                 <div class="relative">
-                    <input type="text" id="spell-input" placeholder="請拼寫出對應的英文單字..." autocomplete="off" class="w-full bg-slate-900 border-2 border-slate-750 focus:border-amber-400 rounded-xl px-4 py-3.5 text-center text-xl font-bold tracking-widest text-slate-100 placeholder-slate-600 focus:outline-none transition lowercase">
+                    <input type="text" id="spell-input" autofocus placeholder="請拼寫出對應的英文單字..." autocomplete="off" class="w-full bg-slate-900 border-2 border-slate-750 focus:border-amber-400 rounded-xl px-4 py-3.5 text-center text-xl font-bold tracking-widest text-slate-100 placeholder-slate-600 focus:outline-none transition lowercase">
                     <div class="absolute right-3 top-3.5 text-slate-500 cursor-pointer hover:text-slate-300" onclick="clearSpellInput()">
                         <i class="fa-solid fa-circle-xmark text-lg"></i>
                     </div>
@@ -343,7 +361,7 @@
     </div>
 
     <script>
-        // --- STREAMING_CHUNK: Initializing state and game asset libraries... ---
+        // 內建 75 個高畫質冒險奇幻單字作為完美備用方案 (當 API 尚未填寫、無網路或跨網域失敗時使用)
         const fallbackWordlist = [
             { en: "adventure", zh: "冒險" }, { en: "princess", zh: "公主" }, { en: "castle", zh: "城堡" }, 
             { en: "dragon", zh: "巨龍" }, { en: "knight", zh: "騎士" }, { en: "magician", zh: "魔術師" }, 
@@ -371,95 +389,144 @@
             { en: "beast", zh: "野獸" }, { en: "tower", zh: "高塔" }
         ];
 
+        // 70 個 Windows 內置 EMOJI 怪物
         const monsterDatabase = [
-            '👾', '👹', '👺', '👻', '💀', '☠️', '👽', '🤖', '🎃', '🧛', 
-            '🧟', '🧙', '🧜', '🧌', '🦁', '🐯', '🐆', '🐺', '🐗', '🕷️', 
-            '🦂', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦈', '🐊', '🦍', 
-            '🦧', '🦇', '🦉', '🦊', '🐻', '🐼', '🐉', '🐲', '🐈‍⬛', '🐃', 
-            '🐂', '🐏', '🐐', '🐪', '🦙', '🦒', '🦛', '🦏', '🐒', '🦅', 
-            '🦟', '🐜', '🐢', '🐌', '🦂', '🦁', '🦉', '🐍', '🐙', '🦖',
-            '🐝', '🕷', '🦄', '🐆', '🐅', '🦌', '🐪', '🐗', '🐾', '☄️'
+            '👾', '👹', '👺', '👻', '💀', '☠️', 'Alien', '🤖', '🎃', '🧛', 
+            '🧟', '🧙', '🧜', '🧌', '🦁', '🐯', 'Leopard', '🐺', '🐗', '🕷️', 
+            'Scorpion', '🐍', '🦎', '🦖', '🦕', '🐙', 'Squid', '🦈', '🐊', '🦍', 
+            'Orangutan', '🦧', 'Owl', '🦊', '🐻', '🐼', '🐉', '🐲', '🐈‍⬛', 'Buffalo', 
+            'Ox', 'Ram', 'Goat', 'Camel', 'Llama', 'Giraffe', 'Hippo', 'Rhino', 'Monkey', 'Eagle', 
+            'Gnat', 'Ant', 'Turtle', 'Snail', 'Scorpion', 'Lion', 'Owl', 'Snake', 'Octopus', 'Rex',
+            'Bee', 'Spider', 'Unicorn', 'Leopard', 'Tiger', 'Deer', 'Camel', 'Boar', 'Paw', 'Comet'
         ];
 
-        let wordList = [...fallbackWordlist]; 
+        let wordList = [...fallbackWordlist]; // 預設單字庫
 
+        // --- 28個隨機分散且機制多樣化的正反饋與負反饋冒險格子 ---
         const eventCells = {
-            4:  { name: "✨精靈泉水", move: 3, msg: "喝下了甘甜的精靈泉水，精力充沛！前進 3 格。" },
-            8:  { name: "👾史萊姆群", move: -2, msg: "遭遇綠色史萊姆群阻路，慌忙繞行退後 2 格。" },
-            12: { name: "🧭矮人指南針", move: 4, msg: "在廢墟找到一具矮人精密指南針，找到近路前進 4 格。" },
-            16: { name: "🌲迷霧森林", move: -3, msg: "在幽暗森林裡迷失方向，兜兜轉轉退後 3 格。" },
-            20: { name: "🦅皇家獅鷲", move: 6, msg: "獲得皇家馴獸師允許，騎乘獅鷲飛躍峽谷前進 6 格！" },
-            24: { name: "⚡混亂法陣", move: -4, msg: "不小心踩到上古混亂魔法陣，時空錯亂退後 4 格。" },
-            28: { name: "💎地底藏寶室", move: 5, msg: "意外跌入地底矮人藏寶室，獲得魔力加持前進 5 格！" },
-            32: { name: "🎭哥布林小偷", move: -2, msg: "睡夢中行囊被狡猾的哥布林小偷洗劫，退後 2 格尋找線索。" },
-            36: { name: "🧪迅捷藥水", move: 4, msg: "喝下了煉金術士調配的迅捷藥水，健步如飛前進 4 格。" },
-            40: { name: "🪵巨石滾落", move: -5, msg: "山坡上突然滾下巨大滾石，被迫向山下退後 5 格！" },
-            44: { name: "😇天使的祝福", move: 3, msg: "空中浮現天使虛影，給予光明守護，前進 3 格。" },
-            48: { name: "🕸️毒蜘蛛咬傷", move: -3, msg: "在灌木叢中被毒蜘蛛咬傷，體力不支蹣跚退後 3 格。" },
-            52: { name: "🎈地精熱氣球", move: 7, msg: "乘坐地精商人的實驗熱氣球，順風飛躍前進 7 格！" },
-            56: { name: "🏹暗器機關", move: -5, msg: "觸發古墓中的連環弩箭機關，受傷退後 5 格。" },
-            60: { name: "🗡️光之聖劍", move: 4, msg: "拔出了插在石中散發光芒的聖劍，勇氣大增前進 4 格。" },
-            64: { name: "👻幽靈低語", move: -4, msg: "古戰場怨靈在耳邊低語迷茫，意志消沉退後 4 格。" },
-            68: { name: "🍃風行者守護", move: 3, msg: "精靈射手風行者在暗中指路，前進 3 格。" },
-            72: { name: "🔥巨龍吐息", move: -6, msg: "守護城堡的巨龍在天空掠過，熾熱火焰逼退勇者 6 格！" },
-            76: { name: "🦄淨化獨角獸", move: 5, msg: "在溪邊得到神聖獨角獸帶路，踏著聖光前進 5 格！" },
-            80: { name: "📦寶箱怪陷阱", move: -3, msg: "高興地打開寶箱卻發現是「寶箱怪」！驚嚇過度退後 3 格。" },
-            83: { name: "🧙‍♀️巫師神秘湯", move: 2, msg: "喝下森林巫師的神秘藥湯，雖然極苦但效果拔群，前進 2 格。" },
-            86: { name: "🥶寒冰詛咒", move: -3, msg: "魔王城吹來了極寒暴風，腳步被冰凍退後 3 格。" },
-            89: { name: "🔮賢者之石", move: 5, msg: "獲得遠古法師留下的賢者之石，魔力充沛前進 5 格。" },
-            92: { name: "🛡️城堡守衛鐵衛", move: -4, msg: "在城堡外牆被高大鐵衛攔阻，力戰不敵退後 4 格。" },
-            94: { name: "🌟聖光洗禮", move: 3, msg: "正義的光芒籠罩全場，戰力爆表直接前進 3 格！" },
-            96: { name: "🖤黑魔法反噬", move: -5, msg: "魔王布下的黑魔法陷阱炸裂！勇者痛苦退後 5 格。" },
-            98: { name: "🌪️終點颶風", move: -3, msg: "魔王城堡頂端的結界強烈暴風，硬生生把勇者吹退 3 格。" },
-            99: { name: "👹魔王最後爪牙", move: -6, msg: "終點門前遭遇魔王親信狂暴巨魔襲擊，不敵退後 6 格！" }
+            4:  { name: "✨精靈泉水", type: "move", move: 3, msg: "喝下了甘甜的精靈泉水，體力大增！前進 3 格。" },
+            8:  { name: "👾史萊姆群", type: "move", move: -2, msg: "遭遇史萊姆黏膠阻路，退後 2 格繞道。" },
+            12: { name: "🧭矮人指南針", type: "move", move: 4, msg: "在廢墟找到矮人精密指南針，抄近路前進 4 格。" },
+            16: { name: "🌲迷霧森林", type: "move", move: -3, msg: "迷霧阻擋了視線，兜兜轉轉退後 3 格。" },
+            20: { name: "🦅皇家獅鷲", type: "move", move: 6, msg: "乘著獅鷲越過險峻山谷，大幅前進 6 格！" },
+            24: { name: "🌀時空法陣", type: "move", move: -4, msg: "不慎踩到時空法陣，魔力逆流退後 4 格。" },
+            28: { name: "💎地底藏寶", type: "move", move: 5, msg: "找到地底藏寶室的暗門，高興地前進 5 格！" },
+            32: { name: "🎭哥布林小偷", type: "move", move: -2, msg: "行囊被狡猾的哥布林小偷割破，無奈退後 2 格撿拾物品。" },
+            36: { name: "🧪雙倍神速藥水", type: "buff_speed", msg: "喝下了風神藥水！獲得「雙倍神速 Buff」，下次擲骰子前進兩倍距離！" },
+            40: { name: "🪵巨石滾落", type: "move", move: -5, msg: "山坡巨石滾滾落下，被迫避險退後 5 格！" },
+            44: { name: "🛡️幸運護盾", type: "buff_shield", msg: "精靈鐵匠贈予你一面幸運大盾！獲得一次「免除答錯退格處罰」的機會！" },
+            48: { name: "🕸️毒蛛叮咬", type: "move", move: -3, msg: "在灌木中被隱影蜘蛛咬傷，解毒耽擱退後 3 格。" },
+            52: { name: "🎈地精熱氣球", type: "move", move: 7, msg: "乘坐熱氣球御風而行，快速前進 7 格！" },
+            56: { name: "🏹暗器陷阱", type: "move", move: -5, msg: "踩中城堡前的尖刺連弩暗器，重傷退後 5 格。" },
+            60: { name: "🗡️光之聖劍", type: "move", move: 4, msg: "拔出插在原野巨石上的正義聖劍，精神一振前進 4 格。" },
+            64: { name: "🧙‍♀️魔王詛咒", type: "debuff_curse", msg: "空中浮現魔王的怨念魔眼！受到魔王詛咒，下次擲骰子前進點數減半！" },
+            68: { name: "🍃風之精靈", type: "move", move: 3, msg: "風之精靈在你耳邊輕語指路，溫柔前進 3 格。" },
+            72: { name: "🔥巨龍噴吐", type: "move", move: -6, msg: "守護城堡的骨龍俯衝噴吐火焰，驚慌退後 6 格！" },
+            76: { name: "🦄淨化聖光", type: "move", move: 5, msg: "獨角獸用聖潔之角為你開闢道路，神聖前進 5 格！" },
+            80: { name: "📦寶箱怪陷阱", type: "move", move: -3, msg: "貪心打開箱子卻被寶箱怪咬住手，嚇得狼狽退後 3 格。" },
+            83: { name: "🌀時空互換法術", type: "swap", msg: "觸發古老禁忌的「空間交換」神力！雙方勇者的位置直接互換！" },
+            86: { name: "🥶寒冰結界", type: "move", move: -3, msg: "魔王城吹來一陣極度低溫的凍結暴風，退後 3 格。" },
+            89: { name: "🔮賢者之石", type: "move", move: 5, msg: "融入了精純的賢者之石，充滿鬥志前進 5 格。" },
+            92: { name: "🛡️城堡鐵衛", type: "move", move: -4, msg: "魔王城外圍的鋼鐵巨兵重擊，把你擊退 4 格。" },
+            94: { name: "🌟精靈女皇祈福", type: "buff_shield", msg: "獲得精靈女皇的最高禮讚，獲贈一面免遭退格處罰的守護神盾！" },
+            96: { name: "🖤魔氣反噬", type: "move", move: -5, msg: "受到魔王城濃重黑霧反噬，腳步不穩退後 5 格。" },
+            98: { name: "🌪️終點颱風", type: "move", move: -3, msg: "城堡最上方的結界颶風颳起，強行吹退 3 格。" },
+            99: { name: "👹魔王親信狂戰士", type: "move", move: -6, msg: "門前遭遇雙斧狂暴巨魔伏擊，力戰不支撤退 6 格！" }
         };
 
+        // --- 遊戲狀態與回合管理變數 ---
         let players = {
-            1: { name: "聖殿騎士", job: "Warrior", pos: 1, avatar: "⚔️", color: "rose", colorHex: "#e11d48" },
-            2: { name: "皇家魔導士", job: "Mage", pos: 1, avatar: "🔮", color: "sky", colorHex: "#0284c7" }
+            1: { name: "聖殿騎士", job: "Warrior", pos: 1, avatar: "⚔️", color: "rose", colorHex: "#e11d48", speedBuff: false, shieldBuff: false, curseDebuff: false },
+            2: { name: "皇家魔導士", job: "Mage", pos: 1, avatar: "🔮", color: "sky", colorHex: "#0284c7", speedBuff: false, shieldBuff: false, curseDebuff: false }
         };
         let currentPlayerId = 1;
         let activeWord = null;
         let isMoving = false;
-        let isRetreating = false; 
         
-        // 【按鍵防重複觸發安全鎖】
+        // 防重複/連按 Enter 鍵的冷卻鎖 (防止決鬥送出 Enter 時一併觸發地圖擲骰子)
         let inputCooldownLock = false;
 
-        // --- STREAMING_CHUNK: Managing initial DOM load and keyboard events... ---
+        // 語音合成上下文 (用於清空發音佇列)
+        const synth = window.speechSynthesis;
+
+        // Web Audio API 骰子音效發聲器
+        function playDiceRollSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let time = audioCtx.currentTime;
+                // 用 6 次短噪音脈衝模擬骰子在木盒碰撞
+                for (let i = 0; i < 6; i++) {
+                    let osc = audioCtx.createOscillator();
+                    let gain = audioCtx.createGain();
+                    
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(100 + Math.random() * 80, time);
+                    
+                    gain.gain.setValueAtTime(0.15, time);
+                    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.08);
+                    
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    
+                    osc.start(time);
+                    osc.stop(time + 0.1);
+                    
+                    time += 0.08 + Math.random() * 0.05;
+                }
+            } catch (e) {
+                console.warn("音效播放失敗: ", e);
+            }
+        }
+
+        // 當點數揭曉時，發出標準 one/two/three/four/five/six 的 TTS 發音
+        function speakNumberEnglish(num) {
+            if ('speechSynthesis' in window) {
+                synth.cancel(); // 終止其他發音
+                const numbersEnglish = ["", "One", "Two", "Three", "Four", "Five", "Six"];
+                const text = numbersEnglish[num];
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US';
+                utterance.rate = 1.0;
+                synth.speak(utterance);
+            }
+        }
+
+        // 網頁初始化載入
         window.addEventListener('DOMContentLoaded', () => {
             const savedUrl = localStorage.getItem('hero_quest_api_url');
             if (savedUrl) {
                 document.getElementById('api-url-input').value = savedUrl;
-                testAndLoadAPI(true); 
+                testAndLoadAPI(true);
             } else {
                 testAndLoadAPI(true);
             }
 
-            // 輸入框中按下 Enter，並徹底阻止冒險地圖的熱鍵捕捉
+            // 處理決鬥視窗輸入框按 Enter 送出
             document.getElementById('spell-input').addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                    e.stopPropagation(); // 阻止事件向上冒泡
+                    e.stopPropagation(); // 阻止向下傳播
                     submitSpell();
                 }
             });
 
-            // 鍵盤空白鍵 / Enter 擲骰子
+            // 主地圖鍵盤快捷鍵 Space / Enter 擲骰子
             window.addEventListener('keydown', (e) => {
                 const gameArena = document.getElementById('game-arena');
                 if (gameArena.classList.contains('hidden')) return;
 
+                // 若決鬥彈窗、勝利彈窗開啟，或輸入法鎖定、按鍵冷卻鎖開啟，則一律禁用擲骰子快捷鍵
                 const duelModal = document.getElementById('duel-modal');
                 const victoryModal = document.getElementById('victory-modal');
-                
-                // 如果彈窗開啟、或是正處於「按鍵冷卻防護期」，則完全不理會地圖快捷鍵
-                if (!duelModal.classList.contains('hidden') || !victoryModal.classList.contains('hidden') || inputCooldownLock) {
-                    return; 
+                if (!duelModal.classList.contains('hidden') || !victoryModal.classList.contains('hidden')) {
+                    return;
+                }
+
+                if (inputCooldownLock) {
+                    return;
                 }
 
                 if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') {
-                    e.preventDefault(); 
-                    
+                    e.preventDefault();
                     const rollBtn = document.getElementById('roll-btn');
                     if (!isMoving && !rollBtn.disabled) {
                         rollDice();
@@ -468,6 +535,7 @@
             });
         });
 
+        // 內建自訂精美 Toast
         function showNotification(title, text, type = "info") {
             const toast = document.getElementById('game-notification');
             const iconBox = document.getElementById('notification-icon');
@@ -501,7 +569,44 @@
             toast.className = "fixed top-6 z-50 transform -translate-y-24 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 bg-slate-800/95 border-2 border-amber-400 rounded-2xl px-6 py-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)] max-w-md w-full";
         }
 
-        // --- STREAMING_CHUNK: Integrating with spreadsheet API... ---
+        // --- 全新巨型事件震撼畫面 ---
+        function showEventSplash(title, desc, type) {
+            const splash = document.getElementById('event-splash');
+            const content = document.getElementById('event-splash-content');
+            const icon = document.getElementById('event-splash-icon');
+            const titleEl = document.getElementById('event-splash-title');
+            const descEl = document.getElementById('event-splash-desc');
+
+            titleEl.innerText = title;
+            descEl.innerText = desc;
+
+            if (type === 'bad') {
+                content.className = "transform scale-50 transition-transform duration-500 bg-slate-900/95 border-4 border-rose-500 rounded-3xl p-8 text-center shadow-[0_0_80px_rgba(225,29,72,0.6)] max-w-lg w-full backdrop-blur-md";
+                icon.innerText = "💥";
+                titleEl.className = "title-font text-4xl sm:text-5xl font-black text-rose-400 mb-3 drop-shadow-lg";
+            } else {
+                content.className = "transform scale-50 transition-transform duration-500 bg-slate-900/95 border-4 border-emerald-400 rounded-3xl p-8 text-center shadow-[0_0_80px_rgba(52,211,153,0.6)] max-w-lg w-full backdrop-blur-md";
+                icon.innerText = "🌟";
+                titleEl.className = "title-font text-4xl sm:text-5xl font-black text-emerald-300 mb-3 drop-shadow-lg";
+            }
+
+            splash.classList.remove('hidden');
+            void splash.offsetWidth; // 觸發重繪
+            splash.classList.remove('opacity-0');
+            splash.classList.add('opacity-100');
+            content.classList.remove('scale-50');
+            content.classList.add('scale-100');
+
+            setTimeout(() => {
+                splash.classList.remove('opacity-100');
+                splash.classList.add('opacity-0');
+                content.classList.remove('scale-100');
+                content.classList.add('scale-50');
+                setTimeout(() => splash.classList.add('hidden'), 300);
+            }, 2000);
+        }
+
+        // --- 連線與加載 Google API 單字庫 ---
         async function testAndLoadAPI(silent = false) {
             const apiUrl = document.getElementById('api-url-input').value.trim();
             const badge = document.getElementById('api-status-badge');
@@ -511,12 +616,12 @@
                 return;
             }
 
-            badge.className = "px-2 py-0.5 rounded text-[10px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20";
+            badge.className = "px-2 py-0.5 rounded text-[10px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-bold";
             badge.innerText = "正在召喚雲端單字中...";
 
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 6000); 
+                const timeoutId = setTimeout(() => controller.abort(), 6000);
                 
                 const response = await fetch(apiUrl, { signal: controller.signal });
                 clearTimeout(timeoutId);
@@ -524,7 +629,7 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (Array.isArray(data) && data.length > 0) {
-                        wordList = data; 
+                        wordList = data;
                         badge.className = "px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold";
                         badge.innerText = `連線成功 (共 ${data.length} 個單字)`;
                         
@@ -542,7 +647,7 @@
                 }
             } catch (error) {
                 console.error(error);
-                badge.className = "px-2 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20";
+                badge.className = "px-2 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold";
                 badge.innerText = "連線失敗，使用本地魔法單字";
                 if (!silent) {
                     showNotification(
@@ -554,6 +659,7 @@
             }
         }
 
+        // --- 職業設定 ---
         function setJob(playerNum, job) {
             const warriorBtn = document.getElementById(`p${playerNum}-job-warrior`);
             const mageBtn = document.getElementById(`p${playerNum}-job-mage`);
@@ -561,7 +667,7 @@
             players[playerNum].job = job;
             if (job === 'Warrior') {
                 players[playerNum].avatar = "⚔️";
-                warriorBtn.className = `flex-1 py-1.5 px-2 rounded border bg-rose-950/80 border-rose-500 text-rose-200 text-xs flex items-center justify-center gap-1 font-bold`;
+                warriorBtn.className = `flex-1 py-1.5 px-2 rounded border bg-${players[playerNum].color}-950/80 border-${players[playerNum].color}-500 text-${players[playerNum].color}-200 text-xs flex items-center justify-center gap-1 font-bold`;
                 mageBtn.className = "flex-1 py-1.5 px-2 rounded border bg-slate-800 border-slate-700 text-slate-400 text-xs flex items-center justify-center gap-1 font-bold";
             } else {
                 players[playerNum].avatar = "🔮";
@@ -588,7 +694,7 @@
             updateTokens();
         }
 
-        // --- STREAMING_CHUNK: Rendering the zigzag board map... ---
+        // --- 建立 10x10 地圖 ---
         function buildBoard() {
             const board = document.getElementById('board');
             board.innerHTML = "";
@@ -605,14 +711,14 @@
                     if (cellId === 1) {
                         cell.classList.add('bg-emerald-950/80', 'border-emerald-500/60', 'text-emerald-300');
                         cell.innerHTML = `
-                            <span class="text-[10px] text-emerald-450 font-bold">START</span>
+                            <span class="text-[10px] text-emerald-450">START</span>
                             <span class="text-xs sm:text-sm">營地</span>
                             <i class="fa-solid fa-tent text-[10px] sm:text-xs text-emerald-550"></i>
                         `;
                     } else if (cellId === 100) {
                         cell.classList.add('bg-purple-950/90', 'border-purple-500', 'text-purple-300', 'col-span-1');
                         cell.innerHTML = `
-                            <span class="text-[10px] text-purple-400 font-bold font-mono">GOAL</span>
+                            <span class="text-[10px] text-purple-400">GOAL</span>
                             <span class="text-xs sm:text-sm">城堡</span>
                             <i class="fa-solid fa-castle text-[10px] sm:text-sm text-purple-500 animate-pulse"></i>
                         `;
@@ -627,7 +733,7 @@
                     } else {
                         cell.classList.add('bg-slate-800/90', 'border-slate-700/80', 'text-slate-300', 'hover:bg-slate-750');
                         cell.innerHTML = `
-                            <span class="text-[9px] text-slate-400 self-start">#${cellId}</span>
+                            <span class="text-[9px] text-slate-400 self-start font-mono">#${cellId}</span>
                             <i class="fa-solid fa-graduation-cap text-slate-600 text-[12px] sm:text-[16px] my-auto"></i>
                             <span></span>
                         `;
@@ -637,6 +743,7 @@
             }
         }
 
+        // --- 棋子定位 ---
         function updateTokens() {
             const p1 = players[1];
             const p2 = players[2];
@@ -647,8 +754,8 @@
             const p1Token = document.getElementById('p1-token');
             const p2Token = document.getElementById('p2-token');
             
-            p1Token.innerText = p1.avatar;
-            p2Token.innerText = p2.avatar;
+            p1Token.innerHTML = p1.avatar + `<div id="p1-buff-badge" class="absolute -top-1.5 -right-1.5 bg-yellow-400 text-slate-900 text-[9px] w-5 h-5 rounded-full border border-white flex items-center justify-center font-black ${p1.speedBuff || p1.shieldBuff || p1.curseDebuff ? '' : 'hidden'}">${p1.speedBuff ? '🚀' : p1.shieldBuff ? '🛡️' : '💀'}</div>`;
+            p2Token.innerHTML = p2.avatar + `<div id="p2-buff-badge" class="absolute -top-1.5 -right-1.5 bg-yellow-400 text-slate-900 text-[9px] w-5 h-5 rounded-full border border-white flex items-center justify-center font-black ${p2.speedBuff || p2.shieldBuff || p2.curseDebuff ? '' : 'hidden'}">${p2.speedBuff ? '🚀' : p2.shieldBuff ? '🛡️' : '💀'}</div>`;
 
             if (p1.pos === p2.pos) {
                 p1Token.style.left = `${p1Cell.offsetLeft + 1}px`;
@@ -663,6 +770,7 @@
             }
         }
 
+        // --- 更新右側狀態面板 ---
         function updateCurrentPlayerUI() {
             const activePlayer = players[currentPlayerId];
             const turnCard = document.getElementById('turn-card');
@@ -670,6 +778,7 @@
             const avatarBox = document.getElementById('player-avatar-box');
             const nameDisplay = document.getElementById('current-player-name');
             const posDisplay = document.getElementById('current-player-pos');
+            const buffStatus = document.getElementById('player-buff-status');
             
             nameDisplay.innerText = activePlayer.name;
             posDisplay.innerText = activePlayer.pos;
@@ -678,6 +787,20 @@
             badge.innerText = activePlayer.job === 'Warrior' ? "⚔️ 戰士" : "🔮 法師";
             avatarBox.className = `w-14 h-14 rounded-2xl bg-${activePlayer.color}-600 border-2 border-${activePlayer.color}-400 flex items-center justify-center text-2xl shadow-md`;
             
+            // 處理狀態提示
+            if (activePlayer.speedBuff) {
+                buffStatus.classList.remove('hidden');
+                buffStatus.innerHTML = `<i class="fa-solid fa-bolt text-yellow-400"></i> <span>已獲神速狀態 (下次擲骰格數 x2)</span>`;
+            } else if (activePlayer.shieldBuff) {
+                buffStatus.classList.remove('hidden');
+                buffStatus.innerHTML = `<i class="fa-solid fa-shield-halved text-emerald-400"></i> <span>已獲得魔能護盾 (免罰一次)</span>`;
+            } else if (activePlayer.curseDebuff) {
+                buffStatus.classList.remove('hidden');
+                buffStatus.innerHTML = `<i class="fa-solid fa-skull text-rose-400 animate-pulse"></i> <span>受到詛咒 (下次擲骰格數減半)</span>`;
+            } else {
+                buffStatus.classList.add('hidden');
+            }
+
             if (currentPlayerId === 1) {
                 turnCard.className = "bg-gradient-to-br from-rose-950/60 to-slate-800/90 border-2 border-rose-500/40 rounded-2xl p-5 shadow-xl transition-all duration-300";
                 badge.className = "px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold";
@@ -687,88 +810,100 @@
             }
         }
 
-        // --- STREAMING_CHUNK: Rolling dice logic with strong 3D force effect... ---
+        // --- 擲骰子主邏輯 ---
         function rollDice() {
             if (isMoving) return;
             isMoving = true;
-            isRetreating = false;
             
             const rollBtn = document.getElementById('roll-btn');
-            const diceView = document.getElementById('dice-view');
             const diceContainer = document.getElementById('dice-container');
+            const diceView = document.getElementById('dice-view');
+            
             rollBtn.disabled = true;
             
-            // 骰子添加狂暴3D滾動與震顫樣式
-            diceView.classList.add('dice-rolling');
-            diceContainer.classList.add('shadow-[0_0_35px_rgba(251,191,36,0.6)]', 'border-yellow-400');
+            // 1. 播放極致滾動碰撞物理聲效
+            playDiceRollSound();
+
+            // 2. 加入骰子抖動扭曲動畫
+            diceContainer.classList.add('dice-shake');
             
             let count = 0;
             const diceFace = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
             const interval = setInterval(() => {
                 diceView.innerText = diceFace[Math.floor(Math.random() * 6)];
                 count++;
-                if (count > 10) { // 稍微拉長一點更具懸念
+                if (count > 8) {
                     clearInterval(interval);
                     
-                    const rollVal = Math.floor(Math.random() * 6) + 1;
+                    let rollVal = Math.floor(Math.random() * 6) + 1;
                     diceView.innerText = diceFace[rollVal - 1];
-                    diceView.classList.remove('dice-rolling');
-                    diceContainer.classList.remove('shadow-[0_0_35px_rgba(251,191,36,0.6)]', 'border-yellow-400');
+                    diceContainer.classList.remove('dice-shake');
                     
-                    // 特效：落地猛烈震一下
-                    diceContainer.style.transform = 'scale(0.8) translateY(10px)';
-                    setTimeout(() => {
-                        diceContainer.style.transform = 'scale(1) translateY(0)';
-                    }, 150);
+                    // 3. 觸發英文語音朗讀 one/two/three...
+                    speakNumberEnglish(rollVal);
 
-                    log(`<b>${players[currentPlayerId].name}</b> 擲出了 <span class="text-amber-400 font-black text-sm">${rollVal} 點</span>！`, currentPlayerId);
+                    // 4. 判定 Buff / Debuff 改動前進格數
+                    let finalSteps = rollVal;
+                    let activePlayer = players[currentPlayerId];
                     
-                    movePlayerAnimation(rollVal);
+                    if (activePlayer.speedBuff) {
+                        finalSteps = rollVal * 2;
+                        log(`⚡ 觸發「雙倍神速藥水」！<b>${activePlayer.name}</b> 此次前進格數乘雙倍：<span class="text-yellow-300 font-bold">${finalSteps} 格</span>！`, currentPlayerId);
+                        activePlayer.speedBuff = false; // 消耗掉
+                    } else if (activePlayer.curseDebuff) {
+                        finalSteps = Math.max(1, Math.round(rollVal / 2));
+                        log(`💀 受到「魔王詛咒」！<b>${activePlayer.name}</b> 前進格數減半：<span class="text-rose-400 font-bold">${finalSteps} 格</span>！`, currentPlayerId);
+                        activePlayer.curseDebuff = false; // 消耗掉
+                    } else {
+                        log(`<b>${activePlayer.name}</b> 擲出了 <span class="text-amber-400 font-black text-sm">${rollVal} 點</span>！前進 ${finalSteps} 格。`, currentPlayerId);
+                    }
+                    
+                    // 更新右側面板狀態顯示
+                    updateCurrentPlayerUI();
+
+                    // 5. 拋物線移動
+                    movePlayerAnimation(finalSteps);
                 }
             }, 80);
         }
 
-        // --- STREAMING_CHUNK: Performing parabolic jump animation step-by-step... ---
-        async function movePlayerAnimation(steps) {
+        // --- Q彈拋物線單格跳躍移動動畫 (加入 skipEvaluation 防止重複判定) ---
+        async function movePlayerAnimation(steps, skipEvaluation = false) {
             let activePlayer = players[currentPlayerId];
             let targetPos = activePlayer.pos + steps;
             
             if (targetPos > 100) targetPos = 100;
             if (targetPos < 1) targetPos = 1;
 
-            const tokenEl = document.getElementById(`p${currentPlayerId}-token`);
+            const token = document.getElementById(`p${currentPlayerId}-token`);
 
             while (activePlayer.pos !== targetPos) {
+                // 給棋子添加 0.28 秒拋物線 hop 類
+                token.classList.add('hop-animation');
+                
                 if (activePlayer.pos < targetPos) {
                     activePlayer.pos++;
                 } else {
                     activePlayer.pos--;
                 }
-
-                // 移除舊動畫以確保每次遞增都能觸發
-                tokenEl.classList.remove('jump-active');
-                void tokenEl.offsetWidth; // 強制重繪 (Reflow) 重新觸發 CSS 關鍵影格
-                
-                // 啟動 Q彈拋物線跳動感 動畫
-                tokenEl.classList.add('jump-active');
-
                 updateTokens();
-                await new Promise(r => setTimeout(r, 220)); // 與 3D 跳躍動畫時長 0.22s 完美同步
+                
+                // 等待 280ms 動畫完成
+                await new Promise(r => setTimeout(r, 280));
+                token.classList.remove('hop-animation');
             }
             
-            // 跳完後移除類別
-            setTimeout(() => {
-                tokenEl.classList.remove('jump-active');
-            }, 250);
-
             document.getElementById(`p${currentPlayerId}-score-lbl`).innerText = `${activePlayer.name}: 第 ${activePlayer.pos} 格`;
             document.getElementById('current-player-pos').innerText = activePlayer.pos;
             
-            setTimeout(() => {
+            await new Promise(r => setTimeout(r, 300));
+            
+            if (!skipEvaluation) {
                 evaluateLandCell();
-            }, 300);
+            }
         }
 
+        // --- 判斷落地格子機制 ---
         function evaluateLandCell() {
             let activePlayer = players[currentPlayerId];
             let pos = activePlayer.pos;
@@ -778,42 +913,76 @@
                 return;
             }
 
-            if (isRetreating) {
-                log(`<b>${activePlayer.name}</b> 退至安全點第 ${pos} 格，原地休整。`, currentPlayerId);
-                isMoving = false;
-                switchTurn();
-                return;
-            }
-
+            // 判斷是否為 28 格情節格
             if (eventCells[pos]) {
                 const ev = eventCells[pos];
                 log(`✨ <span class="text-amber-400 font-bold">${ev.name}</span>: ${ev.msg}`, currentPlayerId);
                 
+                // 呼叫震撼視覺特效！
+                showEventSplash(ev.name.replace(/[\p{Emoji}\u200d]+/gu, ''), ev.msg, (ev.type === 'debuff_curse' || ev.move < 0) ? 'bad' : 'good');
+                
                 setTimeout(async () => {
-                    let destination = pos + ev.move;
-                    if (destination < 1) destination = 1;
-                    if (destination > 100) destination = 100;
-                    
-                    isRetreating = true; 
-                    await movePlayerAnimation(ev.move);
+                    if (ev.type === "move") {
+                        // 傳統移動，強制 skipEvaluation 防止再次觸發新格子
+                        await movePlayerAnimation(ev.move, true);
+                    } else if (ev.type === "buff_speed") {
+                        // 雙倍速度
+                        activePlayer.speedBuff = true;
+                        activePlayer.curseDebuff = false; // 清除詛咒
+                        showNotification("神速注入！", "下次擲骰前進格數直接乘雙倍！", "success");
+                    } else if (ev.type === "buff_shield") {
+                        // 幸運大盾
+                        activePlayer.shieldBuff = true;
+                        showNotification("幸運大盾！", "獲得一次免除拼錯後退的豁免權！", "success");
+                    } else if (ev.type === "debuff_curse") {
+                        // 詛咒
+                        activePlayer.curseDebuff = true;
+                        activePlayer.speedBuff = false; // 覆蓋神速
+                        showNotification("魔王詛咒！", "下次擲骰前進格數直接減半！", "error");
+                    } else if (ev.type === "swap") {
+                        // 時空互換：交換雙方 pos
+                        let otherPlayerId = (currentPlayerId === 1) ? 2 : 1;
+                        let tempPos = activePlayer.pos;
+                        
+                        activePlayer.pos = players[otherPlayerId].pos;
+                        players[otherPlayerId].pos = tempPos;
+                        
+                        log(`🌀 空間魔法撕裂！<b>${activePlayer.name}</b> 與 <b>${players[otherPlayerId].name}</b> 乾坤大挪移！`, currentPlayerId);
+                        
+                        // 播放閃跳效果
+                        const t1 = document.getElementById('p1-token');
+                        const t2 = document.getElementById('p2-token');
+                        t1.classList.add('hop-animation');
+                        t2.classList.add('hop-animation');
+                        
+                        updateTokens();
+                        
+                        await new Promise(r => setTimeout(r, 300));
+                        t1.classList.remove('hop-animation');
+                        t2.classList.remove('hop-animation');
+                        
+                        document.getElementById(`p1-score-lbl`).innerText = `${players[1].name}: 第 ${players[1].pos} 格`;
+                        document.getElementById(`p2-score-lbl`).innerText = `${players[2].name}: 第 ${players[2].pos} 格`;
+                    }
                     
                     isMoving = false;
                     switchTurn();
-                }, 1800);
+                }, 2200); // 等待 Splash 動畫播放完畢
             } else {
+                // 否則觸發單字決鬥
                 triggerVocabularyDuel();
             }
         }
 
-        // --- STREAMING_CHUNK: Opening spelling duel modal with random beast... ---
+        // --- 觸發單字決鬥 ---
         function triggerVocabularyDuel() {
             activeWord = wordList[Math.floor(Math.random() * wordList.length)];
             
+            // 從 70 隻怪物中隨機指派一隻
             const randomMonster = monsterDatabase[Math.floor(Math.random() * monsterDatabase.length)];
             
             document.getElementById('duel-hero-avatar').innerText = players[currentPlayerId].avatar;
             document.getElementById('duel-monster-avatar').innerText = randomMonster;
-            
             document.getElementById('duel-zh-hint').innerText = activeWord.zh;
             
             const spellInput = document.getElementById('spell-input');
@@ -823,28 +992,31 @@
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             
+            // 自動焦點到輸入框
             setTimeout(() => {
                 spellInput.focus();
             }, 50);
 
+            // 自動一口氣朗讀三次
             setTimeout(() => {
                 playDuelVoice();
-            }, 400);
+            }, 300);
         }
 
+        // --- 一口氣朗讀 3 次單字 ---
         function playDuelVoice() {
             if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
+                synth.cancel(); // 清空前面的發音
                 
+                // 一口氣在語音佇列塞入 3 個單字 (帶有自然停頓)
                 for (let i = 0; i < 3; i++) {
                     const utterance = new SpeechSynthesisUtterance(activeWord.en);
                     utterance.lang = 'en-US';
-                    utterance.rate = 0.85; 
-                    
-                    window.speechSynthesis.speak(utterance);
+                    utterance.rate = 0.85; // 清晰、好聽
+                    synth.speak(utterance);
                 }
             } else {
-                showNotification("不支援語音", "您的瀏覽器不支援 SpeechSynthesis 語音，請手動看英文拼寫！", "error");
+                showNotification("不支援語音", "您的瀏覽器不支援 Web Speech API。", "error");
             }
         }
 
@@ -854,40 +1026,53 @@
             input.focus();
         }
 
-        // --- STREAMING_CHUNK: Checking spelling answers and locking map key inputs... ---
+        // --- 提交拼寫確認 ---
         function submitSpell() {
             const inputVal = document.getElementById('spell-input').value.trim().toLowerCase();
             const correctWord = activeWord.en.trim().toLowerCase();
             
+            // 隱藏對決面板
             const modal = document.getElementById('duel-modal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
             
-            // 🔒 【啟用按鍵防連擊鎖】 800ms
+            // 鎖定快捷鍵冷卻 800 毫秒，防止 Enter 連點、直接在地圖模式把骰子擲出去
             inputCooldownLock = true;
             setTimeout(() => {
                 inputCooldownLock = false;
             }, 800);
-            
+
             if (inputVal === correctWord) {
-                log(`✅ <span class="text-emerald-400 font-bold">拼寫對了！</span> <b>${players[currentPlayerId].name}</b> 正確輸入了 "${activeWord.en.toLowerCase()}"，成功堅守陣地！`, currentPlayerId);
-                showNotification("回答正確！", `「${players[currentPlayerId].name}」擊敗了守護獸，留在原地。`, "success");
+                log(`✅ <span class="text-emerald-400 font-bold">拼寫對了！</span> <b>${players[currentPlayerId].name}</b> 正確拼寫 "${activeWord.en.toLowerCase()}"，堅守原地！`, currentPlayerId);
+                showNotification("回答正確！", `「${players[currentPlayerId].name}」擊敗了守護獸。`, "success");
                 isMoving = false;
                 switchTurn();
             } else {
-                log(`❌ <span class="text-rose-400 font-bold">拼寫錯誤！</span> 正確解答是 "<span class="text-emerald-400 font-bold font-mono">${correctWord}</span>" (您拼成: "${inputVal || '空白'}")。`, currentPlayerId);
-                log(`👿 守護獸揮舞重錘，<b>${players[currentPlayerId].name}</b> 體力不支被迫倒退 1 格。`, currentPlayerId);
-                showNotification("回答錯誤...", `正確答案是: ${correctWord}，被迫退後 1 格。`, "error");
+                log(`❌ <span class="text-rose-400 font-bold">拼寫錯誤！</span> 正確解答是 "<span class="text-emerald-400 font-bold font-mono">${correctWord}</span>" (您輸入: "${inputVal || '空白'}")。`, currentPlayerId);
                 
-                setTimeout(async () => {
-                    isRetreating = true; 
-                    await movePlayerAnimation(-1);
+                // 判斷是否有幸運大盾 Buff
+                let activePlayer = players[currentPlayerId];
+                if (activePlayer.shieldBuff) {
+                    activePlayer.shieldBuff = false; // 消耗掉護盾
+                    log(`🛡️ 守護神盾發光！<b>${activePlayer.name}</b> 的「幸運護盾」抵擋了退格處罰！大盾破碎但免於後退。`, currentPlayerId);
+                    showNotification("護盾破碎！", "幸運護盾替你免除了一次後退處罰！", "success");
                     isMoving = false;
                     switchTurn();
-                }, 1000);
+                } else {
+                    log(`👿 守護獸重錘轟擊，<b>${activePlayer.name}</b> 體力不支退後 3 格。`, currentPlayerId);
+                    showNotification("回答錯誤...", `正確答案為 ${correctWord}，被迫退後 3 格。`, "error");
+                    
+                    setTimeout(async () => {
+                        // 倒退 3 格，並跳過二次判定
+                        await movePlayerAnimation(-3, true);
+                        isMoving = false;
+                        switchTurn();
+                    }, 1000);
+                }
             }
         }
 
+        // --- 輪替回合：1P (A) 和 2P (B) 精準對調 ---
         function switchTurn() {
             currentPlayerId = (currentPlayerId === 1) ? 2 : 1;
             updateCurrentPlayerUI();
@@ -896,6 +1081,7 @@
             rollBtn.disabled = false;
         }
 
+        // --- 日誌系統 ---
         function log(htmlContent, playerId = null) {
             const logBox = document.getElementById('log-box');
             let colorClass = "text-slate-300";
@@ -910,6 +1096,7 @@
             logBox.scrollTop = logBox.scrollHeight;
         }
 
+        // --- 勝利特效及撒花 ---
         function triggerVictory() {
             const activePlayer = players[currentPlayerId];
             document.getElementById('winner-announcement').innerText = `勇者 ${activePlayer.name} 成功擊破魔王城堡，拯救了公主！`;
@@ -925,14 +1112,14 @@
                     angle: 60,
                     spread: 55,
                     origin: { x: 0 },
-                    colors: ['#f59e0b', '#e11d48', '#0284c7']
+                    colors: ['#fbbf24', '#e11d48', '#0284c7']
                 });
                 confetti({
                     particleCount: 5,
                     angle: 120,
                     spread: 55,
                     origin: { x: 1 },
-                    colors: ['#f59e0b', '#e11d48', '#0284c7']
+                    colors: ['#fbbf24', '#e11d48', '#0284c7']
                 });
 
                 if (Date.now() < end) {
@@ -943,10 +1130,17 @@
 
         function resetGame() {
             players[1].pos = 1;
+            players[1].speedBuff = false;
+            players[1].shieldBuff = false;
+            players[1].curseDebuff = false;
+            
             players[2].pos = 1;
+            players[2].speedBuff = false;
+            players[2].shieldBuff = false;
+            players[2].curseDebuff = false;
+            
             currentPlayerId = 1;
             isMoving = false;
-            isRetreating = false;
             inputCooldownLock = false;
             
             document.getElementById('victory-modal').classList.add('hidden');
