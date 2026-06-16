@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>A4 字卡專業生成器 Pro 2.1</title>
+    <title>A4 字卡專業生成器 Pro 2.2 (已修正空白頁問題)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         /* 全局基礎基礎設定 */
@@ -26,7 +26,7 @@
         
         h2 { margin-top: 0; color: #1a73e8; text-align: center; }
         
-        /* 升級為 3 欄網格佈局 */
+        /* 3 欄網格佈局 */
         .controls { 
             display: grid; 
             grid-template-columns: 1fr 1fr 1fr; 
@@ -52,7 +52,7 @@
         .a4-page { 
             background: white; 
             width: 210mm; 
-            height: 297mm; 
+            height: 296mm; /* 💡 關鍵修正：由 297mm 改為 296mm，留出 1mm 安全邊際，防範像素四捨五入誤差 */
             box-sizing: border-box; 
             box-shadow: 0 0 10px rgba(0,0,0,0.1); 
             display: grid; 
@@ -88,7 +88,7 @@
 <body>
 
     <div class="no-print">
-        <h2>🃏 A4 字卡專業生成器 Pro 2.1</h2>
+        <h2>🃏 A4 字卡專業生成器 Pro 2.2 (修正版)</h2>
         
         <div class="controls">
             <div>
@@ -146,14 +146,12 @@
         const fontSizeSelect = document.getElementById('fontSize');
         const letterSpacingSelect = document.getElementById('letterSpacing');
         
-        // 完美的幾何網格佈局定義 [欄數, 行數]
         const gridLayouts = {
             8: {c:2, r:4}, 10: {c:2, r:5}, 12: {c:3, r:4}, 14: {c:2, r:7}, 16: {c:4, r:4},
             18: {c:3, r:6}, 20: {c:4, r:5}, 22: {c:2, r:11}, 24: {c:3, r:8}, 26: {c:2, r:13},
             28: {c:4, r:7}, 30: {c:3, r:10}
         };
 
-        // 智能字體動態調整邏輯
         function updateFontSizeOptions() {
             const count = parseInt(cardCountSelect.value);
             fontSizeSelect.innerHTML = '';
@@ -164,7 +162,6 @@
             else if (count <= 22) base = 32;
             else base = 24;
 
-            // 生成合適的字體尺寸範圍
             for (let i = base - 12; i <= base + 36; i += 4) {
                 if (i < 8) continue;
                 let opt = new Option(`${i} px`, i);
@@ -173,19 +170,17 @@
             }
         }
 
-        // 監聽格數切換
         cardCountSelect.addEventListener('change', updateFontSizeOptions);
-        updateFontSizeOptions(); // 初始化調用
+        updateFontSizeOptions();
 
-        // 核心：生成字卡網頁結構
         function generate() {
             const count = parseInt(cardCountSelect.value);
             const size = fontSizeSelect.value + 'px';
-            const spacing = letterSpacingSelect.value; // 獲取字元間距設定
+            const spacing = letterSpacingSelect.value;
             const words = document.getElementById('wordsInput').value.split('\n').map(s=>s.trim()).filter(s=>s!=='');
             const container = document.getElementById('previewContainer');
             
-            container.innerHTML = ''; // 清空舊內容
+            container.innerHTML = '';
 
             if (words.length === 0) {
                 alert('請先輸入一些字詞再生成喔！');
@@ -195,27 +190,24 @@
             const layout = gridLayouts[count];
             const pages = Math.ceil(words.length / count);
 
-            // 循環生成每一頁 A4
             for (let p = 0; p < pages; p++) {
                 const page = document.createElement('div');
                 page.className = 'a4-page';
                 page.style.gridTemplateColumns = `repeat(${layout.c}, 1fr)`;
                 page.style.gridTemplateRows = `repeat(${layout.r}, 1fr)`;
 
-                // 填滿當前頁面的格子
                 for (let i = 0; i < count; i++) {
                     const card = document.createElement('div');
                     card.className = 'card';
                     card.style.fontSize = size;
-                    card.style.letterSpacing = spacing; // 注入字元間距
+                    card.style.letterSpacing = spacing;
                     
-                    // 如果選擇了正數間距，為了讓最後一個字也完美居中，補上一點右邊距補償
                     if (parseInt(spacing) > 0) {
                         card.style.paddingLeft = spacing; 
                     }
 
                     const wordIdx = p * count + i;
-                    card.textContent = words[wordIdx] || ''; // 不夠字則留空格
+                    card.textContent = words[wordIdx] || '';
                     page.appendChild(card);
                 }
                 container.appendChild(page);
@@ -223,11 +215,9 @@
             return true;
         }
 
-        // 按鈕事件綁定
         document.getElementById('genBtn').addEventListener('click', generate);
 
         document.getElementById('pdfBtn').addEventListener('click', () => {
-            // 如果預覽區是空的，先幫忙生成
             if (document.getElementById('previewContainer').innerHTML === '') {
                 if (!generate()) return;
             }
@@ -238,10 +228,10 @@
                 filename: 'A4_Word_Cards.pdf',
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'] } /* 💡 關鍵修正：確保模式完美相容 CSS 換頁 */
             };
             
-            // 執行 html2pdf 轉換並下載
             html2pdf().set(opt).from(element).save();
         });
     </script>
