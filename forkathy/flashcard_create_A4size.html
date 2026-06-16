@@ -2,39 +2,97 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>A4 字卡專業生成器 Pro 2.0</title>
+    <title>A4 字卡專業生成器 Pro 2.1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        body { font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
-        .no-print { background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 800px; margin: 0 auto 30px auto; }
+        /* 全局基礎基礎設定 */
+        body { 
+            font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; 
+            background-color: #f0f2f5; 
+            margin: 0; 
+            padding: 20px; 
+            color: #333; 
+        }
+        
+        /* 控制面板樣式 */
+        .no-print { 
+            background: #ffffff; 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            max-width: 850px; 
+            margin: 0 auto 30px auto; 
+        }
+        
         h2 { margin-top: 0; color: #1a73e8; text-align: center; }
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-        .full-width { grid-column: span 2; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; }
+        
+        /* 升級為 3 欄網格佈局 */
+        .controls { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr 1fr; 
+            gap: 20px; 
+            margin-bottom: 20px; 
+        }
+        
+        .full-width { grid-column: span 3; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #495057; }
         select, textarea { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
-        textarea { height: 120px; }
+        textarea { height: 120px; resize: vertical; }
+        
+        /* 按鈕群組 */
         .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         button { padding: 14px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; border: none; transition: 0.2s; }
         #genBtn { background-color: #1a73e8; color: white; }
         #pdfBtn { background-color: #34a853; color: white; }
         button:hover { opacity: 0.9; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
         
-        /* 預覽與 A4 樣式 */
+        /* A4 預覽與打印精密比例 */
         #previewContainer { display: flex; flex-direction: column; align-items: center; gap: 20px; }
-        .a4-page { background: white; width: 210mm; height: 297mm; box-sizing: border-box; box-shadow: 0 0 10px rgba(0,0,0,0.1); display: grid; padding: 10mm; page-break-after: always; }
-        .card { border: 1px dashed #ccc; display: flex; justify-content: center; align-items: center; text-align: center; font-weight: bold; padding: 10px; word-break: break-all; overflow: hidden; }
+        .a4-page { 
+            background: white; 
+            width: 210mm; 
+            height: 297mm; 
+            box-sizing: border-box; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.1); 
+            display: grid; 
+            padding: 10mm; 
+            page-break-after: always; 
+            break-after: page;
+        }
+        
+        /* 字卡格子樣式 */
+        .card { 
+            border: 1px dashed #ccc; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            text-align: center; 
+            font-weight: bold; 
+            padding: 10px; 
+            word-break: break-all; 
+            overflow: hidden; 
+            background-color: #fff;
+        }
 
-        @media print { .no-print { display: none !important; } body { background: none; padding: 0; } #previewContainer { gap: 0; } .a4-page { box-shadow: none; border: none; } }
+        /* 瀏覽器原生打印設定 (Ctrl + P) */
+        @media print { 
+            .no-print { display: none !important; } 
+            body { background: none; padding: 0; margin: 0; } 
+            #previewContainer { gap: 0; } 
+            .a4-page { box-shadow: none; border: none; width: 210mm; height: 297mm; padding: 10mm; } 
+            @page { size: A4; margin: 0; }
+        }
     </style>
 </head>
 <body>
 
     <div class="no-print">
-        <h2>🃏 A4 字卡專業生成器 Pro 2.0</h2>
+        <h2>🃏 A4 字卡專業生成器 Pro 2.1</h2>
         
         <div class="controls">
             <div>
-                <label>1. 選擇每版格數：</label>
+                <label>1. 每版格數：</label>
                 <select id="cardCount">
                     <option value="8">8 格 (2x4)</option>
                     <option value="10">10 格 (2x5)</option>
@@ -50,19 +108,34 @@
                     <option value="30">30 格 (3x10)</option>
                 </select>
             </div>
+            
             <div>
-                <label>2. 選擇字體大小：</label>
+                <label>2. 字體大小：</label>
                 <select id="fontSize"></select>
             </div>
+
+            <div>
+                <label>3. 字元間距：</label>
+                <select id="letterSpacing">
+                    <option value="0px" selected>正常 (0px)</option>
+                    <option value="2px">微寬 (2px)</option>
+                    <option value="4px">適中 (4px)</option>
+                    <option value="8px">寬鬆 (8px)</option>
+                    <option value="12px">特寬 (12px)</option>
+                    <option value="16px">極寬 (16px)</option>
+                    <option value="-1px">緊湊 (-1px)</option>
+                </select>
+            </div>
+            
             <div class="full-width">
-                <label>3. 輸入字詞 (每行一個)：</label>
-                <textarea id="wordsInput" placeholder="請輸入字詞..."></textarea>
+                <label>4. 輸入字詞 (每行一個，按 Enter 分隔)：</label>
+                <textarea id="wordsInput" placeholder="請在此輸入字詞...&#10;Apple&#10;Banana&#10;Orange"></textarea>
             </div>
         </div>
         
         <div class="btn-group">
             <button id="genBtn">⚡ 生成預覽</button>
-            <button id="pdfBtn">📄 導出 PDF</button>
+            <button id="pdfBtn">📄 導出 PDF 檔案</button>
         </div>
     </div>
 
@@ -71,25 +144,27 @@
     <script>
         const cardCountSelect = document.getElementById('cardCount');
         const fontSizeSelect = document.getElementById('fontSize');
+        const letterSpacingSelect = document.getElementById('letterSpacing');
+        
+        // 完美的幾何網格佈局定義 [欄數, 行數]
         const gridLayouts = {
             8: {c:2, r:4}, 10: {c:2, r:5}, 12: {c:3, r:4}, 14: {c:2, r:7}, 16: {c:4, r:4},
             18: {c:3, r:6}, 20: {c:4, r:5}, 22: {c:2, r:11}, 24: {c:3, r:8}, 26: {c:2, r:13},
             28: {c:4, r:7}, 30: {c:3, r:10}
         };
 
-        // 根據格數自動計算推薦字體大小
+        // 智能字體動態調整邏輯
         function updateFontSizeOptions() {
             const count = parseInt(cardCountSelect.value);
             fontSizeSelect.innerHTML = '';
             
-            // 基礎字體大小邏輯：格數越多，基礎字體越小
             let base = 48;
             if (count <= 10) base = 72;
             else if (count <= 16) base = 48;
             else if (count <= 22) base = 32;
             else base = 24;
 
-            // 生成可選範圍 (base 的 60% 到 150%)
+            // 生成合適的字體尺寸範圍
             for (let i = base - 12; i <= base + 36; i += 4) {
                 if (i < 8) continue;
                 let opt = new Option(`${i} px`, i);
@@ -98,53 +173,75 @@
             }
         }
 
+        // 監聽格數切換
         cardCountSelect.addEventListener('change', updateFontSizeOptions);
-        updateFontSizeOptions(); // 初始化
+        updateFontSizeOptions(); // 初始化調用
 
+        // 核心：生成字卡網頁結構
         function generate() {
             const count = parseInt(cardCountSelect.value);
             const size = fontSizeSelect.value + 'px';
+            const spacing = letterSpacingSelect.value; // 獲取字元間距設定
             const words = document.getElementById('wordsInput').value.split('\n').map(s=>s.trim()).filter(s=>s!=='');
             const container = document.getElementById('previewContainer');
-            container.innerHTML = '';
+            
+            container.innerHTML = ''; // 清空舊內容
 
-            if (words.length === 0) return alert('請輸入字詞');
+            if (words.length === 0) {
+                alert('請先輸入一些字詞再生成喔！');
+                return false;
+            }
 
             const layout = gridLayouts[count];
             const pages = Math.ceil(words.length / count);
 
+            // 循環生成每一頁 A4
             for (let p = 0; p < pages; p++) {
                 const page = document.createElement('div');
                 page.className = 'a4-page';
                 page.style.gridTemplateColumns = `repeat(${layout.c}, 1fr)`;
                 page.style.gridTemplateRows = `repeat(${layout.r}, 1fr)`;
 
+                // 填滿當前頁面的格子
                 for (let i = 0; i < count; i++) {
                     const card = document.createElement('div');
                     card.className = 'card';
                     card.style.fontSize = size;
+                    card.style.letterSpacing = spacing; // 注入字元間距
+                    
+                    // 如果選擇了正數間距，為了讓最後一個字也完美居中，補上一點右邊距補償
+                    if (parseInt(spacing) > 0) {
+                        card.style.paddingLeft = spacing; 
+                    }
+
                     const wordIdx = p * count + i;
-                    card.textContent = words[wordIdx] || '';
+                    card.textContent = words[wordIdx] || ''; // 不夠字則留空格
                     page.appendChild(card);
                 }
                 container.appendChild(page);
             }
+            return true;
         }
 
+        // 按鈕事件綁定
         document.getElementById('genBtn').addEventListener('click', generate);
 
         document.getElementById('pdfBtn').addEventListener('click', () => {
+            // 如果預覽區是空的，先幫忙生成
             if (document.getElementById('previewContainer').innerHTML === '') {
-                generate();
+                if (!generate()) return;
             }
+            
             const element = document.getElementById('previewContainer');
             const opt = {
                 margin: 0,
-                filename: 'word_cards.pdf',
+                filename: 'A4_Word_Cards.pdf',
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
+                html2canvas: { scale: 2, useCORS: true },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
+            
+            // 執行 html2pdf 轉換並下載
             html2pdf().set(opt).from(element).save();
         });
     </script>
