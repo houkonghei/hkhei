@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勇者傳說：單詞拼寫蛇棋冒險</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: radial-gradient(circle, #4b5563 0%, #1f2937 100%);
+        }
+        .title-font {
+            font-family: 'Cinzel', 'Noto Sans TC', serif;
+        }
+        /* Grid Reverse helper to match zigzag */
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(10, minmax(0, 1fr));
+            grid-template-rows: repeat(10, minmax(0, 1fr));
+        }
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #fbbf24;
+            border-radius: 3px;
+        }
+        
+        /* 骰子巨型震動投擲動畫 */
+        @keyframes roll3D {
+            0% { transform: scale(1) rotate(0deg); filter: blur(0px); }
+            15% { transform: scale(1.3) rotate(-20deg) translateY(-15px); filter: blur(1px); }
+            30% { transform: scale(1.4) rotate(45deg) translateY(-25px); filter: blur(2px); }
+            50% { transform: scale(1.5) rotate(-90deg) translateY(-35px); filter: blur(3px); }
+            70% { transform: scale(1.3) rotate(180deg) translateY(-15px); filter: blur(1.5px); }
+            85% { transform: scale(0.9) rotate(270deg) translateY(5px); }
+            100% { transform: scale(1) rotate(360deg); filter: blur(0px); }
+        }
+        .dice-rolling {
+            animation: roll3D 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite;
+        }
+        
+        /* 棋子跳躍拋物線 3D 動畫 */
+        @keyframes jumpArc {
+            0% { transform: scale(1) translateY(0); z-index: 30; }
+            50% { transform: scale(1.4) translateY(-35px); z-index: 30; filter: drop-shadow(0 20px 10px rgba(0,0,0,0.5)); }
+            100% { transform: scale(1) translateY(0); z-index: 20; }
+        }
+        .jump-active {
+            animation: jumpArc 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+
+        /* Token pulsating glow animation to stand out */
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 12px rgba(255,255,255,0.6); }
+            50% { box-shadow: 0 0 25px rgba(255,255,255,1); }
+        }
+        .pulsing-token {
+            animation: pulseGlow 1.5s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-100 p-3 sm:p-6 flex flex-col items-center justify-start overflow-x-hidden">
+
+    <!-- 遊戲內建精美自訂通知提示框（取代傳統瀏覽器 alert） -->
+    <div id="game-notification" class="fixed top-6 z-50 transform -translate-y-24 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 bg-slate-800/95 border-2 border-amber-400 rounded-2xl px-6 py-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)] max-w-md w-full">
+        <div id="notification-icon" class="text-2xl text-amber-400">
+            <i class="fa-solid fa-circle-info animate-bounce"></i>
+        </div>
+        <div class="flex-1">
+            <h4 id="notification-title" class="font-bold text-amber-300 text-sm">系統提示</h4>
+            <p id="notification-text" class="text-xs text-slate-300 mt-0.5">通知內容</p>
+        </div>
+        <button onclick="hideNotification()" class="text-slate-400 hover:text-slate-200 text-sm pointer-events-auto">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <!-- 頂部精美標題 -->
+    <header class="text-center mb-4 sm:mb-6">
+        <h1 class="title-font text-3xl sm:text-5xl font-black text-amber-300 tracking-wider drop-shadow-[0_4px_6px_rgba(251,191,36,0.3)] flex items-center justify-center gap-3">
+            <i class="fa-solid fa-shield-halved text-amber-400 animate-pulse"></i>
+            勇者傳說：單詞拼寫蛇棋冒險
+            <i class="fa-solid fa-wand-sparkles text-amber-400 animate-pulse"></i>
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-300 mt-2 tracking-widest uppercase">Hero's Spelling Quest - Local 2-Player Co-op</p>
+    </header>
+
+    <!-- 角色自訂面板 (進入遊戲前) -->
+    <div id="character-setup" class="w-full max-w-2xl bg-slate-800/95 border-2 border-amber-400/50 rounded-2xl p-6 shadow-2xl mb-6 z-10">
+        <h2 class="title-font text-2xl font-bold text-amber-300 text-center mb-4 border-b border-amber-400/20 pb-3">
+            <i class="fa-solid fa-user-gear mr-2"></i> 勇者冒險整備
+        </h2>
+
+        <!-- Google Apps Script API 網址設定區 -->
+        <div class="bg-slate-900/80 p-4 rounded-xl border border-amber-400/30 mb-6 space-y-2">
+            <div class="flex justify-between items-center">
+                <label class="block text-xs font-bold text-amber-300 uppercase tracking-wider">
+                    <i class="fa-solid fa-link mr-1"></i> Google Apps Script API 魔法網址
+                </label>
+                <span id="api-status-badge" class="px-2 py-0.5 rounded text-[10px] bg-amber-400/10 text-amber-300 border border-amber-400/20 font-bold">正在自動召喚單字庫...</span>
+            </div>
+            <div class="flex gap-2">
+                <input type="text" id="api-url-input" value="https://script.google.com/macros/s/AKfycbyWZMH8NW6402lVVDU0EyoEzUCw6n4Fi2s9mtxmIS1iuZyvxS3C8SmVaI1p6MctYqvQ/exec" placeholder="請貼上您的 Google Apps Script 部署網址" class="flex-1 bg-slate-850 border border-amber-400/20 rounded px-3 py-2 text-xs text-amber-100 focus:outline-none focus:border-amber-400 font-mono">
+                <button onclick="testAndLoadAPI(false)" class="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded transition shadow">
+                    重新連線
+                </button>
+            </div>
+            <p class="text-[10px] text-slate-400">提示：已為您預設填入您的 Google 魔法網址。如果未來更換了試算表部署連結，可在此手動替換。若無網路或未設定，系統會自動使用內置的 75+ 魔法單字開戰。</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- 勇者 1 -->
+            <div class="bg-slate-900/60 p-4 rounded-xl border border-rose-500/30">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="w-8 h-8 rounded-full bg-rose-600 flex items-center justify-center text-white font-bold">1P</span>
+                    <h3 class="text-rose-400 font-bold text-lg">紅色勇者</h3>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">勇者名稱</label>
+                        <input type="text" id="p1-name-input" value="聖殿騎士" class="w-full bg-slate-800 border border-rose-500/30 rounded px-3 py-1.5 text-rose-300 focus:outline-none focus:border-rose-500 font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">職業選擇</label>
+                        <div class="flex gap-2">
+                            <button onclick="setJob(1, 'Warrior')" id="p1-job-warrior" class="flex-1 py-1.5 px-2 rounded border bg-rose-950/80 border-rose-500 text-rose-200 text-xs flex items-center justify-center gap-1 font-bold">
+                                ⚔️ 戰士
+                            </button>
+                            <button onclick="setJob(1, 'Mage')" id="p1-job-mage" class="flex-1 py-1.5 px-2 rounded border bg-slate-800 border-slate-700 text-slate-400 text-xs flex items-center justify-center gap-1 font-bold">
+                                🔮 法師
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 勇者 2 -->
+            <div class="bg-slate-950/60 p-4 rounded-xl border border-sky-500/30">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="w-8 h-8 rounded-full bg-sky-600 flex items-center justify-center text-white font-bold">2P</span>
+                    <h3 class="text-sky-400 font-bold text-lg">藍色勇者</h3>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">勇者名稱</label>
+                        <input type="text" id="p2-name-input" value="皇家魔導士" class="w-full bg-slate-800 border border-sky-500/30 rounded px-3 py-1.5 text-sky-300 focus:outline-none focus:border-sky-500 font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">職業選擇</label>
+                        <div class="flex gap-2">
+                            <button onclick="setJob(2, 'Warrior')" id="p2-job-warrior" class="flex-1 py-1.5 px-2 rounded border bg-slate-800 border-slate-700 text-slate-400 text-xs flex items-center justify-center gap-1 font-bold">
+                                ⚔️ 戰士
+                            </button>
+                            <button onclick="setJob(2, 'Mage')" id="p2-job-mage" class="flex-1 py-1.5 px-2 rounded border bg-sky-950/80 border-sky-500 text-sky-200 text-xs flex items-center justify-center gap-1 font-bold">
+                                🔮 法師
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="text-center">
+            <button onclick="startGame()" class="px-8 py-3.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-450 hover:to-yellow-450 text-slate-900 font-black tracking-widest text-lg rounded-xl shadow-lg shadow-yellow-500/20 transform hover:scale-105 active:scale-95 transition-all duration-200">
+                ⚔️ 踏上拯救公主征途
+            </button>
+        </div>
+    </div>
+
+    <!-- 遊戲主畫面容器 (初始隱藏) -->
+    <div id="game-arena" class="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-6 items-start hidden">
+        
+        <!-- 左側：100格棋盤 (佔 7 格) -->
+        <div class="lg:col-span-7 xl:col-span-8 flex flex-col items-center">
+            <div class="relative bg-slate-900 p-4 rounded-3xl border-4 border-slate-700 shadow-[0_15px_30px_rgba(0,0,0,0.6)] w-full max-w-[660px]">
+                <!-- 棋盤格網格 -->
+                <div id="board" class="board-grid gap-1 sm:gap-1.5 aspect-square w-full">
+                    <!-- 由 JavaScript 動態生成 100 格 -->
+                </div>
+                
+                <!-- 棋盤網格上層定位的玩家棋子 (Tokens) - 棋子巨型化、Q彈發光 -->
+                <div id="p1-token" class="absolute w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-rose-500 to-rose-700 border-4 border-white shadow-2xl flex items-center justify-center text-2xl sm:text-3xl font-black text-white transition-all duration-300 ease-out z-20 pulsing-token">
+                    ⚔️
+                </div>
+                <div id="p2-token" class="absolute w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-sky-500 to-sky-700 border-4 border-white shadow-2xl flex items-center justify-center text-2xl sm:text-3xl font-black text-white transition-all duration-300 ease-out z-20 pulsing-token">
+                    🔮
+                </div>
+            </div>
+            
+            <!-- 圖例說明 -->
+            <div class="mt-4 flex flex-wrap gap-4 justify-center text-xs text-slate-300 bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-700 font-bold shadow">
+                <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-emerald-600 border border-emerald-500 rounded"></span>起點</div>
+                <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-purple-600 border border-purple-500 rounded"></span>城堡/終點</div>
+                <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-amber-500 border border-amber-400 rounded"></span>冒險事件格</div>
+                <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-slate-700 border border-slate-600 rounded"></span>單字決鬥格</div>
+            </div>
+        </div>
+
+        <!-- 右側：控制台、巨型骰子、日誌 (佔 5 格) -->
+        <div class="lg:col-span-5 xl:col-span-4 space-y-4">
+            
+            <!-- 當前玩家狀態卡片 -->
+            <div id="turn-card" class="bg-gradient-to-br from-rose-900/40 to-slate-800/90 border-2 border-rose-500/40 rounded-2xl p-5 shadow-xl transition-all duration-300">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-xs uppercase tracking-widest text-slate-300 font-bold">Current Turn</span>
+                    <span id="player-job-badge" class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold">⚔️ 戰士</span>
+                </div>
+                <div class="flex items-center gap-4 mb-4">
+                    <div id="player-avatar-box" class="w-14 h-14 rounded-2xl bg-rose-600 border-2 border-rose-400 flex items-center justify-center text-2xl shadow-md">
+                        ⚔️
+                    </div>
+                    <div>
+                        <h3 id="current-player-name" class="text-2xl font-black text-rose-200 font-bold">聖殿騎士</h3>
+                        <p class="text-xs text-slate-300">目前位置：第 <span id="current-player-pos" class="font-bold text-yellow-300 text-sm">1</span> 格</p>
+                    </div>
+                </div>
+
+                <!-- 巨型骰子與操作按鈕 -->
+                <div class="flex flex-col items-center bg-slate-900/65 p-5 rounded-2xl border border-slate-700 gap-4">
+                    <!-- 骰子巨型化、金色流光 -->
+                    <div id="dice-container" class="relative w-28 h-28 bg-gradient-to-br from-slate-800 to-slate-950 border-4 border-amber-400 rounded-2xl flex items-center justify-center shadow-2xl select-none transform transition-transform duration-200">
+                        <span id="dice-view" class="title-font font-black text-amber-300 text-6xl drop-shadow-[0_4px_12px_rgba(251,191,36,0.5)]">🎲</span>
+                    </div>
+                    <button id="roll-btn" onclick="rollDice()" class="w-full py-4 bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-350 hover:to-yellow-450 text-slate-900 font-black tracking-widest text-lg rounded-xl shadow-lg hover:shadow-yellow-500/20 active:scale-95 transition-all duration-150 relative">
+                        擲骰子前進 🎲 <span class="absolute right-3 bottom-1.5 text-[9px] opacity-65 font-bold tracking-normal hidden sm:inline">(Space/Enter)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 冒險動態日誌 -->
+            <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-4 shadow-xl">
+                <div class="flex justify-between items-center mb-2 border-b border-slate-700 pb-2">
+                    <h4 class="font-bold text-xs text-amber-400 tracking-widest uppercase flex items-center gap-1.5">
+                        <i class="fa-solid fa-scroll"></i> 冒險日誌
+                    </h4>
+                    <span class="text-[10px] text-slate-400 font-bold">Battle Log</span>
+                </div>
+                <div id="log-box" class="h-44 overflow-y-auto space-y-1.5 pr-1 text-xs">
+                    <div class="text-emerald-400 font-bold">❖ 冒險隊伍已集結，從勇者營地出發！</div>
+                </div>
+            </div>
+
+            <!-- 精美計分板 -->
+            <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex justify-between text-xs text-slate-300 font-bold">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 bg-rose-600 rounded-full"></span>
+                    <span id="p1-score-lbl">聖殿騎士: 第 1 格</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 bg-sky-600 rounded-full"></span>
+                    <span id="p2-score-lbl">皇家魔導士: 第 1 格</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ⚔️ 單字決鬥超級大彈窗 (RPG戰鬥介面) -->
+    <div id="duel-modal" class="fixed inset-0 bg-slate-950/95 z-40 hidden flex-col items-center justify-center p-4">
+        <div class="w-full max-w-xl bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-amber-400 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(251,191,36,0.15)] relative overflow-hidden">
+            <!-- 奇幻背景裝飾 -->
+            <div class="absolute -right-12 -top-12 text-slate-700/10 text-9xl pointer-events-none font-black select-none">
+                WORD
+            </div>
+            
+            <div class="text-center mb-4">
+                <span class="px-3 py-1 bg-amber-400/10 text-amber-300 border border-amber-400/20 rounded-full text-xs font-bold uppercase tracking-widest">
+                    ⚔️ Words Duel ⚔️
+                </span>
+                <h3 class="title-font text-2xl sm:text-3xl font-black text-amber-300 mt-2 animate-pulse">
+                    遭遇「單字守護獸」襲擊！
+                </h3>
+                <p class="text-slate-300 text-xs sm:text-sm mt-1">聽寫出正確英文單字，即可保持安全；拼錯將被擊退 1 格！</p>
+            </div>
+
+            <!-- 戰鬥對戰對峙列：[英雄小圖示] ⚔️ [隨機怪物小圖示] -->
+            <div class="flex items-center justify-center gap-6 my-4 bg-slate-900/80 p-3 rounded-2xl border border-slate-750 max-w-xs mx-auto shadow-inner">
+                <div id="duel-hero-avatar" class="text-4xl filter drop-shadow-md animate-bounce">⚔️</div>
+                <div class="text-3xl text-amber-400 animate-pulse">⚔️</div>
+                <div id="duel-monster-avatar" class="text-4xl filter drop-shadow-md animate-bounce">👾</div>
+            </div>
+
+            <!-- 中文翻譯提示卡片 -->
+            <div class="bg-slate-900 border border-slate-750 rounded-2xl p-4 mb-4 text-center shadow-inner relative">
+                <span class="absolute left-3 top-2 text-[10px] text-slate-400 uppercase font-bold tracking-widest">中文魔法指示</span>
+                <p id="duel-zh-hint" class="text-3xl font-black text-amber-300 drop-shadow mt-2">-- 載入中 --</p>
+            </div>
+
+            <!-- 聽發音互動區 -->
+            <div class="flex flex-col items-center gap-1.5 mb-5">
+                <button id="speak-btn" onclick="playDuelVoice()" class="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-400 hover:from-amber-450 hover:to-yellow-350 text-slate-900 text-3xl shadow-lg shadow-amber-400/20 active:scale-90 transition transform flex items-center justify-center">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
+                <p class="text-xs text-slate-300 font-bold mt-1">
+                    <span class="text-amber-300"><i class="fa-solid fa-infinity"></i> 無限播放</span> (點擊一口氣朗讀 3 次 🔊)
+                </p>
+            </div>
+
+            <!-- 輸入與提交 -->
+            <div class="space-y-4">
+                <div class="relative">
+                    <input type="text" id="spell-input" placeholder="請拼寫出對應的英文單字..." autocomplete="off" class="w-full bg-slate-900 border-2 border-slate-750 focus:border-amber-400 rounded-xl px-4 py-3.5 text-center text-xl font-bold tracking-widest text-slate-100 placeholder-slate-600 focus:outline-none transition lowercase">
+                    <div class="absolute right-3 top-3.5 text-slate-500 cursor-pointer hover:text-slate-300" onclick="clearSpellInput()">
+                        <i class="fa-solid fa-circle-xmark text-lg"></i>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="submitSpell()" class="flex-1 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-450 hover:to-teal-450 text-slate-950 font-black tracking-widest rounded-xl shadow-lg transition transform hover:scale-[1.02] active:scale-95">
+                        確認拼寫 ⚔️
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🏆 勝利彈窗 -->
+    <div id="victory-modal" class="fixed inset-0 bg-slate-950/95 z-50 hidden flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-lg bg-gradient-to-b from-amber-900/30 to-slate-800 border-4 border-amber-450 rounded-3xl p-8 text-center shadow-[0_0_80px_rgba(251,191,36,0.3)]">
+            <i class="fa-solid fa-crown text-7xl text-amber-400 animate-bounce mb-4"></i>
+            <h2 class="title-font text-4xl sm:text-5xl font-black text-amber-300 mb-2">傳奇大勝利！</h2>
+            <p id="winner-announcement" class="text-xl text-slate-100 font-bold mb-6">勇者 聖殿騎士 成功救回了公主！</p>
+            
+            <div class="bg-slate-900/80 border border-slate-700 p-4 rounded-xl mb-6 text-sm text-slate-300">
+                魔王城在強大智慧拼寫之力的衝擊下灰飛煙滅，王國重歸光明與和平！
+            </div>
+
+            <button onclick="resetGame()" class="px-8 py-3.5 bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-350 hover:to-yellow-450 text-slate-900 font-black tracking-widest text-lg rounded-xl shadow-lg transform hover:scale-105 active:scale-95 transition">
+                再玩一局冒險 🔄
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- STREAMING_CHUNK: Initializing state and game asset libraries... ---
+        const fallbackWordlist = [
+            { en: "adventure", zh: "冒險" }, { en: "princess", zh: "公主" }, { en: "castle", zh: "城堡" }, 
+            { en: "dragon", zh: "巨龍" }, { en: "knight", zh: "騎士" }, { en: "magician", zh: "魔術師" }, 
+            { en: "sword", zh: "劍" }, { en: "shield", zh: "盾牌" }, { en: "magic", zh: "魔法" }, 
+            { en: "forest", zh: "森林" }, { en: "quest", zh: "任務" }, { en: "treasure", zh: "寶藏" }, 
+            { en: "victory", zh: "勝利" }, { en: "courage", zh: "勇氣" }, { en: "hero", zh: "英雄" }, 
+            { en: "monster", zh: "怪物" }, { en: "palace", zh: "宮殿" }, { en: "danger", zh: "危險" }, 
+            { en: "spell", zh: "咒語" }, { en: "crystal", zh: "水晶" }, { en: "crown", zh: "皇冠" }, 
+            { en: "empire", zh: "帝國" }, { en: "weapon", zh: "武器" }, { en: "armor", zh: "盔甲" }, 
+            { en: "kingdom", zh: "王國" }, { en: "wizard", zh: "巫師" }, { en: "shadow", zh: "影子" }, 
+            { en: "legend", zh: "傳奇" }, { en: "glory", zh: "榮耀" }, { en: "spirit", zh: "精靈" }, 
+            { en: "unicorn", zh: "獨角獸" }, { en: "griffin", zh: "獅鷲" }, { en: "goblin", zh: "哥布林" }, 
+            { en: "giant", zh: "巨人" }, { en: "stone", zh: "石頭" }, { en: "flame", zh: "火焰" }, 
+            { en: "potion", zh: "藥水" }, { en: "scroll", zh: "卷軸" }, { en: "statue", zh: "雕像" }, 
+            { en: "temple", zh: "神廟" }, { en: "bridge", zh: "橋樑" }, { en: "hunter", zh: "獵人" }, 
+            { en: "village", zh: "村莊" }, { en: "battle", zh: "戰鬥" }, { en: "peace", zh: "和平" }, 
+            { en: "island", zh: "島嶼" }, { en: "desert", zh: "沙漠" }, { en: "silver", zh: "白銀" }, 
+            { en: "golden", zh: "黃金" }, { en: "diamond", zh: "鑽石" }, { en: "friend", zh: "朋友" }, 
+            { en: "feather", zh: "羽毛" }, { en: "compass", zh: "指南針" }, { en: "map", zh: "地圖" }, 
+            { en: "ring", zh: "戒指" }, { en: "mirror", zh: "鏡子" }, { en: "whistle", zh: "哨子" }, 
+            { en: "candle", zh: "蠟燭" }, { en: "lantern", zh: "燈籠" }, { en: "hammer", zh: "鐵錘" }, 
+            { en: "arrow", zh: "箭" }, { en: "helmet", zh: "頭盔" }, { en: "paladin", zh: "聖騎士" }, 
+            { en: "elf", zh: "精靈" }, { en: "dwarf", zh: "矮人" }, { en: "fairytale", zh: "童話" }, 
+            { en: "champion", zh: "冠軍" }, { en: "angel", zh: "天使" }, { en: "demon", zh: "惡魔" }, 
+            { en: "beast", zh: "野獸" }, { en: "tower", zh: "高塔" }
+        ];
+
+        const monsterDatabase = [
+            '👾', '👹', '👺', '👻', '💀', '☠️', '👽', '🤖', '🎃', '🧛', 
+            '🧟', '🧙', '🧜', '🧌', '🦁', '🐯', '🐆', '🐺', '🐗', '🕷️', 
+            '🦂', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦈', '🐊', '🦍', 
+            '🦧', '🦇', '🦉', '🦊', '🐻', '🐼', '🐉', '🐲', '🐈‍⬛', '🐃', 
+            '🐂', '🐏', '🐐', '🐪', '🦙', '🦒', '🦛', '🦏', '🐒', '🦅', 
+            '🦟', '🐜', '🐢', '🐌', '🦂', '🦁', '🦉', '🐍', '🐙', '🦖',
+            '🐝', '🕷', '🦄', '🐆', '🐅', '🦌', '🐪', '🐗', '🐾', '☄️'
+        ];
+
+        let wordList = [...fallbackWordlist]; 
+
+        const eventCells = {
+            4:  { name: "✨精靈泉水", move: 3, msg: "喝下了甘甜的精靈泉水，精力充沛！前進 3 格。" },
+            8:  { name: "👾史萊姆群", move: -2, msg: "遭遇綠色史萊姆群阻路，慌忙繞行退後 2 格。" },
+            12: { name: "🧭矮人指南針", move: 4, msg: "在廢墟找到一具矮人精密指南針，找到近路前進 4 格。" },
+            16: { name: "🌲迷霧森林", move: -3, msg: "在幽暗森林裡迷失方向，兜兜轉轉退後 3 格。" },
+            20: { name: "🦅皇家獅鷲", move: 6, msg: "獲得皇家馴獸師允許，騎乘獅鷲飛躍峽谷前進 6 格！" },
+            24: { name: "⚡混亂法陣", move: -4, msg: "不小心踩到上古混亂魔法陣，時空錯亂退後 4 格。" },
+            28: { name: "💎地底藏寶室", move: 5, msg: "意外跌入地底矮人藏寶室，獲得魔力加持前進 5 格！" },
+            32: { name: "🎭哥布林小偷", move: -2, msg: "睡夢中行囊被狡猾的哥布林小偷洗劫，退後 2 格尋找線索。" },
+            36: { name: "🧪迅捷藥水", move: 4, msg: "喝下了煉金術士調配的迅捷藥水，健步如飛前進 4 格。" },
+            40: { name: "🪵巨石滾落", move: -5, msg: "山坡上突然滾下巨大滾石，被迫向山下退後 5 格！" },
+            44: { name: "😇天使的祝福", move: 3, msg: "空中浮現天使虛影，給予光明守護，前進 3 格。" },
+            48: { name: "🕸️毒蜘蛛咬傷", move: -3, msg: "在灌木叢中被毒蜘蛛咬傷，體力不支蹣跚退後 3 格。" },
+            52: { name: "🎈地精熱氣球", move: 7, msg: "乘坐地精商人的實驗熱氣球，順風飛躍前進 7 格！" },
+            56: { name: "🏹暗器機關", move: -5, msg: "觸發古墓中的連環弩箭機關，受傷退後 5 格。" },
+            60: { name: "🗡️光之聖劍", move: 4, msg: "拔出了插在石中散發光芒的聖劍，勇氣大增前進 4 格。" },
+            64: { name: "👻幽靈低語", move: -4, msg: "古戰場怨靈在耳邊低語迷茫，意志消沉退後 4 格。" },
+            68: { name: "🍃風行者守護", move: 3, msg: "精靈射手風行者在暗中指路，前進 3 格。" },
+            72: { name: "🔥巨龍吐息", move: -6, msg: "守護城堡的巨龍在天空掠過，熾熱火焰逼退勇者 6 格！" },
+            76: { name: "🦄淨化獨角獸", move: 5, msg: "在溪邊得到神聖獨角獸帶路，踏著聖光前進 5 格！" },
+            80: { name: "📦寶箱怪陷阱", move: -3, msg: "高興地打開寶箱卻發現是「寶箱怪」！驚嚇過度退後 3 格。" },
+            83: { name: "🧙‍♀️巫師神秘湯", move: 2, msg: "喝下森林巫師的神秘藥湯，雖然極苦但效果拔群，前進 2 格。" },
+            86: { name: "🥶寒冰詛咒", move: -3, msg: "魔王城吹來了極寒暴風，腳步被冰凍退後 3 格。" },
+            89: { name: "🔮賢者之石", move: 5, msg: "獲得遠古法師留下的賢者之石，魔力充沛前進 5 格。" },
+            92: { name: "🛡️城堡守衛鐵衛", move: -4, msg: "在城堡外牆被高大鐵衛攔阻，力戰不敵退後 4 格。" },
+            94: { name: "🌟聖光洗禮", move: 3, msg: "正義的光芒籠罩全場，戰力爆表直接前進 3 格！" },
+            96: { name: "🖤黑魔法反噬", move: -5, msg: "魔王布下的黑魔法陷阱炸裂！勇者痛苦退後 5 格。" },
+            98: { name: "🌪️終點颶風", move: -3, msg: "魔王城堡頂端的結界強烈暴風，硬生生把勇者吹退 3 格。" },
+            99: { name: "👹魔王最後爪牙", move: -6, msg: "終點門前遭遇魔王親信狂暴巨魔襲擊，不敵退後 6 格！" }
+        };
+
+        let players = {
+            1: { name: "聖殿騎士", job: "Warrior", pos: 1, avatar: "⚔️", color: "rose", colorHex: "#e11d48" },
+            2: { name: "皇家魔導士", job: "Mage", pos: 1, avatar: "🔮", color: "sky", colorHex: "#0284c7" }
+        };
+        let currentPlayerId = 1;
+        let activeWord = null;
+        let isMoving = false;
+        let isRetreating = false; 
+        
+        // 【按鍵防重複觸發安全鎖】
+        let inputCooldownLock = false;
+
+        // --- STREAMING_CHUNK: Managing initial DOM load and keyboard events... ---
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUrl = localStorage.getItem('hero_quest_api_url');
+            if (savedUrl) {
+                document.getElementById('api-url-input').value = savedUrl;
+                testAndLoadAPI(true); 
+            } else {
+                testAndLoadAPI(true);
+            }
+
+            // 輸入框中按下 Enter，並徹底阻止冒險地圖的熱鍵捕捉
+            document.getElementById('spell-input').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.stopPropagation(); // 阻止事件向上冒泡
+                    submitSpell();
+                }
+            });
+
+            // 鍵盤空白鍵 / Enter 擲骰子
+            window.addEventListener('keydown', (e) => {
+                const gameArena = document.getElementById('game-arena');
+                if (gameArena.classList.contains('hidden')) return;
+
+                const duelModal = document.getElementById('duel-modal');
+                const victoryModal = document.getElementById('victory-modal');
+                
+                // 如果彈窗開啟、或是正處於「按鍵冷卻防護期」，則完全不理會地圖快捷鍵
+                if (!duelModal.classList.contains('hidden') || !victoryModal.classList.contains('hidden') || inputCooldownLock) {
+                    return; 
+                }
+
+                if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') {
+                    e.preventDefault(); 
+                    
+                    const rollBtn = document.getElementById('roll-btn');
+                    if (!isMoving && !rollBtn.disabled) {
+                        rollDice();
+                    }
+                }
+            });
+        });
+
+        function showNotification(title, text, type = "info") {
+            const toast = document.getElementById('game-notification');
+            const iconBox = document.getElementById('notification-icon');
+            const titleBox = document.getElementById('notification-title');
+            const textBox = document.getElementById('notification-text');
+
+            titleBox.innerText = title;
+            textBox.innerText = text;
+
+            if (type === "success") {
+                toast.className = "fixed top-6 z-50 transform translate-y-0 opacity-100 transition-all duration-300 pointer-events-none flex items-center gap-3 bg-slate-800/95 border-2 border-emerald-500 rounded-2xl px-6 py-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)] max-w-md w-full";
+                iconBox.className = "text-2xl text-emerald-500";
+                iconBox.innerHTML = `<i class="fa-solid fa-circle-check animate-pulse"></i>`;
+            } else if (type === "error") {
+                toast.className = "fixed top-6 z-50 transform translate-y-0 opacity-100 transition-all duration-300 pointer-events-none flex items-center gap-3 bg-slate-800/95 border-2 border-rose-500 rounded-2xl px-6 py-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)] max-w-md w-full";
+                iconBox.className = "text-2xl text-rose-500";
+                iconBox.innerHTML = `<i class="fa-solid fa-circle-exclamation animate-bounce"></i>`;
+            } else {
+                toast.className = "fixed top-6 z-50 transform translate-y-0 opacity-100 transition-all duration-300 pointer-events-none flex items-center gap-3 bg-slate-800/95 border-2 border-amber-400 rounded-2xl px-6 py-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)] max-w-md w-full";
+                iconBox.className = "text-2xl text-amber-400";
+                iconBox.innerHTML = `<i class="fa-solid fa-bell animate-swing"></i>`;
+            }
+
+            setTimeout(() => {
+                hideNotification();
+            }, 5000);
+        }
+
+        function hideNotification() {
+            const toast = document.getElementById('game-notification');
+            toast.className = "fixed top-6 z-50 transform -translate-y-24 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 bg-slate-800/95 border-2 border-amber-400 rounded-2xl px-6 py-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)] max-w-md w-full";
+        }
+
+        // --- STREAMING_CHUNK: Integrating with spreadsheet API... ---
+        async function testAndLoadAPI(silent = false) {
+            const apiUrl = document.getElementById('api-url-input').value.trim();
+            const badge = document.getElementById('api-status-badge');
+            
+            if (!apiUrl) {
+                if (!silent) showNotification("未設定魔法網址", "請先填寫 Google Apps Script 網址！", "error");
+                return;
+            }
+
+            badge.className = "px-2 py-0.5 rounded text-[10px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20";
+            badge.innerText = "正在召喚雲端單字中...";
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 6000); 
+                
+                const response = await fetch(apiUrl, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        wordList = data; 
+                        badge.className = "px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold";
+                        badge.innerText = `連線成功 (共 ${data.length} 個單字)`;
+                        
+                        localStorage.setItem('hero_quest_api_url', apiUrl);
+                        if (!silent) {
+                            showNotification("魔法連結成功！", `已成功載入試算表中 ${data.length} 個英文單字！`, "success");
+                        }
+                    } else if (data.error) {
+                        throw new Error(data.error);
+                    } else {
+                        throw new Error("單字庫結構無效或為空。");
+                    }
+                } else {
+                    throw new Error("無法成功連線至 Web App。");
+                }
+            } catch (error) {
+                console.error(error);
+                badge.className = "px-2 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20";
+                badge.innerText = "連線失敗，使用本地魔法單字";
+                if (!silent) {
+                    showNotification(
+                        "雲端單字召喚失敗", 
+                        `已自動切換成「內置魔法單字庫 (75字)」。`, 
+                        "error"
+                    );
+                }
+            }
+        }
+
+        function setJob(playerNum, job) {
+            const warriorBtn = document.getElementById(`p${playerNum}-job-warrior`);
+            const mageBtn = document.getElementById(`p${playerNum}-job-mage`);
+            
+            players[playerNum].job = job;
+            if (job === 'Warrior') {
+                players[playerNum].avatar = "⚔️";
+                warriorBtn.className = `flex-1 py-1.5 px-2 rounded border bg-rose-950/80 border-rose-500 text-rose-200 text-xs flex items-center justify-center gap-1 font-bold`;
+                mageBtn.className = "flex-1 py-1.5 px-2 rounded border bg-slate-800 border-slate-700 text-slate-400 text-xs flex items-center justify-center gap-1 font-bold";
+            } else {
+                players[playerNum].avatar = "🔮";
+                mageBtn.className = `flex-1 py-1.5 px-2 rounded border bg-${players[playerNum].color}-950/80 border-${players[playerNum].color}-500 text-${players[playerNum].color}-200 text-xs flex items-center justify-center gap-1 font-bold`;
+                warriorBtn.className = "flex-1 py-1.5 px-2 rounded border bg-slate-800 border-slate-700 text-slate-400 text-xs flex items-center justify-center gap-1 font-bold";
+            }
+        }
+
+        function startGame() {
+            const p1Name = document.getElementById('p1-name-input').value.trim() || "聖殿騎士";
+            const p2Name = document.getElementById('p2-name-input').value.trim() || "皇家魔導士";
+            
+            players[1].name = p1Name;
+            players[2].name = p2Name;
+            
+            document.getElementById('p1-score-lbl').innerText = `${players[1].name}: 第 1 格`;
+            document.getElementById('p2-score-lbl').innerText = `${players[2].name}: 第 1 格`;
+            
+            document.getElementById('character-setup').classList.add('hidden');
+            document.getElementById('game-arena').classList.remove('hidden');
+            
+            buildBoard();
+            updateCurrentPlayerUI();
+            updateTokens();
+        }
+
+        // --- STREAMING_CHUNK: Rendering the zigzag board map... ---
+        function buildBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = "";
+            
+            for (let row = 9; row >= 0; row--) {
+                for (let col = 0; col < 10; col++) {
+                    let actualCol = (row % 2 === 1) ? (9 - col) : col;
+                    let cellId = row * 10 + actualCol + 1;
+                    
+                    const cell = document.createElement('div');
+                    cell.id = `cell-${cellId}`;
+                    cell.className = "relative rounded-lg flex flex-col items-center justify-between p-1 select-none border border-slate-800 font-bold transition-all duration-300";
+                    
+                    if (cellId === 1) {
+                        cell.classList.add('bg-emerald-950/80', 'border-emerald-500/60', 'text-emerald-300');
+                        cell.innerHTML = `
+                            <span class="text-[10px] text-emerald-450 font-bold">START</span>
+                            <span class="text-xs sm:text-sm">營地</span>
+                            <i class="fa-solid fa-tent text-[10px] sm:text-xs text-emerald-550"></i>
+                        `;
+                    } else if (cellId === 100) {
+                        cell.classList.add('bg-purple-950/90', 'border-purple-500', 'text-purple-300', 'col-span-1');
+                        cell.innerHTML = `
+                            <span class="text-[10px] text-purple-400 font-bold font-mono">GOAL</span>
+                            <span class="text-xs sm:text-sm">城堡</span>
+                            <i class="fa-solid fa-castle text-[10px] sm:text-sm text-purple-500 animate-pulse"></i>
+                        `;
+                    } else if (eventCells[cellId]) {
+                        cell.classList.add('bg-amber-950/80', 'border-amber-500/40', 'text-amber-300');
+                        const emoji = eventCells[cellId].name.match(/[\p{Emoji}\u200d]+/gu)?.[0] || "✨";
+                        cell.innerHTML = `
+                            <span class="text-[9px] text-amber-500/80">#${cellId}</span>
+                            <span class="text-[18px] sm:text-[24px]">${emoji}</span>
+                            <span class="text-[8px] sm:text-[9px] text-center truncate w-full text-slate-300">${eventCells[cellId].name.replace(emoji, "")}</span>
+                        `;
+                    } else {
+                        cell.classList.add('bg-slate-800/90', 'border-slate-700/80', 'text-slate-300', 'hover:bg-slate-750');
+                        cell.innerHTML = `
+                            <span class="text-[9px] text-slate-400 self-start">#${cellId}</span>
+                            <i class="fa-solid fa-graduation-cap text-slate-600 text-[12px] sm:text-[16px] my-auto"></i>
+                            <span></span>
+                        `;
+                    }
+                    board.appendChild(cell);
+                }
+            }
+        }
+
+        function updateTokens() {
+            const p1 = players[1];
+            const p2 = players[2];
+            
+            const p1Cell = document.getElementById(`cell-${p1.pos}`);
+            const p2Cell = document.getElementById(`cell-${p2.pos}`);
+            
+            const p1Token = document.getElementById('p1-token');
+            const p2Token = document.getElementById('p2-token');
+            
+            p1Token.innerText = p1.avatar;
+            p2Token.innerText = p2.avatar;
+
+            if (p1.pos === p2.pos) {
+                p1Token.style.left = `${p1Cell.offsetLeft + 1}px`;
+                p1Token.style.top = `${p1Cell.offsetTop + 1}px`;
+                p2Token.style.left = `${p1Cell.offsetLeft + p1Cell.offsetWidth - p2Token.offsetWidth - 1}px`;
+                p2Token.style.top = `${p1Cell.offsetTop + p1Cell.offsetHeight - p2Token.offsetHeight - 1}px`;
+            } else {
+                p1Token.style.left = `${p1Cell.offsetLeft + (p1Cell.offsetWidth / 2) - (p1Token.offsetWidth / 2)}px`;
+                p1Token.style.top = `${p1Cell.offsetTop + (p1Cell.offsetHeight / 2) - (p1Token.offsetHeight / 2)}px`;
+                p2Token.style.left = `${p2Cell.offsetLeft + (p2Cell.offsetWidth / 2) - (p2Token.offsetWidth / 2)}px`;
+                p2Token.style.top = `${p2Cell.offsetTop + (p2Cell.offsetHeight / 2) - (p2Token.offsetHeight / 2)}px`;
+            }
+        }
+
+        function updateCurrentPlayerUI() {
+            const activePlayer = players[currentPlayerId];
+            const turnCard = document.getElementById('turn-card');
+            const badge = document.getElementById('player-job-badge');
+            const avatarBox = document.getElementById('player-avatar-box');
+            const nameDisplay = document.getElementById('current-player-name');
+            const posDisplay = document.getElementById('current-player-pos');
+            
+            nameDisplay.innerText = activePlayer.name;
+            posDisplay.innerText = activePlayer.pos;
+            avatarBox.innerText = activePlayer.avatar;
+            
+            badge.innerText = activePlayer.job === 'Warrior' ? "⚔️ 戰士" : "🔮 法師";
+            avatarBox.className = `w-14 h-14 rounded-2xl bg-${activePlayer.color}-600 border-2 border-${activePlayer.color}-400 flex items-center justify-center text-2xl shadow-md`;
+            
+            if (currentPlayerId === 1) {
+                turnCard.className = "bg-gradient-to-br from-rose-950/60 to-slate-800/90 border-2 border-rose-500/40 rounded-2xl p-5 shadow-xl transition-all duration-300";
+                badge.className = "px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold";
+            } else {
+                turnCard.className = "bg-gradient-to-br from-sky-950/60 to-slate-800/90 border-2 border-sky-500/40 rounded-2xl p-5 shadow-xl transition-all duration-300";
+                badge.className = "px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 text-xs font-bold";
+            }
+        }
+
+        // --- STREAMING_CHUNK: Rolling dice logic with strong 3D force effect... ---
+        function rollDice() {
+            if (isMoving) return;
+            isMoving = true;
+            isRetreating = false;
+            
+            const rollBtn = document.getElementById('roll-btn');
+            const diceView = document.getElementById('dice-view');
+            const diceContainer = document.getElementById('dice-container');
+            rollBtn.disabled = true;
+            
+            // 骰子添加狂暴3D滾動與震顫樣式
+            diceView.classList.add('dice-rolling');
+            diceContainer.classList.add('shadow-[0_0_35px_rgba(251,191,36,0.6)]', 'border-yellow-400');
+            
+            let count = 0;
+            const diceFace = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+            const interval = setInterval(() => {
+                diceView.innerText = diceFace[Math.floor(Math.random() * 6)];
+                count++;
+                if (count > 10) { // 稍微拉長一點更具懸念
+                    clearInterval(interval);
+                    
+                    const rollVal = Math.floor(Math.random() * 6) + 1;
+                    diceView.innerText = diceFace[rollVal - 1];
+                    diceView.classList.remove('dice-rolling');
+                    diceContainer.classList.remove('shadow-[0_0_35px_rgba(251,191,36,0.6)]', 'border-yellow-400');
+                    
+                    // 特效：落地猛烈震一下
+                    diceContainer.style.transform = 'scale(0.8) translateY(10px)';
+                    setTimeout(() => {
+                        diceContainer.style.transform = 'scale(1) translateY(0)';
+                    }, 150);
+
+                    log(`<b>${players[currentPlayerId].name}</b> 擲出了 <span class="text-amber-400 font-black text-sm">${rollVal} 點</span>！`, currentPlayerId);
+                    
+                    movePlayerAnimation(rollVal);
+                }
+            }, 80);
+        }
+
+        // --- STREAMING_CHUNK: Performing parabolic jump animation step-by-step... ---
+        async function movePlayerAnimation(steps) {
+            let activePlayer = players[currentPlayerId];
+            let targetPos = activePlayer.pos + steps;
+            
+            if (targetPos > 100) targetPos = 100;
+            if (targetPos < 1) targetPos = 1;
+
+            const tokenEl = document.getElementById(`p${currentPlayerId}-token`);
+
+            while (activePlayer.pos !== targetPos) {
+                if (activePlayer.pos < targetPos) {
+                    activePlayer.pos++;
+                } else {
+                    activePlayer.pos--;
+                }
+
+                // 移除舊動畫以確保每次遞增都能觸發
+                tokenEl.classList.remove('jump-active');
+                void tokenEl.offsetWidth; // 強制重繪 (Reflow) 重新觸發 CSS 關鍵影格
+                
+                // 啟動 Q彈拋物線跳動感 動畫
+                tokenEl.classList.add('jump-active');
+
+                updateTokens();
+                await new Promise(r => setTimeout(r, 220)); // 與 3D 跳躍動畫時長 0.22s 完美同步
+            }
+            
+            // 跳完後移除類別
+            setTimeout(() => {
+                tokenEl.classList.remove('jump-active');
+            }, 250);
+
+            document.getElementById(`p${currentPlayerId}-score-lbl`).innerText = `${activePlayer.name}: 第 ${activePlayer.pos} 格`;
+            document.getElementById('current-player-pos').innerText = activePlayer.pos;
+            
+            setTimeout(() => {
+                evaluateLandCell();
+            }, 300);
+        }
+
+        function evaluateLandCell() {
+            let activePlayer = players[currentPlayerId];
+            let pos = activePlayer.pos;
+            
+            if (pos === 100) {
+                triggerVictory();
+                return;
+            }
+
+            if (isRetreating) {
+                log(`<b>${activePlayer.name}</b> 退至安全點第 ${pos} 格，原地休整。`, currentPlayerId);
+                isMoving = false;
+                switchTurn();
+                return;
+            }
+
+            if (eventCells[pos]) {
+                const ev = eventCells[pos];
+                log(`✨ <span class="text-amber-400 font-bold">${ev.name}</span>: ${ev.msg}`, currentPlayerId);
+                
+                setTimeout(async () => {
+                    let destination = pos + ev.move;
+                    if (destination < 1) destination = 1;
+                    if (destination > 100) destination = 100;
+                    
+                    isRetreating = true; 
+                    await movePlayerAnimation(ev.move);
+                    
+                    isMoving = false;
+                    switchTurn();
+                }, 1800);
+            } else {
+                triggerVocabularyDuel();
+            }
+        }
+
+        // --- STREAMING_CHUNK: Opening spelling duel modal with random beast... ---
+        function triggerVocabularyDuel() {
+            activeWord = wordList[Math.floor(Math.random() * wordList.length)];
+            
+            const randomMonster = monsterDatabase[Math.floor(Math.random() * monsterDatabase.length)];
+            
+            document.getElementById('duel-hero-avatar').innerText = players[currentPlayerId].avatar;
+            document.getElementById('duel-monster-avatar').innerText = randomMonster;
+            
+            document.getElementById('duel-zh-hint').innerText = activeWord.zh;
+            
+            const spellInput = document.getElementById('spell-input');
+            spellInput.value = "";
+            
+            const modal = document.getElementById('duel-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            setTimeout(() => {
+                spellInput.focus();
+            }, 50);
+
+            setTimeout(() => {
+                playDuelVoice();
+            }, 400);
+        }
+
+        function playDuelVoice() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                
+                for (let i = 0; i < 3; i++) {
+                    const utterance = new SpeechSynthesisUtterance(activeWord.en);
+                    utterance.lang = 'en-US';
+                    utterance.rate = 0.85; 
+                    
+                    window.speechSynthesis.speak(utterance);
+                }
+            } else {
+                showNotification("不支援語音", "您的瀏覽器不支援 SpeechSynthesis 語音，請手動看英文拼寫！", "error");
+            }
+        }
+
+        function clearSpellInput() {
+            const input = document.getElementById('spell-input');
+            input.value = "";
+            input.focus();
+        }
+
+        // --- STREAMING_CHUNK: Checking spelling answers and locking map key inputs... ---
+        function submitSpell() {
+            const inputVal = document.getElementById('spell-input').value.trim().toLowerCase();
+            const correctWord = activeWord.en.trim().toLowerCase();
+            
+            const modal = document.getElementById('duel-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            
+            // 🔒 【啟用按鍵防連擊鎖】 800ms
+            inputCooldownLock = true;
+            setTimeout(() => {
+                inputCooldownLock = false;
+            }, 800);
+            
+            if (inputVal === correctWord) {
+                log(`✅ <span class="text-emerald-400 font-bold">拼寫對了！</span> <b>${players[currentPlayerId].name}</b> 正確輸入了 "${activeWord.en.toLowerCase()}"，成功堅守陣地！`, currentPlayerId);
+                showNotification("回答正確！", `「${players[currentPlayerId].name}」擊敗了守護獸，留在原地。`, "success");
+                isMoving = false;
+                switchTurn();
+            } else {
+                log(`❌ <span class="text-rose-400 font-bold">拼寫錯誤！</span> 正確解答是 "<span class="text-emerald-400 font-bold font-mono">${correctWord}</span>" (您拼成: "${inputVal || '空白'}")。`, currentPlayerId);
+                log(`👿 守護獸揮舞重錘，<b>${players[currentPlayerId].name}</b> 體力不支被迫倒退 1 格。`, currentPlayerId);
+                showNotification("回答錯誤...", `正確答案是: ${correctWord}，被迫退後 1 格。`, "error");
+                
+                setTimeout(async () => {
+                    isRetreating = true; 
+                    await movePlayerAnimation(-1);
+                    isMoving = false;
+                    switchTurn();
+                }, 1000);
+            }
+        }
+
+        function switchTurn() {
+            currentPlayerId = (currentPlayerId === 1) ? 2 : 1;
+            updateCurrentPlayerUI();
+            
+            const rollBtn = document.getElementById('roll-btn');
+            rollBtn.disabled = false;
+        }
+
+        function log(htmlContent, playerId = null) {
+            const logBox = document.getElementById('log-box');
+            let colorClass = "text-slate-300";
+            if (playerId === 1) colorClass = "text-rose-300";
+            if (playerId === 2) colorClass = "text-sky-300";
+            
+            const item = document.createElement('div');
+            item.className = `pb-1 border-b border-slate-750/50 ${colorClass}`;
+            item.innerHTML = `❖ ${htmlContent}`;
+            
+            logBox.appendChild(item);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function triggerVictory() {
+            const activePlayer = players[currentPlayerId];
+            document.getElementById('winner-announcement').innerText = `勇者 ${activePlayer.name} 成功擊破魔王城堡，拯救了公主！`;
+            
+            document.getElementById('victory-modal').classList.remove('hidden');
+            
+            const duration = 5 * 1000;
+            const end = Date.now() + duration;
+
+            (function frame() {
+                confetti({
+                    particleCount: 5,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: ['#f59e0b', '#e11d48', '#0284c7']
+                });
+                confetti({
+                    particleCount: 5,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: ['#f59e0b', '#e11d48', '#0284c7']
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        }
+
+        function resetGame() {
+            players[1].pos = 1;
+            players[2].pos = 1;
+            currentPlayerId = 1;
+            isMoving = false;
+            isRetreating = false;
+            inputCooldownLock = false;
+            
+            document.getElementById('victory-modal').classList.add('hidden');
+            document.getElementById('character-setup').classList.remove('hidden');
+            document.getElementById('game-arena').classList.add('hidden');
+            
+            document.getElementById('log-box').innerHTML = `<div class="text-emerald-400 font-bold">❖ 新的冒險征途已開啟！</div>`;
+        }
+    </script>
+</body>
+</html>
