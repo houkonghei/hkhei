@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>A4 字卡自動排版打印機</title>
+    <style>
+        /* 全局基礎樣式 */
+        body {
+            font-family: "Microsoft JhengHei", -apple-system, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        /* 頂部控制面板（打印時會自動隱藏） */
+        .control-panel {
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            max-width: 650px;
+            margin: 0 auto 30px auto;
+        }
+        
+        h2 {
+            margin-top: 0;
+            color: #007bff;
+            text-align: center;
+            font-size: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ced4da;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, textarea:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        textarea {
+            height: 180px;
+            resize: vertical;
+        }
+
+        button {
+            width: 100%;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:active {
+            transform: scale(0.99);
+        }
+
+        /* 預覽區域樣式 */
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        /* A4 紙張精密比例（螢幕預覽效果） */
+        .a4-page {
+            background: white;
+            width: 210mm;
+            height: 297mm;
+            box-sizing: border-box;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            display: grid;
+            padding: 12mm; /* 留出安全邊距，防止打印機切邊 */
+            page-break-after: always;
+            break-after: page;
+        }
+
+        /* 字卡格子樣式 */
+        .card {
+            border: 1px dashed #adadad;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px; /* 預設字體大小 */
+            font-weight: bold;
+            padding: 15px;
+            text-align: center;
+            word-break: break-all;
+            overflow: hidden;
+            background-color: #fff;
+        }
+
+        /* 💡 核心：打印專用 CSS 樣式 */
+        @media print {
+            body {
+                background: none;
+                padding: 0;
+                margin: 0;
+            }
+            /* 隱藏輸入面板，只打印字卡 */
+            .no-print {
+                display: none !important;
+            }
+            .preview-container {
+                gap: 0;
+            }
+            .a4-page {
+                box-shadow: none;
+                width: 210mm;
+                height: 297mm;
+                padding: 12mm;
+                page-break-after: always;
+                break-after: page;
+            }
+            /* 強制瀏覽器設定 A4 紙張與零邊距 */
+            @page {
+                size: A4;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="control-panel no-print">
+        <h2>🃏 A4 字卡自動生成器</h2>
+        
+        <div class="form-group">
+            <label for="cardCount">每張 A4 容納字卡數目 (雙數選單)：</label>
+            <select id="cardCount">
+                <option value="8">8 張卡 (2 欄 × 4 列)</option>
+                <option value="10">10 張卡 (2 欄 × 5 列)</option>
+                <option value="12">12 張卡 (3 欄 × 4 列)</option>
+                <option value="14">14 張卡 (2 欄 × 7 列)</option>
+                <option value="16">16 張卡 (4 欄 × 4 列)</option>
+                <option value="18">18 張卡 (3 欄 × 6 列)</option>
+                <option value="20">20 張卡 (4 欄 × 5 列)</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="wordsInput">請輸入字詞（每行一個字詞，按 Enter 分隔）：</label>
+            <textarea id="wordsInput" placeholder="請在此輸入字詞...&#10;例如：&#10;Apple&#10;Banana&#10;Orange&#10;Watermelon"></textarea>
+        </div>
+        
+        <button id="generateBtn">⚡ 生成字卡頁面</button>
+    </div>
+
+    <div class="preview-container" id="previewContainer"></div>
+
+    <script>
+        // 根據選取的數量，自動分配最完美的 [欄數(cols), 行數(rows)] 網格
+        const gridLayouts = {
+            8:  { cols: 2, rows: 4 },
+            10: { cols: 2, rows: 5 },
+            12: { cols: 3, rows: 4 },
+            14: { cols: 2, rows: 7 },
+            16: { cols: 4, rows: 4 },
+            18: { cols: 3, rows: 6 },
+            20: { cols: 4, rows: 5 }
+        };
+
+        document.getElementById('generateBtn').addEventListener('click', () => {
+            const selectCount = parseInt(document.getElementById('cardCount').value);
+            const inputText = document.getElementById('wordsInput').value;
+            const container = document.getElementById('previewContainer');
+            
+            // 清空上一次生成的內容
+            container.innerHTML = '';
+
+            // 處理文字：按行切割、去除前後空格、過濾空行
+            const words = inputText.split('\n')
+                                   .map(w => w.trim())
+                                   .filter(w => w !== '');
+
+            if (words.length === 0) {
+                alert('請先輸入一些字詞再生成喔！');
+                return;
+            }
+
+            const layout = gridLayouts[selectCount];
+            // 計算總共需要多少頁 A4
+            const totalPages = Math.ceil(words.length / selectCount);
+
+            // 分頁生成邏輯
+            for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'a4-page';
+                // 動態設定 CSS Grid 欄與列
+                pageDiv.style.gridTemplateColumns = `repeat(${layout.cols}, 1fr)`;
+                pageDiv.style.gridTemplateRows = `repeat(${layout.rows}, 1fr)`;
+
+                // 填滿該頁指定的格子數
+                for (let cardIdx = 0; cardIdx < selectCount; cardIdx++) {
+                    const currentWordIndex = (pageIdx * selectCount) + cardIdx;
+                    const cardDiv = document.createElement('div');
+                    cardDiv.className = 'card';
+                    
+                    if (currentWordIndex < words.length) {
+                        cardDiv.textContent = words[currentWordIndex];
+                    } else {
+                        // 如果字詞不夠填滿最後一頁，留空卡以維持排版格子形狀
+                        cardDiv.textContent = '';
+                    }
+                    
+                    pageDiv.appendChild(cardDiv);
+                }
+
+                container.appendChild(pageDiv);
+            }
+            
+            // 溫馨提示
+            setTimeout(() => {
+                alert('字卡已成功生成！\n\n現在您可以隨時按下快捷鍵 Ctrl + P (Mac 請用 Cmd + P) 來直接打印或儲存為 PDF。');
+            }, 200);
+        });
+    </script>
+</body>
+</html>
