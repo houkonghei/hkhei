@@ -1,0 +1,522 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Play, Search, Trash2, Plus, Info, ArrowRight, RefreshCw, Dna, Database } from 'lucide-react';
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('concept'); // concept, linear, chaining
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans p-4 md:p-8">
+      <div className="max-w-5xl mx-auto space-y-6">
+        
+        {/* Header */}
+        <div className="text-center space-y-2 mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 flex items-center justify-center gap-3">
+            <Database className="text-indigo-600" size={36} />
+            哈希表 (Hash Table) 教學實驗室
+          </h1>
+          <p className="text-slate-600 text-lg">透視哈希函數的魔法，以及化解「資料撞車（衝突）」的智慧。</p>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="flex flex-wrap justify-center gap-2 mb-6 bg-white p-2 rounded-xl shadow-sm border border-slate-200">
+          <TabButton 
+            active={activeTab === 'concept'} 
+            onClick={() => setActiveTab('concept')} 
+            icon={<Info size={18} />} 
+            label="1. 基礎概念" 
+          />
+          <TabButton 
+            active={activeTab === 'linear'} 
+            onClick={() => setActiveTab('linear')} 
+            icon={<ArrowRight size={18} />} 
+            label="2. 線性探測法 (Linear Probing)" 
+          />
+          <TabButton 
+            active={activeTab === 'chaining'} 
+            onClick={() => setActiveTab('chaining')} 
+            icon={<Dna size={18} />} 
+            label="3. 鏈地址法 (Chaining)" 
+          />
+        </div>
+
+        {/* Content Area */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 min-h-[600px]">
+          {activeTab === 'concept' && <ConceptTab />}
+          {activeTab === 'linear' && <HashVisualizer mode="linear" />}
+          {activeTab === 'chaining' && <HashVisualizer mode="chaining" />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TabButton({ active, onClick, icon, label }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold transition-all duration-200 ${
+        active 
+          ? 'bg-indigo-600 text-white shadow-md' 
+          : 'bg-transparent text-slate-600 hover:bg-slate-100'
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+// --- 內容：基礎概念 ---
+function ConceptTab() {
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500 max-w-4xl mx-auto">
+      <div className="grid md:grid-cols-2 gap-8 items-center">
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-slate-800">什麼是哈希表？</h2>
+          <p className="text-lg text-slate-700 leading-relaxed">
+            想像一個有 10 個抽屜的櫃子，你想把資料放進去。如果隨便放，下次找的時候就要一個一個翻（O(n) 時間）。
+          </p>
+          <p className="text-lg text-slate-700 leading-relaxed">
+            <strong>哈希表 (Hash Table)</strong> 的聰明之處在於，它透過一個公式（<strong>哈希函數 Hash Function</strong>），直接算出資料「應該放在幾號抽屜」。下次要找的時候，帶入公式就能一秒找到（O(1) 時間）！
+          </p>
+        </div>
+        <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-100 text-center">
+          <h3 className="font-bold text-indigo-800 mb-4">本次實驗室使用的哈希函數</h3>
+          <div className="flex items-center justify-center gap-4 text-xl font-mono bg-white p-4 rounded-lg shadow-sm">
+            <span className="text-slate-600">Index</span>
+            <span>=</span>
+            <span className="text-blue-600 font-bold">Key</span>
+            <span className="bg-slate-100 px-2 py-1 rounded">% 10</span>
+          </div>
+          <p className="text-sm text-slate-500 mt-4">把數字除以 10 取「餘數」，餘數就是抽屜的號碼（0~9）。</p>
+        </div>
+      </div>
+
+      <div className="border-t border-slate-200 pt-8">
+        <h2 className="text-2xl font-bold text-slate-800 mb-6">最大的敵人：哈希衝突 (Collision)</h2>
+        <p className="text-lg text-slate-700 mb-6">
+          如果我們要放入數字 <span className="font-bold text-blue-600">12</span>，計算 `12 % 10 = 2`，放進 2 號抽屜。<br/>
+          接著要放入數字 <span className="font-bold text-red-600">42</span>，計算 `42 % 10 = 2`... 糟糕！2 號抽屜已經有人了！這就是<strong>「哈希衝突」</strong>。
+        </p>
+        
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="bg-amber-50 p-6 rounded-xl border border-amber-200">
+            <h3 className="text-xl font-bold text-amber-800 mb-2">解法一：線性探測法</h3>
+            <p className="text-slate-700"><strong>(開放尋址法 Open Addressing)</strong></p>
+            <p className="mt-2 text-slate-700">
+              「既然這個位子被佔了，那我就往下一個位子找，直到找到空位為止。」
+            </p>
+            <p className="mt-2 text-sm text-amber-700 italic">👉 請點擊上方分頁「2. 線性探測法」體驗</p>
+          </div>
+          <div className="bg-emerald-50 p-6 rounded-xl border border-emerald-200">
+            <h3 className="text-xl font-bold text-emerald-800 mb-2">解法二：鏈地址法</h3>
+            <p className="text-slate-700"><strong>(拉鏈法 Chaining)</strong></p>
+            <p className="mt-2 text-slate-700">
+              「位子被佔了沒關係，我們在這個位子往外拉一條鏈子（Linked List），大家排隊串在一起。」
+            </p>
+            <p className="mt-2 text-sm text-emerald-700 italic">👉 請點擊上方分頁「3. 鏈地址法」體驗</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- 內容：互動視覺化器 (共用核心邏輯) ---
+function HashVisualizer({ mode }) {
+  const SIZE = 10;
+  // 線性探測: array of numbers/null. 鏈地址: array of arrays.
+  const [table, setTable] = useState(Array(SIZE).fill(mode === 'linear' ? null : []));
+  const [inputValue, setInputValue] = useState('');
+  const [logs, setLogs] = useState([]);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(null);
+  const [checkingValue, setCheckingValue] = useState(null);
+  const [hashCalculation, setHashCalculation] = useState('');
+
+  const logsEndRef = useRef(null);
+
+  // 當切換模式時重置
+  useEffect(() => {
+    resetTable();
+  }, [mode]);
+
+  // 日誌自動滾動到底部
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [logs]);
+
+  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const addLog = (msg, type = 'info') => {
+    setLogs(prev => [...prev, { id: Date.now() + Math.random(), msg, type }]);
+  };
+
+  const resetTable = () => {
+    setTable(Array(SIZE).fill(mode === 'linear' ? null : []));
+    setLogs([]);
+    setHighlightIndex(null);
+    setCheckingValue(null);
+    setHashCalculation('');
+  };
+
+  const handleRandomInsert = () => {
+    const randomNum = Math.floor(Math.random() * 90) + 10; // 10-99
+    setInputValue(randomNum.toString());
+    // 我們不直接執行 insert，讓用戶看到隨機生成的數字再按插入，教學節奏比較好
+  };
+
+  // --- 插入邏輯 ---
+  const handleInsert = async () => {
+    const key = parseInt(inputValue);
+    if (isNaN(key)) {
+      addLog('請輸入有效的數字！', 'error');
+      return;
+    }
+    
+    if (isAnimating) return;
+    setIsAnimating(true);
+    setInputValue('');
+    addLog(`--- 準備插入資料: ${key} ---`, 'header');
+
+    let currentTable = [...table];
+    const initialHash = key % SIZE;
+    
+    setHashCalculation(`${key} % ${SIZE} = ${initialHash}`);
+    addLog(`步驟 1: 計算哈希值。 ${key} 除以 ${SIZE} 餘數為 ${initialHash}。`);
+    await sleep(1000);
+
+    setHighlightIndex(initialHash);
+    
+    if (mode === 'linear') {
+      await insertLinear(key, initialHash, currentTable);
+    } else {
+      await insertChaining(key, initialHash, currentTable);
+    }
+
+    setHighlightIndex(null);
+    setHashCalculation('');
+    setIsAnimating(false);
+  };
+
+  const insertLinear = async (key, initialHash, currentTable) => {
+    let index = initialHash;
+    let startIndex = index;
+    let step = 0;
+
+    while (true) {
+      setHighlightIndex(index);
+      addLog(`檢查索引位置 [${index}]...`);
+      await sleep(1000);
+
+      if (currentTable[index] === null) {
+        addLog(`位置 [${index}] 是空的！插入 ${key}。`, 'success');
+        currentTable[index] = key;
+        setTable([...currentTable]);
+        break;
+      } else if (currentTable[index] === key) {
+        addLog(`位置 [${index}] 已經存在 ${key} 了，不重複插入。`, 'warning');
+        break;
+      } else {
+        step++;
+        addLog(`位置 [${index}] 已有資料 (${currentTable[index]})，發生衝突！`, 'error');
+        await sleep(800);
+        
+        index = (index + 1) % SIZE;
+        addLog(`線性探測: 往後尋找下一個位置 [${index}]。`);
+        
+        if (index === startIndex) {
+          addLog(`已經繞了一圈，哈希表已滿，無法插入！`, 'error');
+          break;
+        }
+      }
+    }
+  };
+
+  const insertChaining = async (key, initialHash, currentTable) => {
+    setHighlightIndex(initialHash);
+    addLog(`檢查索引位置 [${initialHash}] 的鏈表...`);
+    await sleep(1000);
+
+    const bucket = [...currentTable[initialHash]];
+    
+    if (bucket.includes(key)) {
+      addLog(`鏈表中已經存在 ${key} 了，不重複插入。`, 'warning');
+      return;
+    }
+
+    if (bucket.length === 0) {
+      addLog(`該位置為空，建立新的節點存放 ${key}。`, 'success');
+    } else {
+      addLog(`該位置已有資料，發生衝突！將 ${key} 串接在鏈表尾端。`, 'warning');
+    }
+
+    bucket.push(key);
+    currentTable[initialHash] = bucket;
+    setTable([...currentTable]);
+    await sleep(500);
+  };
+
+  // --- 查找邏輯 ---
+  const handleSearch = async () => {
+    const key = parseInt(inputValue);
+    if (isNaN(key)) return;
+    
+    if (isAnimating) return;
+    setIsAnimating(true);
+    setCheckingValue(key);
+    addLog(`--- 開始查找資料: ${key} ---`, 'header');
+
+    const initialHash = key % SIZE;
+    setHashCalculation(`${key} % ${SIZE} = ${initialHash}`);
+    addLog(`步驟 1: 計算哈希值。目標位置應為 ${initialHash}。`);
+    await sleep(1000);
+
+    if (mode === 'linear') {
+      let index = initialHash;
+      let startIndex = index;
+      
+      while (true) {
+        setHighlightIndex(index);
+        addLog(`檢查位置 [${index}]...`);
+        await sleep(1000);
+
+        if (table[index] === key) {
+          addLog(`🎉 找到了！${key} 在位置 [${index}]。`, 'success');
+          break;
+        } else if (table[index] === null) {
+          addLog(`位置 [${index}] 是空的。因為遇到空位，代表 ${key} 不在表內。`, 'error');
+          break;
+        } else {
+          addLog(`位置 [${index}] 是 ${table[index]}，不是我們要找的。`);
+          await sleep(600);
+          index = (index + 1) % SIZE;
+          addLog(`繼續往下一個位置探測: [${index}]。`);
+          
+          if (index === startIndex) {
+            addLog(`繞了一圈都沒找到，${key} 不在哈希表中。`, 'error');
+            break;
+          }
+        }
+      }
+    } else {
+      // Chaining search
+      setHighlightIndex(initialHash);
+      const bucket = table[initialHash];
+      addLog(`進入位置 [${initialHash}] 的鏈表進行循序查找...`);
+      await sleep(1000);
+
+      let found = false;
+      for (let i = 0; i < bucket.length; i++) {
+        addLog(`比對鏈表第 ${i+1} 個節點: ${bucket[i]}`);
+        await sleep(800);
+        if (bucket[i] === key) {
+          addLog(`🎉 找到了！${key} 在位置 [${initialHash}] 的鏈表中。`, 'success');
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        if (bucket.length === 0) {
+           addLog(`該位置沒有鏈表，查找失敗。`, 'error');
+        } else {
+           addLog(`鏈表遍歷完畢，沒有找到 ${key}。`, 'error');
+        }
+      }
+    }
+
+    setHighlightIndex(null);
+    setHashCalculation('');
+    setCheckingValue(null);
+    setIsAnimating(false);
+  };
+
+  return (
+    <div className="grid lg:grid-cols-[1fr_350px] gap-8 h-full">
+      {/* 左側：視覺化主區域 */}
+      <div className="space-y-6">
+        
+        {/* 控制面板 */}
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-bold text-slate-700 mb-1">輸入資料 (整數)</label>
+            <div className="flex gap-2">
+              <input 
+                type="number" 
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="例如: 42"
+                disabled={isAnimating}
+                className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-100"
+                onKeyDown={(e) => e.key === 'Enter' && inputValue && handleInsert()}
+              />
+              <button 
+                onClick={handleRandomInsert}
+                disabled={isAnimating}
+                title="隨機產生"
+                className="px-3 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw size={18} />
+              </button>
+            </div>
+          </div>
+          
+          <button 
+            onClick={handleInsert}
+            disabled={isAnimating || !inputValue}
+            className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+          >
+            <Plus size={18} /> 插入
+          </button>
+          
+          <button 
+            onClick={handleSearch}
+            disabled={isAnimating || !inputValue}
+            className="px-6 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+          >
+            <Search size={18} /> 查找
+          </button>
+
+          <button 
+            onClick={resetTable}
+            disabled={isAnimating}
+            className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition-colors flex items-center gap-2 disabled:opacity-50 ml-auto"
+          >
+            <Trash2 size={18} /> 清空
+          </button>
+        </div>
+
+        {/* 哈希運算動畫區 */}
+        <div className="h-16 flex justify-center items-center">
+          {hashCalculation && (
+            <div className="animate-in slide-in-from-top-4 fade-in duration-300 bg-indigo-100 text-indigo-900 px-6 py-2 rounded-full font-mono text-xl border border-indigo-200 shadow-sm flex items-center gap-3">
+              哈希計算: <span className="font-bold bg-white px-3 py-1 rounded-md">{hashCalculation}</span>
+            </div>
+          )}
+        </div>
+
+        {/* 核心：哈希表陣列顯示 */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-inner overflow-x-auto">
+          {mode === 'linear' ? (
+            // 線性探測 UI
+            <div className="flex gap-2 min-w-max justify-center">
+              {table.map((val, idx) => (
+                <div key={idx} className="flex flex-col items-center gap-2">
+                  <div className={`text-sm font-bold text-slate-400 ${highlightIndex === idx ? 'text-indigo-600' : ''}`}>
+                    [{idx}]
+                  </div>
+                  <div className={`
+                    w-16 h-16 rounded-xl flex items-center justify-center text-xl font-bold transition-all duration-300
+                    ${highlightIndex === idx 
+                      ? 'ring-4 ring-indigo-400 bg-indigo-50 transform scale-110 shadow-lg z-10' 
+                      : 'border-2 border-slate-200 bg-slate-50'
+                    }
+                    ${val !== null && highlightIndex !== idx ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : ''}
+                    ${val !== null && highlightIndex === idx ? 'text-indigo-700' : 'text-slate-300'}
+                  `}>
+                    {val !== null ? val : '-'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // 鏈地址法 UI
+            <div className="flex flex-col gap-3">
+              {table.map((bucket, idx) => (
+                <div key={idx} className={`
+                  flex items-center gap-4 p-2 rounded-xl transition-all duration-300 border-2
+                  ${highlightIndex === idx ? 'border-indigo-400 bg-indigo-50' : 'border-transparent hover:bg-slate-50'}
+                `}>
+                  {/* 桶索引 */}
+                  <div className="w-12 h-12 shrink-0 flex items-center justify-center bg-slate-800 text-white font-bold rounded-lg text-lg shadow-sm">
+                    {idx}
+                  </div>
+                  
+                  <div className="w-px h-8 bg-slate-300 mx-2"></div>
+
+                  {/* 鏈表內容 */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {bucket.length === 0 ? (
+                      <span className="text-slate-400 text-sm italic">空 (null)</span>
+                    ) : (
+                      bucket.map((val, nodeIdx) => (
+                        <React.Fragment key={nodeIdx}>
+                          <div className="w-12 h-12 flex items-center justify-center bg-emerald-100 border-2 border-emerald-300 text-emerald-800 font-bold rounded-full shadow-sm animate-in zoom-in duration-300">
+                            {val}
+                          </div>
+                          {nodeIdx < bucket.length - 1 && (
+                            <ArrowRight className="text-emerald-300" size={20} />
+                          )}
+                        </React.Fragment>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* 教學提示卡片 */}
+        <div className="bg-blue-50 text-blue-800 p-4 rounded-xl text-sm border border-blue-100 flex gap-3">
+          <Info className="shrink-0 mt-0.5" size={18} />
+          <p>
+            <strong>教師小提示：</strong> 
+            {mode === 'linear' 
+              ? ' 您可以嘗試連續插入尾數相同的數字 (例如 12, 22, 32)，讓學生觀察「線性探測」是如何解決碰撞，並將資料往後擠的。當陣列快滿時，效率會明顯下降 (這稱為群聚效應 Clustering)。'
+              : ' 您可以嘗試連續插入尾數相同的數字 (例如 12, 22, 32)，讓學生觀察「鏈地址法」是如何在同一個位置無限延伸的。這種方法不怕陣列滿，但如果鏈條太長，查找速度就會變慢。'}
+          </p>
+        </div>
+
+      </div>
+
+      {/* 右側：日誌與解說面板 */}
+      <div className="bg-slate-900 rounded-xl shadow-lg flex flex-col overflow-hidden h-[600px] border border-slate-800">
+        <div className="bg-slate-800 text-white p-4 font-bold flex items-center gap-2 shadow-sm z-10">
+          <Play size={18} className="text-emerald-400" /> 
+          執行日誌與解析
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-sm">
+          {logs.length === 0 ? (
+            <div className="text-slate-500 text-center mt-10 italic">
+              尚未開始操作。<br/>請在左側輸入數字並點擊「插入」。
+            </div>
+          ) : (
+            logs.map(log => {
+              let colorClass = "text-slate-300";
+              let bgClass = "";
+              let icon = "👉";
+              
+              if (log.type === 'header') {
+                colorClass = "text-indigo-300 font-bold text-base mt-4";
+                icon = "▶";
+              } else if (log.type === 'success') {
+                colorClass = "text-emerald-400 font-bold";
+                bgClass = "bg-emerald-400/10 p-2 rounded";
+                icon = "✅";
+              } else if (log.type === 'error') {
+                colorClass = "text-red-400 font-bold";
+                bgClass = "bg-red-400/10 p-2 rounded";
+                icon = "❌";
+              } else if (log.type === 'warning') {
+                colorClass = "text-amber-400";
+                icon = "⚠️";
+              }
+
+              return (
+                <div key={log.id} className={`flex gap-2 ${colorClass} ${bgClass} animate-in slide-in-from-left-2 fade-in duration-300`}>
+                  <span className="shrink-0">{icon}</span>
+                  <span className="leading-relaxed">{log.msg}</span>
+                </div>
+              );
+            })
+          )}
+          <div ref={logsEndRef} />
+        </div>
+      </div>
+    </div>
+  );
+}
