@@ -4,13 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>時間複雜度 (Big O) 互動學習器</title>
-  <!-- Tailwind CSS CDN -->
+  <!-- Tailwind CSS CDN (最高相容性) -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- React & React DOM CDN (Production 級別) -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <!-- Babel CDN：用於在瀏覽器中即時解析 JSX 語法 -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <!-- 自訂動畫與樣式 -->
   <style>
     @keyframes fadeIn {
@@ -29,89 +24,101 @@
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen p-4 md:p-8">
   
-  <div id="root"></div>
+  <div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="text-center space-y-2 mb-8">
+      <h1 class="text-3xl md:text-4xl font-bold text-slate-900 flex items-center justify-center gap-3">
+        <span id="header-icon-container"></span>
+        時間複雜度 (Big O) 互動學習器
+      </h1>
+      <p class="text-slate-600">別怕數學符號！讓我們用最直白的方式，學會看懂程式的「效能潛力」。</p>
+    </div>
 
-  <script type="text/babel">
-    const { useState, useEffect } = React;
+    <!-- Navigation Tabs -->
+    <div class="flex flex-wrap justify-center gap-2 mb-8 bg-white p-2 rounded-xl shadow-sm border border-slate-200">
+      <button id="tab-basics" class="tab-button flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200">
+        <span class="tab-icon"></span> 1. 觀念圖解
+      </button>
+      <button id="tab-visualizer" class="tab-button flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200">
+        <span class="tab-icon"></span> 2. 互動實驗室
+      </button>
+      <button id="tab-quiz" class="tab-button flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200">
+        <span class="tab-icon"></span> 3. 實戰讀碼測驗
+      </button>
+    </div>
 
-    // --- 圖標元件 (取代原 lucide-react) ---
-    const BookOpen = ({ size = 24, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-      </svg>
-    );
+    <!-- Content Area -->
+    <div id="content-area" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 min-h-[500px]">
+      <!-- 動態渲染內容 -->
+    </div>
+  </div>
 
-    const Activity = ({ size = 24, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-      </svg>
-    );
-
-    const Code = ({ size = 24, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <polyline points="16 18 22 12 16 6" />
-        <polyline points="8 6 2 12 8 18" />
-      </svg>
-    );
-
-    const CheckCircle = ({ size = 24, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-        <polyline points="22 4 12 14.01 9 11.01" />
-      </svg>
-    );
-
-    const XCircle = ({ size = 24, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <circle cx="12" cy="12" r="10" />
-        <line x1="15" y1="9" x2="9" y2="15" />
-        <line x1="9" y1="9" x2="15" y2="15" />
-      </svg>
-    );
-
-    const ArrowRight = ({ size = 24, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <line x1="5" y1="12" x2="19" y2="12" />
-        <polyline points="12 5 19 12 12 19" />
-      </svg>
-    );
-
-    const RefreshCw = ({ size = 24, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <polyline points="23 4 23 10 17 10" />
-        <polyline points="1 20 1 14 7 14" />
-        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-      </svg>
-    );
-
-    const Info = ({ size = 24, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="16" x2="12" y2="12" />
-        <line x1="12" y1="8" x2="12.01" y2="8" />
-      </svg>
-    );
-
-    const ChevronRight = ({ size = 24, className = "" }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <polyline points="9 18 15 12 9 6" />
-      </svg>
-    );
+  <script>
+    // --- 圖標 SVG 字串定義 ---
+    const Icons = {
+      BookOpen: (size = 18, className = "") => `
+        <svg class="${className}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+        </svg>
+      `,
+      Activity: (size = 18, className = "") => `
+        <svg class="${className}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+      `,
+      Code: (size = 18, className = "") => `
+        <svg class="${className}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 18 22 12 16 6" />
+          <polyline points="8 6 2 12 8 18" />
+        </svg>
+      `,
+      CheckCircle: (size = 18, className = "") => `
+        <svg class="${className}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+      `,
+      XCircle: (size = 18, className = "") => `
+        <svg class="${className}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="15" y1="9" x2="9" y2="15" />
+          <line x1="9" y1="9" x2="15" y2="15" />
+        </svg>
+      `,
+      ArrowRight: (size = 18, className = "") => `
+        <svg class="${className}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12" />
+          <polyline points="12 5 19 12 12 19" />
+        </svg>
+      `,
+      RefreshCw: (size = 18, className = "") => `
+        <svg class="${className}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10" />
+          <polyline points="1 20 1 14 7 14" />
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+        </svg>
+      `,
+      Info: (size = 18, className = "") => `
+        <svg class="${className}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+      `
+    };
 
     // --- 測驗資料庫 ---
     const quizData = [
       {
         id: 1,
         title: "基礎陣列讀取",
-        code: `function getFirstElement(arr) {
-  return arr[0];
-}`,
+        code: "function getFirstElement(arr) {\n  return arr[0];\n}",
         options: ["O(1)", "O(log n)", "O(n)", "O(n²)"],
         answer: "O(1)",
-        explanation: "無論陣列 `arr` 有 10 個元素還是 100 萬個元素，我們都只直接拿第 0 個位置的東西。步驟數量永遠固定是一步，所以是常數時間 O(1)。",
+        explanation: "無論陣列 arr 有 10 個元素還是 100 萬個元素，我們都只直接拿第 0 個位置的東西。步驟數量永遠固定是一步，所以是常數時間 O(1)。",
         breakdown: [
           { line: "return arr[0];", cost: "O(1)", reason: "單次存取陣列元素" }
         ]
@@ -119,11 +126,7 @@
       {
         id: 2,
         title: "簡單的迴圈",
-        code: `function printAll(arr) {
-  for (let i = 0; i < arr.length; i++) {
-    console.log(arr[i]);
-  }
-}`,
+        code: "function printAll(arr) {\n  for (let i = 0; i < arr.length; i++) {\n    console.log(arr[i]);\n  }\n}",
         options: ["O(1)", "O(log n)", "O(n)", "O(n²)"],
         answer: "O(n)",
         explanation: "這裡有一個迴圈，會從陣列的開頭跑到結尾。如果陣列長度 (n) 是 10，就執行 10 次；長度是 100，就執行 100 次。時間與資料量成「正比」。",
@@ -136,13 +139,7 @@
       {
         id: 3,
         title: "雙層嵌套迴圈",
-        code: `function printPairs(arr) {
-  for (let i = 0; i < arr.length; i++) {
-    for (let j = 0; j < arr.length; j++) {
-      console.log(arr[i], arr[j]);
-    }
-  }
-}`,
+        code: "function printPairs(arr) {\n  for (let i = 0; i < arr.length; i++) {\n    for (let j = 0; j < arr.length; j++) {\n      console.log(arr[i], arr[j]);\n    }\n  }\n}",
         options: ["O(n)", "O(n log n)", "O(n²)", "O(2^n)"],
         answer: "O(n²)",
         explanation: "看到「迴圈裡面包著迴圈」，通常就是相乘的關係。外層跑 n 次，內層也跑 n 次，總共的步驟就是 n × n = n² 次。這在資料量大時會非常慢！",
@@ -155,18 +152,10 @@
       {
         id: 4,
         title: "陷阱題：兩個獨立迴圈",
-        code: `function doTwoThings(arr) {
-  for (let i = 0; i < arr.length; i++) {
-    console.log("第一步", arr[i]);
-  }
-  
-  for (let j = 0; j < arr.length; j++) {
-    console.log("第二步", arr[j]);
-  }
-}`,
+        code: "function doTwoThings(arr) {\n  for (let i = 0; i < arr.length; i++) {\n    console.log(\"第一步\", arr[i]);\n  }\n  \n  for (let j = 0; j < arr.length; j++) {\n    console.log(\"第二步\", arr[j]);\n  }\n}",
         options: ["O(1)", "O(n)", "O(n²)", "O(2n)"],
         answer: "O(n)",
-        explanation: "這裡有兩個迴圈，但它們是「分開的（平行的）」，不是包在一起的。所以總步驟是 n + n = 2n。在 Big O 符號中，我們會**忽略常數**（把 2 拿掉），只看增長趨勢，所以答案還是 O(n)！",
+        explanation: "這裡有兩個迴圈，但它們是「分開的（平行的）」，不是包在一起的。所以總步驟是 n + n = 2n。在 Big O 符號中，我們會忽略常數（把 2 拿掉），只看增長趨勢，所以答案還是 O(n)！",
         breakdown: [
           { line: "for (let i = 0; i < arr.length; i++)", cost: "O(n)", reason: "第一個獨立迴圈" },
           { line: "for (let j = 0; j < arr.length; j++)", cost: "O(n)", reason: "第二個獨立迴圈" },
@@ -176,426 +165,479 @@
       {
         id: 5,
         title: "折半縮減 (二分法概念)",
-        code: `function halveIt(n) {
-  let count = 0;
-  while (n > 1) {
-    n = Math.floor(n / 2);
-    count++;
-  }
-  return count;
-}`,
+        code: "function halveIt(n) {\n  let count = 0;\n  while (n > 1) {\n    n = Math.floor(n / 2);\n    count++;\n  }\n  return count;\n}",
         options: ["O(1)", "O(log n)", "O(n)", "O(n²)"],
         answer: "O(log n)",
-        explanation: "注意迴圈裡面的 `n / 2`！每次迴圈執行，剩餘的資料量就會「減半」。當資料量每次都除以 2 時，所需的步驟數就是對數 O(log n)。即使 n 是一百萬，也只需要大約 20 步！",
+        explanation: "注意迴圈裡面的 n / 2！每次迴圈執行，剩餘的資料量就會「減半」。當資料量每次都除以 2 時，所需的步驟數就是對數 O(log n)。即使 n 是一百萬，也只需要大約 20 步！",
         breakdown: [
           { line: "while (n > 1)", cost: "執行 log₂(n) 次", reason: "因為每次 n 都會變為原本的一半" },
           { line: "  n = Math.floor(n / 2);", cost: "O(1)", reason: "數學運算" },
           { line: "總計:", cost: "O(log n)", reason: "" }
         ]
+      },
+      {
+        id: 6,
+        title: "高效排序 (合併排序概念)",
+        code: "function mergeSort(arr) {\n  // 1. 遞迴切半直到長度為 1 (高度為 log n)\n  // 2. 每一層合併都需要掃描整批資料 (成本為 n)\n  // 3. 總時間複雜度即為兩者相乘\n  return sortAndMerge(arr);\n}",
+        options: ["O(log n)", "O(n)", "O(n log n)", "O(n²)"],
+        answer: "O(n log n)",
+        explanation: "這通常出現在「分治法」排序中（如合併排序或快速排序的最佳狀況）。將陣列不斷對半切，共有 log n 層（高度）；而每一層在重新組合（合併）時，都需要遍歷比對所有元素，也就是做 n 次處理。兩者結合就是 O(n log n)。",
+        breakdown: [
+          { line: "切分步驟 (Divide)", cost: "O(log n) 層", reason: "每次將資料量折半" },
+          { line: "合併步驟 (Merge)", cost: "每層 O(n) 步", reason: "每一層都需要掃描所有資料進行排序與合併" },
+          { line: "總計:", cost: "n * log n = O(n log n)", reason: "" }
+        ]
       }
     ];
 
-    // --- 主程式進入點 ---
-    function App() {
-      const [activeTab, setActiveTab] = useState('basics'); // basics, visualizer, quiz
+    // --- 全域應用程式狀態 (State) ---
+    const state = {
+      activeTab: 'basics', // 'basics' | 'visualizer' | 'quiz'
+      n: 10,
+      quiz: {
+        currentIdx: 0,
+        selectedOption: null,
+        isAnswered: false,
+        score: 0,
+        isFinished: false
+      }
+    };
 
-      return (
-        <div className="min-h-screen bg-slate-50 text-slate-800 font-sans p-4 md:p-8">
-          <div className="max-w-4xl mx-auto space-y-6">
-            
-            {/* Header */}
-            <div className="text-center space-y-2 mb-8">
-              <h1 className="text-3xl md:text-4xl font-bold text-slate-900 flex items-center justify-center gap-3">
-                <Activity className="text-blue-600" size={36} />
-                時間複雜度 (Big O) 互動學習器
-              </h1>
-              <p className="text-slate-600">別怕數學符號！讓我們用最直白的方式，學會看懂程式的「效能潛力」。</p>
-            </div>
+    // --- 頁面初始化 ---
+    document.addEventListener("DOMContentLoaded", () => {
+      // 載入 Header 圖標
+      document.getElementById('header-icon-container').innerHTML = Icons.Activity(36, "text-blue-600");
+      
+      // 設置頁籤圖標
+      document.querySelector('#tab-basics .tab-icon').innerHTML = Icons.BookOpen(18);
+      document.querySelector('#tab-visualizer .tab-icon').innerHTML = Icons.Activity(18);
+      document.querySelector('#tab-quiz .tab-icon').innerHTML = Icons.Code(18);
 
-            {/* Navigation Tabs */}
-            <div className="flex flex-wrap justify-center gap-2 mb-8 bg-white p-2 rounded-xl shadow-sm border border-slate-200">
-              <TabButton 
-                active={activeTab === 'basics'} 
-                onClick={() => setActiveTab('basics')} 
-                icon={<BookOpen size={18} />} 
-                label="1. 觀念圖解" 
-              />
-              <TabButton 
-                active={activeTab === 'visualizer'} 
-                onClick={() => setActiveTab('visualizer')} 
-                icon={<Activity size={18} />} 
-                label="2. 互動實驗室" 
-              />
-              <TabButton 
-                active={activeTab === 'quiz'} 
-                onClick={() => setActiveTab('quiz')} 
-                icon={<Code size={18} />} 
-                label="3. 實戰讀碼測驗" 
-              />
-            </div>
+      // 綁定頁籤點擊事件
+      document.getElementById('tab-basics').addEventListener('click', () => switchTab('basics'));
+      document.getElementById('tab-visualizer').addEventListener('click', () => switchTab('visualizer'));
+      document.getElementById('tab-quiz').addEventListener('click', () => switchTab('quiz'));
 
-            {/* Content Area */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 min-h-[500px]">
-              {activeTab === 'basics' && <BasicsTab />}
-              {activeTab === 'visualizer' && <VisualizerTab />}
-              {activeTab === 'quiz' && <QuizTab />}
-            </div>
+      // 渲染初始畫面
+      render();
+    });
 
-          </div>
-        </div>
-      );
+    // --- 切換頁籤邏輯 ---
+    function switchTab(tabId) {
+      state.activeTab = tabId;
+      render();
     }
 
-    // --- 頁籤元件 ---
-    function TabButton({ active, onClick, icon, label }) {
-      return (
-        <button
-          onClick={onClick}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-            active 
-              ? 'bg-blue-600 text-white shadow-md' 
-              : 'bg-transparent text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          {icon}
-          {label}
-        </button>
-      );
-    }
-
-    // --- 內容：觀念圖解 ---
-    function BasicsTab() {
-      const concepts = [
-        {
-          title: "O(1) 常數時間",
-          color: "bg-emerald-100 text-emerald-800 border-emerald-300",
-          iconColor: "text-emerald-600",
-          desc: "不管資料有多少，都只需要「固定的一步」。",
-          analogy: "📖 找字典：你已經夾了書籤，直接翻到那一頁。不管字典有 100 頁還是 10000 頁，翻開書籤都是 1 秒鐘。"
-        },
-        {
-          title: "O(log n) 對數時間",
-          color: "bg-blue-100 text-blue-800 border-blue-300",
-          iconColor: "text-blue-600",
-          desc: "資料量增加時，步驟只會「微幅增加」。通常出現在每次都能排除一半資料的演算法。",
-          analogy: "📖 找字典：沒有書籤，但字典有照字母排。你從中間翻開，發現字母太大就往前找，每次都撕掉一半的書。即使有百萬頁，只要撕 20 次就能找到！"
-        },
-        {
-          title: "O(n) 線性時間",
-          color: "bg-yellow-100 text-yellow-800 border-yellow-300",
-          iconColor: "text-yellow-600",
-          desc: "資料有幾個，就要做幾步。時間跟資料量成正比。",
-          analogy: "📖 找字典：這是一本完全沒排序的亂碼書。你只能從第一頁開始一頁一頁看。有 1000 頁最衰可能就要看 1000 次。"
-        },
-        {
-          title: "O(n²) 平方時間",
-          color: "bg-red-100 text-red-800 border-red-300",
-          iconColor: "text-red-600",
-          desc: "資料量每增加一點，時間就會「暴增」。通常是雙層迴圈造成的。",
-          analogy: "🤝 握手問題：房間裡有 n 個人，每個人都要跟其他所有人握手。10 個人要握 100 次，100 個人就要握 10000 次！非常耗時。"
+    // --- 主渲染邏輯 ---
+    function render() {
+      // 1. 渲染頁籤樣式
+      const tabs = ['basics', 'visualizer', 'quiz'];
+      tabs.forEach(tab => {
+        const btn = document.getElementById(`tab-${tab}`);
+        if (state.activeTab === tab) {
+          btn.className = "tab-button flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-blue-600 text-white shadow-md";
+        } else {
+          btn.className = "tab-button flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-transparent text-slate-600 hover:bg-slate-100";
         }
-      ];
+      });
 
-      return (
-        <div className="space-y-6 animate-fade-in">
-          <h2 className="text-2xl font-bold border-b pb-2">如何判斷程式的時間複雜度？</h2>
-          <p className="text-lg text-slate-700">
-            看程式碼時，不要去算精確的「加減乘除有幾個」，而是抓出**「最耗時的結構」**：
+      // 2. 渲染內容區塊
+      const container = document.getElementById('content-area');
+      if (state.activeTab === 'basics') {
+        container.innerHTML = renderBasics();
+      } else if (state.activeTab === 'visualizer') {
+        container.innerHTML = renderVisualizer();
+        setupVisualizerEvents();
+      } else if (state.activeTab === 'quiz') {
+        container.innerHTML = renderQuiz();
+        setupQuizEvents();
+      }
+    }
+
+    // --- Tab 1: 觀念圖解 HTML ---
+    function renderBasics() {
+      return `
+        <div class="space-y-6 animate-fade-in">
+          <h2 class="text-2xl font-bold border-b pb-2">如何判斷程式的時間複雜度？</h2>
+          <p class="text-lg text-slate-700">
+            看程式碼時，不要去算精確的「加減乘除有幾個」，而是抓出<strong>「最耗時的結構」</strong>：
           </p>
           
-          <div className="grid md:grid-cols-2 gap-4">
-            {concepts.map((item, idx) => (
-              <div key={idx} className={`p-5 rounded-xl border-2 ${item.color}`}>
-                <h3 className="text-xl font-bold flex items-center gap-2 mb-2">
-                  <span className={`w-3 h-3 rounded-full ${item.color.replace('text-', 'bg-').split(' ')[1]}`}></span>
-                  {item.title}
-                </h3>
-                <p className="font-medium mb-3">{item.desc}</p>
-                <div className="bg-white/60 p-3 rounded-lg text-sm text-slate-700">
-                  {item.analogy}
-                </div>
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="p-5 rounded-xl border-2 bg-emerald-100 text-emerald-800 border-emerald-300">
+              <h3 class="text-xl font-bold flex items-center gap-2 mb-2">
+                <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                O(1) 常數時間
+              </h3>
+              <p class="font-medium mb-3">不管資料有多少，都只需要「固定的一步」。</p>
+              <div class="bg-white/60 p-3 rounded-lg text-sm text-slate-700">
+                📖 找字典：你已經夾了書籤，直接翻到那一頁。不管字典有 100 頁還是 10000 頁，翻開書籤都是 1 秒鐘。
               </div>
-            ))}
+            </div>
+
+            <div class="p-5 rounded-xl border-2 bg-blue-100 text-blue-800 border-blue-300">
+              <h3 class="text-xl font-bold flex items-center gap-2 mb-2">
+                <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                O(log n) 對數時間
+              </h3>
+              <p class="font-medium mb-3">資料量增加時，步驟只會「微幅增加」。通常出現在每次都能排除一半資料的演算法。</p>
+              <div class="bg-white/60 p-3 rounded-lg text-sm text-slate-700">
+                📖 找字典：沒有書籤，但字典有照字母排。你從中間翻開，發現字母太大就往前找，每次都撕掉一半的書。即使有百萬頁，只要撕 20 次就能找到！
+              </div>
+            </div>
+
+            <div class="p-5 rounded-xl border-2 bg-yellow-100 text-yellow-800 border-yellow-300">
+              <h3 class="text-xl font-bold flex items-center gap-2 mb-2">
+                <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                O(n) 線性時間
+              </h3>
+              <p class="font-medium mb-3">資料有幾個，就要做幾步。時間跟資料量成正比。</p>
+              <div class="bg-white/60 p-3 rounded-lg text-sm text-slate-700">
+                📖 找字典：這是一本完全沒排序的亂碼書。你只能從第一頁開始一頁一頁看。有 1000 頁最衰可能就要看 1000 次。
+              </div>
+            </div>
+
+            <div class="p-5 rounded-xl border-2 bg-indigo-100 text-indigo-800 border-indigo-300">
+              <h3 class="text-xl font-bold flex items-center gap-2 mb-2">
+                <span class="w-3 h-3 rounded-full bg-indigo-500"></span>
+                O(n log n) 線性對數
+              </h3>
+              <p class="font-medium mb-3">結合了線性與對數的特徵。常見於最高效的排序演算法中。</p>
+              <div class="bg-white/60 p-3 rounded-lg text-sm text-slate-700">
+                📖 整理卡片：把一疊亂卡片分兩半、再分兩半（對折 log n 層），最後逐層比對合併（每層 n 步），總步驟就是兩者相乘！
+              </div>
+            </div>
+
+            <div class="p-5 rounded-xl border-2 bg-red-100 text-red-800 border-red-300 md:col-span-2 lg:col-span-1">
+              <h3 class="text-xl font-bold flex items-center gap-2 mb-2">
+                <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                O(n²) 平方時間
+              </h3>
+              <p class="font-medium mb-3">資料量每增加一點，時間就會「暴增」。通常是雙層迴圈造成的。</p>
+              <div class="bg-white/60 p-3 rounded-lg text-sm text-slate-700">
+                🤝 握手問題：房間裡有 n 個人，每個人都要跟其他所有人握手。10 個人要握 100 次，100 個人就要握 10000 次！非常耗時。
+              </div>
+            </div>
           </div>
 
-          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg mt-6 text-slate-700">
-            <h4 className="font-bold text-blue-800 mb-1 flex items-center gap-2"><Info size={18}/> 兩大黃金法則</h4>
-            <ol className="list-decimal list-inside space-y-1">
+          <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg mt-6 text-slate-700">
+            <h4 class="font-bold text-blue-800 mb-1 flex items-center gap-2">${Icons.Info(18, "text-blue-600")} 兩大黃金法則</h4>
+            <ol class="list-decimal list-inside space-y-1">
               <li><strong>看迴圈：</strong> 一層迴圈通常是 O(n)，兩層包在一起就是 O(n²)。有「除以2」或「乘以2」的邏輯通常是 O(log n)。</li>
               <li><strong>抓大放小：</strong> O(n² + n + 1) 直接簡化為 O(n²)。因為當 n 是一百萬時，後面的 +n 根本微不足道。我們只看「最大的影響因子」。</li>
             </ol>
           </div>
         </div>
-      );
+      `;
     }
 
-    // --- 內容：互動實驗室 ---
-    function VisualizerTab() {
-      const [n, setN] = useState(10);
-
-      // 計算各種複雜度的相對運算量 (為求視覺效果，log 取基底2並向上取整)
+    // --- Tab 2: 互動實驗室 HTML & 事件 ---
+    function renderVisualizer() {
+      const n = state.n;
       const calcOperations = {
         'O(1)': 1,
-        'O(log n)': Math.ceil(Math.log2(n || 1)) + 1, // +1 避免 0
+        'O(log n)': Math.ceil(Math.log2(n || 1)) + 1,
         'O(n)': n,
+        'O(n log n)': Math.ceil(n * Math.log2(n || 1)),
         'O(n²)': n * n
       };
 
-      // 取得最大值以計算進度條比例 (最大以 n=50 的 O(n²) 為基準，或是當前最大值)
       const maxBarValue = 50 * 50; 
 
-      return (
-        <div className="space-y-8 animate-fade-in">
+      const makeBar = (label, value, color, desc) => {
+        let percentage = (value / maxBarValue) * 100;
+        if (percentage < 0.5) percentage = 0.5;
+        if (percentage > 100) percentage = 100;
+        return `
+          <div class="grid grid-cols-[100px_1fr_80px] gap-4 items-center">
+            <div class="font-bold text-right text-slate-700 text-xs md:text-sm">${label}</div>
+            <div class="w-full bg-slate-200 h-8 rounded-full overflow-hidden flex items-center relative">
+              <div class="h-full ${color} transition-all duration-300 ease-out" style="width: ${percentage}%"></div>
+            </div>
+            <div class="text-right">
+              <div class="font-bold text-sm md:text-base">${value} 步</div>
+              <div class="text-[10px] text-slate-500">${desc}</div>
+            </div>
+          </div>
+        `;
+      };
+
+      return `
+        <div class="space-y-8 animate-fade-in">
           <div>
-            <h2 className="text-2xl font-bold mb-2">體驗資料量 (N) 的威力</h2>
-            <p className="text-slate-600">拖曳下方拉桿，改變輸入資料的大小 N，觀察各個複雜度需要的「步驟數」變化。</p>
+            <h2 class="text-2xl font-bold mb-2">體驗資料量 (N) 的威力</h2>
+            <p class="text-slate-600">拖曳下方拉桿，改變輸入資料的大小 N，觀察各個複雜度需要的「步驟數」變化。</p>
           </div>
 
-          <div className="bg-slate-100 p-6 rounded-xl">
-            <div className="flex justify-between items-center mb-4">
-              <span className="font-bold text-lg">資料量 N = {n}</span>
-              <span className="text-sm text-slate-500">拉動看看 👉</span>
+          <div class="bg-slate-100 p-6 rounded-xl">
+            <div class="flex justify-between items-center mb-4">
+              <span class="font-bold text-lg">資料量 N = <span class="text-blue-600 text-2xl" id="n-display">${n}</span></span>
+              <span class="text-sm text-slate-500">拉動看看 👉</span>
             </div>
             <input 
               type="range" 
               min="1" 
               max="50" 
-              value={n} 
-              onChange={(e) => setN(Number(e.target.value))}
-              className="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              value="${n}" 
+              id="n-slider"
+              class="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600"
             />
-            <div className="flex justify-between text-xs text-slate-400 mt-2">
+            <div class="flex justify-between text-xs text-slate-400 mt-2">
               <span>1</span>
               <span>50</span>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <ComplexityBar 
-              label="O(1) 常數" 
-              value={calcOperations['O(1)']} 
-              maxValue={maxBarValue} 
-              color="bg-emerald-500" 
-              desc="不動如山"
-            />
-            <ComplexityBar 
-              label="O(log n) 對數" 
-              value={calcOperations['O(log n)']} 
-              maxValue={maxBarValue} 
-              color="bg-blue-500"
-              desc="增長極慢 (極佳)"
-            />
-            <ComplexityBar 
-              label="O(n) 線性" 
-              value={calcOperations['O(n)']} 
-              maxValue={maxBarValue} 
-              color="bg-yellow-500"
-              desc="等比例增長 (普通)"
-            />
-            <ComplexityBar 
-              label="O(n²) 平方" 
-              value={calcOperations['O(n²)']} 
-              maxValue={maxBarValue} 
-              color="bg-red-500"
-              desc="暴衝式增長 (危險)"
-            />
+          <div id="complexity-bars-container" class="space-y-4">
+            ${makeBar('O(1) 常數', calcOperations['O(1)'], 'bg-emerald-500', '不動如山')}
+            ${makeBar('O(log n) 對數', calcOperations['O(log n)'], 'bg-blue-500', '增長極慢 (極佳)')}
+            ${makeBar('O(n) 線性', calcOperations['O(n)'], 'bg-yellow-500', '等比例增長 (普通)')}
+            ${makeBar('O(n log n) 對數線性', calcOperations['O(n log n)'], 'bg-indigo-500', '高效排序 (優良)')}
+            ${makeBar('O(n²) 平方', calcOperations['O(n²)'], 'bg-red-500', '暴衝式增長 (危險)')}
           </div>
           
-          <p className="text-center text-sm text-slate-500 italic mt-4">
-            注意看 O(n²) 的長度，當 N 變大時，它會如何迅速甩開其他人。這就是為什麼我們寫程式要盡量避免不必要的雙層迴圈！
+          <p class="text-center text-sm text-slate-500 italic mt-4">
+            注意看 O(n²) 與 O(n log n) 的差距。當 N 變大時，平方時間會迅速暴衝，而對數線性仍保持相對穩定的效率！
           </p>
         </div>
-      );
+      `;
     }
 
-    function ComplexityBar({ label, value, maxValue, color, desc }) {
-      // 為了讓 O(1) 和 O(log n) 在大基數下還能看見，給予一個最小寬度百分比
+    function setupVisualizerEvents() {
+      const slider = document.getElementById('n-slider');
+      if (slider) {
+        slider.addEventListener('input', (e) => {
+          state.n = Number(e.target.value);
+          document.getElementById('n-display').innerText = state.n;
+          
+          // 即時更新所有進度條
+          const calcOperations = {
+            'O(1)': 1,
+            'O(log n)': Math.ceil(Math.log2(state.n || 1)) + 1,
+            'O(n)': state.n,
+            'O(n log n)': Math.ceil(state.n * Math.log2(state.n || 1)),
+            'O(n²)': state.n * state.n
+          };
+          const maxBarValue = 50 * 50;
+          const barsHTML = `
+            ${renderSingleBar('O(1) 常數', calcOperations['O(1)'], maxBarValue, 'bg-emerald-500', '不動如山')}
+            ${renderSingleBar('O(log n) 對數', calcOperations['O(log n)'], maxBarValue, 'bg-blue-500', '增長極慢 (極佳)')}
+            ${renderSingleBar('O(n) 線性', calcOperations['O(n)'], maxBarValue, 'bg-yellow-500', '等比例增長 (普通)')}
+            ${renderSingleBar('O(n log n) 對數線性', calcOperations['O(n log n)'], maxBarValue, 'bg-indigo-500', '高效排序 (優良)')}
+            ${renderSingleBar('O(n²) 平方', calcOperations['O(n²)'], maxBarValue, 'bg-red-500', '暴衝式增長 (危險)')}
+          `;
+          document.getElementById('complexity-bars-container').innerHTML = barsHTML;
+        });
+      }
+    }
+
+    function renderSingleBar(label, value, maxValue, color, desc) {
       let percentage = (value / maxValue) * 100;
       if (percentage < 0.5) percentage = 0.5;
       if (percentage > 100) percentage = 100;
-
-      return (
-        <div className="grid grid-cols-[100px_1fr_80px] gap-4 items-center">
-          <div className="font-bold text-right text-slate-700">{label}</div>
-          <div className="w-full bg-slate-200 h-8 rounded-full overflow-hidden flex items-center relative">
-            <div 
-              className={`h-full ${color} transition-all duration-300 ease-out`} 
-              style={{ width: `${percentage}%` }}
-            ></div>
+      return `
+        <div class="grid grid-cols-[100px_1fr_80px] gap-4 items-center">
+          <div class="font-bold text-right text-slate-700 text-xs md:text-sm">${label}</div>
+          <div class="w-full bg-slate-200 h-8 rounded-full overflow-hidden flex items-center relative">
+            <div class="h-full ${color} transition-all duration-300 ease-out" style="width: ${percentage}%"></div>
           </div>
-          <div className="text-right">
-            <div className="font-bold">{value} 步</div>
-            <div className="text-[10px] text-slate-500">{desc}</div>
+          <div class="text-right">
+            <div class="font-bold text-sm md:text-base">${value} 步</div>
+            <div class="text-[10px] text-slate-500">${desc}</div>
           </div>
         </div>
-      );
+      `;
     }
 
-    // --- 內容：實戰測驗 ---
-    function QuizTab() {
-      const [currentIdx, setCurrentIdx] = useState(0);
-      const [selectedOption, setSelectedOption] = useState(null);
-      const [isAnswered, setIsAnswered] = useState(false);
-      const [score, setScore] = useState(0);
-      const [isFinished, setIsFinished] = useState(false);
-
-      const currentQuiz = quizData[currentIdx];
-
-      const handleOptionClick = (option) => {
-        if (isAnswered) return;
-        
-        setSelectedOption(option);
-        setIsAnswered(true);
-        
-        if (option === currentQuiz.answer) {
-          setScore(prev => prev + 1);
-        }
-      };
-
-      const handleNext = () => {
-        if (currentIdx < quizData.length - 1) {
-          setCurrentIdx(prev => prev + 1);
-          setSelectedOption(null);
-          setIsAnswered(false);
-        } else {
-          setIsFinished(true);
-        }
-      };
-
-      const resetQuiz = () => {
-        setCurrentIdx(0);
-        setSelectedOption(null);
-        setIsAnswered(false);
-        setScore(0);
-        setIsFinished(false);
-      };
-
+    // --- Tab 3: 實戰測驗 HTML & 事件 ---
+    function renderQuiz() {
+      const { currentIdx, selectedOption, isAnswered, score, isFinished } = state.quiz;
+      
       if (isFinished) {
-        return (
-          <div className="text-center py-12 space-y-6 animate-zoom-in">
-            <div className="inline-block p-6 rounded-full bg-blue-100 mb-4">
-              <Activity size={64} className="text-blue-600" />
+        return `
+          <div class="text-center py-12 space-y-6 animate-zoom-in">
+            <div class="inline-block p-6 rounded-full bg-blue-100 mb-4">
+              ${Icons.Activity(64, "text-blue-600 mx-auto")}
             </div>
-            <h2 className="text-3xl font-bold">測驗完成！</h2>
-            <p className="text-xl">
-              你的分數：<span className="font-bold text-blue-600">{score} / {quizData.length}</span>
+            <h2 class="text-3xl font-bold">測驗完成！</h2>
+            <p class="text-xl">
+              你的分數：<span class="font-bold text-blue-600">${score} / ${quizData.length}</span>
             </p>
-            <p className="text-slate-600 max-w-md mx-auto">
-              {score === quizData.length 
+            <p class="text-slate-600 max-w-md mx-auto">
+              ${score === quizData.length 
                 ? "太厲害了！你已經完全掌握了基礎的時間複雜度分析，具備了優化程式碼的眼光！" 
                 : "不錯喔！分析程式碼需要經驗累積，多看幾次「逐行拆解」就能抓到感覺了。"}
             </p>
             <button 
-              onClick={resetQuiz}
-              className="mt-8 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
+              id="quiz-reset-btn"
+              class="mt-8 px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
             >
-              <RefreshCw size={20} /> 再挑戰一次
+              ${Icons.RefreshCw(20)} 再挑戰一次
             </button>
           </div>
-        );
+        `;
       }
 
-      return (
-        <div className="space-y-6 animate-fade-in">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-bold text-slate-400">
-              挑戰 {currentIdx + 1} / {quizData.length}
-            </span>
-            <span className="text-sm font-bold bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-              目前得分: {score}
-            </span>
-          </div>
+      const currentQuiz = quizData[currentIdx];
 
-          <h2 className="text-2xl font-bold text-slate-800">{currentQuiz.title}</h2>
-          <p className="text-slate-600">請問這段程式碼的時間複雜度（Big O）是多少？</p>
+      // 逸出 HTML 專用
+      const escapedCode = currentQuiz.code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-          {/* 程式碼區塊 */}
-          <div className="bg-slate-900 rounded-xl p-4 overflow-x-auto shadow-inner">
-            <pre className="text-green-400 font-mono text-sm leading-relaxed">
-              <code>{currentQuiz.code}</code>
-            </pre>
-          </div>
+      const optionsHTML = currentQuiz.options.map((option) => {
+        let btnClass = "border-2 border-slate-200 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50";
+        let icon = "";
+        
+        if (isAnswered) {
+          if (option === currentQuiz.answer) {
+            btnClass = "border-2 border-emerald-500 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-200 ring-offset-2";
+            icon = Icons.CheckCircle(24, "text-emerald-500");
+          } else if (option === selectedOption) {
+            btnClass = "border-2 border-red-500 bg-red-50 text-red-800 opacity-70";
+            icon = Icons.XCircle(24, "text-red-500");
+          } else {
+            btnClass = "border-2 border-slate-200 bg-slate-50 text-slate-400 opacity-50";
+          }
+        }
 
-          {/* 選項區塊 */}
-          <div className="grid grid-cols-2 gap-4">
-            {currentQuiz.options.map((option, idx) => {
-              let btnClass = "border-2 border-slate-200 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50";
+        return `
+          <button
+            data-option="${option}"
+            ${isAnswered ? 'disabled' : ''}
+            class="quiz-option p-4 rounded-xl font-bold text-lg transition-all duration-200 flex justify-between items-center ${btnClass}"
+          >
+            <span>${option}</span>
+            ${icon}
+          </button>
+        `;
+      }).join('');
+
+      let explanationHTML = "";
+      if (isAnswered) {
+        const isCorrect = selectedOption === currentQuiz.answer;
+        explanationHTML = `
+          <div class="mt-8 animate-fade-in">
+            <div class="p-6 rounded-xl border-l-4 ${isCorrect ? 'bg-emerald-50 border-emerald-500' : 'bg-amber-50 border-amber-500'}">
+              <h3 class="text-lg font-bold mb-2 flex items-center gap-2">
+                ${isCorrect ? '<span class="text-emerald-700">🎉 答對了！</span>' : '<span class="text-amber-700">💡 差一點，我們來看看為什麼。</span>'}
+              </h3>
+              <p class="text-slate-700 mb-6">${currentQuiz.explanation}</p>
               
-              if (isAnswered) {
-                if (option === currentQuiz.answer) {
-                  btnClass = "border-2 border-emerald-500 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-200 ring-offset-2";
-                } else if (option === selectedOption) {
-                  btnClass = "border-2 border-red-500 bg-red-50 text-red-800 opacity-70";
-                } else {
-                  btnClass = "border-2 border-slate-200 bg-slate-50 text-slate-400 opacity-50";
-                }
-              }
-
-              return (
-                <button
-                  key={idx}
-                  onClick={() => handleOptionClick(option)}
-                  disabled={isAnswered}
-                  className={`p-4 rounded-xl font-bold text-lg transition-all duration-200 flex justify-between items-center ${btnClass}`}
-                >
-                  {option}
-                  {isAnswered && option === currentQuiz.answer && <CheckCircle className="text-emerald-500" size={24} />}
-                  {isAnswered && option === selectedOption && option !== currentQuiz.answer && <XCircle className="text-red-500" size={24} />}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* 解答與解析區塊 (回答後顯示) */}
-          {isAnswered && (
-            <div className="mt-8 animate-fade-in">
-              <div className={`p-6 rounded-xl border-l-4 ${
-                selectedOption === currentQuiz.answer 
-                  ? 'bg-emerald-50 border-emerald-500' 
-                  : 'bg-amber-50 border-amber-500'
-              }`}>
-                <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
-                  {selectedOption === currentQuiz.answer 
-                    ? <span className="text-emerald-700">🎉 答對了！</span> 
-                    : <span className="text-amber-700">💡 差一點，我們來看看為什麼。</span>}
-                </h3>
-                <p className="text-slate-700 mb-6">{currentQuiz.explanation}</p>
-                
-                <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
-                  <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                    <Code size={18} className="text-blue-600"/> 逐行拆解分析
-                  </h4>
-                  <div className="space-y-2 font-mono text-sm">
-                    {currentQuiz.breakdown.map((item, idx) => (
-                      <div key={idx} className={`grid grid-cols-[1fr_auto] gap-4 pb-2 ${idx !== currentQuiz.breakdown.length - 1 ? 'border-b border-slate-100' : ''}`}>
-                        <div className="text-slate-600 break-all">{item.line}</div>
-                        <div className="text-right">
-                          <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{item.cost}</span>
-                          {item.reason && <div className="text-xs text-slate-400 mt-1 font-sans">{item.reason}</div>}
-                        </div>
+              <div class="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+                <h4 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                  ${Icons.Code(18, "text-blue-600")} 逐行拆解分析
+                </h4>
+                <div class="space-y-2 font-mono text-sm">
+                  ${currentQuiz.breakdown.map((item, idx) => `
+                    <div class="grid grid-cols-[1fr_auto] gap-4 pb-2 ${idx !== currentQuiz.breakdown.length - 1 ? 'border-b border-slate-100' : ''}">
+                      <div class="text-slate-600 break-all">${item.line}</div>
+                      <div class="text-right">
+                        <span class="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">${item.cost}</span>
+                        ${item.reason ? `<div class="text-xs text-slate-400 mt-1 font-sans">${item.reason}</div>` : ''}
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-6 flex justify-end">
-                  <button 
-                    onClick={handleNext}
-                    className="px-6 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800 transition-colors flex items-center gap-2"
-                  >
-                    {currentIdx < quizData.length - 1 ? '下一題' : '查看成績'} <ArrowRight size={18} />
-                  </button>
+                    </div>
+                  `).join('')}
                 </div>
               </div>
+
+              <div class="mt-6 flex justify-end">
+                <button 
+                  id="quiz-next-btn"
+                  class="px-6 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800 transition-colors flex items-center gap-2"
+                >
+                  ${currentIdx < quizData.length - 1 ? '下一題' : '查看成績'} ${Icons.ArrowRight(18)}
+                </button>
+              </div>
             </div>
-          )}
+          </div>
+        `;
+      }
+
+      return `
+        <div class="space-y-6 animate-fade-in">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-sm font-bold text-slate-400">
+              挑戰 ${currentIdx + 1} / ${quizData.length}
+            </span>
+            <span class="text-sm font-bold bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+              目前得分: ${score}
+            </span>
+          </div>
+
+          <h2 class="text-2xl font-bold text-slate-800">${currentQuiz.title}</h2>
+          <p class="text-slate-600">請問這段程式碼的時間複雜度（Big O）是多少？</p>
+
+          <!-- 程式碼區塊 -->
+          <div class="bg-slate-900 rounded-xl p-4 overflow-x-auto shadow-inner">
+            <pre class="text-green-400 font-mono text-sm leading-relaxed"><code>${escapedCode}</code></pre>
+          </div>
+
+          <!-- 選項區塊 -->
+          <div class="grid grid-cols-2 gap-4">
+            ${optionsHTML}
+          </div>
+
+          ${explanationHTML}
         </div>
-      );
+      `;
     }
 
-    // --- 渲染到 HTML 實體中 ---
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    function setupQuizEvents() {
+      // 綁定選項點擊
+      const options = document.querySelectorAll('.quiz-option');
+      options.forEach(opt => {
+        opt.addEventListener('click', (e) => {
+          const btn = e.currentTarget;
+          const val = btn.getAttribute('data-option');
+          handleQuizAnswer(val);
+        });
+      });
+
+      // 綁定「下一題」
+      const nextBtn = document.getElementById('quiz-next-btn');
+      if (nextBtn) {
+        nextBtn.addEventListener('click', handleQuizNext);
+      }
+
+      // 綁定「再挑戰一次」
+      const resetBtn = document.getElementById('quiz-reset-btn');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', handleQuizReset);
+      }
+    }
+
+    function handleQuizAnswer(option) {
+      if (state.quiz.isAnswered) return;
+      
+      state.quiz.selectedOption = option;
+      state.quiz.isAnswered = true;
+      
+      const currentQuiz = quizData[state.quiz.currentIdx];
+      if (option === currentQuiz.answer) {
+        state.quiz.score += 1;
+      }
+      
+      render();
+    }
+
+    function handleQuizNext() {
+      if (state.quiz.currentIdx < quizData.length - 1) {
+        state.quiz.currentIdx += 1;
+        state.quiz.selectedOption = null;
+        state.quiz.isAnswered = false;
+      } else {
+        state.quiz.isFinished = true;
+      }
+      render();
+    }
+
+    function handleQuizReset() {
+      state.quiz.currentIdx = 0;
+      state.quiz.selectedOption = null;
+      state.quiz.isAnswered = false;
+      state.quiz.score = 0;
+      state.quiz.isFinished = false;
+      render();
+    }
   </script>
 </body>
 </html>
