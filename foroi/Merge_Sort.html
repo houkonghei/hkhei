@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ 歸併排序 (Merge Sort) 視覺化體驗</title>
+    <!-- 使用 Tailwind CSS CDN 提供精美現代化 UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 自訂滾動條樣式 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-900 text-slate-100 p-4 md:p-6 font-sans select-none">
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- 頂部標題與說明 -->
+        <header class="text-center space-y-2">
+            <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center justify-center gap-3">
+                <!-- 雙向分流合併圖示 SVG -->
+                <svg class="w-8 h-8 text-indigo-400 animate-pulse" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 9.75l3 3m0 0l3-3m-3 3V3.75m0 16.5v-4.5"></path>
+                </svg>
+                C++ 歸併排序 (Merge Sort) 視覺化體驗
+            </h1>
+            <p class="text-slate-400 text-sm">適合課堂教學：與學生一同體驗「分而治之 (Divide and Conquer)」與「雙指標有序合併」</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- 左側：視覺化與狀態控制 -->
+            <div class="lg:col-span-7 flex flex-col gap-4">
+                
+                <!-- 狀態訊息面板 -->
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg min-h-[96px] flex items-center">
+                    <div>
+                        <h3 class="text-indigo-400 font-semibold mb-1 text-xs uppercase tracking-wider">當前步驟解析</h3>
+                        <p id="message-display" class="text-base md:text-lg text-slate-200">準備就緒，點擊播放或下一步開始體驗！</p>
+                    </div>
+                </div>
+
+                <!-- 雙暫存區 (L & R Subarrays) 視覺呈現區（僅在合併階段顯示） -->
+                <div id="subarrays-panel" class="bg-slate-800/80 border border-dashed border-slate-700 p-4 rounded-xl shadow-inner transition-all duration-300 min-h-[110px] flex flex-col justify-center hidden">
+                    <div class="text-xs text-slate-400 font-mono mb-2 flex justify-between">
+                        <span>暫存子陣列 (Auxiliary Arrays)</span>
+                        <span class="text-indigo-400">正在比較 L[i] 與 R[j] 並合併回主陣列</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Left Subarray -->
+                        <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
+                            <span class="text-[10px] text-pink-400 font-bold block mb-1">左子陣列 L [i]</span>
+                            <div id="sub-l-container" class="flex gap-1.5 h-10 items-center justify-start"></div>
+                        </div>
+                        <!-- Right Subarray -->
+                        <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
+                            <span class="text-[10px] text-emerald-400 font-bold block mb-1">右子陣列 R [j]</span>
+                            <div id="sub-r-container" class="flex gap-1.5 h-10 items-center justify-start"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 主陣列長條圖顯示區 -->
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg flex-1 flex flex-col justify-end min-h-[300px] relative overflow-hidden">
+                    <!-- 邊界資訊標示 -->
+                    <div id="boundary-badge" class="absolute top-4 left-6 text-indigo-400 font-mono text-xs md:text-sm opacity-90 bg-slate-900/50 px-3 py-1 rounded border border-slate-700 hidden">
+                        區間: [low...high]
+                    </div>
+
+                    <div id="bars-container" class="flex justify-between items-end h-56 gap-1 w-full mt-8">
+                        <!-- 動態產生長條 -->
+                    </div>
+                </div>
+
+                <!-- 控制面板 -->
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-wrap gap-4 items-center justify-between shadow-md">
+                    <!-- 播放按鍵群 -->
+                    <div class="flex items-center gap-2">
+                        <button id="btn-prev" class="p-2 rounded-full bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="上一步">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"></path></svg>
+                        </button>
+                        <button id="btn-play" class="p-3 rounded-full bg-indigo-600 hover:bg-indigo-500 transition-colors text-white shadow-lg shadow-indigo-950 flex items-center justify-center" title="播放/暫停">
+                            <svg id="play-icon" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        </button>
+                        <button id="btn-next" class="p-2 rounded-full bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="下一步">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
+                        </button>
+                    </div>
+
+                    <!-- 速度調整滑桿 -->
+                    <div class="flex items-center gap-3 flex-1 min-w-[150px] px-2 md:px-4">
+                        <span class="text-xs text-slate-400 whitespace-nowrap">演示速度:</span>
+                        <input id="speed-slider" type="range" min="100" max="1500" step="100" value="800" class="w-full accent-indigo-500 bg-slate-700 h-1 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- 產生新陣列 -->
+                    <button id="btn-reset" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path></svg>
+                        重新隨機
+                    </button>
+                </div>
+                
+                <!-- 圖例說明 -->
+                <div class="flex flex-wrap gap-4 justify-center text-xs text-slate-400 py-2 bg-slate-800/40 rounded-lg border border-slate-800">
+                    <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-yellow-500/80 rounded-sm inline-block"></span>當前拆分中心 (Mid)</div>
+                    <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-indigo-500 rounded-sm inline-block"></span>寫回/合併中 (k)</div>
+                    <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-blue-500/30 rounded-sm inline-block"></span>當前遞迴處理區間</div>
+                    <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-green-500 rounded-sm inline-block"></span>完全排序完成</div>
+                </div>
+
+            </div>
+
+            <!-- 右側：C++ 程式碼追蹤 -->
+            <div class="lg:col-span-5 bg-[#1e1e1e] rounded-xl border border-slate-700 overflow-hidden flex flex-col shadow-lg h-[550px] lg:h-auto">
+                <div class="bg-slate-800 px-4 py-2 border-b border-slate-700 flex justify-between items-center">
+                    <span class="text-sm font-medium text-slate-300 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                        C++ 原始碼執行追蹤
+                    </span>
+                    <span class="text-xs text-slate-500 font-mono">MergeSort.cpp</span>
+                </div>
+                <div id="code-container" class="p-4 overflow-y-auto text-xs md:text-sm font-mono flex-1 leading-relaxed space-y-0.5">
+                    <!-- 程式碼將由 JS 動態解析注入以實現精確行高亮 -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 邏輯腳本區 -->
+    <script>
+        const cppCode = `void mergeSort(int arr[], int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2; // 尋找分割中點
+        
+        mergeSort(arr, l, m);     // 遞迴排序左半邊
+        mergeSort(arr, m + 1, r); // 遞迴排序右半邊
+        
+        merge(arr, l, m, r);     // 合併左右兩個有序子陣列
+    }
+}
+
+void merge(int arr[], int l, int m, int r) {
+    int n1 = m - l + 1;
+    int n2 = r - m;
+    int L[n1], R[n2]; // 建立暫存子陣列
+    
+    for (int i = 0; i < n1; i++) L[i] = arr[l + i];
+    for (int j = 0; j < n2; j++) R[j] = arr[m + 1 + j];
+
+    int i = 0, j = 0, k = l; // 雙指標比較與合併
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j]) {
+            arr[k] = L[i];
+            i++;
+        } else {
+            arr[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+    // 將賸餘元素複製回主陣列
+    while (i < n1) { arr[k] = L[i]; i++; k++; }
+    while (j < n2) { arr[k] = R[j]; j++; k++; }
+}`;
+
+        // 參數配置
+        const ARRAY_SIZE = 12; // 歸併排序結構複雜，12個元素在畫面上呈現最完美
+        const MIN_VAL = 10;
+        const MAX_VAL = 100;
+
+        // 應用狀態
+        let initialArray = [];
+        let array = [];
+        let actions = [];
+        let currentStep = -1;
+        let isPlaying = false;
+        let speed = 800; // ms
+        let timer = null;
+
+        // 當前步驟的視覺化狀態暫存
+        let activeLines = [];
+        let boundary = { l: null, r: null, m: null };
+        let mergeState = {
+            active: false,
+            L: [],
+            R: [],
+            i: null,
+            j: null,
+            k: null
+        };
+        let isFullySorted = false;
+
+        // 初始化
+        window.onload = () => {
+            renderCodeBlock();
+            generateArray();
+            setupEventListeners();
+        };
+
+        // 渲染帶有行號且高亮基礎語法的 C++ 程式碼區塊
+        function renderCodeBlock() {
+            const container = document.getElementById('code-container');
+            const lines = cppCode.split('\n');
+            container.innerHTML = '';
+
+            lines.forEach((line, index) => {
+                const lineDiv = document.createElement('div');
+                lineDiv.id = `code-line-${index}`;
+                lineDiv.className = `px-2 py-0.5 rounded flex transition-colors duration-200 border-l-4 border-transparent hover:bg-white/5`;
+
+                // 行號
+                const numSpan = document.createElement('span');
+                numSpan.className = 'w-6 text-right mr-4 text-slate-600 select-none font-semibold';
+                numSpan.textContent = index + 1;
+
+                // 程式碼本體與基礎高亮
+                const codeSpan = document.createElement('span');
+                codeSpan.className = 'text-slate-300';
+                
+                let highlighted = line
+                    .replace(/(int|void|if|while)/g, '<span class="text-pink-400 font-semibold">$1</span>')
+                    .replace(/(mergeSort|merge)/g, '<span class="text-indigo-300 font-semibold">$1</span>')
+                    .replace(/(\/\/.*)/g, '<span class="text-green-500/80">$1</span>');
+
+                codeSpan.innerHTML = highlighted;
+
+                lineDiv.appendChild(numSpan);
+                lineDiv.appendChild(codeSpan);
+                container.appendChild(lineDiv);
+            });
+        }
+
+        // 產生隨機數組
+        function generateArray() {
+            isPlaying = false;
+            updatePlayButtonUI();
+            if (timer) clearInterval(timer);
+
+            initialArray = Array.from({ length: ARRAY_SIZE }, () => 
+                Math.floor(Math.random() * (MAX_VAL - MIN_VAL + 1)) + MIN_VAL
+            );
+            
+            array = [...initialArray];
+            currentStep = -1;
+            activeLines = [];
+            boundary = { l: null, r: null, m: null };
+            mergeState = { active: false, L: [], R: [], i: null, j: null, k: null };
+            isFullySorted = false;
+
+            calculateActions([...initialArray]);
+            applyStep(-1);
+        }
+
+        // 預先計算並記錄所有步驟
+        function calculateActions(arr) {
+            let tempArr = [...arr];
+            let acts = [];
+
+            const merge = (l, m, r) => {
+                let n1 = m - l + 1;
+                let n2 = r - m;
+                let L = [];
+                let R = [];
+
+                for (let i = 0; i < n1; i++) L.push(tempArr[l + i]);
+                for (let j = 0; j < n2; j++) R.push(tempArr[m + 1 + j]);
+
+                acts.push({
+                    type: 'merge_init',
+                    arr: [...tempArr],
+                    l, r, m,
+                    L: [...L],
+                    R: [...R],
+                    i: 0, j: 0, k: l,
+                    msg: `準備合併區間 [${l}...${m}] (左) 與 [${m+1}...${r}] (右)。建立暫存陣列 L 與 R。`,
+                    lines: [11, 12, 13, 14, 15]
+                });
+
+                let i = 0, j = 0, k = l;
+
+                while (i < n1 && j < n2) {
+                    acts.push({
+                        type: 'merge_compare',
+                        arr: [...tempArr],
+                        l, r, m,
+                        L: [...L],
+                        R: [...R],
+                        i, j, k,
+                        msg: `比較 L[i]=${L[i]} 與 R[j]=${R[j]}。`,
+                        lines: [16, 17]
+                    });
+
+                    if (L[i] <= R[j]) {
+                        tempArr[k] = L[i];
+                        acts.push({
+                            type: 'merge_copy',
+                            arr: [...tempArr],
+                            l, r, m,
+                            L: [...L],
+                            R: [...R],
+                            i, j, k,
+                            chosen: 'L',
+                            msg: `因為 L[i] 較小 (或相等)，將其值 ${L[i]} 複製回主陣列 index[${k}]。指標 i 往後移。`,
+                            lines: [18, 19]
+                        });
+                        i++;
+                    } else {
+                        tempArr[k] = R[j];
+                        acts.push({
+                            type: 'merge_copy',
+                            arr: [...tempArr],
+                            l, r, m,
+                            L: [...L],
+                            R: [...R],
+                            i, j, k,
+                            chosen: 'R',
+                            msg: `因為 R[j] 較小，將其值 ${R[j]} 複製回主陣列 index[${k}]。指標 j 往後移。`,
+                            lines: [20, 21]
+                        });
+                        j++;
+                    }
+                    k++;
+                }
+
+                // 複製賸餘的左半邊
+                while (i < n1) {
+                    tempArr[k] = L[i];
+                    acts.push({
+                        type: 'merge_copy_rem',
+                        arr: [...tempArr],
+                        l, r, m,
+                        L: [...L],
+                        R: [...R],
+                        i, j, k,
+                        chosen: 'L',
+                        msg: `將左側剩餘元素 L[i]=${L[i]} 直接複製回主陣列 index[${k}]。`,
+                        lines: [25]
+                    });
+                    i++;
+                    k++;
+                }
+
+                // 複製賸餘的右半邊
+                while (j < n2) {
+                    tempArr[k] = R[j];
+                    acts.push({
+                        type: 'merge_copy_rem',
+                        arr: [...tempArr],
+                        l, r, m,
+                        L: [...L],
+                        R: [...R],
+                        i, j, k,
+                        chosen: 'R',
+                        msg: `將右側剩餘元素 R[j]=${R[j]} 直接複製回主陣列 index[${k}]。`,
+                        lines: [26]
+                    });
+                    j++;
+                    k++;
+                }
+
+                acts.push({
+                    type: 'merge_done',
+                    arr: [...tempArr],
+                    l, r, m,
+                    msg: `區間 [${l}...${r}] 合併完成！此小區段已呈暫時有序狀態。`,
+                    lines: [6]
+                });
+            };
+
+            const quickSortLogic = (l, r) => {
+                if (l < r) {
+                    let m = Math.floor(l + (r - l) / 2);
+                    acts.push({
+                        type: 'split',
+                        arr: [...tempArr],
+                        l, r, m,
+                        msg: `分割區間 [${l}...${r}]，中點 index[${m}] 數值為 ${tempArr[m]}。`,
+                        lines: [1, 2, 3]
+                    });
+
+                    quickSortLogic(l, m);
+                    quickSortLogic(m + 1, r);
+                    merge(l, m, r);
+                }
+            };
+
+            acts.push({ type: 'start', arr: [...tempArr], msg: "準備開始執行歸併排序 (Merge Sort)！", lines: [0] });
+            quickSortLogic(0, tempArr.length - 1);
+            acts.push({ type: 'done', arr: [...tempArr], msg: "整個數組拆分與合併完成！歸併排序大功告成！🎉", lines: [] });
+
+            actions = acts;
+        }
+
+        // 套用特定步驟狀態到 UI 畫面
+        function applyStep(stepIndex) {
+            const panel = document.getElementById('subarrays-panel');
+            
+            if (stepIndex < 0) {
+                array = [...initialArray];
+                activeLines = [];
+                boundary = { l: null, r: null, m: null };
+                mergeState = { active: false, L: [], R: [], i: null, j: null, k: null };
+                isFullySorted = false;
+                document.getElementById('message-display').textContent = "準備就緒，點擊「播放」或「下一步」觀察它的變化。";
+                panel.classList.add('hidden');
+                updateVisuals();
+                updateNavigationState();
+                return;
+            }
+
+            if (stepIndex >= actions.length) return;
+
+            const action = actions[stepIndex];
+            array = action.arr;
+            activeLines = action.lines || [];
+            document.getElementById('message-display').textContent = action.msg;
+            isFullySorted = (action.type === 'done');
+
+            // 判斷是否需要展開/渲染子陣列
+            if (action.type.startsWith('merge_')) {
+                panel.classList.remove('hidden');
+                mergeState = {
+                    active: true,
+                    L: action.L || [],
+                    R: action.R || [],
+                    i: action.i !== undefined ? action.i : null,
+                    j: action.j !== undefined ? action.j : null,
+                    k: action.k !== undefined ? action.k : null,
+                    chosen: action.chosen || null,
+                    type: action.type
+                };
+                boundary = { l: action.l, r: action.r, m: action.m };
+            } else {
+                panel.classList.add('hidden');
+                mergeState.active = false;
+                if (action.type === 'split') {
+                    boundary = { l: action.l, r: action.r, m: action.m };
+                } else {
+                    boundary = { l: null, r: null, m: null };
+                }
+            }
+
+            updateVisuals();
+            updateNavigationState();
+        }
+
+        // 更新視覺元素
+        function updateVisuals() {
+            // 1. 渲染主長條圖
+            const container = document.getElementById('bars-container');
+            container.innerHTML = '';
+
+            array.forEach((val, idx) => {
+                let barColor = 'bg-slate-300';
+                
+                if (isFullySorted) {
+                    barColor = 'bg-green-500';
+                } else if (mergeState.active) {
+                    if (idx === mergeState.k && mergeState.type !== 'merge_done') {
+                        barColor = 'bg-indigo-500 animate-pulse'; // 當前正在合併寫入的位置
+                    } else if (idx >= boundary.l && idx <= boundary.r) {
+                        barColor = 'bg-indigo-500/30'; // 正在進行合併的主區間
+                    }
+                } else if (boundary.l !== null && idx >= boundary.l && idx <= boundary.r) {
+                    if (idx === boundary.m) {
+                        barColor = 'bg-yellow-500/80'; // 中點 (Mid)
+                    } else {
+                        barColor = 'bg-blue-500/30'; // 分割作用中的區間
+                    }
+                }
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'flex flex-col items-center flex-1 group relative';
+
+                // hover 顯示索引
+                const idxDiv = document.createElement('div');
+                idxDiv.className = 'text-[10px] md:text-xs text-slate-500 mb-1 opacity-0 group-hover:opacity-100 transition-opacity';
+                idxDiv.textContent = `[${idx}]`;
+
+                // 長條柱
+                const bar = document.createElement('div');
+                bar.className = `w-full rounded-t transition-all duration-200 ease-in-out ${barColor} flex items-start justify-center pt-2 relative`;
+                bar.style.height = `${(val / MAX_VAL) * 150 + 20}px`;
+
+                // 數值文字
+                const valSpan = document.createElement('span');
+                valSpan.className = 'text-[10px] md:text-xs font-bold text-slate-300 absolute -top-5';
+                valSpan.textContent = val;
+                bar.appendChild(valSpan);
+
+                // 指標符號
+                const labelContainer = document.createElement('div');
+                labelContainer.className = 'h-6 mt-1 flex justify-center text-[10px] font-bold';
+                if (mergeState.active && idx === mergeState.k && mergeState.type !== 'merge_done') {
+                    const kBadge = document.createElement('span');
+                    kBadge.className = 'text-indigo-400';
+                    kBadge.textContent = 'k';
+                    labelContainer.appendChild(kBadge);
+                } else if (!mergeState.active && idx === boundary.m) {
+                    const midBadge = document.createElement('span');
+                    midBadge.className = 'text-yellow-400';
+                    midBadge.textContent = 'mid';
+                    labelContainer.appendChild(midBadge);
+                }
+
+                itemDiv.appendChild(idxDiv);
+                itemDiv.appendChild(bar);
+                itemDiv.appendChild(labelContainer);
+                container.appendChild(itemDiv);
+            });
+
+            // 2. 渲染輔助子暫存陣列 L 與 R
+            if (mergeState.active) {
+                renderSubarray('sub-l-container', mergeState.L, mergeState.i, 'L', 'text-pink-400', 'border-pink-500/40');
+                renderSubarray('sub-r-container', mergeState.R, mergeState.j, 'R', 'text-emerald-400', 'border-emerald-500/40');
+            }
+
+            // 更新邊界 Badge
+            const badge = document.getElementById('boundary-badge');
+            if (boundary.l !== null) {
+                badge.classList.remove('hidden');
+                if (boundary.m !== null) {
+                    badge.innerHTML = `當前範圍: <span class="text-indigo-300">[${boundary.l} ... ${boundary.r}]</span> | 中點 mid = <span class="text-yellow-300">${boundary.m}</span>`;
+                } else {
+                    badge.innerHTML = `當前範圍: <span class="text-indigo-300">[${boundary.l} ... ${boundary.r}]</span>`;
+                }
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            // 更新 C++ 程式碼行高亮
+            document.querySelectorAll('[id^="code-line-"]').forEach(lineDiv => {
+                lineDiv.classList.remove('bg-indigo-950/60', 'border-l-indigo-400');
+                lineDiv.classList.add('border-l-transparent');
+            });
+            activeLines.forEach(lineNum => {
+                const lineDiv = document.getElementById(`code-line-${lineNum}`);
+                if (lineDiv) {
+                    lineDiv.classList.add('bg-indigo-950/60', 'border-l-indigo-400');
+                    lineDiv.classList.remove('border-l-transparent');
+                }
+            });
+        }
+
+        // 輔助子陣列渲染函式
+        function renderSubarray(containerId, subArray, activePointer, namePrefix, textColorClass, borderCol) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            subArray.forEach((val, idx) => {
+                const isSelected = (idx === activePointer);
+                const isPassed = (idx < activePointer); // 已經被合併取走的元素
+
+                const cell = document.createElement('div');
+                cell.className = `w-10 h-8 rounded border flex flex-col items-center justify-center text-xs transition-all duration-300 relative
+                    ${isSelected ? `bg-indigo-900/50 ${borderCol} ring-2 ring-indigo-400/50 scale-105` : 'bg-slate-800 border-slate-700'}
+                    ${isPassed ? 'opacity-25 bg-slate-950/40' : ''}`;
+
+                const valSpan = document.createElement('span');
+                valSpan.className = `font-bold ${isSelected ? textColorClass : 'text-slate-200'}`;
+                valSpan.textContent = val;
+
+                // 指標標記
+                if (isSelected) {
+                    const pointerBadge = document.createElement('span');
+                    pointerBadge.className = `absolute -bottom-3.5 text-[8px] font-black ${textColorClass}`;
+                    pointerBadge.textContent = `${namePrefix === 'L' ? 'i' : 'j'}`;
+                    cell.appendChild(pointerBadge);
+                }
+
+                cell.appendChild(valSpan);
+                container.appendChild(cell);
+            });
+        }
+
+        // 按鈕啟用狀態管理
+        function updateNavigationState() {
+            document.getElementById('btn-prev').disabled = (currentStep <= -1);
+            document.getElementById('btn-next').disabled = (currentStep >= actions.length - 1);
+        }
+
+        // 更新播放按鈕的圖示
+        function updatePlayButtonUI() {
+            const playIcon = document.getElementById('play-icon');
+            if (isPlaying) {
+                playIcon.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
+            } else {
+                playIcon.innerHTML = `<path d="M8 5v14l11-7z"/>`;
+            }
+        }
+
+        // 自動播放邏輯
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            updatePlayButtonUI();
+
+            if (isPlaying) {
+                if (currentStep >= actions.length - 1) {
+                    currentStep = -1; // 從頭播放
+                }
+                runTimer();
+            } else {
+                if (timer) clearInterval(timer);
+            }
+        }
+
+        function runTimer() {
+            if (timer) clearInterval(timer);
+            timer = setInterval(() => {
+                if (currentStep < actions.length - 1) {
+                    currentStep++;
+                    applyStep(currentStep);
+                } else {
+                    isPlaying = false;
+                    updatePlayButtonUI();
+                    clearInterval(timer);
+                }
+            }, speed);
+        }
+
+        // 設定控制項監聽器
+        function setupEventListeners() {
+            document.getElementById('btn-play').addEventListener('click', togglePlay);
+
+            document.getElementById('btn-next').addEventListener('click', () => {
+                isPlaying = false;
+                updatePlayButtonUI();
+                if (timer) clearInterval(timer);
+                if (currentStep < actions.length - 1) {
+                    currentStep++;
+                    applyStep(currentStep);
+                }
+            });
+
+            document.getElementById('btn-prev').addEventListener('click', () => {
+                isPlaying = false;
+                updatePlayButtonUI();
+                if (timer) clearInterval(timer);
+                if (currentStep > -1) {
+                    currentStep--;
+                    applyStep(currentStep);
+                }
+            });
+
+            document.getElementById('btn-reset').addEventListener('click', generateArray);
+
+            const speedSlider = document.getElementById('speed-slider');
+            speedSlider.addEventListener('input', (e) => {
+                speed = 1600 - Number(e.target.value);
+                if (isPlaying) {
+                    runTimer();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
