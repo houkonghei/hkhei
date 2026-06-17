@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ 堆積排序 (Heap Sort) 視覺化體驗</title>
+    <!-- 使用 Tailwind CSS CDN 提供精美現代化 UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 自訂滾動條樣式 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-900 text-slate-100 p-4 md:p-6 font-sans select-none">
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- 頂部標題與說明 -->
+        <header class="text-center space-y-2">
+            <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center justify-center gap-3">
+                <!-- 堆積結構樹狀圖示 SVG -->
+                <svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M12 3L5.25 9.75M12 3l6.75 6.75M5.25 9.75h13.5M12 12v9M3.75 18h16.5"></path>
+                </svg>
+                C++ 堆積排序 (Heap Sort) 視覺化體驗
+            </h1>
+            <p class="text-slate-400 text-sm">三大經典 O(N log N) 排序的完美收尾：結合「完全二元樹」與「陣列一體化」的極致視覺呈現</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- 左側：視覺化雙視角與狀態控制 -->
+            <div class="lg:col-span-8 flex flex-col gap-4">
+                
+                <!-- 狀態訊息面板 -->
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg min-h-[96px] flex items-center">
+                    <div>
+                        <h3 class="text-amber-400 font-semibold mb-1 text-xs uppercase tracking-wider">當前步驟解析</h3>
+                        <p id="message-display" class="text-base md:text-lg text-slate-200">準備就緒，點擊播放或下一步開始體驗！</p>
+                    </div>
+                </div>
+
+                <!-- 雙視角顯示區 (二元樹 + 陣列長條圖) -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                    
+                    <!-- 視角一：完全二元堆積樹 -->
+                    <div class="md:col-span-7 bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg flex flex-col relative overflow-hidden min-h-[300px]">
+                        <span class="text-xs text-amber-400 font-mono absolute top-4 left-4 bg-slate-900/40 px-2 py-1 rounded">
+                            視角 A: 完全二元堆積樹 (Max Heap Tree)
+                        </span>
+                        
+                        <!-- 樹狀繪製區 SVG -->
+                        <div class="flex-1 flex items-center justify-center mt-6">
+                            <svg id="tree-svg" class="w-full h-64 md:h-72" viewBox="0 0 500 280">
+                                <!-- 連線與節點將由 JS 動態生成 -->
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- 視角二：一維陣列長條圖 -->
+                    <div class="md:col-span-5 bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg flex flex-col justify-end relative overflow-hidden min-h-[300px]">
+                        <span class="text-xs text-blue-400 font-mono absolute top-4 left-4 bg-slate-900/40 px-2 py-1 rounded">
+                            視角 B: 陣列儲存狀態 (Array)
+                        </span>
+
+                        <div id="bars-container" class="flex justify-between items-end h-48 gap-1 w-full mt-10">
+                            <!-- 動態產生長條 -->
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- 控制面板 -->
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-wrap gap-4 items-center justify-between shadow-md">
+                    <!-- 播放按鍵群 -->
+                    <div class="flex items-center gap-2">
+                        <button id="btn-prev" class="p-2 rounded-full bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="上一步">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"></path></svg>
+                        </button>
+                        <button id="btn-play" class="p-3 rounded-full bg-amber-500 hover:bg-amber-400 transition-colors text-slate-950 shadow-lg shadow-amber-950 flex items-center justify-center" title="播放/暫停">
+                            <svg id="play-icon" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        </button>
+                        <button id="btn-next" class="p-2 rounded-full bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="下一步">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
+                        </button>
+                    </div>
+
+                    <!-- 速度調整滑桿 -->
+                    <div class="flex items-center gap-3 flex-1 min-w-[150px] px-2 md:px-4">
+                        <span class="text-xs text-slate-400 whitespace-nowrap">演示速度:</span>
+                        <input id="speed-slider" type="range" min="100" max="1500" step="100" value="800" class="w-full accent-amber-500 bg-slate-700 h-1 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- 產生新陣列 -->
+                    <button id="btn-reset" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path></svg>
+                        重新隨機
+                    </button>
+                </div>
+                
+                <!-- 圖例說明 -->
+                <div class="flex flex-wrap gap-4 justify-center text-xs text-slate-400 py-2 bg-slate-800/40 rounded-lg border border-slate-800">
+                    <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-amber-400 rounded-sm inline-block"></span>當前根節點 / 作用節點</div>
+                    <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-purple-500 rounded-sm inline-block"></span>比較子節點 (Left / Right)</div>
+                    <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-red-500 rounded-sm inline-block"></span>準備交換 / 交換中</div>
+                    <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-green-500 rounded-sm inline-block"></span>完全排序完成 (離開堆積)</div>
+                    <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-amber-600/50 rounded-sm inline-block"></span>堆積中未處理元素</div>
+                </div>
+
+            </div>
+
+            <!-- 右側：C++ 程式碼追蹤 -->
+            <div class="lg:col-span-4 bg-[#1e1e1e] rounded-xl border border-slate-700 overflow-hidden flex flex-col shadow-lg h-[550px] lg:h-auto">
+                <div class="bg-slate-800 px-4 py-2 border-b border-slate-700 flex justify-between items-center">
+                    <span class="text-sm font-medium text-slate-300 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                        C++ 原始碼執行追蹤
+                    </span>
+                    <span class="text-xs text-slate-500 font-mono">HeapSort.cpp</span>
+                </div>
+                <div id="code-container" class="p-4 overflow-y-auto text-xs font-mono flex-1 leading-relaxed space-y-0.5">
+                    <!-- 程式碼將由 JS 動態解析注入以實現精確行高亮 -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 邏輯腳本區 -->
+    <script>
+        const cppCode = `void heapSort(int arr[], int n) {
+    // 1. 建立最大堆積 (Build Heap)
+    for (int i = n / 2 - 1; i >= 0; i--) {
+        heapify(arr, n, i);
+    }
+
+    // 2. 依次取出堆積頂端最大值並重建堆積
+    for (int i = n - 1; i > 0; i--) {
+        swap(arr[0], arr[i]); // 將最大值交換到尾端
+        heapify(arr, i, 0);   // 重建剩餘元素的堆積
+    }
+}
+
+void heapify(int arr[], int n, int i) {
+    int largest = i;   // 初始化最大值為根節點
+    int l = 2 * i + 1; // 左子節點 index
+    int r = 2 * i + 2; // 右子節點 index
+
+    // 比較左子節點
+    if (l < n && arr[l] > arr[largest]) {
+        largest = l;
+    }
+
+    // 比較右子節點
+    if (r < n && arr[r] > arr[largest]) {
+        largest = r;
+    }
+
+    // 若最大值不是根節點，則交換並遞迴調整
+    if (largest != i) {
+        swap(arr[i], arr[largest]);
+        heapify(arr, n, largest);
+    }
+}`;
+
+        // 參數配置
+        const ARRAY_SIZE = 10; // 10個元素能完美呈現4層完全二元樹
+        const MIN_VAL = 10;
+        const MAX_VAL = 100;
+
+        // 應用狀態
+        let initialArray = [];
+        let array = [];
+        let actions = [];
+        let currentStep = -1;
+        let isPlaying = false;
+        let speed = 800; // ms
+        let timer = null;
+
+        // 當前步驟的視覺化狀態暫存
+        let activeLines = [];
+        let heapSize = ARRAY_SIZE;
+        let highlightState = {
+            root: null,
+            compare: [],
+            swap: [],
+            largest: null,
+            l: null,
+            r: null
+        };
+        let isFullySorted = false;
+
+        // 初始化
+        window.onload = () => {
+            renderCodeBlock();
+            generateArray();
+            setupEventListeners();
+        };
+
+        // 渲染帶有行號且高亮基礎語法的 C++ 程式碼區塊
+        function renderCodeBlock() {
+            const container = document.getElementById('code-container');
+            const lines = cppCode.split('\n');
+            container.innerHTML = '';
+
+            lines.forEach((line, index) => {
+                const lineDiv = document.createElement('div');
+                lineDiv.id = `code-line-${index}`;
+                lineDiv.className = `px-2 py-0.5 rounded flex transition-colors duration-200 border-l-4 border-transparent hover:bg-white/5`;
+
+                // 行號
+                const numSpan = document.createElement('span');
+                numSpan.className = 'w-6 text-right mr-3 text-slate-600 select-none font-semibold';
+                numSpan.textContent = index + 1;
+
+                // 程式碼本體與基礎高亮
+                const codeSpan = document.createElement('span');
+                codeSpan.className = 'text-slate-300';
+                
+                let highlighted = line
+                    .replace(/(int|void|if|for|return)/g, '<span class="text-pink-400 font-semibold">$1</span>')
+                    .replace(/(heapSort|heapify|swap)/g, '<span class="text-amber-300 font-semibold">$1</span>')
+                    .replace(/(\/\/.*)/g, '<span class="text-green-500/80">$1</span>');
+
+                codeSpan.innerHTML = highlighted;
+
+                lineDiv.appendChild(numSpan);
+                lineDiv.appendChild(codeSpan);
+                container.appendChild(lineDiv);
+            });
+        }
+
+        // 產生隨機數組
+        function generateArray() {
+            isPlaying = false;
+            updatePlayButtonUI();
+            if (timer) clearInterval(timer);
+
+            initialArray = Array.from({ length: ARRAY_SIZE }, () => 
+                Math.floor(Math.random() * (MAX_VAL - MIN_VAL + 1)) + MIN_VAL
+            );
+            
+            array = [...initialArray];
+            currentStep = -1;
+            activeLines = [];
+            heapSize = ARRAY_SIZE;
+            highlightState = { root: null, compare: [], swap: [], largest: null, l: null, r: null };
+            isFullySorted = false;
+
+            calculateActions([...initialArray]);
+            applyStep(-1);
+        }
+
+        // 核心演算法：預先計算並記錄所有步驟
+        function calculateActions(arr) {
+            let tempArr = [...arr];
+            let acts = [];
+            let n = tempArr.length;
+
+            acts.push({
+                type: 'start',
+                arr: [...tempArr],
+                heapSize: n,
+                root: null, compare: [], swap: [], largest: null,
+                msg: "開始堆積排序！第一階段：建立最大堆積 (Build Max Heap)。",
+                lines: [0, 1]
+            });
+
+            const heapify = (size, rootIdx) => {
+                let largest = rootIdx;
+                let l = 2 * rootIdx + 1;
+                let r = 2 * rootIdx + 2;
+
+                acts.push({
+                    type: 'heapify_start',
+                    arr: [...tempArr],
+                    heapSize: size,
+                    root: rootIdx,
+                    largest: rootIdx,
+                    l: l < size ? l : null,
+                    r: r < size ? r : null,
+                    compare: [], swap: [],
+                    msg: `進入 heapify。檢查以 index[${rootIdx}] (${tempArr[rootIdx]}) 為根的子樹是否符合堆積特性。`,
+                    lines: [14, 15, 16, 17]
+                });
+
+                // 比較左子節點
+                if (l < size) {
+                    acts.push({
+                        type: 'compare_left',
+                        arr: [...tempArr],
+                        heapSize: size,
+                        root: rootIdx,
+                        largest: largest,
+                        l: l,
+                        r: r < size ? r : null,
+                        compare: [largest, l],
+                        swap: [],
+                        msg: `比較左子節點 L[${l}] (${tempArr[l]}) 與當前最大值 [${largest}] (${tempArr[largest]})。`,
+                        lines: [20, 21, 22]
+                    });
+                    if (tempArr[l] > tempArr[largest]) {
+                        largest = l;
+                    }
+                }
+
+                // 比較右子節點
+                if (r < size) {
+                    acts.push({
+                        type: 'compare_right',
+                        arr: [...tempArr],
+                        heapSize: size,
+                        root: rootIdx,
+                        largest: largest,
+                        l: l,
+                        r: r,
+                        compare: [largest, r],
+                        swap: [],
+                        msg: `比較右子節點 R[${r}] (${tempArr[r]}) 與目前最大值 [${largest}] (${tempArr[largest]})。`,
+                        lines: [25, 26, 27]
+                    });
+                    if (tempArr[r] > tempArr[largest]) {
+                        largest = r;
+                    }
+                }
+
+                // 若最大值非根節點
+                if (largest !== rootIdx) {
+                    acts.push({
+                        type: 'swap_prep',
+                        arr: [...tempArr],
+                        heapSize: size,
+                        root: rootIdx,
+                        largest: largest,
+                        l: l < size ? l : null,
+                        r: r < size ? r : null,
+                        compare: [],
+                        swap: [rootIdx, largest],
+                        msg: `發現最大值為子節點 index[${largest}] (${tempArr[largest]})，準備與根節點 index[${rootIdx}] 進行交換。`,
+                        lines: [30, 31]
+                    });
+
+                    let temp = tempArr[rootIdx];
+                    tempArr[rootIdx] = tempArr[largest];
+                    tempArr[largest] = temp;
+
+                    acts.push({
+                        type: 'swap',
+                        arr: [...tempArr],
+                        heapSize: size,
+                        root: rootIdx,
+                        largest: largest,
+                        l: l < size ? l : null,
+                        r: r < size ? r : null,
+                        compare: [],
+                        swap: [rootIdx, largest],
+                        msg: `完成交換！將較大值移到頂部。由於子樹結構已被改變，必須遞迴對 index[${largest}] 子樹呼叫 heapify。`,
+                        lines: [32]
+                    });
+
+                    heapify(size, largest);
+                } else {
+                    acts.push({
+                        type: 'heapify_ok',
+                        arr: [...tempArr],
+                        heapSize: size,
+                        root: rootIdx,
+                        largest: largest,
+                        l: l < size ? l : null,
+                        r: r < size ? r : null,
+                        compare: [], swap: [],
+                        msg: `根節點 index[${rootIdx}] 已是最大，不需要交換。該子樹符合最大堆積規則。`,
+                        lines: [30]
+                    });
+                }
+            };
+
+            // 1. Build Heap (由底向上)
+            for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
+                acts.push({
+                    type: 'build_loop',
+                    arr: [...tempArr],
+                    heapSize: n,
+                    root: i, compare: [], swap: [], largest: null,
+                    msg: `選擇非分葉節點的末端 index[${i}] (${tempArr[i]}) 開始，準備進行向下調整 (heapify)。`,
+                    lines: [3, 4]
+                });
+                heapify(n, i);
+            }
+
+            acts.push({
+                type: 'build_done',
+                arr: [...tempArr],
+                heapSize: n,
+                root: null, compare: [], swap: [], largest: null,
+                msg: "恭喜！第一階段「最大堆積」建立成功！此時 index[0] 一定是整個陣列的最大值 (最大堆積頂端)。",
+                lines: [5]
+            });
+
+            // 2. Extract Max 排序階段
+            for (let i = n - 1; i > 0; i--) {
+                acts.push({
+                    type: 'extract_prep',
+                    arr: [...tempArr],
+                    heapSize: i + 1,
+                    root: 0, compare: [],
+                    swap: [0, i],
+                    msg: `【排序步驟】將堆積頂端（最大值 index[0]: ${tempArr[0]}）與堆積最後一個元素 index[${i}] (${tempArr[i]}) 交換。`,
+                    lines: [8, 9]
+                });
+
+                let temp = tempArr[0];
+                tempArr[0] = tempArr[i];
+                tempArr[i] = temp;
+
+                acts.push({
+                    type: 'extracted',
+                    arr: [...tempArr],
+                    heapSize: i, // 堆積大小減1
+                    root: null, compare: [], swap: [],
+                    msg: `數值 ${temp} 已正確定位到 index[${i}]（標記為綠色）並脫離堆積。接下來，針對新的根節點 index[0] 重新呼叫 heapify。`,
+                    lines: [10]
+                });
+
+                heapify(i, 0);
+            }
+
+            acts.push({
+                type: 'done',
+                arr: [...tempArr],
+                heapSize: 0,
+                root: null, compare: [], swap: [], largest: null,
+                msg: "提取與重建完全結束！所有元素皆已定位，堆積排序圓滿成功！🎉",
+                lines: []
+            });
+
+            actions = acts;
+        }
+
+        // 套用特定步驟狀態到 UI 畫面
+        function applyStep(stepIndex) {
+            if (stepIndex < 0) {
+                array = [...initialArray];
+                activeLines = [];
+                heapSize = ARRAY_SIZE;
+                highlightState = { root: null, compare: [], swap: [], largest: null, l: null, r: null };
+                isFullySorted = false;
+                document.getElementById('message-display').textContent = "準備就緒，點擊「播放」或「下一步」觀察它的變化。";
+                updateVisuals();
+                updateNavigationState();
+                return;
+            }
+
+            if (stepIndex >= actions.length) return;
+
+            const action = actions[stepIndex];
+            array = action.arr;
+            activeLines = action.lines || [];
+            heapSize = action.heapSize;
+            document.getElementById('message-display').textContent = action.msg;
+            isFullySorted = (action.type === 'done');
+
+            // 還原當前亮顯狀態
+            highlightState = {
+                root: action.root !== undefined ? action.root : null,
+                compare: action.compare || [],
+                swap: action.swap || [],
+                largest: action.largest !== undefined ? action.largest : null,
+                l: action.l !== undefined ? action.l : null,
+                r: action.r !== undefined ? action.r : null
+            };
+
+            updateVisuals();
+            updateNavigationState();
+        }
+
+        // 更新視覺元素 (陣列與二元樹)
+        function updateVisuals() {
+            // ==================== 1. 渲染陣列長條圖 ====================
+            const barsContainer = document.getElementById('bars-container');
+            barsContainer.innerHTML = '';
+
+            array.forEach((val, idx) => {
+                let barColor = 'bg-slate-300'; // 預設：已脫離堆積但未到最終定位
+                
+                if (isFullySorted || idx >= heapSize) {
+                    barColor = 'bg-green-500'; // 已確定排序位置
+                } else if (highlightState.swap.includes(idx)) {
+                    barColor = 'bg-red-500'; // 準備/正在交換
+                } else if (highlightState.compare.includes(idx)) {
+                    barColor = 'bg-purple-500'; // 正在與父節點比較大小的子節點
+                } else if (idx === highlightState.root) {
+                    barColor = 'bg-amber-400'; // 目前 heapify 的根節點
+                } else if (idx < heapSize) {
+                    barColor = 'bg-amber-600/50'; // 還在作用堆積中的一般節點
+                }
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'flex flex-col items-center flex-1 group relative';
+
+                // hover 顯示索引
+                const idxDiv = document.createElement('div');
+                idxDiv.className = 'text-[9px] md:text-xs text-slate-500 mb-1 opacity-0 group-hover:opacity-100 transition-opacity';
+                idxDiv.textContent = `[${idx}]`;
+
+                // 長條柱
+                const bar = document.createElement('div');
+                bar.className = `w-full rounded-t transition-all duration-200 ease-in-out ${barColor} flex items-start justify-center pt-2 relative`;
+                bar.style.height = `${(val / MAX_VAL) * 120 + 20}px`;
+
+                // 數值文字
+                const valSpan = document.createElement('span');
+                valSpan.className = 'text-[10px] md:text-xs font-bold text-slate-300 absolute -top-5';
+                valSpan.textContent = val;
+                bar.appendChild(valSpan);
+
+                // 下方圖示標記
+                const labelContainer = document.createElement('div');
+                labelContainer.className = 'h-5 mt-1 flex justify-center text-[10px] font-bold';
+                
+                if (idx < heapSize) {
+                    if (idx === highlightState.root) {
+                        labelContainer.innerHTML = '<span class="text-amber-400">R</span>';
+                    } else if (highlightState.compare.includes(idx)) {
+                        labelContainer.innerHTML = '<span class="text-purple-400">C</span>';
+                    }
+                } else {
+                    labelContainer.innerHTML = '<span class="text-green-500">✓</span>';
+                }
+
+                itemDiv.appendChild(idxDiv);
+                itemDiv.appendChild(bar);
+                itemDiv.appendChild(labelContainer);
+                barsContainer.appendChild(itemDiv);
+            });
+
+
+            // ==================== 2. 渲染 SVG 二元樹 ====================
+            const treeSvg = document.getElementById('tree-svg');
+            treeSvg.innerHTML = '';
+
+            // 完全二元樹各節點在 500x280 的 SVG 空間中的座標映射計算
+            const getNodeCoordinates = (index) => {
+                // 完全二元樹層級與層內偏移
+                const level = Math.floor(Math.log2(index + 1));
+                const totalNodesInLevel = Math.pow(2, level);
+                const indexInLevel = index - totalNodesInLevel + 1;
+                
+                // 動態計算 X，根據層級分割空間
+                const spacingX = 500 / totalNodesInLevel;
+                const x = spacingX * indexInLevel + (spacingX / 2);
+                
+                // 固定層高
+                const y = 35 + level * 65;
+                return { x, y };
+            };
+
+            // 畫線 (二元樹分枝)
+            for (let idx = 1; idx < ARRAY_SIZE; idx++) {
+                const parentIdx = Math.floor((idx - 1) / 2);
+                const parentCoord = getNodeCoordinates(parentIdx);
+                const childCoord = getNodeCoordinates(idx);
+
+                // 只有當子節點與父節點都還在堆積範圍內時，線條才亮顯
+                const inHeap = (idx < heapSize);
+
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', parentCoord.x);
+                line.setAttribute('y1', parentCoord.y);
+                line.setAttribute('x2', childCoord.x);
+                line.setAttribute('y2', childCoord.y);
+                line.setAttribute('stroke', inHeap ? '#475569' : '#1e293b');
+                line.setAttribute('stroke-width', inHeap ? '2.5' : '1.5');
+                if (!inHeap) {
+                    line.setAttribute('stroke-dasharray', '3,3');
+                }
+                treeSvg.appendChild(line);
+            }
+
+            // 畫節點圓圈與文字
+            array.forEach((val, idx) => {
+                const coord = getNodeCoordinates(idx);
+                const inHeap = (idx < heapSize);
+
+                // 判定節點圓圈填滿顏色
+                let nodeColor = '#334155'; // 預設：不在堆積
+                let strokeColor = '#475569';
+                let textColor = '#cbd5e1';
+
+                if (isFullySorted || !inHeap) {
+                    nodeColor = '#14532d'; // 已經脫離堆積，已完成排序
+                    strokeColor = '#22c55e';
+                    textColor = '#86efac';
+                } else if (highlightState.swap.includes(idx)) {
+                    nodeColor = '#7f1d1d'; // 交換中
+                    strokeColor = '#ef4444';
+                    textColor = '#fca5a5';
+                } else if (highlightState.compare.includes(idx)) {
+                    nodeColor = '#581c87'; // 比較中
+                    strokeColor = '#a855f7';
+                    textColor = '#e9d5ff';
+                } else if (idx === highlightState.root) {
+                    nodeColor = '#78350f'; // 根節點
+                    strokeColor = '#fbbf24';
+                    textColor = '#fde68a';
+                } else {
+                    nodeColor = '#0f172a'; // 還在堆積中，等待處理
+                    strokeColor = '#d97706'; // 堆積框線琥珀色
+                    textColor = '#fbbf24';
+                }
+
+                // 節點 G 群組
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.setAttribute('class', 'cursor-pointer');
+
+                // 外圈圓形
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', coord.x);
+                circle.setAttribute('cy', coord.y);
+                circle.setAttribute('r', '17');
+                circle.setAttribute('fill', nodeColor);
+                circle.setAttribute('stroke', strokeColor);
+                circle.setAttribute('stroke-width', '2.5');
+                circle.setAttribute('class', 'transition-all duration-300');
+                g.appendChild(circle);
+
+                // 節點內數值
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', coord.x);
+                text.setAttribute('y', coord.y + 4);
+                text.setAttribute('fill', textColor);
+                text.setAttribute('font-size', '11px');
+                text.setAttribute('font-weight', 'bold');
+                text.setAttribute('text-anchor', 'middle');
+                text.textContent = val;
+                g.appendChild(text);
+
+                // 節點索引小標籤 (貼心展示陣列 index)
+                const indexText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                indexText.setAttribute('x', coord.x);
+                indexText.setAttribute('y', coord.y - 20);
+                indexText.setAttribute('fill', '#94a3b8');
+                indexText.setAttribute('font-size', '8px');
+                indexText.setAttribute('font-mono', 'true');
+                indexText.setAttribute('text-anchor', 'middle');
+                indexText.textContent = `[${idx}]`;
+                g.appendChild(indexText);
+
+                treeSvg.appendChild(g);
+            });
+
+
+            // ==================== 3. 更新 C++ 程式碼行高亮 ====================
+            document.querySelectorAll('[id^="code-line-"]').forEach(lineDiv => {
+                lineDiv.classList.remove('bg-amber-950/60', 'border-l-amber-500');
+                lineDiv.classList.add('border-l-transparent');
+            });
+            activeLines.forEach(lineNum => {
+                const lineDiv = document.getElementById(`code-line-${lineNum}`);
+                if (lineDiv) {
+                    lineDiv.classList.add('bg-amber-950/60', 'border-l-amber-500');
+                    lineDiv.classList.remove('border-l-transparent');
+                }
+            });
+        }
+
+        // 按鈕啟用狀態管理
+        function updateNavigationState() {
+            document.getElementById('btn-prev').disabled = (currentStep <= -1);
+            document.getElementById('btn-next').disabled = (currentStep >= actions.length - 1);
+        }
+
+        // 更新播放按鈕的圖示 (Play / Pause)
+        function updatePlayButtonUI() {
+            const playIcon = document.getElementById('play-icon');
+            if (isPlaying) {
+                playIcon.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
+            } else {
+                playIcon.innerHTML = `<path d="M8 5v14l11-7z"/>`;
+            }
+        }
+
+        // 自動播放邏輯
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            updatePlayButtonUI();
+
+            if (isPlaying) {
+                if (currentStep >= actions.length - 1) {
+                    currentStep = -1; // 重頭播放
+                }
+                runTimer();
+            } else {
+                if (timer) clearInterval(timer);
+            }
+        }
+
+        function runTimer() {
+            if (timer) clearInterval(timer);
+            timer = setInterval(() => {
+                if (currentStep < actions.length - 1) {
+                    currentStep++;
+                    applyStep(currentStep);
+                } else {
+                    isPlaying = false;
+                    updatePlayButtonUI();
+                    clearInterval(timer);
+                }
+            }, speed);
+        }
+
+        // 設定控制項監聽器
+        function setupEventListeners() {
+            document.getElementById('btn-play').addEventListener('click', togglePlay);
+
+            document.getElementById('btn-next').addEventListener('click', () => {
+                isPlaying = false;
+                updatePlayButtonUI();
+                if (timer) clearInterval(timer);
+                if (currentStep < actions.length - 1) {
+                    currentStep++;
+                    applyStep(currentStep);
+                }
+            });
+
+            document.getElementById('btn-prev').addEventListener('click', () => {
+                isPlaying = false;
+                updatePlayButtonUI();
+                if (timer) clearInterval(timer);
+                if (currentStep > -1) {
+                    currentStep--;
+                    applyStep(currentStep);
+                }
+            });
+
+            document.getElementById('btn-reset').addEventListener('click', generateArray);
+
+            const speedSlider = document.getElementById('speed-slider');
+            speedSlider.addEventListener('input', (e) => {
+                speed = 1600 - Number(e.target.value);
+                if (isPlaying) {
+                    runTimer();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
