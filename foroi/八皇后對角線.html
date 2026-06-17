@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>八皇后對角線座標互動教學</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1 / 1;
+            border: 4px solid #333;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        /* 棋盤底色 */
+        .cell.light { background-color: #f0d9b5; color: #555; }
+        .cell.dark { background-color: #b58863; color: #ddd; }
+        
+        /* 高亮效果 */
+        .cell.target { 
+            background-color: #fbbf24 !important; /* 黃色 */
+            color: #000 !important;
+            transform: scale(1.05);
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        .cell.highlight-d1 { 
+            background-color: #fca5a5 !important; /* 紅色 - 主對角線 */
+            color: #991b1b !important;
+        }
+        .cell.highlight-d2 { 
+            background-color: #93c5fd !important; /* 藍色 - 副對角線 */
+            color: #1e3a8a !important;
+        }
+        .cell.highlight-both {
+            /* 如果重疊（雖然除了目標點不會有重疊，但防呆） */
+            background-color: #c4b5fd !important; 
+        }
+
+        /* 標籤小字 */
+        .math-label {
+            position: absolute;
+            bottom: 2px;
+            font-size: 0.7rem;
+            opacity: 0.8;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen p-4 md:p-8 font-sans text-slate-800">
+
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-extrabold text-center text-slate-800 mb-2">♕ 八皇后：對角線座標互動解密</h1>
+        <p class="text-center text-slate-500 mb-8">將滑鼠游標移動到棋盤上的任何一個格子，觀察右側的數學變化！</p>
+
+        <div class="flex flex-col lg:flex-row gap-8 items-start">
+            
+            <!-- 左側：棋盤 -->
+            <div class="w-full lg:w-1/2 flex justify-center flex-col items-center">
+                <div id="board" class="board rounded-sm"></div>
+                <div class="mt-4 flex gap-4 text-sm font-semibold">
+                    <div class="flex items-center gap-1"><div class="w-4 h-4 bg-yellow-400 border border-black"></div> 游標位置</div>
+                    <div class="flex items-center gap-1"><div class="w-4 h-4 bg-red-300 border border-black"></div> 主對角線 (\)</div>
+                    <div class="flex items-center gap-1"><div class="w-4 h-4 bg-blue-300 border border-black"></div> 副對角線 (/)</div>
+                </div>
+            </div>
+
+            <!-- 右側：數學解釋面板 -->
+            <div class="w-full lg:w-1/2 flex flex-col gap-4">
+                
+                <!-- 當前座標狀態 -->
+                <div class="bg-white p-5 rounded-xl shadow-md border-l-4 border-yellow-400">
+                    <h2 class="text-xl font-bold mb-2">📍 當前格子 (row, col)</h2>
+                    <p class="text-3xl font-mono text-slate-700" id="current-coord">請移動滑鼠...</p>
+                </div>
+
+                <!-- 副對角線解釋 -->
+                <div class="bg-blue-50 p-5 rounded-xl shadow-md border border-blue-200 border-l-4 border-l-blue-500">
+                    <h2 class="text-xl font-bold text-blue-800 mb-2 flex items-center gap-2">
+                        <span>↗️ 副對角線陣列：</span>
+                        <code class="bg-blue-100 px-2 py-1 rounded text-blue-900">d2[row + col]</code>
+                    </h2>
+                    <p class="mb-3 text-slate-700">規律：這條藍色斜線上所有的格子，把它們的 <b>row 和 col 相加</b>，結果都是一模一樣的！</p>
+                    <div class="bg-white p-3 rounded border border-blue-100 font-mono text-sm h-32 overflow-y-auto" id="d2-math">
+                        等您移動滑鼠來驗證...
+                    </div>
+                </div>
+
+                <!-- 主對角線解釋 -->
+                <div class="bg-red-50 p-5 rounded-xl shadow-md border border-red-200 border-l-4 border-l-red-500">
+                    <h2 class="text-xl font-bold text-red-800 mb-2 flex items-center gap-2">
+                        <span>↘️ 主對角線陣列：</span>
+                        <code class="bg-red-100 px-2 py-1 rounded text-red-900">d1[row - col + 7]</code>
+                    </h2>
+                    <p class="mb-2 text-slate-700">規律：這條紅色斜線上的格子，把它們的 <b>row 減去 col</b>，結果都是一樣的。</p>
+                    <p class="mb-3 text-slate-700 text-sm bg-red-100 p-2 rounded inline-block">
+                        ⚠️ 為什麼要 +7？因為相減可能是負數（陣列索引不能是負的），+7 是為了將所有結果平移到 0~14 之間！
+                    </p>
+                    <div class="bg-white p-3 rounded border border-red-100 font-mono text-sm h-40 overflow-y-auto" id="d1-math">
+                        等您移動滑鼠來驗證...
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const N = 8;
+        const boardEl = document.getElementById('board');
+        const coordEl = document.getElementById('current-coord');
+        const d2MathEl = document.getElementById('d2-math');
+        const d1MathEl = document.getElementById('d1-math');
+        
+        // 生成 8x8 棋盤
+        for (let r = 0; r < N; r++) {
+            for (let c = 0; c < N; c++) {
+                const cell = document.createElement('div');
+                cell.className = `cell ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
+                cell.id = `cell-${r}-${c}`;
+                
+                // 顯示座標
+                cell.innerHTML = `${r},${c}`;
+                
+                // 綁定事件
+                cell.addEventListener('mouseenter', () => handleHover(r, c));
+                
+                boardEl.appendChild(cell);
+            }
+        }
+
+        // 當滑鼠移開棋盤時清理
+        boardEl.addEventListener('mouseleave', () => {
+            clearHighlights();
+            coordEl.innerText = "請移動滑鼠...";
+            d2MathEl.innerHTML = "等您移動滑鼠來驗證...";
+            d1MathEl.innerHTML = "等您移動滑鼠來驗證...";
+        });
+
+        function clearHighlights() {
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.classList.remove('target', 'highlight-d1', 'highlight-d2');
+            });
+        }
+
+        function handleHover(targetR, targetC) {
+            clearHighlights();
+            
+            // 標記目標點
+            document.getElementById(`cell-${targetR}-${targetC}`).classList.add('target');
+            coordEl.innerHTML = `(${targetR}, ${targetC})`;
+
+            // 計算目標的對角線特徵值
+            const targetD2Sum = targetR + targetC;
+            const targetD1Diff = targetR - targetC;
+            const targetD1Index = targetR - targetC + (N - 1);
+
+            let d2Log = `<div class="font-bold text-blue-600 mb-1">目標格子 (${targetR}, ${targetC}) ➔ ${targetR} + ${targetC} = ${targetD2Sum}</div><hr class="my-1 border-blue-200">`;
+            let d1Log = `<div class="font-bold text-red-600 mb-1">目標格子 (${targetR}, ${targetC}) ➔ ${targetR} - ${targetC} = ${targetD1Diff}</div><hr class="my-1 border-red-200">`;
+
+            // 遍歷所有格子，找出同一條對角線上的小夥伴
+            for (let r = 0; r < N; r++) {
+                for (let c = 0; c < N; c++) {
+                    if (r === targetR && c === targetC) continue; // 跳過目標自己
+
+                    const cell = document.getElementById(`cell-${r}-${c}`);
+                    
+                    // 檢查副對角線 (/)
+                    if (r + c === targetD2Sum) {
+                        cell.classList.add('highlight-d2');
+                        d2Log += `<div>格子 (${r}, ${c}) ➔ <span class="text-blue-600">${r} + ${c} = ${r+c}</span></div>`;
+                    }
+                    
+                    // 檢查主對角線 (\)
+                    if (r - c === targetD1Diff) {
+                        cell.classList.add('highlight-d1');
+                        d1Log += `<div>格子 (${r}, ${c}) ➔ <span class="text-red-600">${r} - ${c} = ${r-c}</span></div>`;
+                    }
+                }
+            }
+
+            // 更新面板文字
+            d2Log += `<div class="mt-2 pt-1 border-t border-blue-200 font-bold">結論：這條線由陣列 <span class="bg-blue-200 px-1 rounded">d2[${targetD2Sum}]</span> 代表。</div>`;
+            d2MathEl.innerHTML = d2Log;
+
+            d1Log += `<div class="mt-2 pt-1 border-t border-red-200 font-bold">陣列索引不能是 ${targetD1Diff}！所以統一加上 N-1 (即 7)</div>`;
+            d1Log += `<div class="font-bold">結論：這條線由陣列 <span class="bg-red-200 px-1 rounded">d1[${targetD1Diff} + 7] = d1[${targetD1Index}]</span> 代表。</div>`;
+            d1MathEl.innerHTML = d1Log;
+        }
+
+        // 初始化預設指著一個格子，避免畫面空空的
+        handleHover(3, 4);
+    </script>
+</body>
+</html>

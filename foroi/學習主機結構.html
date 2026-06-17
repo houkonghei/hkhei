@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>電腦主機硬體互動學習</title>
+    <style>
+        /* 全局變數與基礎設定 */
+        :root {
+            --bg-color: #f0fdf4;
+            --case-bg: #0f172a;
+            --case-border: #334155;
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --text-dark: #0f172a;
+            --text-light: #f8fafc;
+            --panel-bg: #ffffff;
+            --hw-border: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            color: var(--text-dark);
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        p.subtitle {
+            color: #64748b;
+            font-size: 1.1rem;
+        }
+
+        /* 主容器：包含機殼與資訊面板 */
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                flex-direction: row;
+                align-items: stretch;
+            }
+        }
+
+        /* 左側：電腦機殼藍圖 (Blueprint) */
+        .pc-case-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1000px; /* 增加一點立體感 */
+        }
+
+        .case-blueprint {
+            position: relative;
+            width: 100%;
+            max-width: 380px;
+            aspect-ratio: 3 / 4;
+            background-color: var(--case-bg);
+            /* 優化：加入工程網格背景 */
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            border: 12px solid var(--case-border);
+            border-radius: 12px;
+            box-shadow: 
+                inset 0 0 40px rgba(0,0,0,0.9), 
+                0 20px 25px -5px rgba(0, 0, 0, 0.15),
+                0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            overflow: hidden; /* 確保內部發光不會溢出 */
+        }
+
+        /* 機殼內部玻璃反光效果 */
+        .case-blueprint::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0) 60%);
+            pointer-events: none;
+            border-radius: 4px;
+            z-index: 20; /* 反光層在最上層 */
+        }
+
+        /* --- 硬體組件在機殼內的絕對定位設計 --- */
+        .bp-item {
+            position: absolute;
+            background-color: rgba(248, 250, 252, 0.05);
+            border: 2px solid var(--hw-border);
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+            font-weight: bold;
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(4px);
+            /* 優化：重置 button 預設樣式 */
+            font-family: inherit;
+            outline: none;
+            padding: 0;
+        }
+
+        /* 優化：鍵盤導航的無障礙焦點提示 */
+        .bp-item:focus-visible {
+            box-shadow: 0 0 0 3px var(--primary-hover);
+            border-color: white;
+            color: white;
+        }
+
+        /* 滑鼠懸停效果 */
+        .bp-item:hover {
+            background-color: rgba(16, 185, 129, 0.2);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        /* 選中時的發光效果 */
+        .bp-item.active {
+            background-color: rgba(16, 185, 129, 0.4);
+            border-color: var(--primary);
+            color: white;
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.6), inset 0 0 10px rgba(16, 185, 129, 0.3);
+            z-index: 10;
+        }
+
+        /* 動畫箭頭指向效果 */
+        @keyframes bounceDown {
+            0%, 100% { transform: translate(-50%, 0); }
+            50% { transform: translate(-50%, -8px); }
+        }
+
+        .bp-item.active::before {
+            content: '👇'; 
+            position: absolute;
+            top: -35px; 
+            left: 50%;
+            font-size: 28px;
+            animation: bounceDown 1s cubic-bezier(0.28, 0.84, 0.42, 1) infinite;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+            pointer-events: none; 
+        }
+
+        /* 各別硬體的位置與大小 */
+        .bp-mb {
+            top: 5%; left: 5%; width: 90%; height: 70%;
+            border: 2px dashed #475569;
+            background-color: rgba(51, 65, 85, 0.2);
+            z-index: 1; 
+            align-items: flex-start;
+            padding-top: 8px;
+        }
+        .bp-mb.active::before { top: -15px; left: 15%; } 
+
+        .bp-cpu {
+            top: 15%; left: 35%; width: 22%; height: 14%;
+            z-index: 2;
+        }
+
+        .bp-cooler {
+            top: 5%; left: 75%; width: 20%; height: 35%;
+            z-index: 2;
+            border-style: dotted; 
+        }
+
+        .bp-ram {
+            top: 12%; left: 60%; width: 10%; height: 20%;
+            z-index: 2;
+        }
+
+        .bp-gpu {
+            top: 42%; left: 10%; width: 75%; height: 16%;
+            z-index: 3;
+            border-left: 8px solid var(--hw-border); 
+        }
+
+        .bp-storage {
+            top: 62%; left: 60%; width: 25%; height: 8%;
+            z-index: 2;
+        }
+
+        .bp-psu {
+            bottom: 3%; left: 5%; width: 90%; height: 18%;
+            z-index: 2;
+            border: 2px solid #94a3b8;
+            background-color: rgba(15, 23, 42, 0.8);
+        }
+
+        /* --- 右側：資訊面板與圖片 --- */
+        .info-panel {
+            flex: 1;
+            background-color: var(--panel-bg);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+            border-top: 6px solid var(--primary);
+            display: flex;
+            flex-direction: column;
+            min-height: 420px;
+        }
+
+        .info-content {
+            opacity: 1;
+            transition: opacity 0.25s ease-in-out, transform 0.25s ease-in-out;
+            transform: translateY(0);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        /* 優化：加入輕微的位移動畫使切換更生動 */
+        .info-content.fade {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #94a3b8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 1.5rem;
+            flex: 1;
+        }
+
+        .hardware-img {
+            width: 100%;
+            height: 240px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            /* 預防載入時的破圖感 */
+            background-color: #f1f5f9; 
+        }
+
+        .info-title {
+            color: var(--primary-hover);
+            font-size: 1.8rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .info-tag {
+            display: inline-block;
+            background-color: #d1fae5;
+            color: #065f46;
+            padding: 0.4rem 1rem;
+            border-radius: 999px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-bottom: 1.2rem;
+            letter-spacing: 0.5px;
+        }
+
+        .info-desc {
+            font-size: 1.1rem;
+            line-height: 1.7;
+            color: #475569;
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🖥️ 電腦主機透視圖鑑</h1>
+        <p class="subtitle">點擊或使用鍵盤導航左側零件，探索真實照片與功能！</p>
+    </header>
+
+    <div class="container">
+        <!-- 左側：視覺化主機內部藍圖 -->
+        <div class="pc-case-wrapper">
+            <div class="case-blueprint">
+                <!-- 優化：將 div 改為 button，支援鍵盤 tab 切換 -->
+                <button class="bp-item bp-mb" onclick="selectHardware('mb', this)" aria-label="查看主機板資訊">主機板</button>
+                <button class="bp-item bp-cpu" onclick="selectHardware('cpu', this)" aria-label="查看 CPU 資訊">CPU</button>
+                <button class="bp-item bp-cooler" onclick="selectHardware('cooler', this)" aria-label="查看散熱風扇資訊">散熱風扇</button>
+                <button class="bp-item bp-ram" onclick="selectHardware('ram', this)" aria-label="查看記憶體資訊">RAM</button>
+                <button class="bp-item bp-gpu" onclick="selectHardware('gpu', this)" aria-label="查看顯示卡資訊">顯示卡 (GPU)</button>
+                <button class="bp-item bp-storage" onclick="selectHardware('storage', this)" aria-label="查看儲存硬碟資訊">SSD 硬碟</button>
+                <button class="bp-item bp-psu" onclick="selectHardware('psu', this)" aria-label="查看電源供應器資訊">電源</button>
+            </div>
+        </div>
+
+        <!-- 右側：資訊與圖片顯示區 -->
+        <div class="info-panel" aria-live="polite">
+            <div id="infoDisplay" class="info-content">
+                <div class="empty-state">
+                    <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    <h2>尚未選擇硬體</h2>
+                    <p>請點擊左側主機內的方塊，開始探索內部構造！</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 硬體資料庫
+        const hardwareData = {
+            cpu: {
+                name: "CPU (中央處理器)",
+                tag: "電腦的大腦",
+                imageUrl: "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800&q=80",
+                desc: "CPU 是電腦的核心，負責執行程式碼、進行數學運算和邏輯判斷。圖片中這塊金屬方形晶片會安裝在主機板正中央，效能越高，處理多工的速度就越快。"
+            },
+            mb: {
+                name: "Motherboard (主機板)",
+                tag: "電腦的骨架與神經網路",
+                imageUrl: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80",
+                desc: "主機板是一塊佈滿精密電路的大型電路板。你可以看到上面有很多插槽，所有的硬體組件（CPU、記憶體、顯示卡）都必須插在它上面，讓各零件能互相通訊。"
+            },
+            ram: {
+                name: "RAM (隨機存取記憶體)",
+                tag: "電腦的短期工作桌",
+                imageUrl: "https://cdn.mos.cms.futurecdn.net/7dr4ML5wSoiYJJgDNTprcR-1200-80.jpg",
+                desc: "長條狀的記憶體模組。它提供極高的讀寫速度，用來暫存 CPU 正在處理的資料（如你開啟的分頁、遊戲畫面）。電源關閉後資料就會消失，容量越大電腦越不卡頓。"
+            },
+            gpu: {
+                name: "GPU (顯示卡 / 圖形處理器)",
+                tag: "電腦的畫家",
+                imageUrl: "https://images.unsplash.com/photo-1591488320449-011701bb6704?w=800&q=80",
+                desc: "體積龐大且通常帶有自己專屬風扇的組件。專門負責渲染影像、影片和 3D 圖形。玩 3A 遊戲、3D 建模或進行 AI 運算時，都需要一張強大的獨立顯示卡。"
+            },
+            storage: {
+                name: "SSD / HDD (儲存裝置)",
+                tag: "電腦的永久倉庫",
+                imageUrl: "https://images.unsplash.com/photo-1531492746076-161ca9bcad58?w=800&q=80",
+                desc: "用來永久保存作業系統、遊戲和檔案。現代主流是圖片中的 M.2 SSD 或 2.5吋固態硬碟，讀取速度極快，能讓電腦在幾秒鐘內開機完畢。"
+            },
+            cooler: {
+                name: "Cooler (散熱器/風扇)",
+                tag: "電腦的空調系統",
+                imageUrl: "https://www.dngs.com.tw/upload/20200604141304wjm481.jpg",
+                desc: "硬體在高速運作時會產生高溫。散熱風扇或水冷系統負責將熱量排出機殼外。有的安裝在 CPU 上方，有的安裝在機殼前/後方，防止硬體過熱當機。"
+            },
+            psu: {
+                name: "PSU (電源供應器)",
+                tag: "電腦的心臟",
+                imageUrl: "https://www1.yohohongkong.com/images/upload/Image/1596150017163873609.jpg",
+                desc: "通常安裝在機殼底部。負責將牆上插座的交流電轉換成電腦各零件需要的直流電。會延伸出許多線材連接到主機板、顯示卡和硬碟上，提供穩定動力。"
+            }
+        };
+
+        // 優化：預載所有圖片，確保點擊時不會有延遲或空白載入時間
+        Object.values(hardwareData).forEach(data => {
+            const img = new Image();
+            img.src = data.imageUrl;
+        });
+
+        const infoDisplay = document.getElementById('infoDisplay');
+        let currentActiveBtn = null;
+        let animationTimeout = null; // 優化：用於清除連續點擊造成的動畫衝突
+
+        function selectHardware(partKey, element) {
+            // 避免重複點擊當前已選中的硬體
+            if (currentActiveBtn === element) return;
+
+            // 處理按鈕狀態
+            if (currentActiveBtn) {
+                currentActiveBtn.classList.remove('active');
+            }
+            element.classList.add('active');
+            currentActiveBtn = element;
+
+            const data = hardwareData[partKey];
+
+            // 執行淡出
+            infoDisplay.classList.add('fade');
+
+            // 優化：清除之前的計時器，防止快速連續點擊時的錯亂
+            if (animationTimeout) {
+                clearTimeout(animationTimeout);
+            }
+
+            // 等待淡出後更換內容並淡入
+            animationTimeout = setTimeout(() => {
+                infoDisplay.innerHTML = `
+                    <img src="${data.imageUrl}" alt="真實的 ${data.name} 照片" class="hardware-img">
+                    <h2 class="info-title">${data.name}</h2>
+                    <div>
+                        <span class="info-tag">${data.tag}</span>
+                    </div>
+                    <p class="info-desc">${data.desc}</p>
+                `;
+                infoDisplay.classList.remove('fade');
+            }, 250); // 對齊 CSS 中定義的 0.25s 轉場時間
+        }
+    </script>
+</body>
+</html>

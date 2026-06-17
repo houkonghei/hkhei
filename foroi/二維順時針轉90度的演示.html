@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ 二維陣列順時針 90 度旋轉演示 (N x N)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 { color: #2c3e50; margin-bottom: 10px; text-align: center; }
+        
+        .setup-panel {
+            background-color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .setup-panel input {
+            width: 60px;
+            padding: 5px;
+            font-size: 16px;
+            text-align: center;
+        }
+        .setup-panel button {
+            background-color: #2196f3;
+        }
+        .setup-panel button:hover { background-color: #0b7dda; }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 10px;
+        }
+        .matrix-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .grid {
+            display: grid;
+            gap: 5px;
+            background-color: #ddd;
+            padding: 5px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .cell {
+            width: 55px;
+            height: 55px;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .coord {
+            font-size: 10px;
+            color: #888;
+            position: absolute;
+            bottom: 2px;
+            font-weight: normal;
+        }
+        
+        /* 狀態顏色 */
+        .highlight-src { background-color: #ffdcb5; transform: scale(1.05); border: 2px solid #ff9800; z-index: 2; }
+        .highlight-dest { background-color: #c8e6c9; transform: scale(1.05); border: 2px solid #4caf50; z-index: 2; }
+        .filled { background-color: #e8f5e9; color: #2e7d32; }
+        .empty { color: transparent; }
+        
+        .info-panel {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+        .formula {
+            font-size: 20px;
+            font-family: monospace;
+            background-color: #282c34;
+            color: #61afef;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0;
+            line-height: 1.5;
+        }
+        .highlight-text { color: #e06c75; font-weight: bold; }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #45a049; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        #btn-reset { background-color: #f44336; }
+        #btn-reset:hover { background-color: #da190b; }
+    </style>
+</head>
+<body>
+
+    <h1>二維陣列 順時針旋轉 90 度</h1>
+    
+    <div class="setup-panel">
+        <label for="input-n"><strong>設定陣列大小 (N)：</strong></label>
+        <input type="number" id="input-n" value="3" min="2" max="8">
+        <button id="btn-build">套用並產生新陣列</button>
+    </div>
+
+    <div class="container">
+        <div class="matrix-wrapper">
+            <h3>原陣列 temp</h3>
+            <div class="grid" id="grid-temp"></div>
+        </div>
+        <div class="matrix-wrapper">
+            <h3>目標陣列 a</h3>
+            <div class="grid" id="grid-a"></div>
+        </div>
+    </div>
+
+    <div class="info-panel">
+        <h2 id="step-title">準備開始</h2>
+        <div class="formula" id="formula-display">請點擊下一步</div>
+        <p id="calculation-details" style="font-size: 16px; line-height: 1.6;">點擊「下一步」開始觀察座標變化</p>
+    </div>
+
+    <div class="controls">
+        <button id="btn-reset">重置</button>
+        <button id="btn-prev" disabled>上一步</button>
+        <button id="btn-next">下一步</button>
+        <button id="btn-play">自動播放</button>
+    </div>
+
+    <script>
+        let n = 3;
+        let currentStep = -1;
+        let totalSteps = n * n;
+        let playInterval = null;
+        let sourceData = [];
+
+        const gridTemp = document.getElementById('grid-temp');
+        const gridA = document.getElementById('grid-a');
+        
+        // 產生連續數字的二維陣列資料
+        function generateData() {
+            sourceData = [];
+            let counter = 1;
+            for (let i = 0; i < n; i++) {
+                let row = [];
+                for (let j = 0; j < n; j++) {
+                    row.push(counter++);
+                }
+                sourceData.push(row);
+            }
+            totalSteps = n * n;
+        }
+
+        // 初始化/重新建立網格 DOM
+        function initGrids() {
+            // 動態調整 Grid 排版
+            gridTemp.style.gridTemplateColumns = `repeat(${n}, 55px)`;
+            gridTemp.style.gridTemplateRows = `repeat(${n}, 55px)`;
+            gridA.style.gridTemplateColumns = `repeat(${n}, 55px)`;
+            gridA.style.gridTemplateRows = `repeat(${n}, 55px)`;
+
+            gridTemp.innerHTML = '';
+            gridA.innerHTML = '';
+            
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    // 原陣列
+                    const cellTemp = document.createElement('div');
+                    cellTemp.className = 'cell';
+                    cellTemp.id = `temp-${i}-${j}`;
+                    cellTemp.innerHTML = `${sourceData[i][j]}<span class="coord">(${i},${j})</span>`;
+                    gridTemp.appendChild(cellTemp);
+
+                    // 目標陣列
+                    const cellA = document.createElement('div');
+                    cellA.className = 'cell empty';
+                    cellA.id = `a-${i}-${j}`;
+                    cellA.innerHTML = `?<span class="coord">(${i},${j})</span>`;
+                    gridA.appendChild(cellA);
+                }
+            }
+            
+            currentStep = -1;
+            updateUI();
+        }
+
+        // 停止自動播放
+        function stopAutoPlay() {
+            if (playInterval) {
+                clearInterval(playInterval);
+                playInterval = null;
+                document.getElementById('btn-play').innerText = "自動播放";
+            }
+        }
+
+        // 更新畫面狀態
+        function updateUI() {
+            // 清除所有狀態
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.classList.remove('highlight-src', 'highlight-dest', 'filled');
+            });
+            document.querySelectorAll('#grid-a .cell').forEach(cell => {
+                cell.classList.add('empty');
+                cell.childNodes[0].nodeValue = '?';
+            });
+
+            if (currentStep === -1) {
+                document.getElementById('step-title').innerText = "準備開始";
+                document.getElementById('formula-display').innerHTML = 
+                    `通用公式：a[j][n - 1 - i] = temp[i][j]<br>` + 
+                    `<span style="color:#abb2bf; font-size:16px;">(當前 n = ${n})</span>`;
+                document.getElementById('calculation-details').innerText = "點擊「下一步」或「自動播放」開始觀察座標變化";
+            } else {
+                // 重繪目前步驟前的所有結果
+                for (let step = 0; step <= currentStep; step++) {
+                    const i = Math.floor(step / n);
+                    const j = step % n;
+                    const targetI = j;
+                    const targetJ = n - 1 - i;
+                    const val = sourceData[i][j];
+
+                    const destCell = document.getElementById(`a-${targetI}-${targetJ}`);
+                    destCell.classList.remove('empty');
+                    destCell.childNodes[0].nodeValue = val;
+                    
+                    if (step < currentStep) {
+                        destCell.classList.add('filled');
+                    } else if (step === currentStep) {
+                        // 當前步驟高亮
+                        const srcCell = document.getElementById(`temp-${i}-${j}`);
+                        srcCell.classList.add('highlight-src');
+                        destCell.classList.add('highlight-dest');
+
+                        // 更新資訊
+                        document.getElementById('step-title').innerText = `第 ${step + 1} / ${totalSteps} 步：搬移數字 ${val}`;
+                        document.getElementById('formula-display').innerHTML = 
+                            `a[<span class="highlight-text">${targetI}</span>][<span class="highlight-text">${n} - 1 - ${i}</span>] = temp[<span class="highlight-text">${i}</span>][<span class="highlight-text">${j}</span>];`;
+                        
+                        document.getElementById('calculation-details').innerHTML = 
+                            `目前來源座標： <strong>i = ${i}, j = ${j}</strong>。<br>` +
+                            `代入公式：目標列(Row)為 <strong>${targetI}</strong>，目標行(Column)為 ${n} - 1 - ${i} = <strong>${targetJ}</strong>。<br>` +
+                            `數字 ${val} 從 temp <strong>(${i}, ${j})</strong> 移動到 a 的 <strong>(${targetI}, ${targetJ})</strong>。`;
+                    }
+                }
+            }
+
+            // 更新按鈕啟用/停用狀態
+            document.getElementById('btn-prev').disabled = currentStep === -1;
+            document.getElementById('btn-next').disabled = currentStep === totalSteps - 1;
+            
+            if (currentStep === totalSteps - 1 && playInterval) {
+                stopAutoPlay();
+            }
+        }
+
+        // --- 事件監聽器 ---
+
+        // 套用新大小
+        document.getElementById('btn-build').addEventListener('click', () => {
+            const inputVal = parseInt(document.getElementById('input-n').value);
+            if (inputVal >= 2 && inputVal <= 8) {
+                n = inputVal;
+                stopAutoPlay();
+                generateData();
+                initGrids();
+            } else {
+                alert("為了最佳顯示效果，請輸入 2 到 8 之間的整數！");
+                document.getElementById('input-n').value = n; // 回復原本的合法值
+            }
+        });
+
+        document.getElementById('btn-next').addEventListener('click', () => {
+            if (currentStep < totalSteps - 1) {
+                currentStep++;
+                updateUI();
+            }
+        });
+
+        document.getElementById('btn-prev').addEventListener('click', () => {
+            if (currentStep > -1) {
+                currentStep--;
+                updateUI();
+            }
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            currentStep = -1;
+            stopAutoPlay();
+            updateUI();
+        });
+
+        document.getElementById('btn-play').addEventListener('click', function() {
+            if (playInterval) {
+                stopAutoPlay();
+            } else {
+                if (currentStep === totalSteps - 1) {
+                    currentStep = -1; // 若已到底，重頭播
+                    updateUI();
+                }
+                this.innerText = "暫停";
+                playInterval = setInterval(() => {
+                    if (currentStep < totalSteps - 1) {
+                        currentStep++;
+                        updateUI();
+                    } else {
+                        stopAutoPlay();
+                    }
+                }, 800); // 稍微調快到 0.8 秒一步，讓大陣列跑快一點
+            }
+        });
+
+        // 頁面載入時初始執行
+        generateData();
+        initGrids();
+    </script>
+</body>
+</html>

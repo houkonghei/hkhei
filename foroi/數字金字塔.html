@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數字金字塔 DP 動態規劃教學互動工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        .pyramid-row {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .cell {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans p-6">
+
+    <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-xl p-6 border border-slate-200">
+        <h1 class="text-2xl font-bold text-center text-indigo-600 mb-2">📐 數字金字塔：動態規劃 (DP) 視覺化教學</h1>
+        <p class="text-slate-500 text-center text-sm mb-6">透過「自底向上」的思考，觀察每一個格子的累積變化</p>
+
+        <div class="flex justify-center gap-4 mb-6">
+            <button id="btn-prev" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded text-sm font-semibold disabled:opacity-50">上一步</button>
+            <button id="btn-next" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-semibold">下一步</button>
+            <button id="btn-auto" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-sm font-semibold">自動播放</button>
+            <button id="btn-reset" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded text-sm font-semibold">重置</button>
+        </div>
+
+        <div class="w-full bg-slate-100 rounded-full h-2 mb-6">
+            <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-2 border border-slate-100 rounded-lg p-4 bg-slate-900 flex flex-col justify-center min-h-[400px]">
+                <div id="pyramid-container"></div>
+            </div>
+
+            <div class="flex flex-col justify-between border border-slate-200 rounded-lg p-4 bg-slate-50">
+                <div>
+                    <h3 class="font-bold text-lg text-slate-700 mb-3 border-b pb-2 border-slate-200">🤖 當前演算法狀態</h3>
+                    <div id="explanation" class="text-sm text-slate-600 leading-relaxed min-h-[150px]">
+                        點擊「下一步」開始觀察 DP 的推導過程！
+                    </div>
+                </div>
+                <div class="mt-4 p-3 bg-indigo-50 border border-indigo-100 rounded text-xs text-indigo-700">
+                    <span class="font-bold">圖例說明：</span><br>
+                    <span class="inline-block w-3 h-3 bg-amber-400 rounded-full mr-1"></span> 當前計算點 <br>
+                    <span class="inline-block w-3 h-3 bg-cyan-400 rounded-full mr-1"></span> 決策比對來源（下方與右下）<br>
+                    <span class="inline-block w-3 h-3 bg-emerald-500 rounded-full mr-1"></span> 已完成 DP 計算的節點
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 範例輸入數據
+        const triangle = [
+            [13],
+            [11, 8],
+            [12, 7, 26],
+            [6, 14, 15, 8],
+            [12, 7, 13, 24, 11]
+        ];
+
+        let steps = [];
+        let currentStepIdx = 0;
+        let autoPlayTimer = null;
+
+        // 生成 DP 的每一步歷史紀錄
+        function generateSteps() {
+            steps = [];
+            let currentDP = JSON.parse(JSON.stringify(triangle));
+            
+            // 步驟 0：初始狀態
+            steps.push({
+                dp: JSON.parse(JSON.stringify(currentDP)),
+                active: null,
+                compare: [],
+                desc: "<b>【初始狀態】</b><br>這是一張原本的金字塔表。在動態規劃中，最底層（第 4 行）因為下方沒有數字了，所以它們的<b>最大累積和就是它們自己</b>。接下來我們將從倒數第二層（第 3 行）開始往上推算。"
+            });
+
+            // 自底向上計算
+            for (let i = 3; i >= 0; i--) {
+                for (let j = 0; j <= i; j++) {
+                    let leftChild = currentDP[i+1][j];
+                    let rightChild = currentDP[i+1][j+1];
+                    let chosen = Math.max(leftChild, rightChild);
+                    let originalVal = triangle[i][j];
+
+                    // 階段 1：比對狀態
+                    steps.push({
+                        dp: JSON.parse(JSON.stringify(currentDP)),
+                        active: [i, j],
+                        compare: [[i+1, j], [[i+1], j+1]],
+                        stage: 'comparing',
+                        desc: `<b>【正在決策】第 ${i} 行，第 ${j} 個數 (${originalVal})</b><br>檢查它下一步能走的兩個方向：<br>⬅️ 左下方累積最大值：<b>${leftChild}</b><br>➡️ 右下方累積最大值：<b>${rightChild}</b><br>我們應該選擇較大的那一個！`
+                    });
+
+                    // 實際更新 DP 值
+                    currentDP[i][j] = originalVal + chosen;
+
+                    // 階段 2：更新完成狀態
+                    steps.push({
+                        dp: JSON.parse(JSON.stringify(currentDP)),
+                        active: [i, j],
+                        compare: [[i+1, j], [i+1, j+1]],
+                        stage: 'updated',
+                        desc: `<b>【更新完成】</b><br>選擇了較大的路徑值 <b>${chosen}</b>！<br>加上原來的數字 ${originalVal}，得到這個位置的累積最大和為：<br><span class="text-lg font-bold text-emerald-600">${originalVal} + ${chosen} = ${currentDP[i][j]}</span>`
+                    });
+                }
+            }
+
+            // 最後一步：輸出答案
+            steps.push({
+                dp: JSON.parse(JSON.stringify(currentDP)),
+                active: [0, 0],
+                compare: [],
+                stage: 'final',
+                desc: "<b>【大功告成！】</b><br>演算法成功推導回金字塔頂端！頂點的數字已經變成了整個金字塔能得到的最大路徑和：<br><span class='text-2xl font-bold text-indigo-600'>max = " + currentDP[0][0] + "</span>"
+            });
+        }
+
+        // 渲染金字塔 UI
+        function render() {
+            const container = document.getElementById('pyramid-container');
+            container.innerHTML = '';
+            
+            const stepData = steps[currentStepIdx];
+            const dpMatrix = stepData.dp;
+
+            for (let i = 0; i < triangle.length; i++) {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'pyramid-row';
+
+                for (let j = 0; j <= i; j++) {
+                    const cellDiv = document.createElement('div');
+                    cellDiv.className = 'cell w-16 h-16 rounded-lg flex flex-col justify-center items-center relative border text-white font-bold shadow-md';
+                    
+                    // 顯示原始數字與 DP 數值
+                    cellDiv.innerHTML = `
+                        <span class="text-[10px] text-slate-400 absolute top-1 font-normal">原:${triangle[i][j]}</span>
+                        <span class="text-base mt-2">${dpMatrix[i][j]}</span>
+                    `;
+
+                    // 判斷顏色高亮
+                    let isStepCalculated = (i > 3) || (i === 3 && currentStepIdx > 0); 
+                    // 簡化邏輯：如果這個位置在當前步驟之前就已經被更新過，給予已完成的底色
+                    
+                    // 精確的高亮控制
+                    if (stepData.active && stepData.active[0] === i && stepData.active[1] === j) {
+                        if (stepData.stage === 'comparing') {
+                            cellDiv.className += ' bg-amber-400 text-slate-950 border-amber-500 scale-110 z-10';
+                        } else {
+                            cellDiv.className += ' bg-emerald-500 text-white border-emerald-600 scale-110 z-10';
+                        }
+                    } else if (stepData.compare.some(pos => pos[0] === i && pos[1] === j)) {
+                        cellDiv.className += ' bg-cyan-400 text-slate-950 border-cyan-500';
+                    } else {
+                        // 檢查該節點是否在當前歷史中已經算完了
+                        if (isNodeFinalized(i, j)) {
+                            cellDiv.className += ' bg-slate-800 text-emerald-400 border-emerald-800/40';
+                        } else {
+                            cellDiv.className += ' bg-slate-800 text-slate-300 border-slate-700';
+                        }
+                    }
+
+                    rowDiv.appendChild(cellDiv);
+                }
+                container.appendChild(rowDiv);
+            }
+
+            // 更新說明文字與按鈕狀態
+            document.getElementById('explanation').innerHTML = stepData.desc;
+            document.getElementById('btn-prev').disabled = currentStepIdx === 0;
+            document.getElementById('btn-next').disabled = currentStepIdx === steps.length - 1;
+            
+            // 更新進度條
+            const progress = (currentStepIdx / (steps.length - 1)) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+        }
+
+        function isNodeFinalized(r, c) {
+            // 透過檢查當前步驟的 DP 值是否已經不等於初始 triangle 值來快速判斷
+            if (r === 4) return true; // 最底層永遠是好的是基底
+            return steps[currentStepIdx].dp[r][c] !== triangle[r][c];
+        }
+
+        // 事件綁定
+        document.getElementById('btn-next').addEventListener('click', () => {
+            if (currentStepIdx < steps.length - 1) {
+                currentStepIdx++;
+                render();
+            }
+        });
+
+        document.getElementById('btn-prev').addEventListener('click', () => {
+            if (currentStepIdx > 0) {
+                currentStepIdx--;
+                render();
+            }
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            currentStepIdx = 0;
+            if(autoPlayTimer) clearInterval(autoPlayTimer);
+            document.getElementById('btn-auto').innerText = "自動播放";
+            render();
+        });
+
+        document.getElementById('btn-auto').addEventListener('click', () => {
+            if (autoPlayTimer) {
+                clearInterval(autoPlayTimer);
+                autoPlayTimer = null;
+                document.getElementById('btn-auto').innerText = "自動播放";
+            } else {
+                document.getElementById('btn-auto').innerText = "暫停";
+                autoPlayTimer = setInterval(() => {
+                    if (currentStepIdx < steps.length - 1) {
+                        currentStepIdx++;
+                        render();
+                    } else {
+                        clearInterval(autoPlayTimer);
+                        autoPlayTimer = null;
+                        document.getElementById('btn-auto').innerText = "自動播放";
+                    }
+                }, 1200);
+            }
+        });
+
+        // 初始化
+        generateSteps();
+        render();
+    </script>
+</body>
+</html>
