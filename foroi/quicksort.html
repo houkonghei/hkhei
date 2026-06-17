@@ -1,0 +1,408 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Play, Pause, SkipForward, SkipBack, RefreshCw } from 'lucide-react';
+
+const cppCode = `void quickSort(int arr[], int low, int high) {
+    if (low < high) {
+        // 找到基準點，並將陣列分區
+        int pi = partition(arr, low, high);
+        
+        // 遞迴排序左半部與右半部
+        quickSort(arr, low, pi - 1);
+        quickSort(arr, pi + 1, high);
+    }
+}
+
+int partition(int arr[], int low, int high) {
+    int pivot = arr[high];  // 選擇最右邊的元素為基準點 (pivot)
+    int i = (low - 1);      // i 指向小於 pivot 的最後一個元素
+
+    for (int j = low; j <= high - 1; j++) {
+        // 若當前元素小於基準點，則將它交換到左邊
+        if (arr[j] < pivot) {
+            i++;
+            swap(arr[i], arr[j]);
+        }
+    }
+    // 將基準點交換到正確的位置
+    swap(arr[i + 1], arr[high]);
+    return (i + 1);
+}`;
+
+const ARRAY_SIZE = 15;
+const MIN_VAL = 10;
+const MAX_VAL = 100;
+
+export default function App() {
+    const [initialArray, setInitialArray] = useState([]);
+    const [array, setArray] = useState([]);
+    const [actions, setActions] = useState([]);
+    const [currentStep, setCurrentStep] = useState(-1);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [speed, setSpeed] = useState(800); // ms
+    
+    // 視覺化狀態
+    const [pivotIdx, setPivotIdx] = useState(null);
+    const [compareIdx, setCompareIdx] = useState([]);
+    const [swapIdx, setSwapIdx] = useState([]);
+    const [sortedIdx, setSortedIdx] = useState(new Set());
+    const [activeLines, setActiveLines] = useState([]);
+    const [message, setMessage] = useState("點擊「產生新陣列」開始，或按下播放鍵觀察排序過程！");
+    const [boundary, setBoundary] = useState({ low: null, high: null, i: null });
+
+    const timerRef = useRef(null);
+
+    // 產生隨機陣列
+    const generateArray = useCallback(() => {
+        const newArr = Array.from({ length: ARRAY_SIZE }, () => 
+            Math.floor(Math.random() * (MAX_VAL - MIN_VAL + 1)) + MIN_VAL
+        );
+        setInitialArray([...newArr]);
+        setArray([...newArr]);
+        resetState();
+        calculateActions(newArr);
+    }, []);
+
+    useEffect(() => {
+        generateArray();
+    }, [generateArray]);
+
+    const resetState = () => {
+        setCurrentStep(-1);
+        setIsPlaying(false);
+        setPivotIdx(null);
+        setCompareIdx([]);
+        setSwapIdx([]);
+        setSortedIdx(new Set());
+        setActiveLines([]);
+        setMessage("準備就緒。");
+        setBoundary({ low: null, high: null, i: null });
+        if (timerRef.current) clearInterval(timerRef.current);
+    };
+
+    // 預先計算所有快排的動作步驟
+    const calculateActions = (arr) => {
+        let tempArr = [...arr];
+        let acts = [];
+        let sortedSet = new Set();
+
+        const partition = (low, high) => {
+            let pivot = tempArr[high];
+            acts.push({ 
+                type: 'setPivot', 
+                arr: [...tempArr], 
+                pivot: high, low, highVal: high, i: low - 1,
+                msg: `選定範圍 [${low}...${high}]。選擇最後一個元素 ${pivot} 作為基準點 (pivot)。`,
+                lines: [11] 
+            });
+
+            let i = (low - 1);
+            for (let j = low; j <= high - 1; j++) {
+                acts.push({
+                    type: 'compare',
+                    arr: [...tempArr],
+                    pivot: high, compare: [j], low, highVal: high, i,
+                    msg: `比較 arr[j]=${tempArr[j]} 與 pivot=${pivot}。`,
+                    lines: [16]
+                });
+
+                if (tempArr[j] < pivot) {
+                    i++;
+                    let tempMsg = `因為 ${tempArr[j]} < ${pivot}，所以 i 增加至 ${i}，並交換 arr[i] 與 arr[j]。`;
+                    // 執行交換
+                    let temp = tempArr[i];
+                    tempArr[i] = tempArr[j];
+                    tempArr[j] = temp;
+                    acts.push({
+                        type: 'swap',
+                        arr: [...tempArr],
+                        pivot: high, swap: [i, j], low, highVal: high, i,
+                        msg: tempMsg,
+                        lines: [17, 18]
+                    });
+                } else {
+                    acts.push({
+                        type: 'no_swap',
+                        arr: [...tempArr],
+                        pivot: high, compare: [j], low, highVal: high, i,
+                        msg: `因為 ${tempArr[j]} >= ${pivot}，不進行交換，繼續尋找。`,
+                        lines: [16]
+                    });
+                }
+            }
+            // 最後將 pivot 放到正確位置
+            let tempMsg = `尋找結束。將 pivot (${pivot}) 與 arr[i+1] (${tempArr[i+1]}) 交換，使左邊都比它小，右邊都比它大。`;
+            let temp = tempArr[i + 1];
+            tempArr[i + 1] = tempArr[high];
+            tempArr[high] = temp;
+            
+            acts.push({
+                type: 'swapPivot',
+                arr: [...tempArr],
+                pivot: i + 1, swap: [i + 1, high], low, highVal: high, i: i+1,
+                msg: tempMsg,
+                lines: [22, 23]
+            });
+            
+            sortedSet.add(i + 1);
+            acts.push({
+                type: 'sorted',
+                arr: [...tempArr],
+                sortedItem: i + 1,
+                sortedSet: new Set(sortedSet),
+                msg: `元素 ${pivot} 已到達最終正確的排序位置！`,
+                lines: [2, 3, 4]
+            });
+
+            return (i + 1);
+        };
+
+        const quickSortLogic = (low, high) => {
+            if (low < high) {
+                let pi = partition(low, high);
+                quickSortLogic(low, pi - 1);
+                quickSortLogic(pi + 1, high);
+            } else if (low === high) {
+                sortedSet.add(low);
+                acts.push({
+                    type: 'sorted',
+                    arr: [...tempArr],
+                    sortedItem: low,
+                    sortedSet: new Set(sortedSet),
+                    msg: `單一元素 ${tempArr[low]} 已在正確位置。`,
+                    lines: [1]
+                });
+            }
+        };
+
+        acts.push({ type: 'start', arr: [...tempArr], msg: "開始快速排序！", lines: [0] });
+        quickSortLogic(0, tempArr.length - 1);
+        acts.push({ type: 'done', arr: [...tempArr], msg: "排序完成！🎉", lines: [] });
+
+        setActions(acts);
+    };
+
+    // 應用步驟狀態
+    const applyStep = (stepIndex) => {
+        if (stepIndex < 0) {
+            setArray([...initialArray]);
+            setPivotIdx(null); setCompareIdx([]); setSwapIdx([]);
+            setBoundary({ low: null, high: null, i: null });
+            setActiveLines([]); setMessage("等待開始...");
+            setSortedIdx(new Set());
+            return;
+        }
+        
+        if (stepIndex >= actions.length) return;
+
+        const action = actions[stepIndex];
+        setArray(action.arr);
+        setActiveLines(action.lines || []);
+        setMessage(action.msg);
+
+        // 重置臨時視覺狀態
+        setCompareIdx([]);
+        setSwapIdx([]);
+
+        if (action.type === 'start') {
+            setPivotIdx(null);
+            setBoundary({ low: null, high: null, i: null });
+        } else if (action.type === 'setPivot') {
+            setPivotIdx(action.pivot);
+            setBoundary({ low: action.low, high: action.highVal, i: action.i });
+        } else if (action.type === 'compare' || action.type === 'no_swap') {
+            setCompareIdx(action.compare);
+            setBoundary({ low: action.low, high: action.highVal, i: action.i });
+        } else if (action.type === 'swap') {
+            setSwapIdx(action.swap);
+            setBoundary({ low: action.low, high: action.highVal, i: action.i });
+        } else if (action.type === 'swapPivot') {
+            setSwapIdx(action.swap);
+            setPivotIdx(action.pivot); // 更新 pivot 視覺位置
+        } else if (action.type === 'sorted') {
+            setSortedIdx(action.sortedSet);
+            setPivotIdx(null);
+            setBoundary({ low: null, high: null, i: null });
+        } else if (action.type === 'done') {
+            setSortedIdx(new Set(array.map((_, i) => i))); // 全部變綠
+            setBoundary({ low: null, high: null, i: null });
+        }
+    };
+
+    // 控制播放
+    useEffect(() => {
+        if (isPlaying) {
+            timerRef.current = setInterval(() => {
+                setCurrentStep(prev => {
+                    if (prev < actions.length - 1) return prev + 1;
+                    setIsPlaying(false);
+                    return prev;
+                });
+            }, speed);
+        } else {
+            if (timerRef.current) clearInterval(timerRef.current);
+        }
+        return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    }, [isPlaying, speed, actions.length]);
+
+    // 當步驟改變時應用畫面
+    useEffect(() => {
+        applyStep(currentStep);
+    }, [currentStep]);
+
+    const handlePlayPause = () => setIsPlaying(!isPlaying);
+    const handleNext = () => { setIsPlaying(false); if (currentStep < actions.length - 1) setCurrentStep(prev => prev + 1); };
+    const handlePrev = () => { setIsPlaying(false); if (currentStep > -1) setCurrentStep(prev => prev - 1); };
+
+    // 取得長條圖的顏色
+    const getBarColor = (index) => {
+        if (sortedIdx.has(index)) return 'bg-green-500';
+        if (swapIdx.includes(index)) return 'bg-red-500';
+        if (compareIdx.includes(index)) return 'bg-purple-500';
+        if (index === pivotIdx) return 'bg-amber-400';
+        
+        // 如果在當前分區處理範圍內，用稍微亮一點的顏色
+        if (boundary.low !== null && index >= boundary.low && index <= boundary.high) {
+            return 'bg-blue-400';
+        }
+        return 'bg-slate-300'; // 範圍外的變暗
+    };
+
+    return (
+        <div className="min-h-screen bg-slate-900 text-slate-100 p-6 font-sans">
+            <div className="max-w-6xl mx-auto space-y-6">
+                
+                {/* 頂部標題與說明 */}
+                <header className="text-center space-y-2">
+                    <h1 className="text-3xl font-bold tracking-tight text-white flex items-center justify-center gap-3">
+                        <RefreshCw className="text-blue-400" />
+                        C++ 快速排序 (Quick Sort) 視覺化體驗
+                    </h1>
+                    <p className="text-slate-400 text-sm">與學生一起觀察「基準點(Pivot)」與「雙指標」如何將陣列分區。</p>
+                </header>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    {/* 左側：視覺化與狀態 */}
+                    <div className="lg:col-span-7 flex flex-col gap-4">
+                        
+                        {/* 狀態訊息面板 */}
+                        <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg min-h-[100px] flex items-center">
+                            <div>
+                                <h3 className="text-blue-400 font-semibold mb-1 text-sm">當前步驟解析：</h3>
+                                <p className="text-lg text-slate-200">{message}</p>
+                            </div>
+                        </div>
+
+                        {/* 長條圖顯示區 */}
+                        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg flex-1 flex flex-col justify-end min-h-[350px] relative">
+                            {/* i 指標的視覺標示 */}
+                            {boundary.i !== null && boundary.low !== null && boundary.i >= boundary.low -1 && (
+                                <div className="absolute top-4 left-6 text-emerald-400 font-mono text-sm opacity-80">
+                                    當前邊界 i = {boundary.i < boundary.low ? "無(初始)" : `index[${boundary.i}] (${array[boundary.i]})`}
+                                </div>
+                            )}
+
+                            <div className="flex justify-between items-end h-full gap-1 w-full">
+                                {array.map((val, idx) => (
+                                    <div key={idx} className="flex flex-col items-center flex-1 group">
+                                        <div className="text-xs text-slate-400 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            [{idx}]
+                                        </div>
+                                        <div 
+                                            className={`w-full rounded-t-md transition-all duration-300 ease-in-out ${getBarColor(idx)} flex items-start justify-center pt-2 relative`}
+                                            style={{ height: `${(val / MAX_VAL) * 220}px` }}
+                                        >
+                                            <span className="text-xs font-bold text-slate-900 absolute -top-5">
+                                                {val}
+                                            </span>
+                                        </div>
+                                        {/* 指標圖示 */}
+                                        <div className="h-6 mt-1 flex gap-1 justify-center">
+                                            {idx === pivotIdx && <span className="text-amber-400 text-xs font-bold">P</span>}
+                                            {boundary.i === idx && <span className="text-emerald-400 text-xs font-bold">i</span>}
+                                            {compareIdx.includes(idx) && !swapIdx.includes(idx) && <span className="text-purple-400 text-xs font-bold">j</span>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* 控制面板 */}
+                        <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-wrap gap-4 items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <button onClick={handlePrev} disabled={currentStep <= 0} className="p-2 rounded-full bg-slate-700 hover:bg-slate-600 disabled:opacity-50 transition-colors">
+                                    <SkipBack size={20} />
+                                </button>
+                                <button onClick={handlePlayPause} className="p-3 rounded-full bg-blue-600 hover:bg-blue-500 transition-colors text-white shadow-lg shadow-blue-900/50">
+                                    {isPlaying ? <Pause size={24} /> : <Play size={24} className="ml-1" />}
+                                </button>
+                                <button onClick={handleNext} disabled={currentStep >= actions.length - 1} className="p-2 rounded-full bg-slate-700 hover:bg-slate-600 disabled:opacity-50 transition-colors">
+                                    <SkipForward size={20} />
+                                </button>
+                            </div>
+
+                            <div className="flex items-center gap-3 flex-1 px-6">
+                                <label className="text-sm text-slate-400 whitespace-nowrap">速度:</label>
+                                <input 
+                                    type="range" 
+                                    min="100" max="1500" step="100" 
+                                    value={1600 - speed} // 反轉滑桿直覺性
+                                    onChange={(e) => setSpeed(1600 - Number(e.target.value))}
+                                    className="w-full accent-blue-500"
+                                />
+                            </div>
+
+                            <button onClick={generateArray} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                <RefreshCw size={16} /> 產生新陣列
+                            </button>
+                        </div>
+                        
+                        {/* 圖例說明 */}
+                        <div className="flex flex-wrap gap-4 justify-center text-xs text-slate-300">
+                            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-amber-400 rounded-sm"></div>基準點 (Pivot)</div>
+                            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-purple-500 rounded-sm"></div>比較中 (j)</div>
+                            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-red-500 rounded-sm"></div>交換發生</div>
+                            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-green-500 rounded-sm"></div>已排序完成</div>
+                            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-blue-400 rounded-sm"></div>當前分區處理範圍</div>
+                        </div>
+
+                    </div>
+
+                    {/* 右側：C++ 程式碼與高亮 */}
+                    <div className="lg:col-span-5 bg-[#1e1e1e] rounded-xl border border-slate-700 overflow-hidden flex flex-col shadow-lg">
+                        <div className="bg-slate-800/80 px-4 py-2 border-b border-slate-700 flex justify-between items-center">
+                            <span className="text-sm font-medium text-slate-300">C++ 原始碼追蹤</span>
+                            <span className="text-xs text-slate-500 font-mono">QuickSort.cpp</span>
+                        </div>
+                        <div className="p-4 overflow-y-auto text-sm font-mono flex-1 leading-relaxed">
+                            {cppCode.split('\n').map((line, index) => {
+                                const isActive = activeLines.includes(index);
+                                return (
+                                    <div 
+                                        key={index} 
+                                        className={`px-2 py-0.5 rounded flex transition-colors duration-200 ${isActive ? 'bg-blue-900/50 border-l-4 border-blue-400' : 'border-l-4 border-transparent hover:bg-white/5'}`}
+                                    >
+                                        <span className="w-6 text-right mr-4 text-slate-600 select-none">{index + 1}</span>
+                                        <span className={isActive ? 'text-blue-100' : 'text-slate-300'}>
+                                            {/* 簡易語法高亮模擬 */}
+                                            {line.replace(/(int|void|if|for|return)/g, '<span class="text-pink-400">$1</span>')
+                                                 .replace(/(quickSort|partition|swap)/g, '<span class="text-blue-300">$1</span>')
+                                                 .replace(/(\/\/.*)/g, '<span class="text-green-600/80">$1</span>')
+                                                 .split(/(<[^>]+>)/g)
+                                                 .map((part, i) => 
+                                                    part.startsWith('<') ? 
+                                                    <span key={i} dangerouslySetInnerHTML={{__html: part}} /> : 
+                                                    <span key={i}>{part}</span>
+                                                )}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    );
+}
