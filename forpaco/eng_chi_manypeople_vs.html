@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>英語單詞搶答遊戲</title>
+    <!-- 使用 Tailwind CSS 進行快速排版 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0fdf4; }
+        .hidden-screen { display: none !important; }
+        .bounce { animation: bounce 1s infinite; }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8,0,1,1); }
+            50% { transform: translateY(0); animation-timing-function: cubic-bezier(0,0,0.2,1); }
+        }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col">
+
+    <!-- 頂部導航/標題 -->
+    <header class="bg-green-600 text-white p-4 shadow-md text-center shrink-0">
+        <h1 class="text-2xl font-bold">🎯 英語單詞搶答賽</h1>
+    </header>
+
+    <!-- 訊息提示框 -->
+    <div id="msg-box" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg z-50 hidden transition-opacity duration-300">
+        <span id="msg-text">訊息</span>
+    </div>
+
+    <!-- 主要內容區塊 -->
+    <main class="flex-1 overflow-y-auto p-4 flex justify-center items-start pt-10">
+        
+        <!-- 畫面 1：登入與建立/加入房間 -->
+        <div id="screen-home" class="w-full max-w-md bg-white rounded-2xl shadow-xl p-6">
+            <h2 class="text-xl font-semibold mb-4 text-center">準備進入遊戲</h2>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">你的暱稱</label>
+                <input type="text" id="input-name" placeholder="輸入你的名字" class="w-full border-2 border-gray-300 rounded-lg p-3 focus:outline-none focus:border-green-500 text-lg">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mt-6">
+                <button id="btn-show-create" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg transition">建立新房間</button>
+                <button id="btn-show-join" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition">加入房間</button>
+            </div>
+
+            <!-- 建立房間區域 (隱藏) -->
+            <div id="section-create" class="hidden mt-6 p-4 border-2 border-green-200 rounded-lg bg-green-50">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Google Apps Script API 網址 (可選)</label>
+                <input type="text" id="input-gas-url" value="https://script.google.com/macros/s/AKfycbwpuWk23qqR7-TCCWUcesT0L-OJ-zfUfG6-e4_Asn_QYS1uNNrGgGiBInl7tYfBdvbjtg/exec" placeholder="留空則使用內建預設單詞測試" class="w-full border border-gray-300 rounded p-2 mb-3 text-sm">
+                <button id="btn-create-room" class="w-full bg-green-600 text-white font-bold py-2 rounded">取得單詞並建立</button>
+            </div>
+
+            <!-- 加入房間區域 (隱藏) -->
+            <div id="section-join" class="hidden mt-6 p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
+                <label class="block text-sm font-medium text-gray-700 mb-1">房間代碼</label>
+                <input type="text" id="input-room-code" placeholder="輸入5碼房間代碼" class="w-full border border-gray-300 rounded p-2 mb-3 text-lg uppercase tracking-widest text-center font-mono">
+                <button id="btn-join-room" class="w-full bg-blue-600 text-white font-bold py-2 rounded">進入房間</button>
+            </div>
+        </div>
+
+        <!-- 畫面 2：大廳等待區 -->
+        <div id="screen-lobby" class="hidden-screen w-full max-w-md bg-white rounded-2xl shadow-xl p-6 text-center">
+            <h2 class="text-gray-500 font-semibold mb-1">房間代碼</h2>
+            <div class="text-5xl font-mono font-bold tracking-widest text-gray-800 mb-2 cursor-pointer bg-gray-100 py-2 rounded-lg" id="display-room-code" title="點擊複製">ABCDE</div>
+            <p class="text-sm text-gray-400 mb-6">請其他玩家輸入此代碼加入</p>
+
+            <div class="text-left mb-6">
+                <h3 class="font-bold text-lg mb-2">已加入玩家： (<span id="player-count">0</span>)</h3>
+                <ul id="player-list" class="bg-gray-50 border border-gray-200 rounded-lg p-2 max-h-48 overflow-y-auto space-y-1 text-lg">
+                    <!-- 玩家列表生成區 -->
+                </ul>
+            </div>
+
+            <button id="btn-start-game" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 rounded-xl text-xl transition shadow-lg animate-pulse">
+                房主專屬：開始遊戲！
+            </button>
+            <p id="wait-host-msg" class="text-gray-500 italic">等待房主開始遊戲...</p>
+        </div>
+
+        <!-- 畫面 3：遊戲進行中 -->
+        <div id="screen-game" class="hidden-screen w-full max-w-3xl grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <!-- 左側/上方：主要遊戲區 -->
+            <div class="md:col-span-2 bg-white rounded-2xl shadow-xl p-6 flex flex-col items-center justify-center min-h-[400px] relative text-center">
+                
+                <!-- 狀態顯示 -->
+                <div id="game-status-text" class="text-xl font-bold text-blue-600 mb-4 h-8">準備中...</div>
+                
+                <!-- 中文提示字 -->
+                <div id="chinese-word" class="text-6xl font-black text-gray-800 mb-8 h-20 flex items-center justify-center w-full">
+                    <!-- 中文單字出現在這 -->
+                </div>
+
+                <!-- 搶答輸入區 -->
+                <div id="answer-section" class="w-full max-w-sm hidden">
+                    <input type="text" id="input-answer" autocomplete="off" placeholder="在此輸入英文單字..." class="w-full border-4 border-gray-300 rounded-xl p-4 text-2xl text-center focus:outline-none focus:border-yellow-400 font-mono shadow-inner mb-4 transition-colors">
+                    <button id="btn-submit-answer" class="w-full bg-green-500 text-white font-bold py-3 rounded-xl text-xl shadow-md active:bg-green-700">送出搶答！</button>
+                </div>
+
+                <!-- 回合結果顯示區 -->
+                <div id="round-result-section" class="hidden w-full">
+                    <div class="text-4xl font-bold text-green-600 mb-2 bounce">🎉 搶答成功！</div>
+                    <div class="text-2xl text-gray-700 mb-4">得勝者：<span id="round-winner-name" class="font-bold text-blue-600"></span></div>
+                    <div class="text-xl text-gray-500">正確答案是 <span id="correct-answer-text" class="font-bold text-black bg-yellow-200 px-2 rounded"></span></div>
+                </div>
+
+            </div>
+
+            <!-- 右側/下方：計分板 -->
+            <div class="bg-white rounded-2xl shadow-xl p-6">
+                <h3 class="font-bold text-xl mb-4 border-b-2 border-gray-100 pb-2 flex justify-between">
+                    <span>計分板</span>
+                    <span class="text-sm font-normal text-gray-500">第 <span id="current-round-text">1</span> 關</span>
+                </h3>
+                <ul id="scoreboard-list" class="space-y-3">
+                    <!-- 計分板生成區 -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- 畫面 4：遊戲結束結算 -->
+        <div id="screen-finished" class="hidden-screen w-full max-w-md bg-white rounded-2xl shadow-xl p-8 text-center">
+            <h2 class="text-4xl font-black text-yellow-500 mb-2">🏆 遊戲結束</h2>
+            <p class="text-gray-600 mb-8">感謝大家的參與！</p>
+            
+            <div class="bg-yellow-50 rounded-xl p-6 mb-8 border-2 border-yellow-200">
+                <h3 class="text-xl font-bold text-gray-800 mb-2">最終冠軍</h3>
+                <div id="final-winner-name" class="text-3xl font-black text-blue-600"></div>
+                <div class="text-lg text-gray-600 mt-2">總得分：<span id="final-winner-score"></span> 分</div>
+            </div>
+
+            <button onclick="window.location.reload()" class="bg-gray-800 text-white font-bold py-3 px-8 rounded-full hover:bg-gray-900 transition">返回首頁</button>
+        </div>
+
+    </main>
+
+    <!-- Firebase SDK 引入 (使用 ES Modules) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        /* ==========================================
+           配置 Firebase (重要)
+           ========================================== */
+        let firebaseConfig;
+        let appId = 'word-buzzer-game'; // 預設的 App ID
+
+        // 判斷是否在預覽環境 (Canvas) 中運行
+        if (typeof __firebase_config !== 'undefined') {
+            firebaseConfig = JSON.parse(__firebase_config);
+            if (typeof __app_id !== 'undefined') appId = __app_id;
+        } else {
+            // ⭐⭐⭐ 部署到 GitHub Pages 前，請將下方替換為你的 Firebase 專案設定 ⭐⭐⭐
+            // 1. 到 Firebase console 建立專案
+            // 2. 啟用 Firestore Database (設為測試模式)
+            // 3. 啟用 Authentication (啟用匿名登入 Anonymous)
+            // 4. 註冊 Web App，並將配置貼在這裡：
+            firebaseConfig = {
+                apiKey: "AIzaSyDpo4XeuQ-CpUBrRjfp9F6lHodCaHnPEPA",
+                authDomain: "engchivocmanypeoplevs.firebaseapp.com",
+                projectId: "engchivocmanypeoplevs",
+                storageBucket: "engchivocmanypeoplevs.firebasestorage.app",
+                messagingSenderId: "756895087254",
+                appId: "1:756895087254:web:cb718b984540fbaf0220b7",
+                measurementId: "G-QRQMKRH1QP"
+            };
+        }
+
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        /* ==========================================
+           全域變數與遊戲狀態
+           ========================================== */
+        let myUid = null;
+        let myName = '';
+        let currentRoomId = null;
+        let isHost = false;
+        let roomUnsubscribe = null; // 用來取消監聽 Firestore
+        
+        let localRoomState = null; // 儲存最新的房間狀態
+        let hasSpokenThisRound = false; // 防止重複發音
+
+        // 預設測試單詞 (當沒有 GAS URL 時使用)
+        const fallbackWords = [
+            { en: 'apple', zh: '蘋果' },
+            { en: 'banana', zh: '香蕉' },
+            { en: 'computer', zh: '電腦' },
+            { en: 'sun', zh: '太陽' },
+            { en: 'mountain', zh: '山脈' }
+        ];
+
+        /* ==========================================
+           DOM 元素綁定
+           ========================================== */
+        const UI = {
+            screens: {
+                home: document.getElementById('screen-home'),
+                lobby: document.getElementById('screen-lobby'),
+                game: document.getElementById('screen-game'),
+                finished: document.getElementById('screen-finished')
+            },
+            home: {
+                name: document.getElementById('input-name'),
+                btnShowCreate: document.getElementById('btn-show-create'),
+                btnShowJoin: document.getElementById('btn-show-join'),
+                secCreate: document.getElementById('section-create'),
+                secJoin: document.getElementById('section-join'),
+                gasUrl: document.getElementById('input-gas-url'),
+                btnCreate: document.getElementById('btn-create-room'),
+                roomCode: document.getElementById('input-room-code'),
+                btnJoin: document.getElementById('btn-join-room')
+            },
+            lobby: {
+                roomCodeDisplay: document.getElementById('display-room-code'),
+                playerList: document.getElementById('player-list'),
+                playerCount: document.getElementById('player-count'),
+                btnStart: document.getElementById('btn-start-game'),
+                waitMsg: document.getElementById('wait-host-msg')
+            },
+            game: {
+                statusText: document.getElementById('game-status-text'),
+                chineseWord: document.getElementById('chinese-word'),
+                answerSection: document.getElementById('answer-section'),
+                inputAnswer: document.getElementById('input-answer'),
+                btnSubmit: document.getElementById('btn-submit-answer'),
+                roundResultSection: document.getElementById('round-result-section'),
+                roundWinnerName: document.getElementById('round-winner-name'),
+                correctAnswerText: document.getElementById('correct-answer-text'),
+                scoreboard: document.getElementById('scoreboard-list'),
+                currentRound: document.getElementById('current-round-text')
+            },
+            finished: {
+                winnerName: document.getElementById('final-winner-name'),
+                winnerScore: document.getElementById('final-winner-score')
+            }
+        };
+
+        /* ==========================================
+           通用輔助函數
+           ========================================== */
+        function showScreen(screenName) {
+            Object.values(UI.screens).forEach(s => s.classList.add('hidden-screen'));
+            UI.screens[screenName].classList.remove('hidden-screen');
+        }
+
+        function showMsg(text) {
+            const msgBox = document.getElementById('msg-box');
+            document.getElementById('msg-text').textContent = text;
+            msgBox.classList.remove('hidden');
+            setTimeout(() => msgBox.classList.add('hidden'), 3000);
+        }
+
+        function generateRoomCode() {
+            return Math.random().toString(36).substring(2, 7).toUpperCase();
+        }
+
+        // 取得 Firestore 房間文件的參考路徑 (遵循嚴格路徑規則)
+        function getRoomDoc(roomId) {
+            return doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+        }
+
+        /* ==========================================
+           初始化與認證
+           ========================================== */
+        async function initAuth() {
+            try {
+                // 如果在預覽環境中有自定義 Token，優先使用它以獲得資料庫存取權限
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    // 如果部署在 GitHub Pages 等外部環境，則使用匿名登入
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("登入失敗:", error);
+                showMsg("連線失敗，請檢查網路或 Firebase 設定。");
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                myUid = user.uid;
+                console.log("登入成功 UID:", myUid);
+            }
+        });
+
+        // 畫面啟動
+        initAuth();
+
+        /* ==========================================
+           畫面 1：首頁邏輯 (建立/加入房間)
+           ========================================== */
+        UI.home.btnShowCreate.onclick = () => {
+            UI.home.secCreate.classList.remove('hidden');
+            UI.home.secJoin.classList.add('hidden');
+        };
+        UI.home.btnShowJoin.onclick = () => {
+            UI.home.secJoin.classList.remove('hidden');
+            UI.home.secCreate.classList.add('hidden');
+        };
+
+        // 建立房間
+        UI.home.btnCreate.onclick = async () => {
+            myName = UI.home.name.value.trim() || '無名氏';
+            if (!myUid) { showMsg("正在連線中，請稍候..."); return; }
+
+            UI.home.btnCreate.disabled = true;
+            UI.home.btnCreate.textContent = '載入中...';
+
+            const gasUrl = UI.home.gasUrl.value.trim();
+            let words = fallbackWords;
+
+            if (gasUrl) {
+                try {
+                    const response = await fetch(gasUrl);
+                    const data = await response.json();
+                    if (data && data.words && data.words.length > 0) {
+                        words = data.words;
+                        showMsg(`成功載入 ${words.length} 個單詞！`);
+                    } else {
+                        showMsg("讀取單詞失敗，使用預設單詞。");
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showMsg("API 錯誤，使用預設單詞。");
+                }
+            }
+
+            const roomId = generateRoomCode();
+            isHost = true;
+            currentRoomId = roomId;
+
+            const roomData = {
+                roomId: roomId,
+                host: myUid,
+                status: 'lobby', // lobby, playing, finished
+                phase: 'waiting', // waiting, reading, answering, round_end
+                words: words,
+                currentWordIndex: 0,
+                players: {
+                    [myUid]: { name: myName, score: 0 }
+                },
+                roundWinner: null
+            };
+
+            try {
+                await setDoc(getRoomDoc(roomId), roomData);
+                listenToRoom(roomId);
+                showScreen('lobby');
+            } catch (err) {
+                console.error("建立房間失敗:", err);
+                showMsg("建立房間失敗！");
+                UI.home.btnCreate.disabled = false;
+                UI.home.btnCreate.textContent = '取得單詞並建立';
+            }
+        };
+
+        // 加入房間
+        UI.home.btnJoin.onclick = async () => {
+            myName = UI.home.name.value.trim() || '無名氏';
+            const roomId = UI.home.roomCode.value.trim().toUpperCase();
+            if (!roomId) { showMsg("請輸入房間代碼"); return; }
+            if (!myUid) { showMsg("正在連線中，請稍候..."); return; }
+
+            UI.home.btnJoin.disabled = true;
+            UI.home.btnJoin.textContent = '加入中...';
+
+            try {
+                const roomRef = getRoomDoc(roomId);
+                const roomSnap = await getDoc(roomRef);
+                
+                if (roomSnap.exists()) {
+                    currentRoomId = roomId;
+                    isHost = false;
+                    // 將自己加入 players
+                    const data = roomSnap.data();
+                    const newPlayers = { ...data.players };
+                    newPlayers[myUid] = { name: myName, score: 0 };
+                    
+                    await updateDoc(roomRef, { players: newPlayers });
+                    listenToRoom(roomId);
+                    showScreen('lobby');
+                } else {
+                    showMsg("找不到該房間！");
+                    UI.home.btnJoin.disabled = false;
+                    UI.home.btnJoin.textContent = '進入房間';
+                }
+            } catch (err) {
+                console.error("加入房間失敗:", err);
+                showMsg("加入失敗！");
+                UI.home.btnJoin.disabled = false;
+                UI.home.btnJoin.textContent = '進入房間';
+            }
+        };
+
+        // 點擊複製房間代碼
+        UI.lobby.roomCodeDisplay.onclick = () => {
+            if(currentRoomId) {
+                navigator.clipboard.writeText(currentRoomId).then(() => showMsg("代碼已複製！"));
+            }
+        };
+
+        /* ==========================================
+           即時監聽與狀態分發
+           ========================================== */
+        function listenToRoom(roomId) {
+            if (roomUnsubscribe) roomUnsubscribe();
+            
+            roomUnsubscribe = onSnapshot(getRoomDoc(roomId), (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    localRoomState = data;
+                    handleStateChange(data);
+                } else {
+                    showMsg("房間已被關閉");
+                    window.location.reload();
+                }
+            }, (error) => {
+                console.error("監聽失敗:", error);
+            });
+        }
+
+        // 核心邏輯：根據 Firebase 的狀態更新 UI
+        function handleStateChange(state) {
+            // 更新大廳 UI
+            if (state.status === 'lobby') {
+                updateLobbyUI(state);
+            } 
+            // 進入遊戲中
+            else if (state.status === 'playing') {
+                if(document.getElementById('screen-lobby').classList.contains('hidden-screen') === false) {
+                    showScreen('game');
+                }
+                updateGameUI(state);
+            }
+            // 遊戲結束
+            else if (state.status === 'finished') {
+                showScreen('finished');
+                updateFinishedUI(state);
+            }
+        }
+
+        /* ==========================================
+           各狀態畫面更新邏輯
+           ========================================== */
+        
+        // 1. 大廳更新
+        function updateLobbyUI(state) {
+            UI.lobby.roomCodeDisplay.textContent = state.roomId;
+            const playerIds = Object.keys(state.players);
+            UI.lobby.playerCount.textContent = playerIds.length;
+            
+            UI.lobby.playerList.innerHTML = '';
+            playerIds.forEach(uid => {
+                const p = state.players[uid];
+                const li = document.createElement('li');
+                li.className = `p-2 rounded ${uid === state.host ? 'bg-yellow-100 font-bold' : ''}`;
+                li.innerHTML = `${uid === state.host ? '👑 ' : '👤 '}${p.name} ${uid === myUid ? '(你)' : ''}`;
+                UI.lobby.playerList.appendChild(li);
+            });
+
+            if (isHost) {
+                UI.lobby.btnStart.classList.remove('hidden');
+                UI.lobby.waitMsg.classList.add('hidden');
+            } else {
+                UI.lobby.btnStart.classList.add('hidden');
+                UI.lobby.waitMsg.classList.remove('hidden');
+            }
+        }
+
+        // 房主按下開始遊戲
+        UI.lobby.btnStart.onclick = async () => {
+            if (isHost && localRoomState) {
+                await updateDoc(getRoomDoc(currentRoomId), {
+                    status: 'playing',
+                    phase: 'reading' // 進入讀單詞階段
+                });
+            }
+        };
+
+        // 2. 遊戲進行中更新
+        function updateGameUI(state) {
+            updateScoreboard(state);
+            
+            const currentWord = state.words[state.currentWordIndex];
+            UI.game.currentRound.textContent = state.currentWordIndex + 1;
+
+            // 狀態機：根據 phase 更新畫面
+            if (state.phase === 'reading') {
+                // 讀取階段：顯示中文，準備聽音
+                UI.game.statusText.textContent = "🔊 準備聽單字...";
+                UI.game.statusText.className = "text-xl font-bold text-blue-600 mb-4 h-8";
+                UI.game.chineseWord.textContent = currentWord.zh;
+                
+                UI.game.answerSection.classList.add('hidden');
+                UI.game.roundResultSection.classList.add('hidden');
+                UI.game.inputAnswer.value = ''; // 清空輸入框
+
+                // 系統發音 (確保這回合只發音一次)
+                if (!hasSpokenThisRound) {
+                    hasSpokenThisRound = true;
+                    // 為了同步，我們讓房主來主導發音，發音結束後房主切換階段到 answering
+                    if (isHost) {
+                        speakWord(currentWord.en, 3, async () => {
+                            // 發音完畢，開放搶答
+                            await updateDoc(getRoomDoc(currentRoomId), { phase: 'answering' });
+                        });
+                    }
+                }
+            } 
+            else if (state.phase === 'answering') {
+                // 搶答階段：開放輸入
+                hasSpokenThisRound = false; // 為下回合重置
+                UI.game.statusText.textContent = "⌨️ 快點輸入英文拼寫！";
+                UI.game.statusText.className = "text-xl font-bold text-red-500 mb-4 h-8 animate-pulse";
+                UI.game.chineseWord.textContent = currentWord.zh;
+                
+                UI.game.answerSection.classList.remove('hidden');
+                UI.game.roundResultSection.classList.add('hidden');
+                
+                // 自動 Focus 輸入框 (手機上可能需要使用者手動點，但盡量觸發)
+                UI.game.inputAnswer.focus();
+            } 
+            else if (state.phase === 'round_end') {
+                // 回合結束：顯示結果
+                hasSpokenThisRound = false;
+                UI.game.statusText.textContent = "⏳ 回合結束，準備下一題";
+                UI.game.statusText.className = "text-xl font-bold text-gray-500 mb-4 h-8";
+                
+                UI.game.answerSection.classList.add('hidden');
+                UI.game.roundResultSection.classList.remove('hidden');
+                
+                // 顯示獲勝者
+                const winnerName = state.players[state.roundWinner]?.name || '未知';
+                UI.game.roundWinnerName.textContent = winnerName;
+                UI.game.correctAnswerText.textContent = currentWord.en;
+
+                // 房主負責倒數並進入下一回合
+                if (isHost) {
+                    // 防止重複觸發計時器
+                    if (!window.roundTimer) {
+                        window.roundTimer = setTimeout(async () => {
+                            window.roundTimer = null;
+                            const nextIndex = state.currentWordIndex + 1;
+                            
+                            if (nextIndex >= state.words.length) {
+                                // 遊戲結束
+                                await updateDoc(getRoomDoc(currentRoomId), { status: 'finished' });
+                            } else {
+                                // 下一回合
+                                await updateDoc(getRoomDoc(currentRoomId), {
+                                    currentWordIndex: nextIndex,
+                                    phase: 'reading',
+                                    roundWinner: null
+                                });
+                            }
+                        }, 4000); // 顯示 4 秒結果
+                    }
+                }
+            }
+        }
+
+        // 更新計分板
+        function updateScoreboard(state) {
+            UI.game.scoreboard.innerHTML = '';
+            // 排序分數
+            const sortedPlayers = Object.entries(state.players)
+                .sort((a, b) => b[1].score - a[1].score);
+
+            sortedPlayers.forEach(([uid, p], index) => {
+                const li = document.createElement('li');
+                li.className = `flex justify-between items-center p-2 rounded-lg ${uid === myUid ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'}`;
+                
+                let medal = '';
+                if(index === 0 && p.score > 0) medal = '🥇 ';
+                else if(index === 1 && p.score > 0) medal = '🥈 ';
+                else if(index === 2 && p.score > 0) medal = '🥉 ';
+
+                li.innerHTML = `
+                    <span class="font-medium text-gray-700">${medal}${p.name}</span>
+                    <span class="font-bold text-lg text-blue-600">${p.score}</span>
+                `;
+                UI.game.scoreboard.appendChild(li);
+            });
+        }
+
+        /* ==========================================
+           搶答提交邏輯
+           ========================================== */
+        // 綁定按鈕與 Enter 鍵
+        UI.game.btnSubmit.onclick = submitAnswer;
+        UI.game.inputAnswer.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') submitAnswer();
+        });
+
+        async function submitAnswer() {
+            if (!localRoomState || localRoomState.phase !== 'answering') return;
+            
+            const myAnswer = UI.game.inputAnswer.value.trim().toLowerCase();
+            const correctWord = localRoomState.words[localRoomState.currentWordIndex].en.toLowerCase();
+            
+            if (myAnswer === correctWord) {
+                // 答對了！立即發送更新給 Firebase
+                // 在高並發下，第一個寫入成功的會改變 phase，後面的寫入會被邏輯擋下或覆蓋(但我們靠前端阻擋)
+                UI.game.btnSubmit.disabled = true;
+                
+                // 複製一份新的 players 並增加分數
+                const newPlayers = { ...localRoomState.players };
+                newPlayers[myUid].score += 1;
+
+                try {
+                    // 更新房間狀態
+                    await updateDoc(getRoomDoc(currentRoomId), {
+                        phase: 'round_end',
+                        roundWinner: myUid,
+                        players: newPlayers
+                    });
+                } catch (err) {
+                    console.error("更新分數失敗:", err);
+                } finally {
+                    UI.game.btnSubmit.disabled = false;
+                }
+            } else {
+                // 答錯清空，並讓輸入框震動(簡單的視覺提示)
+                UI.game.inputAnswer.value = '';
+                UI.game.inputAnswer.classList.add('border-red-500');
+                setTimeout(() => UI.game.inputAnswer.classList.remove('border-red-500'), 300);
+            }
+        }
+
+        /* ==========================================
+           結束畫面邏輯
+           ========================================== */
+        function updateFinishedUI(state) {
+            const sortedPlayers = Object.entries(state.players)
+                .sort((a, b) => b[1].score - a[1].score);
+            
+            if (sortedPlayers.length > 0) {
+                UI.finished.winnerName.textContent = sortedPlayers[0][1].name;
+                UI.finished.winnerScore.textContent = sortedPlayers[0][1].score;
+            }
+        }
+
+        /* ==========================================
+           TTS 語音發音模組
+           ========================================== */
+        function speakWord(word, times, callback) {
+            // 確保瀏覽器支援
+            if (!('speechSynthesis' in window)) {
+                console.warn("此設備不支援語音合成");
+                if(callback) setTimeout(callback, 2000); // 退回延遲機制
+                return;
+            }
+
+            let count = 0;
+            function speakNext() {
+                if (count >= times) {
+                    if (callback) callback();
+                    return;
+                }
+                const utterance = new SpeechSynthesisUtterance(word);
+                utterance.lang = 'en-US'; 
+                utterance.rate = 0.9; // 稍微放慢一點更清楚
+                
+                utterance.onend = () => {
+                    count++;
+                    // 停頓 0.5 秒後再讀下一次
+                    setTimeout(speakNext, 500);
+                };
+                utterance.onerror = (e) => {
+                    console.error("TTS 錯誤:", e);
+                    count++;
+                    speakNext(); // 忽略錯誤繼續
+                };
+                
+                window.speechSynthesis.speak(utterance);
+            }
+            speakNext();
+        }
+
+    </script>
+</body>
+</html>
