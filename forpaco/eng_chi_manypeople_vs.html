@@ -31,7 +31,7 @@
     <!-- 主要內容區塊 -->
     <main class="flex-1 overflow-y-auto p-4 flex justify-center items-start pt-10">
         
-        <!-- 畫面 1：登入與建立/加入房間 -->
+        <!-- 畫面 1：登入與自動加入 -->
         <div id="screen-home" class="w-full max-w-md bg-white rounded-2xl shadow-xl p-6">
             <h2 class="text-xl font-semibold mb-4 text-center">準備進入遊戲</h2>
             
@@ -40,31 +40,14 @@
                 <input type="text" id="input-name" placeholder="輸入你的名字" class="w-full border-2 border-gray-300 rounded-lg p-3 focus:outline-none focus:border-green-500 text-lg">
             </div>
 
-            <div class="grid grid-cols-2 gap-4 mt-6">
-                <button id="btn-show-create" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg transition">建立新房間</button>
-                <button id="btn-show-join" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition">加入房間</button>
-            </div>
-
-            <!-- 建立房間區域 (隱藏) -->
-            <div id="section-create" class="hidden mt-6 p-4 border-2 border-green-200 rounded-lg bg-green-50">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Google Apps Script API 網址 (可選)</label>
-                <input type="text" id="input-gas-url" value="https://script.google.com/macros/s/AKfycbwpuWk23qqR7-TCCWUcesT0L-OJ-zfUfG6-e4_Asn_QYS1uNNrGgGiBInl7tYfBdvbjtg/exec" placeholder="留空則使用內建預設單詞測試" class="w-full border border-gray-300 rounded p-2 mb-3 text-sm">
-                <button id="btn-create-room" class="w-full bg-green-600 text-white font-bold py-2 rounded">取得單詞並建立</button>
-            </div>
-
-            <!-- 加入房間區域 (隱藏) -->
-            <div id="section-join" class="hidden mt-6 p-4 border-2 border-blue-200 rounded-lg bg-blue-50">
-                <label class="block text-sm font-medium text-gray-700 mb-1">房間代碼</label>
-                <input type="text" id="input-room-code" placeholder="輸入5碼房間代碼" class="w-full border border-gray-300 rounded p-2 mb-3 text-lg uppercase tracking-widest text-center font-mono">
-                <button id="btn-join-room" class="w-full bg-blue-600 text-white font-bold py-2 rounded">進入房間</button>
-            </div>
+            <button id="btn-enter-game" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg transition mt-4 shadow-md">進入遊戲</button>
+            <p id="loading-words-msg" class="text-sm text-gray-500 text-center mt-3 animate-pulse">正在自動載入字庫中...</p>
         </div>
 
         <!-- 畫面 2：大廳等待區 -->
         <div id="screen-lobby" class="hidden-screen w-full max-w-md bg-white rounded-2xl shadow-xl p-6 text-center">
-            <h2 class="text-gray-500 font-semibold mb-1">房間代碼</h2>
-            <div class="text-5xl font-mono font-bold tracking-widest text-gray-800 mb-2 cursor-pointer bg-gray-100 py-2 rounded-lg" id="display-room-code" title="點擊複製">ABCDE</div>
-            <p class="text-sm text-gray-400 mb-6">請其他玩家輸入此代碼加入</p>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">等待玩家加入</h2>
+            <p class="text-sm text-gray-500 mb-6">所有在同一網頁的人都會進入此大廳</p>
 
             <div class="text-left mb-6">
                 <h3 class="font-bold text-lg mb-2">已加入玩家： (<span id="player-count">0</span>)</h3>
@@ -131,7 +114,7 @@
                 <div class="text-lg text-gray-600 mt-2">總得分：<span id="final-winner-score"></span> 分</div>
             </div>
 
-            <button onclick="window.location.reload()" class="bg-gray-800 text-white font-bold py-3 px-8 rounded-full hover:bg-gray-900 transition">返回首頁</button>
+            <button onclick="window.location.reload()" class="bg-gray-800 text-white font-bold py-3 px-8 rounded-full hover:bg-gray-900 transition">再來一局</button>
         </div>
 
     </main>
@@ -148,16 +131,10 @@
         let firebaseConfig;
         let appId = 'word-buzzer-game'; // 預設的 App ID
 
-        // 判斷是否在預覽環境 (Canvas) 中運行
         if (typeof __firebase_config !== 'undefined') {
             firebaseConfig = JSON.parse(__firebase_config);
             if (typeof __app_id !== 'undefined') appId = __app_id;
         } else {
-            // ⭐⭐⭐ 部署到 GitHub Pages 前，請將下方替換為你的 Firebase 專案設定 ⭐⭐⭐
-            // 1. 到 Firebase console 建立專案
-            // 2. 啟用 Firestore Database (設為測試模式)
-            // 3. 啟用 Authentication (啟用匿名登入 Anonymous)
-            // 4. 註冊 Web App，並將配置貼在這裡：
             firebaseConfig = {
                 apiKey: "AIzaSyDpo4XeuQ-CpUBrRjfp9F6lHodCaHnPEPA",
                 authDomain: "engchivocmanypeoplevs.firebaseapp.com",
@@ -179,21 +156,47 @@
            ========================================== */
         let myUid = null;
         let myName = '';
-        let currentRoomId = null;
-        let isHost = false;
-        let roomUnsubscribe = null; // 用來取消監聽 Firestore
         
-        let localRoomState = null; // 儲存最新的房間狀態
-        let hasSpokenThisRound = false; // 防止重複發音
+        // 使用固定的全局房間 ID，所有人都會連進這裡
+        const GLOBAL_ROOM_ID = 'GLOBAL_GAME_ROOM';
+        let currentRoomId = GLOBAL_ROOM_ID; 
+        
+        let isHost = false;
+        let roomUnsubscribe = null; 
+        let localRoomState = null; 
+        let hasSpokenThisRound = false; 
 
-        // 預設測試單詞 (當沒有 GAS URL 時使用)
-        const fallbackWords = [
+        // 預設測試單詞 (當無法連線到 Google Sheet 時使用)
+        let gameWords = [
             { en: 'apple', zh: '蘋果' },
             { en: 'banana', zh: '香蕉' },
-            { en: 'computer', zh: '電腦' },
-            { en: 'sun', zh: '太陽' },
-            { en: 'mountain', zh: '山脈' }
+            { en: 'computer', zh: '電腦' }
         ];
+
+        /* ==========================================
+           自動載入字庫 (一開啟網頁就執行)
+           ========================================== */
+        const gasUrl = "https://script.google.com/macros/s/AKfycbwpuWk23qqR7-TCCWUcesT0L-OJ-zfUfG6-e4_Asn_QYS1uNNrGgGiBInl7tYfBdvbjtg/exec";
+        
+        fetch(gasUrl)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.words && data.words.length > 0) {
+                    gameWords = data.words;
+                    const msgEl = document.getElementById('loading-words-msg');
+                    msgEl.textContent = `✅ 字庫已成功載入 (${gameWords.length} 個單詞)`;
+                    msgEl.classList.replace('text-gray-500', 'text-green-600');
+                    msgEl.classList.remove('animate-pulse');
+                }
+            })
+            .catch(err => {
+                console.error("載入字庫失敗:", err);
+                const msgEl = document.getElementById('loading-words-msg');
+                msgEl.textContent = "⚠️ 載入字庫失敗，將使用內建測試單詞";
+                msgEl.classList.replace('text-gray-500', 'text-red-500');
+                msgEl.classList.remove('animate-pulse');
+            });
+
 
         /* ==========================================
            DOM 元素綁定
@@ -207,17 +210,9 @@
             },
             home: {
                 name: document.getElementById('input-name'),
-                btnShowCreate: document.getElementById('btn-show-create'),
-                btnShowJoin: document.getElementById('btn-show-join'),
-                secCreate: document.getElementById('section-create'),
-                secJoin: document.getElementById('section-join'),
-                gasUrl: document.getElementById('input-gas-url'),
-                btnCreate: document.getElementById('btn-create-room'),
-                roomCode: document.getElementById('input-room-code'),
-                btnJoin: document.getElementById('btn-join-room')
+                btnEnter: document.getElementById('btn-enter-game')
             },
             lobby: {
-                roomCodeDisplay: document.getElementById('display-room-code'),
                 playerList: document.getElementById('player-list'),
                 playerCount: document.getElementById('player-count'),
                 btnStart: document.getElementById('btn-start-game'),
@@ -256,11 +251,7 @@
             setTimeout(() => msgBox.classList.add('hidden'), 3000);
         }
 
-        function generateRoomCode() {
-            return Math.random().toString(36).substring(2, 7).toUpperCase();
-        }
-
-        // 取得 Firestore 房間文件的參考路徑 (遵循嚴格路徑規則)
+        // 取得 Firestore 房間文件的參考路徑
         function getRoomDoc(roomId) {
             return doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
         }
@@ -270,11 +261,9 @@
            ========================================== */
         async function initAuth() {
             try {
-                // 如果在預覽環境中有自定義 Token，優先使用它以獲得資料庫存取權限
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
-                    // 如果部署在 GitHub Pages 等外部環境，則使用匿名登入
                     await signInAnonymously(auth);
                 }
             } catch (error) {
@@ -286,125 +275,66 @@
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 myUid = user.uid;
-                console.log("登入成功 UID:", myUid);
             }
         });
 
-        // 畫面啟動
         initAuth();
 
         /* ==========================================
-           畫面 1：首頁邏輯 (建立/加入房間)
+           畫面 1：登入並自動進入全局遊戲
            ========================================== */
-        UI.home.btnShowCreate.onclick = () => {
-            UI.home.secCreate.classList.remove('hidden');
-            UI.home.secJoin.classList.add('hidden');
-        };
-        UI.home.btnShowJoin.onclick = () => {
-            UI.home.secJoin.classList.remove('hidden');
-            UI.home.secCreate.classList.add('hidden');
-        };
-
-        // 建立房間
-        UI.home.btnCreate.onclick = async () => {
+        UI.home.btnEnter.onclick = async () => {
             myName = UI.home.name.value.trim() || '無名氏';
             if (!myUid) { showMsg("正在連線中，請稍候..."); return; }
 
-            UI.home.btnCreate.disabled = true;
-            UI.home.btnCreate.textContent = '載入中...';
-
-            const gasUrl = UI.home.gasUrl.value.trim();
-            let words = fallbackWords;
-
-            if (gasUrl) {
-                try {
-                    const response = await fetch(gasUrl);
-                    const data = await response.json();
-                    if (data && data.words && data.words.length > 0) {
-                        words = data.words;
-                        showMsg(`成功載入 ${words.length} 個單詞！`);
-                    } else {
-                        showMsg("讀取單詞失敗，使用預設單詞。");
-                    }
-                } catch (err) {
-                    console.error(err);
-                    showMsg("API 錯誤，使用預設單詞。");
-                }
-            }
-
-            const roomId = generateRoomCode();
-            isHost = true;
-            currentRoomId = roomId;
-
-            const roomData = {
-                roomId: roomId,
-                host: myUid,
-                status: 'lobby', // lobby, playing, finished
-                phase: 'waiting', // waiting, reading, answering, round_end
-                words: words,
-                currentWordIndex: 0,
-                players: {
-                    [myUid]: { name: myName, score: 0 }
-                },
-                roundWinner: null
-            };
+            UI.home.btnEnter.disabled = true;
+            UI.home.btnEnter.textContent = '進入中...';
 
             try {
-                await setDoc(getRoomDoc(roomId), roomData);
-                listenToRoom(roomId);
-                showScreen('lobby');
-            } catch (err) {
-                console.error("建立房間失敗:", err);
-                showMsg("建立房間失敗！");
-                UI.home.btnCreate.disabled = false;
-                UI.home.btnCreate.textContent = '取得單詞並建立';
-            }
-        };
-
-        // 加入房間
-        UI.home.btnJoin.onclick = async () => {
-            myName = UI.home.name.value.trim() || '無名氏';
-            const roomId = UI.home.roomCode.value.trim().toUpperCase();
-            if (!roomId) { showMsg("請輸入房間代碼"); return; }
-            if (!myUid) { showMsg("正在連線中，請稍候..."); return; }
-
-            UI.home.btnJoin.disabled = true;
-            UI.home.btnJoin.textContent = '加入中...';
-
-            try {
-                const roomRef = getRoomDoc(roomId);
+                const roomRef = getRoomDoc(GLOBAL_ROOM_ID);
                 const roomSnap = await getDoc(roomRef);
                 
-                if (roomSnap.exists()) {
-                    currentRoomId = roomId;
-                    isHost = false;
-                    // 將自己加入 players
+                // 如果房間存在且未結束，就直接加入
+                if (roomSnap.exists() && roomSnap.data().status !== 'finished') {
                     const data = roomSnap.data();
-                    const newPlayers = { ...data.players };
-                    newPlayers[myUid] = { name: myName, score: 0 };
+                    isHost = (data.host === myUid); // 如果本來就是房主，維持身分
                     
-                    await updateDoc(roomRef, { players: newPlayers });
-                    listenToRoom(roomId);
-                    showScreen('lobby');
+                    const newPlayers = { ...data.players };
+                    // 只有當自己不在名單內時才新增（避免覆蓋舊分數）
+                    if (!newPlayers[myUid]) {
+                        newPlayers[myUid] = { name: myName, score: 0 };
+                        await updateDoc(roomRef, { players: newPlayers });
+                    }
+                    
+                    listenToRoom(GLOBAL_ROOM_ID);
+                    showScreen(data.status === 'playing' ? 'game' : 'lobby');
                 } else {
-                    showMsg("找不到該房間！");
-                    UI.home.btnJoin.disabled = false;
-                    UI.home.btnJoin.textContent = '進入房間';
+                    // 如果房間不存在或已經結束，創建新的一局，我就是房主
+                    isHost = true;
+                    const roomData = {
+                        roomId: GLOBAL_ROOM_ID,
+                        host: myUid,
+                        status: 'lobby',
+                        phase: 'waiting',
+                        words: gameWords,
+                        currentWordIndex: 0,
+                        players: {
+                            [myUid]: { name: myName, score: 0 }
+                        },
+                        roundWinner: null
+                    };
+                    await setDoc(roomRef, roomData);
+                    listenToRoom(GLOBAL_ROOM_ID);
+                    showScreen('lobby');
                 }
             } catch (err) {
-                console.error("加入房間失敗:", err);
-                showMsg("加入失敗！");
-                UI.home.btnJoin.disabled = false;
-                UI.home.btnJoin.textContent = '進入房間';
+                console.error("進入遊戲失敗:", err);
+                showMsg("進入遊戲失敗！");
+                UI.home.btnEnter.disabled = false;
+                UI.home.btnEnter.textContent = '進入遊戲';
             }
         };
 
-        // 點擊複製房間代碼
-        UI.lobby.roomCodeDisplay.onclick = () => {
-            if(currentRoomId) {
-                navigator.clipboard.writeText(currentRoomId).then(() => showMsg("代碼已複製！"));
-            }
-        };
 
         /* ==========================================
            即時監聽與狀態分發
@@ -417,9 +347,6 @@
                     const data = docSnap.data();
                     localRoomState = data;
                     handleStateChange(data);
-                } else {
-                    showMsg("房間已被關閉");
-                    window.location.reload();
                 }
             }, (error) => {
                 console.error("監聽失敗:", error);
@@ -428,18 +355,18 @@
 
         // 核心邏輯：根據 Firebase 的狀態更新 UI
         function handleStateChange(state) {
-            // 更新大廳 UI
+            // 自動修復房主身分 (以防重整)
+            if (state.host === myUid) isHost = true;
+
             if (state.status === 'lobby') {
                 updateLobbyUI(state);
             } 
-            // 進入遊戲中
             else if (state.status === 'playing') {
                 if(document.getElementById('screen-lobby').classList.contains('hidden-screen') === false) {
                     showScreen('game');
                 }
                 updateGameUI(state);
             }
-            // 遊戲結束
             else if (state.status === 'finished') {
                 showScreen('finished');
                 updateFinishedUI(state);
@@ -452,7 +379,6 @@
         
         // 1. 大廳更新
         function updateLobbyUI(state) {
-            UI.lobby.roomCodeDisplay.textContent = state.roomId;
             const playerIds = Object.keys(state.players);
             UI.lobby.playerCount.textContent = playerIds.length;
             
@@ -505,10 +431,9 @@
                 // 系統發音 (確保這回合只發音一次)
                 if (!hasSpokenThisRound) {
                     hasSpokenThisRound = true;
-                    // 為了同步，我們讓房主來主導發音，發音結束後房主切換階段到 answering
+                    // 由房主來主導發音，發音結束後房主切換階段到 answering
                     if (isHost) {
                         speakWord(currentWord.en, 3, async () => {
-                            // 發音完畢，開放搶答
                             await updateDoc(getRoomDoc(currentRoomId), { phase: 'answering' });
                         });
                     }
@@ -516,7 +441,7 @@
             } 
             else if (state.phase === 'answering') {
                 // 搶答階段：開放輸入
-                hasSpokenThisRound = false; // 為下回合重置
+                hasSpokenThisRound = false; 
                 UI.game.statusText.textContent = "⌨️ 快點輸入英文拼寫！";
                 UI.game.statusText.className = "text-xl font-bold text-red-500 mb-4 h-8 animate-pulse";
                 UI.game.chineseWord.textContent = currentWord.zh;
@@ -524,7 +449,7 @@
                 UI.game.answerSection.classList.remove('hidden');
                 UI.game.roundResultSection.classList.add('hidden');
                 
-                // 自動 Focus 輸入框 (手機上可能需要使用者手動點，但盡量觸發)
+                // 自動 Focus 輸入框
                 UI.game.inputAnswer.focus();
             } 
             else if (state.phase === 'round_end') {
@@ -543,17 +468,14 @@
 
                 // 房主負責倒數並進入下一回合
                 if (isHost) {
-                    // 防止重複觸發計時器
                     if (!window.roundTimer) {
                         window.roundTimer = setTimeout(async () => {
                             window.roundTimer = null;
                             const nextIndex = state.currentWordIndex + 1;
                             
                             if (nextIndex >= state.words.length) {
-                                // 遊戲結束
                                 await updateDoc(getRoomDoc(currentRoomId), { status: 'finished' });
                             } else {
-                                // 下一回合
                                 await updateDoc(getRoomDoc(currentRoomId), {
                                     currentWordIndex: nextIndex,
                                     phase: 'reading',
@@ -593,7 +515,6 @@
         /* ==========================================
            搶答提交邏輯
            ========================================== */
-        // 綁定按鈕與 Enter 鍵
         UI.game.btnSubmit.onclick = submitAnswer;
         UI.game.inputAnswer.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') submitAnswer();
@@ -606,16 +527,12 @@
             const correctWord = localRoomState.words[localRoomState.currentWordIndex].en.toLowerCase();
             
             if (myAnswer === correctWord) {
-                // 答對了！立即發送更新給 Firebase
-                // 在高並發下，第一個寫入成功的會改變 phase，後面的寫入會被邏輯擋下或覆蓋(但我們靠前端阻擋)
+                // 答對了！
                 UI.game.btnSubmit.disabled = true;
-                
-                // 複製一份新的 players 並增加分數
                 const newPlayers = { ...localRoomState.players };
                 newPlayers[myUid].score += 1;
 
                 try {
-                    // 更新房間狀態
                     await updateDoc(getRoomDoc(currentRoomId), {
                         phase: 'round_end',
                         roundWinner: myUid,
@@ -627,7 +544,7 @@
                     UI.game.btnSubmit.disabled = false;
                 }
             } else {
-                // 答錯清空，並讓輸入框震動(簡單的視覺提示)
+                // 答錯清空，震動提示
                 UI.game.inputAnswer.value = '';
                 UI.game.inputAnswer.classList.add('border-red-500');
                 setTimeout(() => UI.game.inputAnswer.classList.remove('border-red-500'), 300);
@@ -651,10 +568,9 @@
            TTS 語音發音模組
            ========================================== */
         function speakWord(word, times, callback) {
-            // 確保瀏覽器支援
             if (!('speechSynthesis' in window)) {
                 console.warn("此設備不支援語音合成");
-                if(callback) setTimeout(callback, 2000); // 退回延遲機制
+                if(callback) setTimeout(callback, 2000); 
                 return;
             }
 
@@ -666,17 +582,16 @@
                 }
                 const utterance = new SpeechSynthesisUtterance(word);
                 utterance.lang = 'en-US'; 
-                utterance.rate = 0.9; // 稍微放慢一點更清楚
+                utterance.rate = 0.9; 
                 
                 utterance.onend = () => {
                     count++;
-                    // 停頓 0.5 秒後再讀下一次
                     setTimeout(speakNext, 500);
                 };
                 utterance.onerror = (e) => {
                     console.error("TTS 錯誤:", e);
                     count++;
-                    speakNext(); // 忽略錯誤繼續
+                    speakNext();
                 };
                 
                 window.speechSynthesis.speak(utterance);
