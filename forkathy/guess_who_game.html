@@ -1,139 +1,478 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>猜猜我是誰 - 語言表達遊戲</title>
+    <title>猜猜我是誰 🎨 幼兒廣東話語音版</title>
+    <!-- 引入 Tailwind CSS 提供繽紛多彩的 UI 介面 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .card-flipped {
-            transform: scale(0.92);
-            opacity: 0.25;
+        /* 幼兒卡牌 3D 輕微浮動效果與排除灰色效果 */
+        .card-active {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .card-eliminated {
+            transform: scale(0.9) rotate(2deg);
+            opacity: 0.2;
             filter: grayscale(100%);
+        }
+        /* 繽紛漸變背景與可愛字體 */
+        body {
+            background: linear-gradient(135deg, #fef08a 0%, #f97316 100%);
+            font-family: 'PingFang HK', 'Heiti TC', sans-serif;
         }
     </style>
 </head>
-<body class="bg-gradient-to-b from-amber-50 to-orange-100 min-h-screen font-sans text-gray-800 pb-12">
+<body class="min-h-screen pb-12 overflow-x-hidden relative">
 
-    <header class="bg-red-600 text-white shadow-md p-4 sticky top-0 z-50">
-        <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
-            <h1 class="text-2xl font-bold tracking-wider flex items-center gap-2">
-                <span>🎭</span> 猜猜我是誰 - 語言表達遊戲
-            </h1>
-            <div class="flex items-center gap-4 text-sm sm:text-base">
-                <span class="bg-red-700 px-3 py-1 rounded-full font-semibold" id="level-display">關卡: 1 / 100</span>
-                <button onclick="resetGameProgress()" class="text-xs bg-red-800 hover:bg-red-900 transition px-2 py-1 rounded">重置進度</button>
+    <!-- 用於慶祝過關的 Canvas 五彩紙屑畫布 -->
+    <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50 w-full h-full"></canvas>
+
+    <!-- 頂部繽紛標題欄 -->
+    <header class="bg-white/95 backdrop-blur-md border-b-4 border-yellow-400 shadow-lg p-4 sticky top-0 z-40">
+        <div class="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <span class="text-4xl animate-bounce">🎨</span>
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-orange-600 tracking-wider">
+                        猜猜我是誰 <span class="text-blue-500 text-lg block sm:inline">(幼兒廣東話版)</span>
+                    </h1>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <!-- 關卡指示器 -->
+                <div class="bg-yellow-400 border-2 border-yellow-500 text-yellow-950 font-black px-4 py-1.5 rounded-full shadow-md text-base sm:text-lg">
+                    第 <span id="level-num">1</span> / 100 關
+                </div>
+                
+                <!-- TTS 語音狀態檢測標籤 -->
+                <div id="tts-status" class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-300 flex items-center gap-1">
+                    <span>🎤</span> 語音加載中...
+                </div>
             </div>
         </div>
     </header>
 
-    <main class="max-w-4xl mx-auto px-4 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- 主要遊戲區域 -->
+    <main class="max-w-5xl mx-auto px-4 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
         
+        <!-- 左側：幼兒專屬提示控制台 (TTS核心) -->
         <section class="md:col-span-1 flex flex-col gap-4">
-            <div class="bg-white rounded-2xl shadow-xl p-5 border-2 border-orange-200">
-                <h2 class="text-lg font-bold text-orange-700 mb-3 flex items-center gap-2">
-                    <span>💡</span> 本局線索牆
+            
+            <!-- 粵語提示面板 -->
+            <div class="bg-white rounded-3xl shadow-xl p-5 border-4 border-orange-400 relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 w-12 h-12 bg-orange-400 rounded-full opacity-20"></div>
+                
+                <h2 class="text-xl font-black text-orange-600 mb-3 flex items-center gap-2">
+                    <span>📢</span> 廣東話聽力線索
                 </h2>
-                
-                <div class="flex justify-between items-center mb-4 bg-orange-50 p-2 rounded-lg text-sm">
-                    <span class="font-medium text-gray-600">當前提示次數:</span>
-                    <span id="clue-count" class="font-bold text-red-600 text-lg">1 / 7</span>
+
+                <!-- 提示計數器 -->
+                <div class="flex justify-between items-center mb-3 bg-orange-50 px-3 py-2 rounded-2xl border border-orange-100">
+                    <span class="text-sm font-bold text-gray-600">已聽線索：</span>
+                    <span class="bg-red-500 text-white font-extrabold px-3 py-0.5 rounded-full text-sm" id="clue-badge">1 / 7</span>
                 </div>
 
-                <div id="clues-container" class="space-y-2 max-h-64 overflow-y-auto mb-4 pr-1">
+                <!-- 提示內容顯示盒 -->
+                <div id="clues-list" class="space-y-3 max-h-[280px] overflow-y-auto mb-4 p-1">
+                    <!-- 由 JS 填充廣東話提示 -->
+                </div>
+
+                <!-- 超大聲音重播按鈕 (幼兒最愛) -->
+                <button onclick="speakCurrentClue()" class="w-full bg-yellow-400 hover:bg-yellow-500 active:scale-95 border-b-4 border-yellow-600 text-yellow-950 font-black py-4 px-4 rounded-2xl shadow-lg transition duration-150 flex justify-center items-center gap-3 text-lg animate-pulse">
+                    <span class="text-2xl">🔊</span> 點擊聽廣東話讀一次
+                </button>
+
+                <div class="grid grid-cols-2 gap-2 mt-3">
+                    <!-- 下一個線索 -->
+                    <button id="next-clue-btn" onclick="nextClue()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-2 rounded-xl text-sm border-b-4 border-orange-700 active:scale-95 transition flex flex-col items-center justify-center">
+                        <span class="text-xl">🔍</span>
+                        <span>下一個線索</span>
+                    </button>
+                    <!-- 開啟猜測 -->
+                    <button id="guess-mode-btn" onclick="toggleGuessMode()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-2 rounded-xl text-sm border-b-4 border-blue-700 active:scale-95 transition flex flex-col items-center justify-center">
+                        <span id="guess-btn-icon" class="text-xl">🎯</span>
+                        <span id="guess-btn-text">我要猜答案！</span>
+                    </button>
+                </div>
+                
+                <div id="guess-instructions" class="hidden mt-3 p-2 bg-blue-50 border-2 border-blue-300 rounded-xl text-center text-xs text-blue-800 font-bold animate-bounce">
+                    👈 請在右邊點選你認為正確的卡牌！
+                </div>
+            </div>
+
+            <!-- 開發者調試工具箱 (方便你我一起調試) -->
+            <div class="bg-stone-800 text-stone-300 rounded-2xl p-4 shadow-lg border-2 border-stone-700 text-xs">
+                <details open>
+                    <summary class="font-bold text-yellow-400 cursor-pointer select-none flex justify-between items-center">
+                        <span>🛠️ 開發者調試面板</span>
+                        <span class="text-[10px] text-stone-400">點擊摺疊</span>
+                    </summary>
+                    <div class="mt-2 space-y-2 pt-2 border-t border-stone-700">
+                        <div class="flex justify-between items-center">
+                            <span>本關正確答案：</span>
+                            <span class="bg-yellow-400 text-black px-2 py-0.5 rounded font-black text-sm" id="dev-answer-display">-</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <button onclick="revealAllClues()" class="bg-stone-700 hover:bg-stone-600 px-2 py-1.5 rounded text-white border border-stone-600">直接看全部提示</button>
+                            <button onclick="forceSkipLevel()" class="bg-stone-700 hover:bg-stone-600 px-2 py-1.5 rounded text-white border border-stone-600">直接跳下一關</button>
+                        </div>
+                        <div class="flex items-center gap-1 text-[10px] text-stone-400">
+                            <span>🔊 語音調試：</span>
+                            <select id="voice-select" class="bg-stone-900 text-white rounded p-1 w-full text-[10px] border border-stone-700" onchange="changeVoice()">
+                                <option value="">正在載入系統語音清單...</option>
+                            </select>
+                        </div>
                     </div>
-
-                <hr class="border-orange-100 my-4">
-
-                <div class="flex flex-col gap-2">
-                    <button id="next-clue-btn" onclick="showNextClue()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-xl shadow transition duration-200 flex justify-center items-center gap-2">
-                        <span>🔍</span> 下一條提示
-                    </button>
-                    
-                    <button id="guess-mode-btn" onclick="toggleGuessMode()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow transition duration-200 flex justify-center items-center gap-2">
-                        <span id="guess-btn-icon">🎯</span> <span id="guess-btn-text">我要猜測！</span>
-                    </button>
-                </div>
-                
-                <p id="mode-tip" class="text-xs text-center text-gray-500 mt-3 hidden">
-                    💡 猜測模式已開啟！請在右側面板點擊你認為正確的 Emoji。
-                </p>
+                </details>
             </div>
             
-            <div class="bg-stone-800 text-stone-300 rounded-2xl p-4 text-xs space-y-1.5 shadow-md">
-                <p class="font-bold text-amber-400 text-sm mb-1">🎮 遊戲規則說明：</p>
-                <p>1. 觀察左側提示，在右側點擊卡牌可將其「折疊/排除」。</p>
-                <p>2. 若線索不足，可點擊「下一條提示」進入下一輪（最高7條）。</p>
-                <p>3. 準備好觸發最終答案時，點擊「我要猜測」，再點選目標卡牌。</p>
-                <p>4. 超過 7 條提示仍未猜出，或猜錯目標，即視為本關失敗！</p>
-            </div>
         </section>
 
+        <!-- 右側：24 格超大圓角卡通卡牌面板 -->
         <section class="md:col-span-2">
-            <div class="bg-red-700 rounded-3xl p-4 sm:p-6 shadow-2xl border-4 border-red-800">
-                <div id="game-board" class="grid grid-cols-4 sm:grid-cols-6 gap-3 sm:gap-4">
-                    </div>
+            <div class="bg-red-600 rounded-[32px] p-4 sm:p-6 shadow-2xl border-8 border-red-700 relative">
+                <!-- 復古玩具擋板的邊框裝飾 -->
+                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-yellow-900 px-6 py-1 rounded-full text-xs font-black shadow-md border-2 border-yellow-500 uppercase tracking-widest">
+                    Guess Who Gameboard
+                </div>
+                
+                <div id="game-board" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 sm:gap-4 mt-2">
+                    <!-- JS 動態生成 24 張卡牌 -->
+                </div>
             </div>
         </section>
     </main>
 
-    <div id="modal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 hidden px-4">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 text-center transform scale-95 transition-all">
-            <div id="modal-icon" class="text-6xl mb-4">🎉</div>
-            <h3 id="modal-title" class="text-2xl font-bold mb-2">恭喜過關！</h3>
-            <p id="modal-message" class="text-gray-600 mb-6">你成功的猜出了答案！</p>
-            <button id="modal-action-btn" onclick="closeModal()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition shadow-lg">
-                進入下一關
+    <!-- 幼兒專屬歡樂結算彈窗 -->
+    <div id="result-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden px-4">
+        <div class="bg-white rounded-[32px] shadow-2xl max-w-md w-full p-6 text-center transform scale-95 transition-all border-8 border-yellow-400">
+            <div id="modal-emoji" class="text-8xl mb-3 animate-bounce">🎉</div>
+            <h3 id="modal-title" class="text-3xl font-extrabold text-orange-600 mb-2">好叻呀！答啱咗！</h3>
+            <p id="modal-message" class="text-gray-700 text-base mb-6 font-bold">你真係聰明，成功估中咗！</p>
+            
+            <button id="modal-next-btn" onclick="closeModal()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-2xl text-xl shadow-lg border-b-8 border-emerald-700 active:scale-95 transition">
+                下一關繼續玩！🚀
             </button>
         </div>
     </div>
 
     <script>
-        // ======= 24 位核心角色池與其專屬的 7 條漸進式語言提示庫 =======
+        // ======= 24 位核心角色池 (全面轉換為廣東話口語化 7 條提示) =======
         const charactersData = [
-            { id: "cowboy", emoji: "🤠", name: "牛仔", clues: ["我是一個普遍被認為是人類的角色。", "我頭上戴著一頂非常有特色的寬沿帽子。", "我的服裝風格跟美國西部、馬兒或警長有關。", "我臉上帶著非常開朗、熱情的笑容。", "我沒有任何面部鬍鬚，也沒有戴眼鏡。", "我的經典搭配是左輪手槍或長鞭牛鞭。", "我是帥氣的黃色笑臉西部牛仔！"] },
-            { id: "nerd", emoji: "🤓", name: "書呆子", clues: ["我是一個人類角色。", "我沒有戴任何帽子或頭戴式防護裝備。", "我臉上架著一副厚厚的黑框眼鏡。", "我的門牙稍微有點大，看起來很有特色。", "我很喜歡讀書、寫程式和鑽研各種科學。", "很多人會叫我學霸或者科技宅男/宅女。", "我是戴著厚眼鏡、露大門牙的書呆子笑臉！"] },
-            { id: "cool", emoji: "😎", name: "墨鏡仔", clues: ["我是一個黃色的人類經典笑臉。", "你現在完全看不見我的眼睛，因為被遮住了。", "我戴著一副非常酷炫的黑色太陽眼鏡。", "我的表情充滿自信，嘴角微微上揚。", "夏天、海灘或者是需要裝酷的時候最適合找我。", "我給人一種很明朗、很放鬆的時尚感。", "我是戴著全黑太陽墨鏡的酷炫笑臉！"] },
-            { id: "clown", emoji: "🤡", name: "小丑", clues: ["我擁有類似人類的外表，但妝容很誇張。", "我的臉上塗滿了厚厚的白色與彩色化妝品。", "我有一個圓圓大大的經典紅鼻子。", "我的主要工作是在馬戲團或派對裡逗大家開心。", "有時候我看起來很歡樂，但有些人會有點怕我。", "我會折氣球、拋球雜耍，還會表演滑稽動作。", "我是紅鼻子、大紅嘴唇的馬戲團滑稽小丑！"] },
-            { id: "ninja", emoji: "🥷", name: "忍者", clues: ["我是一個身手敏捷、神祕的人類角色。", "我的全身上下幾乎都被深黑色的衣服包裹著。", "你只能看到我的眼睛，嘴巴和頭髮都被蒙住了。", "我擅長潛伏、暗殺以及使用手裡劍與武士刀。", "我走路非常輕巧，飛簷走壁，幾乎不會發出聲音。", "我來自古老的日本，是暗夜中的神祕行者。", "我是身穿黑衣、只露出雙眼的神祕忍者！"] },
-            { id: "santa", emoji: "🎅", name: "聖誕老人", clues: ["我是一個非常受全世界小孩子歡迎的人類老人。", "我頭上戴著一頂紅白相間的標誌性毛絨帽子。", "我長著滿臉濃密、雪白的漂亮落腮鬍。", "我每年只在12月底的某一個深夜辛勤工作。", "我喜歡坐著由九隻馴鹿拉的會飛的雪橇。", "我會從煙囪爬進屋裡，把精美禮物放進襪子。", "我是紅白大衣、白鬍子的慈祥聖誕老人！"] },
-            { id: "princess", emoji: "👸", name: "公主", clues: ["我是一位尊貴的人類女性皇室成員。", "我頭上戴著象徵高貴身份的金黃色小皇冠。", "我通常穿著優雅的禮服，有著美麗的長髮。", "童話故事裡，我常常在城堡裡等待王子。", "有些故事裡我會被惡龍抓走，或者吃下毒蘋果。", "我代表著優雅、高貴與童話世界的美好。", "我是戴著耀眼小皇冠、美麗優雅的公主！"] },
-            { id: "lion", emoji: "🦁", name: "獅子", clues: ["我不是人類，我是一隻力量強大的四足哺乳動物。", "我被人類公認為是「萬獸之王」。", "我的脖子周圍長著一圈厚厚、威風的鬃毛。", "我主要生活在非洲大草原上，是頂級的掠食者。", "我的叫聲非常震撼人心，能傳到數公里之外。", "迪士尼電影《獅子王》裡的辛巴就是我的同類。", "我是威風凜凜、長著大鬃毛的萬獸之王獅子！"] },
-            { id: "robot", emoji: "🤖", name: "機器人", clues: ["我不是生物，我是由金屬和電路組成的非人類。", "我的身體通常是灰色或藍色的機械金屬結構。", "我的頭頂長著天線，眼睛常常會發出電子光芒。", "我說話的聲音可能沒有感情，都是電子音效。", "我需要充電或裝電池運作，擅長高精度計算。", "科幻電影裡我可能會智商超高，或成為小助手。", "我是金屬外殼、方方正正的未來科技機器人！"] },
-            { id: "alien", emoji: "👽", name: "外星人", clues: ["我不是地球上的生物，來自遙遠未知的外太空。", "我長著一個巨大的倒卵圓形腦袋，沒有一根頭髮。", "我的眼睛比例非常大，全黑且深不見底。", "在許多影視作品中，我的皮膚通常被描繪成綠色。", "我搭乘神祕的飛碟（UFO）在宇宙中穿梭旅行。", "科幻迷最喜歡討論關於我的神祕基地（如51區）。", "我是大腦袋、大黑眼睛的神祕天外來客外星人！"] },
-            { id: "firefighter", emoji: "🧑‍🚒", name: "消防員", clues: ["我位是一名英勇且備受尊敬的人類專業人員。", "我的工作環境通常伴隨著熊熊烈火、高溫與濃煙。", "我頭上戴著堅固且耐高溫的防護安全頭盔。", "我每天都會與紅色消防車、高空雲梯及水帶為伍。", "我的主要職責是撲滅火災以及在現場搜救生命。", "我的衣服上有亮眼的反光條，確保黑暗中的安全。", "我是手持強力水槍、衝進火場英勇救人的消防員！"] },
-            { id: "astronaut", emoji: "🧑‍🚀", name: "宇航員", clues: ["我是一位在極端極致環境下工作的人類專業人員。", "我工作的時候必須穿著非常厚重特製的白色衣服。", "我的整個頭部被一個全封閉的透明面罩頭盔保護。", "我的工作地點不在地球表面，而是在神祕太空。", "我坐著巨大的火箭升空，在國際太空站做實驗。", "在無重力環境下，我會漂浮，並吃著特製太空食品。", "我是漫步月球、探索宇宙奧秘的太空宇航員！"] },
-            { id: "wizard", emoji: "🧙‍♂️", name: "巫師", clues: ["我是一個擁有超自然神祕魔法力量的人類男性。", "我通常留著長長的灰色或白色鬍鬚，顯得有智慧。", "我頭上戴著一頂高高尖尖的經典魔法帽子。", "我的手裡經常握著一根法杖，可以施展各種咒語。", "《哈利波特》的鄧不利多或《魔戒》甘道夫是我的同行。", "我會調配神秘的魔藥，有些故事裡我還有一隻貓頭鷹。", "我是身穿魔法袍、手拿長法杖的神祕大巫師！"] },
-            { id: "vampire", emoji: "🧛", name: "吸血鬼", clues: ["我是一個存在於奇幻傳說中的超自然非人類。", "我非常討厭溫暖的陽光，白天我都在棺材裡睡覺。", "我的嘴巴裡有兩顆非常尖銳、用來防身的犬齒獠牙。", "我喜歡身穿優雅古典的黑色或深紅色高領披風。", "大蒜、十字架和木樁傳說是我的致命剋星。", "傳說中我能變成蝙蝠在夜空中飛翔，具有長生不老之身。", "我是夜間活動、長著尖尖獠牙的優雅吸血鬼！"] },
-            { id: "elf", emoji: "🧝", name: "精靈", clues: ["我是一個充滿奇幻神話色彩的非人類種族。", "我身上最明顯的特徵是長著一雙長長、尖尖的耳朵。", "我通常身材修長，擁有出眾的容貌與超長的壽命。", "我與大自然森林非常親近，擅長使用弓箭或治癒魔法。", "在很多RPG奇幻遊戲和史詩電影中都有我的身影。", "我走路腳步極其輕盈，幾乎不會留下任何足跡。", "我是住在森林深處、長著尖耳朵的優雅精靈！"] },
-            { id: "cat", emoji: "🐱", name: "貓咪", clues: ["我是一隻深受人類喜愛、行動敏捷的毛茸茸小動物。", "我走起路來悄無聲息，而且彈跳與平衡感極佳。", "我的臉頰兩側長著幾根用來探測空間的敏感鬍鬚。", "當我感到極度安全和高興時，喉嚨會發出嚕嚕聲。", "我喜歡抓老鼠、玩毛線球，偶爾會傲嬌地不理人。", "我是網路上著名的「傲嬌主子」，人類甘願當我貓奴。", "我是會發出喵喵叫聲、喜歡曬太陽洗臉的可愛貓咪！"] },
-            { id: "dog", emoji: "🐶", name: "狗狗", clues: ["我被公認是人類最忠誠、最親密貼心的動物朋友。", "我的聽覺和嗅覺極度靈敏，能幫人類做很多特殊工作。", "當我見到心愛的主人時，會瘋狂地搖晃我的尾巴。", "我的品種和體型非常多，有的巴掌大，有的大如牛。", "我喜歡啃骨頭、玩接飛盤，每天都渴望出門散步。", "當我高興、警惕或撒嬌時，會發出汪汪的叫聲。", "我是忠心耿耿、喜歡搖尾巴汪汪叫的人類好夥伴狗狗！"] },
-            { id: "monkey", emoji: "🐵", name: "猴子", clues: ["我是一隻非常聰明、活潑且靈活的靈長類動物。", "我有一條靈活的長尾巴，喜歡在樹林間盪來盪去。", "我最喜歡吃的一種水果是黃黃的、彎彎的。", "我的模仿能力極強，能學人類做很多滑稽鬼臉。", "中國神話故事裡大鬧天宮的孫悟空就是我的同類。", "我高興或興奮的時候喜歡抓耳撓腮，嘰嘰喳喳叫。", "我是喜歡吃香蕉、在樹冠上靈巧攀爬的機靈猴子！"] },
-            { id: "beard", emoji: "🧔", name: "型男鬍", clues: ["我是一個成熟、充滿魅力的人類男性角色。", "我此時此刻沒有戴帽子，眼睛上也沒有戴眼鏡。", "我最引以為傲的是下巴和臉頰上那一圈濃密的落腮鬍。", "我給人一種粗獷、成熟或者非常時尚型男的視覺感。", "我需要定期使用修容剪或刮鬍刀來維持完美的形狀。", "比起稚嫩的白面書生，我走的是成熟穩重路線。", "我是蓄著滿臉性感、有型濃密落腮鬍的帥氣型男！"] },
-            { id: "grandma", emoji: "👵", name: "老奶奶", clues: ["我是一位充滿慈愛與溫暖的人類女性家庭長輩。", "我的 頭髮已經全部相繼變成了銀白色，通常會盤起來。", "因為視力隨著歲月退化，我臉上常戴著一副老花眼鏡。", "我說話聲音很溫柔，喜歡給孫子孫女講過去的故事。", "我擅長織溫暖的毛衣、做美味的手工餅乾或家常菜。", "我的眼角和臉上布滿了歲月留下的溫柔皺紋。", "我是銀白頭髮、戴著老花鏡、慈祥和藹的老奶奶！"] },
-            { id: "grandpa", emoji: "👴", name: "老爺爺", clues: ["我是一位德高望重、閱歷豐富的人類男性家庭長輩。", "我的頭頂基本上已經禿了，只剩下兩側有些許白髮。", "我走路有時候會慢吞吞的，可能需要一根拐杖輔助。", "我最大的愛好是在公園裡下象棋、看報紙或者曬太陽。", "我的下巴有時可能留著一點點慈祥的小白鬍渣。", "我是家庭裡最年長、最有生活智慧的男性長輩。", "我是頭頂微禿、滿頭白髮、面帶微笑的慈祥老爺爺！"] },
-            { id: "baby", emoji: "👶", name: "嬰兒", clues: ["我是一個人類，但我是所有人裡面年紀最小、最稚嫩的。", "我的頭上光溜溜的，只倔強地長著一根細細的捲髮。", "我現在還完全不會雙腳站立行走，只能在地上爬行。", "我還不會說人類的完整語言，只會發出呀呀的聲音。", "當我肚子餓、受驚嚇或是尿布濕了，我會大聲啼哭。", "我最喜歡喝牛奶，睡覺或安撫時嘴裡還含著奶嘴。", "我是剛出生不久、咬著奶嘴爬行的可愛小嬰兒！"] },
-            { id: "police", emoji: "👮", name: "警察", clues: ["我是一位維護社會治安、執行法律的人類公務人員。", "我頭上戴著一頂非常威嚴、正氣的大蓋帽（警帽）。", "我身穿筆挺的制服，胸前佩戴著一枚閃亮的警徽。", "我的隨身配備通常有手銬、警棍、對講機甚至是配槍。", "當你在街上迷路或遇到壞人時，找我幫忙絕對沒錯。", "我開著閃爍紅藍警燈、會發出警笛聲的帥氣巡邏車。", "我是維持社會正義、專門抓捕壞人的正義警察！"] },
-            { id: "doctor", emoji: "👩‍⚕️", name: "醫生", clues: ["我是一位在醫療機構工作的人類女性專業醫護人員。", "我的外衣通常是一件非常乾淨整潔的白色長大褂（白大衣）。", "我的脖子上經常掛著一個用來聆聽心跳的專業聽診器。", "我的神聖工作是幫生病的人看病、開藥方或者做手術。", "大家都希望看到我獲得健康，但平時又希望不需要找我。", "我會溫柔地叮嚀你要多喝水、按時吃藥、千萬別熬夜。", "我是身穿白大衣、手持聽診器、救死扶傷的女性醫生！"] }
+            { id: "cowboy", emoji: "🤠", name: "牛仔", clues: [
+                "我係一個人嚟架。",
+                "我頭上面戴住一頂好闊嘅大草帽。",
+                "我最鍾意騎馬，喺大草原上面奔跑。",
+                "我塊臉笑得好開心、好熱情。",
+                "我下巴好乾淨，無留鬚，亦無戴眼鏡。",
+                "我有時會揮動繩索，好似一個西部警長。",
+                "我係一個好有型、戴住黃色帽子嘅西部牛仔！"
+            ]},
+            { id: "nerd", emoji: "🤓", name: "書呆子", clues: [
+                "我係一個人，而且我好鍾意讀書。",
+                "我無戴帽，但係我戴住一副好厚嘅黑框眼鏡。",
+                "我有兩隻好大、好明顯嘅兔仔牙突出嚟。",
+                "我最鍾意做功課、寫電腦程式同研究科學。",
+                "好多人會叫我做學霸，或者叫我做高科技宅男。",
+                "我雖然笑起上嚟有啲傻氣，但其實我超級聰明。",
+                "我係一個戴住大眼鏡、露出大門牙嘅書呆子！"
+            ]},
+            { id: "cool", emoji: "😎", name: "墨鏡仔", clues: [
+                "我係一個黃色皮膚嘅經典笑臉。",
+                "你而家完全睇唔到我對眼睛，因為被遮住咗。",
+                "我戴住一副非常之酷炫嘅黑色太陽眼鏡（墨鏡）。",
+                "我嘅表情充滿自信，嘴角微微向上揚。",
+                "夏天去沙灘，或者想扮有型嗰陣最啱搵我。",
+                "我比人一種好放鬆、好時尚嘅感覺。",
+                "我係一個戴住全黑太陽眼鏡嘅有型墨鏡仔！"
+            ]},
+            { id: "clown", emoji: "🤡", name: "小丑", clues: [
+                "我擁有好似人類嘅外形，但係我嘅化妝好誇張。",
+                "我塊臉上面搽滿咗厚厚嘅白色同彩色油漆。",
+                "我長有一隻紅色、圓溜溜嘅大鼻子。",
+                "我嘅工作係喺馬戲團或者生日派對度整古做怪，帶歡樂比大家。",
+                "我最拿手玩拋波波、扭氣球同表演踩高蹺。",
+                "我會著到五顏六色，鞋子大到不合比例。",
+                "我係紅鼻子、大紅嘴唇、帶比大家歡笑嘅馬戲團小丑！"
+            ]},
+            { id: "ninja", emoji: "🥷", name: "忍者", clues: [
+                "我係一個身手好敏捷、行蹤好神祕嘅古代刺客。",
+                "我全身上下幾乎都被黑色嘅衣服包到實一實。",
+                "你淨係可以見到我對眼睛，我個嘴同頭髮都被蒙面巾遮住咗。",
+                "我擅長匿埋喺陰暗地方，仲會使用手裡劍（飛鏢）同武士刀。",
+                "我行路好似貓咪一樣無聲無息，仲識得飛簷走壁。",
+                "我來自古代嘅日本，係黑夜中嘅神祕行者。",
+                "我係一個身穿黑衣、只露出雙眼嘅神祕日本忍者！"
+            ]},
+            { id: "santa", emoji: "🎅", name: "聖誕老人", clues: [
+                "我係一個極受全世界小朋友歡迎嘅慈祥老爺爺。",
+                "我頭上面戴住一頂紅色同白色嘅毛絨帽。",
+                "我面上留有滿滿、好似雪咁白嘅濃密落腮鬍鬚。",
+                "我每年淨係會喺12月底嘅一個凍冰冰深夜出嚟努力工作。",
+                "我會坐住由九隻識飛嘅馴鹿拉住嘅雪橇去送禮物。",
+                "我會由煙囪爬入屋，將禮物放喺小朋友嘅襪入面。",
+                "我係身穿紅白大衣、派禮物比大家嘅聖誕老人！"
+            ]},
+            { id: "princess", emoji: "👸", name: "公主", clues: [
+                "我是一位高貴嘅皇室女性成員。",
+                "我頭頂戴住一頂金光閃閃、好精緻嘅小皇冠。",
+                "我通常著住一條好靚嘅長裙，有一頭好亮麗嘅秀髮。",
+                "喺童話故事入面，我經常住喺城堡，等待王子嘅出現。",
+                "有啲故事度我會食咗一粒毒蘋果，或者被惡龍抓走。",
+                "我代表住溫柔、高雅與美麗童話。",
+                "我係戴住耀眼小皇冠、住喺城堡入面嘅美麗公主！"
+            ]},
+            { id: "lion", emoji: "🦁", name: "獅子", clues: [
+                "我唔係人，我係一隻威猛嘅四足哺乳動物。",
+                "人類公認我係大自然界嘅「萬獸之王」。",
+                "我嘅脖子周圍長有一大圈好厚、好威風嘅金色鬃毛。",
+                "我主要生活喺非洲大草原上，係最頂級嘅獵食者。",
+                "我嘅咆哮叫聲非常大，可以傳到好幾公里咁遠。",
+                "迪士尼電影《獅子王》入面嘅主角辛巴就係我嘅同類。",
+                "我係長著大鬃毛、叫聲好大嘅草原王者大獅子！"
+            ]},
+            { id: "robot", emoji: "🤖", name: "機器人", clues: [
+                "我唔係生物，我係由金屬同電路組成嘅鐵皮玩具。",
+                "我嘅身體通常係灰色或者藍色嘅金屬結構。",
+                "我頭頂裝有一根小天線，眼睛有時會發出紅藍光芒。",
+                "我講嘢嘅聲音好平淡，無感情，有種電子機械音。",
+                "我需要插電或者裝電池先可以動，計算能力非常厲害。",
+                "好多科幻電影度，我會成為人類嘅未來小助手。",
+                "我係一個身上有齒輪與天線、金屬製成嘅未來機器人！"
+            ]},
+            { id: "alien", emoji: "👽", name: "外星人", clues: [
+                "我唔係地球上嘅生物，我來自好遙遠嘅未知外太空。",
+                "我長有一個超級大、倒轉雞蛋形嘅光頭腦袋，無頭髮。",
+                "我對眼睛大得好誇張，而且全黑色，完全無眼白。",
+                "好多科幻畫作入面，我嘅皮膚通常被畫成綠色或者灰色。",
+                "我會駕駛神祕嘅飛碟（UFO）在星際中旅行。",
+                "我嘅手指長長，會發出奇妙的光，對人類非常好奇。",
+                "我係大腦袋、大黑眼、來自神秘外太空嘅外星人！"
+            ]},
+            { id: "firefighter", emoji: "🧑‍🚒", name: "消防員", clues: [
+                "我是一位非常勇敢、幫人類消滅火災嘅英雄。",
+                "我工作嘅地方通常伴隨住熊熊烈火、高溫同埋濃煙。",
+                "我頭頂戴住一頂非常堅固、耐火嘅黃色防護頭盔。",
+                "我每日都會同紅色消防車、雲梯同埋長長嘅水喉做朋友。",
+                "我嘅職責係第一時間去救火同埋救出被困嘅市民。",
+                "我身上著住一件有黃色反光條嘅防火制服。",
+                "我係手持強力水槍、英勇衝進火場救人嘅消防員！"
+            ]},
+            { id: "astronaut", emoji: "🧑‍🚀", name: "太空人", clues: [
+                "我是一位喺極端環境下工作嘅超級科學探索員。",
+                "我工作嗰陣，必須著住一件白色、非常厚重嘅特製衣服。",
+                "我成個頭部都被一個圓形、透明嘅全封閉大頭盔保護住。",
+                "我工作嘅地方不在地球表面，而係喺神祕嘅宇宙太空。",
+                "我會坐住巨型火箭升空，喺太空站度漂浮做實驗。",
+                "因為在無重力狀態，我食嘢同飲水都要好似吸啫喱咁吸。",
+                "我係漫步月球、飄浮在星空中嘅神祕太空人！"
+            ]},
+            { id: "wizard", emoji: "🧙‍♂️", name: "魔法師", clues: [
+                "我是一個擁有不可思議魔法力量嘅男角色。",
+                "我留住長長嘅白色或者灰色鬚，睇落非常有智慧。",
+                "我頭頂戴住一頂高高、尖尖嘅經典魔法帽子。",
+                "我手上通常會拿住一根長長嘅法杖，可以用嚟施法。",
+                "《哈利波特》入面嘅鄧不利多校長就是我嘅代表人物。",
+                "我識得用大釜煮魔藥，或者召喚飛天掃把。",
+                "我係一個戴尖頂帽、識得變魔法嘅神祕大巫師！"
+            ]},
+            { id: "vampire", emoji: "🧛", name: "吸血鬼", clues: [
+                "我是一個傳說中怕太陽光嘅超自然神祕角色。",
+                "我最討厭暖烘烘嘅陽光，所以白天我通常喺棺材度瞓覺。",
+                "我笑嘅時候，你會見到我嘴入面有兩隻非常尖銳嘅犬牙。",
+                "我鍾意著住一件黑色同紅色相間、領口好高嘅大披風。",
+                "大蒜、十字架同埋銀色嘅子彈傳說中係我最驚嘅嘢。",
+                "傳說度我可以變成一隻黑色小蝙蝠，喺黑夜中飛嚟飛去。",
+                "我係長住小尖牙、身穿黑紅披風嘅神祕吸血鬼！"
+            ]},
+            { id: "elf", emoji: "🧝", name: "精靈", clues: [
+                "我是一個充滿童話奇幻色彩嘅美麗生物種族。",
+                "我最明顯嘅特徵，係長住一對長長、尖尖嘅大耳朵。",
+                "我通常身材好修長，有長長嘅頭髮，而且可以生存好耐。",
+                "我非常熱愛大自然森林，最擅長射箭或者使用森林治癒術。",
+                "好多奇幻冒險故事或者RPG遊戲入面，我都會喺森林出現。",
+                "我行路嘅腳步比貓更輕，走過草地都唔會壓彎一棵草。",
+                "我係住在森林深處、長有一對尖耳朵嘅優雅精靈！"
+            ]},
+            { id: "cat", emoji: "🐱", name: "貓咪", clues: [
+                "我係一隻好受人類喜愛、行動敏捷嘅毛茸茸小動物。",
+                "我行路完全無聲無息，而且我平衡力非常好，識高空跳落嚟。",
+                "我兩邊臉頰長有幾根長長、敏感嘅鬚，用嚟探路。",
+                "當我感到好安全、好舒服嗰陣，喉嚨會發出咕嚕咕嚕聲。",
+                "我最鍾意抓老鼠、玩毛線球，或者趴喺窗台曬太陽。",
+                "我好傲嬌，有時你叫我名字，我可能只會動一下尾巴唔理你。",
+                "我係一隻會「喵喵」叫、最鍾意舔毛清理自己嘅得意小貓！"
+            ]},
+            { id: "dog", emoji: "🐶", name: "狗狗", clues: [
+                "我被公認係人類最忠心、最貼心嘅動物好朋友。",
+                "我嘅嗅覺同埋聽覺超級靈敏，可以幫警察叔叔做嘢。",
+                "當我見到心愛嘅主人返屋企，我會瘋狂搖動我嘅尾巴。",
+                "我好鍾意啃骨頭、玩接飛盤，每日最渴望出街散步。",
+                "當我開心或者警戒嗰時，會發出汪汪嘅叫聲。",
+                "我會幫主人看門口，甚至帶引盲人行路。",
+                "我係一隻忠心耿耿、鍾意搖尾巴汪汪叫嘅可愛小狗！"
+            ]},
+            { id: "monkey", emoji: "🐵", name: "猴子", clues: [
+                "我是一隻非常聰明、活潑而且身手敏捷嘅靈長類動物。",
+                "我長有一條好靈活嘅長尾巴，最鍾意喺樹林間盪鞦韆。",
+                "我最鍾意食嘅，係一種黃色、彎彎嘅香甜水果。",
+                "我嘅模仿能力超強，好鍾意學人類做各種滑稽嘅鬼臉。",
+                "西遊記故事入面嘅孫悟空，就係我哋嘅神話代表。",
+                "我高興嗰時會抓耳撓腮，發出吱吱渣渣嘅興奮叫聲。",
+                "我係熱愛食香蕉、喺樹上面靈活爬嚟爬去嘅馬騮仔！"
+            ]},
+            { id: "beard", emoji: "🧔", name: "鬍鬚叔叔", clues: [
+                "我是一個成熟、充滿成熟魅力嘅男性人類角色。",
+                "我呢個時候無戴帽子，亦無戴任何眼鏡。",
+                "我最顯眼嘅特徵，係嘴唇周圍同下巴留有一大圈濃密嘅黑色鬍鬚。",
+                "我給人一種很粗獷、稳重或者非常帥氣嘅男人形象。",
+                "我需要定期用剪刀或者剃鬚刀來整理我美麗嘅鬍鬚。",
+                "比起白白淨淨嘅後生仔，我行嘅係成熟穩重路線。",
+                "我係一個留住整齊、濃密黑色落腮鬍嘅帥氣鬍鬚叔叔！"
+            ]},
+            { id: "grandma", emoji: "👵", name: "老奶奶", clues: [
+                "我是一位充滿愛心、好慈祥嘅女性家庭長輩。",
+                "我嘅頭髮因為歲月，已經全部變成銀白色，通常會盤起來。",
+                "我對眼有老花，所以塊臉上面常戴住一副圓圓嘅老花眼鏡。",
+                "我講嘢好溫柔，好鍾意抱住孫仔孫女講以前嘅有趣故事。",
+                "我最擅長織溫暖嘅毛衣，或者做甜甜嘅手工餅乾比大家食。",
+                "我嘅面部留有好多溫和嘅皺紋，笑起上嚟非常親切。",
+                "我係一頭銀髮、戴老花鏡、笑瞇瞇嘅慈祥阿婆（老奶奶）！"
+            ]},
+            { id: "grandpa", emoji: "👴", name: "老爺爺", clues: [
+                "我是一位德高望重、經歷過好多風雨嘅男性家庭長輩。",
+                "我頭頂上嘅頭髮大部分已經脫落（禿頭），只剩兩邊有些許白髮。",
+                "我行路有時會慢吞吞，需要用一根小拐杖行路。",
+                "我平時最鍾意去公園同街坊下棋、睇報紙，或者坐喺度曬太陽。",
+                "我下巴偶爾會留有一點點短短嘅白色小鬍渣。",
+                "我笑起上嚟眼睛會瞇成一條線，係家庭裡嘅智慧擔當。",
+                "我係頭頂微禿、滿頭白髮、拄拐杖嘅慈祥阿公（老爺爺）！"
+            ]},
+            { id: "baby", emoji: "👶", name: "BB（嬰兒）", clues: [
+                "我是一個人類，但我是所有人裡面年紀最小、最柔弱嘅一個。",
+                "我頭上光禿禿，只得頭頂一條細細、捲捲嘅頭髮。",
+                "我而家仲未學識雙腳行路，只能用雙手雙腳喺地板上爬來爬去。",
+                "我仲唔識講人類嘅複雜說話，平時淨係會發出呀呀呀嘅單音。",
+                "一但我肚子餓、受驚或者尿濕咗，我就會大聲喊：哇哇哇！",
+                "我最鍾意含住一個奶嘴，或者抱住奶樽大口大口飲牛奶。",
+                "我係一個咬住小奶嘴、好得意、需要大家照顧嘅小BB！"
+            ]},
+            { id: "police", emoji: "👮", name: "警察叔叔", clues: [
+                "我是一位威風凜凜、專門維持治安、捉壞人嘅公務人員。",
+                "我頭頂戴住一頂黑色或藍色、非常莊嚴正氣嘅大蓋帽子（警帽）。",
+                "我身穿挺拔嘅制服，胸前佩戴住一枚閃亮亮嘅警察徽章。",
+                "我嘅裝備有手銬、警棍、對講機，有時仲會配備手槍。",
+                "如果你喺條街度迷路或者遇到危險，搵我幫忙就萬無一失。",
+                "我會駕駛閃爍住紅藍警燈、發出呠呠警報聲嘅巡邏車。",
+                "我係消滅罪惡、守護市民治安、正直無私嘅警察叔叔！"
+            ]},
+            { id: "doctor", emoji: "👩‍⚕️", name: "女醫生", clues: [
+                "我是一位在醫院或診所裡辛勤工作嘅女性醫護人員。",
+                "我工作嗰陣，身上會著住一件好整潔、全白色嘅長大褂（白大衣）。",
+                "我條頸度經常掛住一個圓形、用嚟聽你心跳嘅聽診器。",
+                "我嘅職責係幫身體不舒服嘅人看病、聽心跳、開藥或者做手術。",
+                "我會好溫柔咁叮囑你要多喝水、按時吃藥、早點瞓覺。",
+                "我會用醫學知識保護大家遠離病毒，重獲健康快樂。",
+                "我係一位手拿聽診器、專門幫你看病嘅溫柔女醫生！"
+            ]}
         ];
 
-        // ======= 遊戲運行狀態變數 =======
-        let currentLevel = 1;         // 當前關卡 (1-100)
-        let boardCharacters = [];     // 當前棋盤上的卡牌順序 (每關隨機洗牌)
-        let targetCharacter = null;   // 本關謎底角色
-        let cluesShown = 1;           // 當前已解鎖的提示數量 (1-7)
-        let isGuessMode = false;      // 是否開啟猜測模式
-        let eliminatedIds = new Set();// 玩家手動翻倒/排除的角色 ID 集合
+        // ======= 遊戲運行狀態變量 =======
+        let currentLevel = 1;
+        let boardCharacters = [];
+        let targetCharacter = null;
+        let cluesShown = 1;
+        let isGuessMode = false;
+        let eliminatedIds = new Set();
+        let selectedVoice = null;
 
-        // 初始化加載
-        window.onload = function() {
-            // 從瀏覽器緩存讀取進度
-            const savedLevel = localStorage.getItem('guess_who_level');
-            if (savedLevel && parseInt(savedLevel) <= 100) {
-                currentLevel = parseInt(savedLevel);
+        // ======= TTS 音訊核心引擎 =======
+        function initTTS() {
+            if ('speechSynthesis' in window) {
+                // 部分瀏覽器對 `getVoices` 實作非同步加載，需監聽觸發
+                window.speechSynthesis.onvoiceschanged = () => {
+                    populateVoiceList();
+                };
+                populateVoiceList();
+            } else {
+                const statusLabel = document.getElementById('tts-status');
+                statusLabel.innerText = "❌ 瀏覽器不支援語音";
+                statusLabel.className = "bg-red-100 text-red-800 text-xs font-bold px-3 py-1.5 rounded-full border border-red-300";
             }
-            initLevel();
-        };
+        }
+
+        function populateVoiceList() {
+            if (!('speechSynthesis' in window)) return;
+            const voices = window.speechSynthesis.getVoices();
+            const voiceSelect = document.getElementById('voice-select');
+            voiceSelect.innerHTML = '';
+
+            // 篩選出廣東話/粵語語音 (zh-HK, zh-GND, Cantonese, Hong Kong)
+            let cantoneseVoiceList = voices.filter(voice => 
+                voice.lang.includes('zh-HK') || 
+                voice.lang.includes('zh-GND') || 
+                voice.name.toLowerCase().includes('cantonese') ||
+                voice.name.toLowerCase().includes('hong kong')
+            );
+
+            // 若沒有找到粵語，則篩選任何中文 (zh-CN, zh-TW, zh)
+            let finalVoices = cantoneseVoiceList.length > 0 ? cantoneseVoiceList : voices.filter(v => v.lang.startsWith('zh'));
+            if (finalVoices.length === 0) finalVoices = voices; // 萬能兜底
+
+            finalVoices.forEach((voice, index) => {
+                const option = document.createElement('option');
+                option.value = voice.name;
+                option.innerText = `${voice.name} (${voice.lang})`;
+                voiceSelect.appendChild(option);
+            });
+
+            // 預設選擇第一個找到的語音
+            if (finalVoices.length > 0) {
+                selectedVoice = finalVoices[0];
+                const statusLabel = document.getElementById('tts-status');
+                if (cantoneseVoiceList.length > 0) {
+                    statusLabel.innerHTML = `<span>🎤</span> 粵語語音已就緒`;
+                    statusLabel.className = "bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-300";
+                } else {
+                    statusLabel.innerHTML = `<span>⚠️</span> 系統缺廣東話，使用普通話`;
+                    statusLabel.className = "bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1.5 rounded-full border border-amber-300";
+                }
+            }
+        }
+
+        function changeVoice() {
+            const voiceSelect = document.getElementById('voice-select');
+            const voices = window.speechSynthesis.getVoices();
+            selectedVoice = voices.find(v => v.name === voiceSelect.value);
+            // 立即測試朗讀當前最新提示
+            speakCurrentClue();
+        }
+
+        // 發聲函數
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // 停止目前所有發聲
+                const utterance = new SpeechSynthesisUtterance(text);
+                
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                }
+                
+                // 幼兒專屬語速與音調微調
+                utterance.rate = 0.8;  // 微慢速，方便理解
+                utterance.pitch = 1.25; // 稍微高音，聽起來更親切活潑
+                
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function speakCurrentClue() {
+            const currentClueText = targetCharacter.clues[cluesShown - 1];
+            // 讀出前綴：「第 ${cluesShown} 個提示：」再加上線索主體
+            speakText(`第 ${cluesShown} 個提示。${currentClueText}`);
+        }
 
         // ======= 初始化關卡核心邏輯 =======
         function initLevel() {
@@ -142,108 +481,131 @@
             isGuessMode = false;
             updateGuessModeUI();
 
-            // 100關機制的設計：根據關卡數決定謎底 (24個角色循環)
-            // 這樣就算只有24個基礎角色，配合每關大洗牌，也能產生100種不同的局勢體驗！
+            // 100關對應謎底機制 (24個角色循環)
             const targetIndex = (currentLevel - 1) % charactersData.length;
             targetCharacter = charactersData[targetIndex];
 
-            // 複製一份完整池，並進行隨機洗牌(Shuffle)，讓卡牌在棋盤上的位置每關都不同
+            // 洗牌打亂右側卡牌排列
             boardCharacters = [...charactersData];
             for (let i = boardCharacters.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [boardCharacters[i], boardCharacters[j]] = [boardCharacters[j], boardCharacters[i]];
             }
 
-            // 更新 UI 數據顯示
-            document.getElementById('level-display').innerText = `關卡: ${currentLevel} / 100`;
-            document.getElementById('next-clue-btn').disabled = false;
-            document.getElementById('next-clue-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+            // 更新 UI
+            document.getElementById('level-num').innerText = currentLevel;
+            document.getElementById('dev-answer-display').innerText = `${targetCharacter.emoji} ${targetCharacter.name}`;
+            
+            // 下一個提示按鈕重置
+            const nextBtn = document.getElementById('next-clue-btn');
+            nextBtn.disabled = false;
+            nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
 
             renderClues();
             renderBoard();
+
+            // 當關卡初始化成功時，主動以粵語語音播報一次提示！
+            setTimeout(() => {
+                speakText(`小朋友，新一關開始喇！聽下第一個提示：`);
+                setTimeout(() => {
+                    speakCurrentClue();
+                }, 2000);
+            }, 500);
         }
 
-        // ======= 渲染左側提示區 =======
+        // ======= 渲染左側提示列表 =======
         function renderClues() {
-            document.getElementById('clue-count').innerText = `${cluesShown} / 7`;
-            const container = document.getElementById('clues-container');
-            container.innerHTML = '';
+            document.getElementById('clue-badge').innerText = `${cluesShown} / 7`;
+            const list = document.getElementById('clues-list');
+            list.innerHTML = '';
 
-            // 根據目前已解鎖的數量，逐條渲染提示
             for (let i = 0; i < cluesShown; i++) {
                 const clueText = targetCharacter.clues[i];
-                const clueDiv = document.createElement('div');
-                clueDiv.className = `p-3 rounded-xl text-sm border font-medium transition-all duration-300 transform translate-x-0 ${
-                    i === cluesShown - 1 
-                    ? 'bg-amber-100 border-amber-400 text-amber-900 font-semibold shadow-sm scale-102' 
-                    : 'bg-gray-50 border-gray-200 text-gray-600'
+                const card = document.createElement('div');
+                const isNewest = (i === cluesShown - 1);
+                
+                // 新提示使用特別發光效果，方便幼兒識別
+                card.className = `p-3 rounded-2xl border-2 transition-all duration-300 text-sm font-bold flex gap-2 items-start ${
+                    isNewest 
+                    ? 'bg-yellow-50 border-yellow-400 text-yellow-950 scale-102 shadow-md animate-pulse' 
+                    : 'bg-stone-50 border-stone-200 text-stone-500'
                 }`;
-                clueDiv.innerHTML = `<span class="text-orange-500 font-bold mr-1">#${i+1}</span> ${clueText}`;
-                container.appendChild(clueDiv);
+                card.innerHTML = `
+                    <span class="bg-orange-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center shrink-0 font-black">${i+1}</span>
+                    <span>${clueText}</span>
+                `;
+                list.appendChild(card);
             }
-            
-            // 自動滾動到最新提示
-            container.scrollTop = container.scrollHeight;
+            list.scrollTop = list.scrollHeight; // 自動向下滾動
         }
 
-        // ======= 渲染右側棋盤區 =======
+        // ======= 渲染 24 格大卡牌 =======
         function renderBoard() {
             const board = document.getElementById('game-board');
             board.innerHTML = '';
 
             boardCharacters.forEach((char) => {
                 const isEliminated = eliminatedIds.has(char.id);
+                const button = document.createElement('button');
                 
-                const card = document.createElement('button');
-                // 復古塑膠框卡牌樣式設計
-                card.className = `bg-amber-50 rounded-xl p-3 flex flex-col items-center justify-center border-2 shadow-md transition-all duration-200 hover:scale-105 active:scale-95 ${
-                    isEliminated ? 'card-flipped border-gray-400' : 'border-amber-200'
+                // 幼兒友善：極大圓角、厚實邊框、鮮明按壓效果
+                button.className = `card-active bg-yellow-50 rounded-2xl p-2 sm:p-4 border-4 flex flex-col items-center justify-center shadow-lg active:scale-90 ${
+                    isEliminated 
+                    ? 'card-eliminated border-stone-300' 
+                    : isGuessMode 
+                        ? 'border-blue-400 hover:border-blue-500 hover:bg-blue-50' 
+                        : 'border-yellow-300 hover:border-yellow-400'
                 }`;
-                card.onclick = () => handleCardClick(char);
+                
+                button.onclick = () => handleCardClick(char);
 
-                // 卡牌內部：大 Emoji 與名字標籤
-                card.innerHTML = `
-                    <div class="text-4xl sm:text-5xl mb-2 select-none">${isEliminated ? '❌' : char.emoji}</div>
-                    <div class="bg-amber-100 text-amber-900 text-xs font-bold px-2 py-0.5 rounded border border-amber-300 w-full text-center truncate shadow-inner">
+                // 卡牌大 Emoji
+                button.innerHTML = `
+                    <div class="text-5xl sm:text-6xl mb-2 select-none">${isEliminated ? '❌' : char.emoji}</div>
+                    <div class="bg-amber-100 text-amber-950 text-xs sm:text-sm font-black px-3 py-1 rounded-xl border-2 border-amber-300 w-full text-center truncate">
                         ${char.name}
                     </div>
                 `;
-                board.appendChild(card);
+                board.appendChild(button);
             });
         }
 
-        // ======= 卡牌點擊事件 (翻牌排查 vs 提交答案) =======
+        // 卡牌點擊
         function handleCardClick(char) {
             if (isGuessMode) {
-                // 【猜測模式】：判定答案
+                // 提交答案
+                isGuessMode = false;
+                updateGuessModeUI();
                 processGuess(char);
             } else {
-                // 【正常模式】：翻轉卡牌（手動排除法）
+                // 翻轉卡片排除
                 if (eliminatedIds.has(char.id)) {
-                    eliminatedIds.delete(char.id); // 反轉還原
+                    eliminatedIds.delete(char.id);
                 } else {
-                    eliminatedIds.add(char.id);    // 倒下排除
+                    eliminatedIds.add(char.id);
                 }
                 renderBoard();
             }
         }
 
-        // ======= 下一條提示功能 =======
-        function showNextClue() {
+        // 下一條提示
+        function nextClue() {
             if (cluesShown < 7) {
                 cluesShown++;
                 renderClues();
+                speakCurrentClue(); // 自動語音播報新提示
                 
-                // 如果已經到第7個提示，禁用按鈕
                 if (cluesShown === 7) {
                     const nextBtn = document.getElementById('next-clue-btn');
                     nextBtn.disabled = true;
                     nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 }
+            } else {
+                speakText("已經無多餘嘅線索喇，快啲猜測啦！");
             }
         }
 
-        // ======= 切換猜測模式狀態 =======
+        // 猜測模式切換
         function toggleGuessMode() {
             isGuessMode = !isGuessMode;
             updateGuessModeUI();
@@ -253,105 +615,167 @@
             const btn = document.getElementById('guess-mode-btn');
             const icon = document.getElementById('guess-btn-icon');
             const text = document.getElementById('guess-btn-text');
-            const tip = document.getElementById('mode-tip');
+            const instructions = document.getElementById('guess-instructions');
             const boardContainer = document.getElementById('game-board').parentElement;
 
             if (isGuessMode) {
-                btn.className = "w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl shadow transition duration-200 flex justify-center items-center gap-2 animate-pulse";
+                btn.className = "bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-2 rounded-xl text-sm border-b-4 border-red-700 active:scale-95 transition flex flex-col items-center justify-center animate-pulse";
                 icon.innerText = "❌";
-                text.innerText = "取消猜測模式";
-                tip.classList.remove('hidden');
-                boardContainer.classList.remove('border-red-800', 'bg-red-700');
-                boardContainer.classList.add('border-blue-500', 'bg-blue-900'); // 猜測狀態切換為亮藍色背景
+                text.innerText = "取消猜測";
+                instructions.classList.remove('hidden');
+                boardContainer.classList.remove('border-red-700', 'bg-red-600');
+                boardContainer.classList.add('border-blue-600', 'bg-blue-700'); // 改為炫亮藍底表示高亮選擇
+                speakText("請點選你認為正確嘅卡牌！");
             } else {
-                btn.className = "w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow transition duration-200 flex justify-center items-center gap-2";
+                btn.className = "bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-2 rounded-xl text-sm border-b-4 border-blue-700 active:scale-95 transition flex flex-col items-center justify-center";
                 icon.innerText = "🎯";
-                text.innerText = "我要猜測！";
-                tip.classList.add('hidden');
-                boardContainer.classList.remove('border-blue-500', 'bg-blue-900');
-                boardContainer.classList.add('border-red-800', 'bg-red-700');
+                text.innerText = "我要猜答案！";
+                instructions.classList.add('hidden');
+                boardContainer.classList.remove('border-blue-600', 'bg-blue-700');
+                boardContainer.classList.add('border-red-700', 'bg-red-600');
             }
         }
 
-        // ======= 驗證猜測結果 =======
-        function processGuess(selectedChar) {
-            // 關閉猜測模式
-            isGuessMode = false;
-            updateGuessModeUI();
-
-            if (selectedChar.id === targetCharacter.id) {
-                // 【猜對了】：晉級
-                showModal(true, `🎉 挑戰成功！`, `你使用了 ${cluesShown} 個提示，成功找出了神秘人：【${targetCharacter.emoji} ${targetCharacter.name}】！`);
+        // 處理猜測結果
+        let wonThisRound = true;
+        function processGuess(char) {
+            if (char.id === targetCharacter.id) {
+                wonThisRound = true;
+                triggerConfetti(); // 觸發過關彩帶特效
+                speakText(`好叻呀！答啱咗！答案真係 ${targetCharacter.name}！`);
+                showModal(true, `🎉 答啱咗喇！`, `你好叻呀！成功用咗 ${cluesShown} 個線索，估中咗神秘人就係：【${targetCharacter.emoji} ${targetCharacter.name}】！`);
             } else {
-                // 【猜錯了】：本關判定失敗
-                showModal(false, `💥 猜錯了，挑戰失敗！`, `很遺憾，你猜測的是【${selectedChar.emoji} ${selectedChar.name}】，但真正的答案是【${targetCharacter.emoji} ${targetCharacter.name}】。再接再厲！`);
+                wonThisRound = false;
+                speakText(`哎呀，估錯咗喇，其實答案係 ${targetCharacter.name}。`);
+                showModal(false, `💥 估錯咗喇！`, `答案其實係【${targetCharacter.emoji} ${targetCharacter.name}】，而你估咗【${char.emoji} ${char.name}】。唔好灰心，再試過！`);
             }
         }
 
-        // ======= 處理 7 次提示用盡仍沒猜出的極端失敗狀況 =======
-        // 規則規定：7個提示下都猜不到，算失敗。
-        // 當顯示第7個提示時，玩家必須點擊「我要猜測」並點中正確卡牌。
-        // 為了讓體驗更直觀，如果7條提示都出了，玩家再次點擊「下一條提示」或直接放棄時，會在驗證處判定，也可以藉由在猜錯或提示耗盡時引導。
-        // 在此機制中，第7條提示出現後按鈕會變灰色，如果此時選錯就直接進失敗結算。
-
-        // ======= 結算彈窗控制機制 =======
-        let isWinState = true;
+        // 結算彈窗控制
         function showModal(isWin, title, msg) {
-            isWinState = isWin;
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-message').innerText = msg;
-            
-            const icon = document.getElementById('modal-icon');
-            const actionBtn = document.getElementById('modal-action-btn');
-            
+            const modal = document.getElementById('result-modal');
+            const mEmoji = document.getElementById('modal-emoji');
+            const mTitle = document.getElementById('modal-title');
+            const mMessage = document.getElementById('modal-message');
+            const mBtn = document.getElementById('modal-next-btn');
+
+            mTitle.innerText = title;
+            mMessage.innerText = msg;
+
             if (isWin) {
-                icon.innerText = "👑";
-                actionBtn.innerText = currentLevel >= 100 ? "重新通關100關！" : "進入下一關";
-                actionBtn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition shadow-lg";
+                mEmoji.innerText = "👑";
+                mBtn.innerText = currentLevel >= 100 ? "再挑戰100關！" : "下一關繼續玩！🚀";
+                mBtn.className = "w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-2xl text-xl shadow-lg border-b-8 border-emerald-700 active:scale-95 transition";
             } else {
-                icon.innerText = "👻";
-                actionBtn.innerText = "重新挑戰本關";
-                actionBtn.className = "w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition shadow-lg";
+                mEmoji.innerText = "🦁";
+                mBtn.innerText = "重新挑戰本關 💪";
+                mBtn.className = "w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl text-xl shadow-lg border-b-8 border-orange-700 active:scale-95 transition";
             }
 
-            const modal = document.getElementById('modal');
             modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.children[0].classList.remove('scale-95');
-                modal.children[0].classList.add('scale-100');
-            }, 10);
         }
 
         function closeModal() {
-            const modal = document.getElementById('modal');
-            modal.children[0].classList.remove('scale-100');
-            modal.children[0].classList.add('scale-95');
-            modal.classList.add('hidden');
-
-            if (isWinState) {
-                // 成功過關，前進下一關
+            document.getElementById('result-modal').classList.add('hidden');
+            if (wonThisRound) {
                 if (currentLevel >= 100) {
                     currentLevel = 1;
                 } else {
                     currentLevel++;
                 }
-                // 保存關卡進度至瀏覽器
                 localStorage.setItem('guess_who_level', currentLevel);
                 initLevel();
             } else {
-                // 失敗，原地重試本關
                 initLevel();
             }
         }
 
-        // 重置進度功能
-        function resetGameProgress() {
-            if (confirm("確定要重置所有關卡進度，回到第 1 關嗎？")) {
-                currentLevel = 1;
-                localStorage.setItem('guess_who_level', currentLevel);
-                initLevel();
+        // ======= 調試專用：強行解鎖所有提示 =======
+        function revealAllClues() {
+            cluesShown = 7;
+            renderClues();
+            const nextBtn = document.getElementById('next-clue-btn');
+            nextBtn.disabled = true;
+            nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            speakText("我為你直接解鎖曬所有提示喇，睇睇可唔可以估中佢！");
+        }
+
+        // ======= 調試專用：跳關 =======
+        function forceSkipLevel() {
+            wonThisRound = true;
+            closeModal();
+        }
+
+        // ======= Canvas 精美五彩彩帶粒子效果 (自建免加載外部JS庫) =======
+        const canvas = document.getElementById("confetti-canvas");
+        const ctx = canvas.getContext("2d");
+        let confetti = [];
+        let animationFrameId = null;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        function triggerConfetti() {
+            confetti = [];
+            const colors = ["#f59e0b", "#ef4444", "#3b82f6", "#10b981", "#ec4899", "#8b5cf6"];
+            for (let i = 0; i < 150; i++) {
+                confetti.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    r: Math.random() * 6 + 4,
+                    d: Math.random() * canvas.height,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    tilt: Math.random() * 10 - 5,
+                    tiltAngleIncremental: Math.random() * 0.07 + 0.02,
+                    tiltAngle: 0
+                });
+            }
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            animateConfetti();
+        }
+
+        function animateConfetti() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let active = false;
+
+            confetti.forEach((p, idx) => {
+                p.tiltAngle += p.tiltAngleIncremental;
+                p.y += (Math.cos(p.d) + 3 + p.r / 2) / 2;
+                p.x += Math.sin(p.tiltAngle);
+                p.tilt = Math.sin(p.tiltAngle - idx / 3) * 15;
+
+                if (p.y < canvas.height) {
+                    active = true;
+                }
+
+                ctx.beginPath();
+                ctx.lineWidth = p.r;
+                ctx.strokeStyle = p.color;
+                ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
+                ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
+                ctx.stroke();
+            });
+
+            if (active) {
+                animationFrameId = requestAnimationFrame(animateConfetti);
+            } else {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
             }
         }
+
+        // 頁面加載引導
+        window.onload = function() {
+            const savedLevel = localStorage.getItem('guess_who_level');
+            if (savedLevel && parseInt(savedLevel) <= 100) {
+                currentLevel = parseInt(savedLevel);
+            }
+            initTTS();
+            initLevel();
+        };
     </script>
 </body>
 </html>
