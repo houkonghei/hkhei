@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>斜向蛇形矩陣：教學步進演示</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+        }
+        .controls {
+            margin-bottom: 20px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        input[type="number"] {
+            padding: 8px;
+            font-size: 16px;
+            width: 70px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 18px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-reset {
+            background-color: #607d8b;
+        }
+        .btn-reset:hover {
+            background-color: #455a64;
+        }
+        .btn-next {
+            background-color: #ff9800;
+            font-size: 18px;
+            padding: 10px 24px;
+            box-shadow: 0 4px 0 #e65100;
+        }
+        .btn-next:hover {
+            background-color: #ffa726;
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #e65100;
+        }
+        .btn-next:disabled {
+            background-color: #ccc;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: translateY(4px);
+        }
+        #matrix-container {
+            display: grid;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .cell {
+            width: 80px;
+            height: 80px;
+            background-color: #fff;
+            border: 2px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .cell-val {
+            font-size: 26px;
+            font-weight: bold;
+            color: transparent;
+            transition: color 0.1s ease;
+        }
+        .cell-coord {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-size: 12px;
+            color: #888;
+        }
+        .cell-parity {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            font-size: 12px;
+        }
+        .even-diagonal {
+            background-color: #e3f2fd; /* 藍色 */
+        }
+        .odd-diagonal {
+            background-color: #fff9c4; /* 黃色 */
+        }
+        /* 走到該格時的特效 */
+        .cell.active {
+            border-color: #e65100;
+            border-width: 3px;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(230, 81, 0, 0.3);
+            z-index: 10;
+        }
+        .cell.active .cell-val {
+            color: #e65100;
+        }
+        /* 走過的格子顏色稍微變淡，突顯當下那一步 */
+        .cell.visited {
+            border-color: #2196f3;
+            border-width: 2px;
+            transform: scale(1);
+            box-shadow: none;
+            z-index: 1;
+        }
+        .cell.visited .cell-val {
+            color: #1565c0;
+        }
+        .status-text {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🐍 斜向蛇形矩陣教學工具</h1>
+    
+    <div class="controls">
+        <label for="n-input">N= </label>
+        <input type="number" id="n-input" value="5" min="1" max="10">
+        <button class="btn-reset" onclick="initMatrix()">🔄 建立新矩陣</button>
+        <button id="btn-next" class="btn-next" onclick="nextStep()">🐾 下一步</button>
+    </div>
+
+    <div id="status" class="status-text">請點擊「下一步」開始演示</div>
+    <div id="matrix-container"></div>
+
+    <script>
+        // 核心演算法：計算所有路徑
+        function calculateMatrix(n) {
+            let path = [];
+            let r = 0, c = 0;
+
+            for (let i = 1; i <= n * n; i++) {
+                path.push({ row: r, col: c, val: i });
+
+                if ((r + c) % 2 === 1) { // 奇數對角線：右上
+                    if (r === 0 && c < n - 1) c++;
+                    else if (c === n - 1) r++;
+                    else { r--; c++; }
+                } else { // 偶數對角線：左下
+                    if (c === 0 && r < n - 1) r++;
+                    else if (r === n - 1) c++;
+                    else if (i > 1) { r++; c--; }
+                    else r++;
+                }
+            }
+            return path;
+        }
+
+        // 全域變數，用來記錄當前狀態
+        let currentPath = [];
+        let currentStep = 0;
+        let cellDOMs = [];
+        let previousCell = null;
+
+        // 初始化矩陣（不自動走，只是畫出格子）
+        function initMatrix() {
+            const nInput = document.getElementById('n-input');
+            let n = parseInt(nInput.value);
+            if (isNaN(n) || n < 1) n = 1;
+            if (n > 10) n = 10;
+            nInput.value = n;
+
+            // 重置狀態
+            currentStep = 0;
+            previousCell = null;
+            document.getElementById('btn-next').disabled = false;
+            document.getElementById('status').textContent = "準備就緒！請點擊「下一步」";
+
+            const container = document.getElementById('matrix-container');
+            container.innerHTML = '';
+            container.style.gridTemplateColumns = `repeat(${n}, 80px)`;
+
+            cellDOMs = []; // 清空DOM陣列
+
+            // 畫出帶有底色和座標的空網格
+            for (let i = 0; i < n; i++) {
+                cellDOMs[i] = [];
+                for (let j = 0; j < n; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+
+                    const coordSpan = document.createElement('span');
+                    coordSpan.className = 'cell-coord';
+                    coordSpan.textContent = `(${i}, ${j})`;
+                    cell.appendChild(coordSpan);
+
+                    const valSpan = document.createElement('span');
+                    valSpan.className = 'cell-val';
+                    cell.appendChild(valSpan);
+
+                    if ((i + j) % 2 === 0) {
+                        cell.classList.add('even-diagonal');
+                        const paritySpan = document.createElement('span');
+                        paritySpan.className = 'cell-parity';
+                        paritySpan.textContent = `S: Even`;
+                        cell.appendChild(paritySpan);
+                    } else {
+                        cell.classList.add('odd-diagonal');
+                        const paritySpan = document.createElement('span');
+                        paritySpan.className = 'cell-parity';
+                        paritySpan.textContent = `S: Odd`;
+                        cell.appendChild(paritySpan);
+                    }
+
+                    container.appendChild(cell);
+                    cellDOMs[i][j] = cell;
+                }
+            }
+
+            // 預先計算好所有路徑，等待老師按鈕
+            currentPath = calculateMatrix(n);
+        }
+
+        // 點擊「下一步」執行的動作
+        function nextStep() {
+            if (currentStep < currentPath.length) {
+                // 如果前一步有格子，把它從「正在踩(active)」變成「走過(visited)」
+                if (previousCell) {
+                    previousCell.classList.remove('active');
+                    previousCell.classList.add('visited');
+                }
+
+                // 取得這一步的資料
+                const currentData = currentPath[currentStep];
+                const activeCellDOM = cellDOMs[currentData.row][currentData.col];
+                const valSpanDOM = activeCellDOM.querySelector('.cell-val');
+                
+                // 顯示數字並加上高亮特效
+                valSpanDOM.textContent = currentData.val;
+                activeCellDOM.classList.add('active');
+
+                // 更新狀態文字
+                const sum = currentData.row + currentData.col;
+                const parityText = sum % 2 === 0 ? "偶數 (左下)" : "奇數 (右上)";
+                document.getElementById('status').textContent = 
+                    `第 ${currentData.val} 步：座標 (${currentData.row}, ${currentData.col}) | r+c=${sum} 準備往${parityText}`;
+
+                // 記錄這次的格子，留給下一步時變暗
+                previousCell = activeCellDOM;
+                currentStep++;
+
+                // 如果走完了，按鈕反白失效
+                if (currentStep === currentPath.length) {
+                    document.getElementById('btn-next').disabled = true;
+                    document.getElementById('status').textContent = "🎉 演示完成！";
+                }
+            }
+        }
+
+        // 網頁開啟時先初始化一次
+        window.onload = initMatrix;
+    </script>
+
+</body>
+</html>
