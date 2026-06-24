@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guess Who? 🎨 100-Level Interactive English Game</title>
+    <!-- Tailwind CSS for vibrant layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Smooth transitions for card candidate highlighting */
+        .card-active {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        /* Bounce keyframe for the shortlist checkmark badge */
+        @keyframes badge-pop {
+            0% { transform: scale(0); }
+            70% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .badge-animation {
+            animation: badge-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        /* Colorful background gradient */
+        body {
+            background: linear-gradient(135deg, #fef08a 0%, #f97316 100%);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12 overflow-x-hidden relative">
+
+    <!-- Confetti canvas for celebrating correct answers -->
+    <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50 w-full h-full"></canvas>
+
+    <!-- Header bar -->
+    <header class="bg-white/95 backdrop-blur-md border-b-4 border-yellow-400 shadow-lg p-4 sticky top-0 z-40">
+        <div class="max-w-[1600px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <span class="text-4xl animate-bounce">🎨</span>
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-orange-600 tracking-wider">
+                        Guess Who? <span class="text-blue-500 text-lg block sm:inline">(Toddler English Voice Edition)</span>
+                    </h1>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <!-- Level indicator -->
+                <div class="bg-yellow-400 border-2 border-yellow-500 text-yellow-950 font-black px-4 py-1.5 rounded-full shadow-md text-base sm:text-lg">
+                    Level <span id="level-num">1</span> / 100
+                </div>
+                
+                <!-- TTS Voice Status -->
+                <div id="tts-status" class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-300 flex items-center gap-1">
+                    <span>🎤</span> Loading Voice...
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Widescreen optimization layout (Three Columns) -->
+    <main class="max-w-[1600px] mx-auto px-6 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Side Column (Clues & Audio Panel) -->
+        <section class="lg:col-span-3 flex flex-col gap-4">
+            
+            <div class="bg-white rounded-3xl shadow-xl p-5 border-4 border-orange-400 relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 w-12 h-12 bg-orange-400 rounded-full opacity-20"></div>
+                
+                <h2 class="text-xl font-black text-orange-600 mb-3 flex items-center gap-2">
+                    <span>📢</span> English Audio Clues
+                </h2>
+
+                <!-- Clue progress indicator -->
+                <div class="flex justify-between items-center mb-3 bg-orange-50 px-3 py-2 rounded-2xl border border-orange-100">
+                    <span class="text-xs sm:text-sm font-bold text-gray-600">Revealed Clues:</span>
+                    <span class="bg-red-500 text-white font-extrabold px-3 py-0.5 rounded-full text-sm" id="clue-badge">1 / 7</span>
+                </div>
+
+                <!-- Scrollable clues list -->
+                <div id="clues-list" class="space-y-3 max-h-[300px] overflow-y-auto mb-4 p-1">
+                    <!-- Injected via JavaScript -->
+                </div>
+
+                <!-- Big friendly TTS repeat button -->
+                <button onclick="speakCurrentClue()" class="w-full bg-yellow-400 hover:bg-yellow-500 active:scale-95 border-b-4 border-yellow-600 text-yellow-950 font-black py-4 px-4 rounded-2xl shadow-lg transition duration-150 flex justify-center items-center gap-3 text-lg animate-pulse">
+                    <span class="text-2xl">🔊</span> Listen to Clue
+                </button>
+
+                <div class="grid grid-cols-2 gap-2 mt-3">
+                    <!-- Next Clue Button -->
+                    <button id="next-clue-btn" onclick="nextClue()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-2 rounded-xl text-sm border-b-4 border-orange-700 active:scale-95 transition flex flex-col items-center justify-center">
+                        <span class="text-xl">🔍</span>
+                        <span>Next Clue</span>
+                    </button>
+                    <!-- Guess mode toggle -->
+                    <button id="guess-mode-btn" onclick="toggleGuessMode()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-2 rounded-xl text-sm border-b-4 border-blue-700 active:scale-95 transition flex flex-col items-center justify-center">
+                        <span id="guess-btn-icon" class="text-xl">🎯</span>
+                        <span id="guess-btn-text">Guess Now!</span>
+                    </button>
+                </div>
+                
+                <div id="guess-instructions" class="hidden mt-3 p-2 bg-blue-50 border-2 border-blue-300 rounded-xl text-center text-xs text-blue-800 font-bold animate-bounce">
+                    👈 Tap the correct card on the board!
+                </div>
+            </div>
+
+            <!-- Learning and gameplay guidance -->
+            <div class="bg-amber-50 rounded-2xl p-4 border-2 border-amber-200 text-xs text-amber-900 font-bold">
+                💡 <span class="text-blue-600">Shortlist Mode:</span> Tap a card to add a blue checkmark, designating it as your backup candidate! Tap again to uncheck. When you feel ready, tap "Guess Now!" to choose your final answer.
+            </div>
+            
+        </section>
+
+        <!-- Middle Column (Main 24-card grid) -->
+        <section class="lg:col-span-6">
+            <div class="bg-red-600 rounded-[32px] p-4 sm:p-6 shadow-2xl border-8 border-red-700 relative">
+                <!-- Retro toy look frame tag -->
+                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-yellow-900 px-6 py-1 rounded-full text-xs font-black shadow-md border-2 border-yellow-500 uppercase tracking-widest">
+                    Guess Who Gameboard
+                </div>
+                
+                <!-- Grid of 24 Cards -->
+                <div id="game-board" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 sm:gap-4 mt-2">
+                    <!-- Generated via JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Side Column (Voice configuration & Debug settings) -->
+        <section class="lg:col-span-3 flex flex-col gap-4">
+            
+            <!-- Voice selection config -->
+            <div class="bg-white rounded-3xl p-5 border-4 border-blue-400 shadow-xl">
+                <h3 class="text-lg font-black text-blue-600 mb-3 flex items-center gap-2">
+                    <span>⚙️</span> Voice Settings
+                </h3>
+                <div class="space-y-2 text-xs">
+                    <label class="block text-gray-700 font-bold">Preferred English Voice (Prioritizing Google):</label>
+                    <select id="voice-select" class="w-full bg-blue-50 text-blue-950 font-bold rounded-xl p-3 border-2 border-blue-200" onchange="changeVoice()">
+                        <option value="">Searching system voices...</option>
+                    </select>
+                    <p class="text-[11px] text-gray-500 leading-normal">
+                        💡 We prioritize premium English female voices (e.g., Google US English Female, Microsoft Zira) for a soft and pleasing pronunciation tone.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Debug Console -->
+            <div class="bg-stone-800 text-stone-300 rounded-3xl p-5 shadow-lg border-4 border-stone-700 text-xs">
+                <details open>
+                    <summary class="font-bold text-yellow-400 cursor-pointer select-none flex justify-between items-center text-sm">
+                        <span>🛠️ Real-Time Debug Panel</span>
+                        <span class="text-[10px] text-stone-400">Click to collapse</span>
+                    </summary>
+                    <div class="mt-3 space-y-3 pt-3 border-t border-stone-700">
+                        <div class="flex justify-between items-center bg-stone-900 p-2 rounded-xl">
+                            <span>Target Answer:</span>
+                            <span class="bg-yellow-400 text-black px-3 py-1 rounded-lg font-black text-sm" id="dev-answer-display">-</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="revealAllClues()" class="bg-stone-700 hover:bg-stone-600 font-bold px-2 py-2 rounded-xl text-white border border-stone-600 active:scale-95 transition">
+                                Show All Clues
+                            </button>
+                            <button onclick="forceSkipLevel()" class="bg-stone-700 hover:bg-stone-600 font-bold px-2 py-2 rounded-xl text-white border border-stone-600 active:scale-95 transition">
+                                Skip Level
+                            </button>
+                        </div>
+                        <button onclick="resetGameProgress()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-xl active:scale-95 transition">
+                            Reset Level to 1
+                        </button>
+                    </div>
+                </details>
+            </div>
+            
+        </section>
+
+    </main>
+
+    <!-- Celebration modal -->
+    <div id="result-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden px-4">
+        <div class="bg-white rounded-[32px] shadow-2xl max-w-md w-full p-6 text-center transform scale-95 transition-all border-8 border-yellow-400">
+            <div id="modal-emoji" class="text-8xl mb-3 animate-bounce">🎉</div>
+            <h3 id="modal-title" class="text-3xl font-extrabold text-orange-600 mb-2">Awesome! Correct!</h3>
+            <p id="modal-message" class="text-gray-700 text-base mb-6 font-bold">You are so smart! You guessed it perfectly!</p>
+            
+            <button id="modal-next-btn" onclick="closeModal()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-2xl text-xl shadow-lg border-b-8 border-emerald-700 active:scale-95 transition">
+                Next Level! 🚀
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ======= 100 Core Characters with child-friendly English Clues =======
+        const charactersData = [
+            { id: "cowboy", emoji: "🤠", name: "Cowboy", clues: ["I am a human character.", "I wear a very wide hat on my head.", "I love to ride horses on big green prairies.", "I have a big, happy smile on my face.", "I do not have a beard, and I do not wear glasses.", "I can spin a lasso to catch cattle like a sheriff.", "I am a cool cowboy wearing a big yellow hat!"] },
+            { id: "nerd", emoji: "🤓", name: "Nerd", clues: ["I am a human character who loves books.", "I don't wear any hats, but I wear thick black glasses.", "I have two large bunny teeth sticking out of my mouth.", "I love to do homework, code on computers, and study science.", "People call me a top student or a tech expert.", "I look a bit silly when I smile, but I am super smart.", "I am a smart student with big glasses and buck teeth!"] },
+            { id: "cool", emoji: "😎", name: "Cool Guy", clues: ["I am a yellow smiley face.", "You cannot see my eyes at all.", "I am wearing a pair of cool black sunglasses.", "My smile is filled with confidence.", "Summer beaches and hot sunny days are when you see me most.", "I give off a super relaxed and fashionable vibe.", "I am a cool guy wearing dark sunglasses!"] },
+            { id: "clown", emoji: "🤡", name: "Clown", clues: ["I look like a human, but my makeup is very colorful.", "My face is painted with white and red makeup.", "I have a big, round red nose.", "My job is to bring laughter at circuses and birthday parties.", "I love juggling colorful balls, blowing balloons, and walking on stilts.", "I wear super colorful clothes and giant shoes.", "I am a funny circus clown with a big red nose!"] },
+            { id: "ninja", emoji: "🥷", name: "Ninja", clues: ["I am a quick, stealthy, and mysterious warrior.", "My entire body is covered in dark black clothes.", "You can only see my eyes; my mouth and hair are covered.", "I am great at hiding in shadows and using ninja stars.", "I walk silently like a little cat and can scale walls.", "I come from ancient Japan and move through the dark night.", "I am a mysterious black-clad ninja showing only my eyes!"] },
+            { id: "santa", emoji: "🎅", name: "Santa Claus", clues: ["I am an old grandpa loved by kids all over the world.", "I wear a red and white fluffy hat on my head.", "I have a thick, white beard that is as bright as snow.", "I travel to work only once a year on a cold winter night.", "I ride on a sleigh pulled by flying reindeer.", "I climb down chimneys to leave wonderful presents in stockings.", "I am the kind Santa Claus giving gifts to everyone!"] },
+            { id: "princess", emoji: "👸", name: "Princess", clues: ["I am a noble female member of a royal family.", "I wear a sparkling, beautiful gold crown on my head.", "I usually wear a gorgeous long gown and have lovely hair.", "In fairy tales, I live in a beautiful castle waiting for my prince.", "In some stories, I eat a magic apple or get guarded by a dragon.", "I represent grace, beauty, and fantasy.", "I am a beautiful princess living in a magical castle!"] },
+            { id: "lion", emoji: "🦁", name: "Lion", clues: ["I am not a human; I am a strong wild animal.", "Humans call me the 'King of the Jungle'.", "I have a thick, golden mane of hair around my neck.", "I live on the big African savanna and hunt for food.", "My roar is so loud that it can be heard miles away.", "The hero Simba from the movie 'The Lion King' is my family.", "I am a powerful lion with a beautiful golden mane!"] },
+            { id: "robot", emoji: "🤖", name: "Robot", clues: ["I am not a living creature; I am made of metal and circuits.", "My body is a blue or grey metallic structure.", "I have a little antenna on my head and glowing eyes.", "I speak in a funny, flat, electronic tone.", "I need electricity or batteries to move and calculate numbers.", "In sci-fi movies, I am a helpful companion to humans.", "I am a futuristic robot with antennas and gears!"] },
+            { id: "alien", emoji: "👽", name: "Alien", clues: ["I am not from Earth; I come from a faraway star.", "I have an oversized, bald, egg-shaped head with no hair.", "My eyes are huge, completely black, and have no whites.", "In many cartoons, my skin is colored green or grey.", "I fly through space in a mysterious saucer-shaped UFO.", "I have long fingers and am very curious about humans.", "I am a mysterious alien with a giant bald head and big black eyes!"] },
+            { id: "firefighter", emoji: "🧑‍🚒", name: "Firefighter", clues: ["I am a very brave hero who helps stop fires.", "I work around hot flames, smoke, and emergencies.", "I wear a super strong, heat-proof yellow helmet.", "My best friends are red fire trucks, long ladders, and water hoses.", "My job is to rescue people and extinguish dangerous fires.", "My protective uniform has bright reflective safety stripes.", "I am an amazing firefighter holding a powerful water hose!"] },
+            { id: "astronaut", emoji: "🧑‍🚀", name: "Astronaut", clues: ["I am a scientist who works in extreme environments.", "When I work, I must wear a thick, heavy white suit.", "My head is protected inside a round, transparent helmet.", "My workplace is high above Earth, in the mysterious cosmos.", "I ride on a giant rocket to live and floatingly work in space stations.", "Because there is no gravity, I float around like a balloon.", "I am a brave astronaut walking on the moon and stars!"] },
+            { id: "wizard", emoji: "🧙‍♂️", name: "Wizard", clues: ["I am a male character who commands magical powers.", "I have a long grey beard and look very wise.", "I wear a tall, pointed magical hat on my head.", "I hold a magical wand or staff to cast powerful spells.", "Albus Dumbledore and Gandalf are famous wizards.", "I brew magic potions in a big cauldron and fly on brooms.", "I am a mysterious wizard wearing a tall pointed hat!"] },
+            { id: "vampire", emoji: "🧛", name: "Vampire", clues: ["I am a legendary character who is afraid of sunlight.", "I sleep in a cozy coffin during the bright day.", "When I smile, you can see two sharp fangs in my mouth.", "I wear an elegant black and red cloak with a high collar.", "Garlic and silver are things I absolutely dislike.", "I can turn into a little black bat and fly into the night.", "I am a cool vampire with sharp fangs and a high-collared cape!"] },
+            { id: "elf", emoji: "🧝", name: "Elf", clues: ["I am a magical and graceful creature from fairy tales.", "My most famous feature is my long, pointed ears.", "I have a slender body, beautiful hair, and live for a long time.", "I love green forests and am excellent at archery or magic.", "You can find me in adventure movies and fantasy stories.", "I walk so lightly that I don't even bend the grass.", "I am a beautiful forest elf with long pointed ears!"] },
+            { id: "cat", emoji: "🐱", name: "Cat", clues: ["I am a fluffy, agile little pet loved by humans.", "I can walk completely silently and have incredible balance.", "I have long, sensitive whiskers on my cheeks to guide me.", "When I feel safe and happy, I make a purring sound.", "I love chasing mice, playing with yarn, and sleeping in the sun.", "I can be very independent and meow when I want food.", "I am a cute kitty cat who loves to meow and groom myself!"] },
+            { id: "dog", emoji: "🐶", name: "Dog", clues: ["I am known as human's most loyal and loving best friend.", "My nose and ears are super sensitive to sounds and smells.", "When I see my favorite owner, I wag my tail happily.", "I love chewing on bones, catching frisbees, and going for walks.", "I bark 'woof woof' when I am happy or guarding the house.", "I can help guide people or work with police officers.", "I am a friendly puppy dog who loves to wag my tail and bark!"] },
+            { id: "monkey", emoji: "🐵", name: "Monkey", clues: ["I am a very smart, active, and clever primate.", "I have a long, flexible tail that helps me swing on trees.", "My absolute favorite food is a sweet, curved yellow fruit.", "I love making funny faces and mimicking what humans do.", "The magical Sun Wukong from legends is my relative.", "I scratch my head when I'm excited and chatter happily.", "I am a playful monkey swinging on trees and eating bananas!"] },
+            { id: "beard", emoji: "🧔", name: "Bearded Man", clues: ["I am a handsome, mature male human character.", "Right now, I am not wearing any hats or glasses.", "My main feature is a thick, well-groomed beard around my face.", "I look very sturdy, stylish, and masculine.", "I use scissors or trimmers to keep my beard neat.", "Instead of a smooth face, I prefer a hairy chin look.", "I am a handsome man with a thick, trendy beard!"] },
+            { id: "grandma", emoji: "👵", name: "Grandma", clues: ["I am a loving and kind elderly lady in the family.", "My hair has turned completely silver-white over the years.", "I wear round reading glasses because my eyes are tired.", "I speak gently and love telling sweet stories to my grandchildren.", "I am great at knitting warm sweaters and baking delicious cookies.", "I have gentle wrinkles around my eyes when I smile.", "I am a sweet grandma with silver hair and reading glasses!"] },
+            { id: "grandpa", emoji: "👴", name: "Grandpa", clues: ["I am a wise and respected elderly gentleman in the family.", "Most of my hair has fallen out, leaving just a little white on the sides.", "I walk a little slowly and sometimes use a walking cane.", "I love playing chess in the park, reading newspapers, and sitting in the sun.", "I might have some short, white stubble on my chin.", "I smile warmly and share lots of great life stories.", "I am a kind, bald grandpa walking with a cane!"] },
+            { id: "baby", emoji: "👶", name: "Baby", clues: ["I am a human, but I am the youngest and smallest of all.", "I am bald, except for one curly strand of hair on my head.", "I cannot walk on two feet yet; I crawl around on the floor.", "I don't know how to speak words; I just make happy noises.", "If I am hungry, tired, or wet, I will cry out loud.", "I love sucking on a pacifier and drinking milk from a bottle.", "I am a cute little baby sucking on a sweet pacifier!"] },
+            { id: "police", emoji: "👮", name: "Police Officer", clues: ["I am a brave public servant who keeps the city safe.", "I wear a proud and formal police cap on my head.", "I wear a neat uniform with a shiny badge on my chest.", "I carry tools like walkie-talkies and handcuffs to catch bad guys.", "If you are lost or in danger, you can always ask me for help.", "I drive a cool patrol car with flashing red and blue lights.", "I am a brave police officer protecting the neighborhood!"] },
+            { id: "doctor", emoji: "👩‍⚕️", name: "Doctor", clues: ["I am a caring female healthcare professional in a hospital.", "I wear a clean, neat white lab coat during my work.", "I have a stethoscope around my neck to listen to your heartbeat.", "My job is to diagnose illnesses, prescribe medicine, and heal people.", "I gently remind you to drink plenty of water and sleep early.", "I use medical knowledge to keep everyone happy and healthy.", "I am a kind doctor who listens to your heart with a stethoscope!"] }
+        ];
+
+        // Fill remaining database to reach 100 with beautiful English emojis
+        const baseEmojis = ["🍓", "🍎", "🍌", "🍉", "🍒", "🍍", "🥑", "🍇", "🍊", "🍋", "🍿", "🍩", "🍪", "🍫", "🍬", "🍭", "🍯", "🥛", "🥤", "🎈", "🎁", "🎨", "🎮", "🎸", "🎺", "📱", "💻", "💡", "🔑", "🌻", "🌲", "🍀", "🍇", "🍉", "🍄", "🏡", "🏠", "⛺", "⚽", "🏀"];
+        const baseNames = ["Strawberry", "Apple", "Banana", "Watermelon", "Cherry", "Pineapple", "Avocado", "Grapes", "Orange", "Lemon", "Popcorn", "Donut", "Cookie", "Chocolate", "Candy", "Lollipop", "Honey Jar", "Milk Carton", "Soda Cup", "Balloon", "Gift Box", "Palette", "Game Controller", "Guitar", "Trumpet", "Smart Phone", "Laptop", "Light Bulb", "Key", "Sunflower", "Pine Tree", "Four Leaf Clover", "Purple Grapes", "Sweet Melon", "Mushroom", "Cozy Cottage", "Brick House", "Camping Tent", "Soccer Ball", "Basketball"];
+        const genericCluesTemplates = [
+            "I am a very common item found in daily life.",
+            "I have bright colors and am popular with kids.",
+            "My design is distinct and easy to recognize.",
+            "You can use me for playing, eating, or decorating.",
+            "You can find me around the house or in local parks.",
+            "I am safe, fun, and bring joy to children.",
+            "I am the wonderful and adorable {name}!"
+        ];
+
+        while (charactersData.length < 100) {
+            const idx = charactersData.length - 24;
+            const emoji = baseEmojis[idx % baseEmojis.length];
+            const name = baseNames[idx % baseNames.length] + (Math.floor(idx/baseEmojis.length) > 0 ? " " + (Math.floor(idx/baseEmojis.length) + 1) : "");
+            const id = "item_" + charactersData.length;
+            
+            const customClues = genericCluesTemplates.map((clue, cIdx) => {
+                if (cIdx === 6) return clue.replace("{name}", name);
+                return clue;
+            });
+
+            charactersData.push({
+                id: id,
+                emoji: emoji,
+                name: name,
+                clues: customClues
+            });
+        }
+
+        // ======= Game State Variables =======
+        let currentLevel = 1;
+        let boardCharacters = []; // 24 randomly picked cards for this round
+        let targetCharacter = null; // Correct answer
+        let cluesShown = 1;
+        let isGuessMode = false;
+        let shortlistedIds = new Set(); // Stores cards chosen as potential candidates (replaces old eliminatedIds)
+        let selectedVoice = null;
+
+        // ======= STREAMING_CHUNK: Initializing TTS Voice Engine =======
+        function initTTS() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.onvoiceschanged = () => {
+                    populateVoiceList();
+                };
+                populateVoiceList();
+            } else {
+                const statusLabel = document.getElementById('tts-status');
+                statusLabel.innerText = "❌ TTS Unsupported";
+                statusLabel.className = "bg-red-100 text-red-800 text-xs font-bold px-3 py-1.5 rounded-full border border-red-300";
+            }
+        }
+
+        function populateVoiceList() {
+            if (!('speechSynthesis' in window)) return;
+            const voices = window.speechSynthesis.getVoices();
+            const voiceSelect = document.getElementById('voice-select');
+            voiceSelect.innerHTML = '';
+
+            // Score voices to choose a beautiful female English voice (Preferring Google)
+            let scoredVoices = voices.map(voice => {
+                let score = 0;
+                const name = voice.name.toLowerCase();
+                const lang = voice.lang.toLowerCase();
+
+                // Check for English language
+                if (lang.startsWith('en')) {
+                    score += 100;
+                    if (name.includes('google')) score += 50; // Extra points for Google TTS!
+                    if (name.includes('natural')) score += 40;
+
+                    // Strongly prefer female voices by name
+                    const femaleNames = ['zira', 'samantha', 'victoria', 'hazel', 'susan', 'karen', 'fiona', 'aria', 'female', 'tessa'];
+                    const maleNames = ['david', 'george', 'male', 'mark', 'ravi', 'guy'];
+                    
+                    femaleNames.forEach(fName => {
+                        if (name.includes(fName)) score += 100;
+                    });
+                    maleNames.forEach(mName => {
+                        if (name.includes(mName)) score -= 80;
+                    });
+                }
+                return { voice, score };
+            });
+
+            // Sort descending by score
+            scoredVoices.sort((a, b) => b.score - a.score);
+
+            scoredVoices.forEach((item) => {
+                const option = document.createElement('option');
+                option.value = item.voice.name;
+                const prefix = item.score >= 150 ? "⭐️ [Preferred Female] " : "";
+                option.innerText = `${prefix}${item.voice.name} (${item.voice.lang})`;
+                voiceSelect.appendChild(option);
+            });
+
+            // Default to highest scoring voice
+            if (scoredVoices.length > 0 && scoredVoices[0].score > 0) {
+                selectedVoice = scoredVoices[0].voice;
+                const statusLabel = document.getElementById('tts-status');
+                if (scoredVoices[0].score >= 140) {
+                    statusLabel.innerHTML = `<span>🎤</span> Default: English Female`;
+                    statusLabel.className = "bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-300";
+                } else {
+                    statusLabel.innerHTML = `<span>🎤</span> English Voice Ready`;
+                    statusLabel.className = "bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-300";
+                }
+            }
+        }
+
+        function changeVoice() {
+            const voiceSelect = document.getElementById('voice-select');
+            const voices = window.speechSynthesis.getVoices();
+            selectedVoice = voices.find(v => v.name === voiceSelect.value);
+            speakCurrentClue();
+        }
+
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop current speech
+                const utterance = new SpeechSynthesisUtterance(text);
+                
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                }
+                
+                // Kid-friendly slow & clear rate
+                utterance.rate = 0.85; 
+                utterance.pitch = 1.25; // Playful pitch
+                
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function speakCurrentClue() {
+            const currentClueText = targetCharacter.clues[cluesShown - 1];
+            speakText(`Clue number ${cluesShown}. ${currentClueText}`);
+        }
+
+        // ======= STREAMING_CHUNK: Initializing Level Setup =======
+        function initLevel() {
+            shortlistedIds.clear();
+            cluesShown = 1;
+            isGuessMode = false;
+            updateGuessModeUI();
+
+            // Set current level's answer
+            const targetIndex = (currentLevel - 1) % charactersData.length;
+            targetCharacter = charactersData[targetIndex];
+
+            // Pick 23 random other cards + the target card
+            let remainingPool = charactersData.filter(char => char.id !== targetCharacter.id);
+            
+            // Shuffle pool
+            for (let i = remainingPool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [remainingPool[i], remainingPool[j]] = [remainingPool[j], remainingPool[i]];
+            }
+
+            // Slice out 23 and append target
+            boardCharacters = remainingPool.slice(0, 23);
+            boardCharacters.push(targetCharacter);
+
+            // Reshuffle all 24 cards to hide the target's index
+            for (let i = boardCharacters.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [boardCharacters[i], boardCharacters[j]] = [boardCharacters[j], boardCharacters[i]];
+            }
+
+            // Update UI
+            document.getElementById('level-num').innerText = currentLevel;
+            document.getElementById('dev-answer-display').innerText = `${targetCharacter.emoji} ${targetCharacter.name}`;
+            
+            const nextBtn = document.getElementById('next-clue-btn');
+            nextBtn.disabled = false;
+            nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            renderClues();
+            renderBoard();
+
+            // Announce new round to toddler
+            setTimeout(() => {
+                speakText(`Welcome to level ${currentLevel}! Listen to your first clue.`);
+                setTimeout(() => {
+                    speakCurrentClue();
+                }, 2200);
+            }, 600);
+        }
+
+        // ======= Render Left Clue Lists =======
+        function renderClues() {
+            document.getElementById('clue-badge').innerText = `${cluesShown} / 7`;
+            const list = document.getElementById('clues-list');
+            list.innerHTML = '';
+
+            for (let i = 0; i < cluesShown; i++) {
+                const clueText = targetCharacter.clues[i];
+                const card = document.createElement('div');
+                const isNewest = (i === cluesShown - 1);
+                
+                card.className = `p-3 rounded-2xl border-2 transition-all duration-300 text-sm font-bold flex gap-2 items-start ${
+                    isNewest 
+                    ? 'bg-yellow-50 border-yellow-400 text-yellow-950 scale-102 shadow-md animate-pulse' 
+                    : 'bg-stone-50 border-stone-200 text-stone-500'
+                }`;
+                card.innerHTML = `
+                    <span class="bg-orange-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center shrink-0 font-black">${i+1}</span>
+                    <span class="leading-relaxed">${clueText}</span>
+                `;
+                list.appendChild(card);
+            }
+            list.scrollTop = list.scrollHeight; 
+        }
+
+        // ======= STREAMING_CHUNK: Rendering Game Board Cards (Backup Candidate Highlight Mode) =======
+        function renderBoard() {
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+
+            boardCharacters.forEach((char) => {
+                const isShortlisted = shortlistedIds.has(char.id);
+                const button = document.createElement('button');
+                
+                // Add "relative" class for perfect badge alignment in the corner
+                // Use bright blue ring and outline when shortlisted to indicate positive selection (candidate)
+                button.className = `card-active relative bg-yellow-50 rounded-2xl p-2 sm:p-3 border-4 flex flex-col items-center justify-between shadow-lg active:scale-95 transition min-h-[140px] sm:min-h-[160px] ${
+                    isShortlisted 
+                    ? 'border-blue-500 ring-4 ring-blue-300/80 bg-blue-50/70 scale-102' 
+                    : isGuessMode 
+                        ? 'border-blue-400 hover:border-blue-500 hover:bg-blue-50' 
+                        : 'border-yellow-300 hover:border-yellow-400'
+                }`;
+                
+                button.onclick = () => handleCardClick(char);
+
+                // Shortlisted cards render a beautiful rounded blue circle badge with a checkmark in the corner
+                button.innerHTML = `
+                    ${isShortlisted ? `
+                        <div class="absolute -top-1.5 -right-1.5 bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow-md border-2 border-white badge-animation z-10">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                    ` : ''}
+                    <div class="text-5xl sm:text-6xl my-auto select-none">${char.emoji}</div>
+                    <div class="bg-amber-100 text-amber-950 text-xs sm:text-sm font-black py-1.5 px-1 rounded-xl border-2 border-amber-300 w-full text-center break-words min-h-[2.5rem] flex items-center justify-center leading-tight">
+                        ${char.name}
+                    </div>
+                `;
+                board.appendChild(button);
+            });
+        }
+
+        // ======= STREAMING_CHUNK: Handlers and State Modifications =======
+        function handleCardClick(char) {
+            // Read card name out loud when tapped for toddler learning
+            speakText(char.name);
+
+            if (isGuessMode) {
+                isGuessMode = false;
+                updateGuessModeUI();
+                processGuess(char);
+            } else {
+                // Shortlist mode: toggle candidates (adds blue circle/checkmark)
+                if (shortlistedIds.has(char.id)) {
+                    shortlistedIds.delete(char.id);
+                } else {
+                    shortlistedIds.add(char.id);
+                }
+                renderBoard();
+            }
+        }
+
+        function nextClue() {
+            if (cluesShown < 7) {
+                cluesShown++;
+                renderClues();
+                speakCurrentClue(); 
+                
+                if (cluesShown === 7) {
+                    const nextBtn = document.getElementById('next-clue-btn');
+                    nextBtn.disabled = true;
+                    nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            } else {
+                speakText("There are no more clues left! Take a guess!");
+            }
+        }
+
+        function toggleGuessMode() {
+            isGuessMode = !isGuessMode;
+            updateGuessModeUI();
+        }
+
+        function updateGuessModeUI() {
+            const btn = document.getElementById('guess-mode-btn');
+            const icon = document.getElementById('guess-btn-icon');
+            const text = document.getElementById('guess-btn-text');
+            const instructions = document.getElementById('guess-instructions');
+            const boardContainer = document.getElementById('game-board').parentElement;
+
+            if (isGuessMode) {
+                btn.className = "bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-2 rounded-xl text-sm border-b-4 border-red-700 active:scale-95 transition flex flex-col items-center justify-center animate-pulse";
+                icon.innerText = "❌";
+                text.innerText = "Cancel Guess";
+                instructions.classList.remove('hidden');
+                boardContainer.classList.remove('border-red-700', 'bg-red-600');
+                boardContainer.classList.add('border-blue-600', 'bg-blue-700'); 
+                speakText("Please pick the card you think is correct!");
+            } else {
+                btn.className = "bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-2 rounded-xl text-sm border-b-4 border-blue-700 active:scale-95 transition flex flex-col items-center justify-center";
+                icon.innerText = "🎯";
+                text.innerText = "Guess Now!";
+                instructions.classList.add('hidden');
+                boardContainer.classList.remove('border-blue-600', 'bg-blue-700');
+                boardContainer.classList.add('border-red-700', 'bg-red-600');
+            }
+        }
+
+        // ======= Validate Guess =======
+        let wonThisRound = true;
+        function processGuess(char) {
+            if (char.id === targetCharacter.id) {
+                wonThisRound = true;
+                triggerConfetti(); 
+                speakText(`Great job! That is correct! The answer is indeed ${targetCharacter.name}!`);
+                showModal(true, `🎉 That's Correct!`, `Super smart! You used ${cluesShown} clue(s) to find: [ ${targetCharacter.emoji} ${targetCharacter.name} ]!`);
+            } else {
+                wonThisRound = false;
+                speakText(`Oh no, that's incorrect. The answer was actually ${targetCharacter.name}.`);
+                showModal(false, `💥 Incorrect Guess!`, `The real answer was [ ${targetCharacter.emoji} ${targetCharacter.name} ]. But you guessed [ ${char.emoji} ${char.name} ]. Try again!`);
+            }
+        }
+
+        function showModal(isWin, title, msg) {
+            const modal = document.getElementById('result-modal');
+            const mEmoji = document.getElementById('modal-emoji');
+            const mTitle = document.getElementById('modal-title');
+            const mMessage = document.getElementById('modal-message');
+            const mBtn = document.getElementById('modal-next-btn');
+
+            mTitle.innerText = title;
+            mMessage.innerText = msg;
+
+            if (isWin) {
+                mEmoji.innerText = "👑";
+                mBtn.innerText = currentLevel >= 100 ? "Replay 100 Levels!" : "Next Level! 🚀";
+                mBtn.className = "w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-2xl text-xl shadow-lg border-b-8 border-emerald-700 active:scale-95 transition";
+            } else {
+                mEmoji.innerText = "🦁";
+                mBtn.innerText = "Retry Level 💪";
+                mBtn.className = "w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl text-xl shadow-lg border-b-8 border-orange-700 active:scale-95 transition";
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('result-modal').classList.add('hidden');
+            if (wonThisRound) {
+                if (currentLevel >= 100) {
+                    currentLevel = 1;
+                } else {
+                    currentLevel++;
+                }
+                localStorage.setItem('guess_who_level_en', currentLevel);
+                initLevel();
+            } else {
+                initLevel();
+            }
+        }
+
+        // ======= Debug Helpers =======
+        function revealAllClues() {
+            cluesShown = 7;
+            renderClues();
+            const nextBtn = document.getElementById('next-clue-btn');
+            nextBtn.disabled = true;
+            nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            speakText("I have revealed all clues for you. Take a look!");
+        }
+
+        function forceSkipLevel() {
+            wonThisRound = true;
+            closeModal();
+        }
+
+        function resetGameProgress() {
+            if (confirm("Reset game progress back to Level 1?")) {
+                currentLevel = 1;
+                localStorage.setItem('guess_who_level_en', currentLevel);
+                initLevel();
+            }
+        }
+
+        // ======= STREAMING_CHUNK: Canvas Particle Confetti System =======
+        const canvas = document.getElementById("confetti-canvas");
+        const ctx = canvas.getContext("2d");
+        let confetti = [];
+        let animationFrameId = null;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        function triggerConfetti() {
+            confetti = [];
+            const colors = ["#f59e0b", "#ef4444", "#3b82f6", "#10b981", "#ec4899", "#8b5cf6"];
+            for (let i = 0; i < 150; i++) {
+                confetti.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    r: Math.random() * 6 + 4,
+                    d: Math.random() * canvas.height,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    tilt: Math.random() * 10 - 5,
+                    tiltAngleIncremental: Math.random() * 0.07 + 0.02,
+                    tiltAngle: 0
+                });
+            }
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            animateConfetti();
+        }
+
+        function animateConfetti() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let active = false;
+
+            confetti.forEach((p, idx) => {
+                p.tiltAngle += p.tiltAngleIncremental;
+                p.y += (Math.cos(p.d) + 3 + p.r / 2) / 2;
+                p.x += Math.sin(p.tiltAngle);
+                p.tilt = Math.sin(p.tiltAngle - idx / 3) * 15;
+
+                if (p.y < canvas.height) {
+                    active = true;
+                }
+
+                ctx.beginPath();
+                ctx.lineWidth = p.r;
+                ctx.strokeStyle = p.color;
+                ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
+                ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
+                ctx.stroke();
+            });
+
+            if (active) {
+                animationFrameId = requestAnimationFrame(animateConfetti);
+            } else {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        // Page load bootstrap
+        window.onload = function() {
+            const savedLevel = localStorage.getItem('guess_who_level_en');
+            if (savedLevel && parseInt(savedLevel) <= 100) {
+                currentLevel = parseInt(savedLevel);
+            }
+            initTTS();
+            initLevel();
+        };
+    </script>
+</body>
+</html>
