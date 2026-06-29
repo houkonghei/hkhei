@@ -50,17 +50,32 @@
       0%, 100% { transform: translateY(0) scale(1); opacity: 0.3; }
       50% { transform: translateY(-20px) scale(1.2); opacity: 0.8; }
     }
+    /* Grid scrollbar styling */
+    .custom-scroll::-webkit-scrollbar {
+      width: 8px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(254, 228, 230, 0.5);
+      border-radius: 999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(244, 63, 94, 0.3);
+      border-radius: 999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(244, 63, 94, 0.6);
+    }
   </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between overflow-x-hidden p-4 relative">
+<body class="h-screen flex flex-col justify-between overflow-hidden p-3 relative">
 
   <!-- Sparkles background -->
   <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
-    <div class="sparkle w-4 h-4 left-10 top-20" style="animation-delay: 0s;"></div>
-    <div class="sparkle w-3 h-3 left-1/4 top-10" style="animation-delay: 1s;"></div>
-    <div class="sparkle w-5 h-5 left-1/2 top-24" style="animation-delay: 2s;"></div>
-    <div class="sparkle w-3 h-3 left-3/4 top-12" style="animation-delay: 0.5s;"></div>
-    <div class="sparkle w-4 h-4 left-11/12 top-20" style="animation-delay: 1.5s;"></div>
+    <div class="sparkle w-4 h-4 left-10 top-10" style="animation-delay: 0s;"></div>
+    <div class="sparkle w-3 h-3 left-1/4 top-5" style="animation-delay: 1s;"></div>
+    <div class="sparkle w-5 h-5 left-1/2 top-12" style="animation-delay: 2s;"></div>
+    <div class="sparkle w-3 h-3 left-3/4 top-6" style="animation-delay: 0.5s;"></div>
+    <div class="sparkle w-4 h-4 left-11/12 top-10" style="animation-delay: 1.5s;"></div>
     <div class="sparkle w-3 h-3 left-5 top-2/3" style="animation-delay: 2.5s;"></div>
     <div class="sparkle w-5 h-5 left-1/3 top-3/4" style="animation-delay: 1.8s;"></div>
     <div class="sparkle w-4 h-4 left-2/3 top-2/3" style="animation-delay: 0.7s;"></div>
@@ -68,100 +83,100 @@
   </div>
 
   <!-- Main Container -->
-  <main class="w-full max-w-7xl mx-auto flex-grow flex flex-col justify-center items-center z-10">
+  <main class="w-full max-w-7xl mx-auto flex-grow flex flex-col justify-between items-center z-10 h-full overflow-hidden">
     
-    <!-- HEADER BAR -->
-    <header class="w-full text-center py-2 mb-2 flex justify-between items-center bg-white/70 backdrop-blur-md rounded-2xl px-6 shadow-sm">
-      <div class="flex items-center gap-3">
-        <span class="text-3xl">🌸</span>
-        <h1 class="text-3xl playful-title text-pink-600 tracking-wider">Guess Who I Am!</h1>
+    <!-- HEADER BAR (Compact height) -->
+    <header class="w-full text-center py-1.5 mb-1.5 flex justify-between items-center bg-white/75 backdrop-blur-md rounded-2xl px-5 shadow-sm h-[7vh] min-h-[50px] shrink-0">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🌸</span>
+        <h1 class="text-2xl playful-title text-pink-600 tracking-wider">Guess Who I Am!</h1>
       </div>
       <!-- TTS Voice Status Indicator -->
-      <div class="flex items-center gap-2 text-sm text-pink-500 font-semibold bg-pink-100 px-3 py-1.5 rounded-full">
+      <div class="flex items-center gap-2 text-xs text-pink-500 font-semibold bg-pink-50 px-3 py-1 rounded-full">
         <span id="voice-indicator">🔊 Cute Voice Loaded</span>
-        <button onclick="speak('Hello sweetheart! Let\'s play together!', 1.0)" class="hover:scale-110 active:scale-95 transition-transform">
+        <button onclick="speak('Hello sweetheart! Let\'s play together!', 1.0)" class="hover:scale-110 active:scale-95 transition-transform bg-pink-100 hover:bg-pink-200 px-2 py-0.5 rounded-lg text-pink-700">
           📢 Test Voice
         </button>
       </div>
     </header>
 
     <!-- ==================== STAGE 1: THEME SELECTION ==================== -->
-    <section id="stage-1" class="w-full flex-grow flex flex-col justify-center items-center">
-      <div class="text-center mb-4">
-        <h2 class="text-2xl font-bold text-pink-700">Step 1: Choose an Awesome Theme! 🧸</h2>
-        <p class="text-sm text-pink-600/80">Select one of the 30 categories below to start our English game!</p>
+    <section id="stage-1" class="w-full flex-grow flex flex-col justify-between items-center h-[90vh] overflow-hidden">
+      <div class="text-center mb-1.5 shrink-0">
+        <h2 class="text-xl font-bold text-pink-700">Step 1: Choose an Awesome Theme! 🧸</h2>
+        <p class="text-xs text-pink-600/80">Select one of the 30 categories below to start our English game!</p>
       </div>
       
-      <!-- Theme Grid Container -->
-      <div id="theme-grid" class="grid grid-cols-5 gap-3 w-full max-h-[68vh] overflow-y-auto p-2 bg-white/40 rounded-3xl border-4 border-white/60 shadow-inner">
+      <!-- Theme Grid Container (Responsive compact heights) -->
+      <div id="theme-grid" class="grid grid-cols-5 gap-2.5 w-full h-[78vh] overflow-y-auto p-2.5 bg-white/40 rounded-3xl border-4 border-white/60 shadow-inner custom-scroll">
         <!-- Dynmically loaded themes -->
       </div>
     </section>
 
     <!-- ==================== STAGE 2: DADDY'S SECRET CHOICE ==================== -->
-    <section id="stage-2" class="w-full flex-grow hidden flex-col justify-center items-center">
-      <div class="text-center mb-2 bg-pink-100 border border-pink-200 rounded-2xl p-3 max-w-2xl shadow-sm">
-        <h2 class="text-2xl font-bold text-pink-700">🤫 Step 2: Daddy's Secret Choice! 🤫</h2>
-        <p class="text-sm text-pink-600 mt-1">👧 Daughter, please close your eyes now! No peeking! 🙈</p>
-        <p class="text-xs text-pink-500 font-bold mt-1">👨 Daddy: Click one card below to set as the secret answer, then click "Lock Answer"!</p>
+    <section id="stage-2" class="w-full flex-grow hidden flex-col justify-between items-center h-[90vh] overflow-hidden">
+      <div class="text-center mb-1 bg-pink-100/90 border border-pink-200/60 rounded-xl p-2 max-w-3xl w-full shadow-sm shrink-0">
+        <h2 class="text-lg font-bold text-pink-700">🤫 Step 2: Daddy's Secret Choice! 🤫</h2>
+        <p class="text-xs text-pink-600 font-semibold">👧 Daughter, please close your eyes now! No peeking! 🙈</p>
+        <p class="text-[10px] text-pink-500 font-bold mt-0.5">👨 Daddy: Click one card below to set as the secret answer, then click "Lock Answer"!</p>
       </div>
 
       <!-- Selected Theme Title Display -->
-      <div class="text-lg font-bold text-pink-700 bg-white/80 px-4 py-1.5 rounded-full mb-3 shadow-sm border border-pink-200">
+      <div class="text-sm font-bold text-pink-700 bg-white/90 px-4 py-1 rounded-full mb-1.5 shadow-sm border border-pink-200/50 shrink-0">
         Current Theme: <span id="s2-theme-name" class="text-pink-600">Animals</span>
       </div>
 
-      <!-- 6x4 Grid for Selection -->
-      <div id="s2-grid" class="grid grid-cols-6 gap-3 w-full p-2 bg-white/40 rounded-3xl border-4 border-white/60 shadow-inner">
+      <!-- 6x4 Grid for Selection (Dynamic 4-row layout, completely fits in 56vh!) -->
+      <div id="s2-grid" class="grid grid-cols-6 grid-rows-4 gap-2.5 w-full p-2 bg-white/40 rounded-2xl border-4 border-white/60 shadow-inner h-[56vh] shrink-0">
         <!-- Dynmically loaded cards -->
       </div>
 
       <!-- Bottom controls for Stage 2 -->
-      <div class="mt-4 flex gap-4 items-center">
-        <button onclick="goBackToThemes()" class="px-6 py-3 bg-pink-400 hover:bg-pink-500 text-white font-bold text-lg rounded-full shadow-md transition-all active:scale-95">
+      <div class="mt-2 flex gap-4 items-center justify-center h-[8vh] shrink-0">
+        <button onclick="goBackToThemes()" class="px-5 py-2 bg-pink-400 hover:bg-pink-500 text-white font-bold text-sm rounded-full shadow-md transition-all active:scale-95">
           🔙 Back to Themes
         </button>
-        <button id="lock-btn" disabled onclick="lockAnswerAndStart()" class="px-10 py-3 bg-gray-400 text-white font-bold text-xl rounded-full shadow-md cursor-not-allowed transition-all">
+        <button id="lock-btn" disabled onclick="lockAnswerAndStart()" class="px-8 py-2.5 bg-gray-400 text-white font-bold text-base rounded-full shadow-md cursor-not-allowed transition-all">
           🔒 Select a card first
         </button>
       </div>
     </section>
 
     <!-- ==================== STAGE 3: INTERACTIVE GUESSING GAME ==================== -->
-    <section id="stage-3" class="w-full flex-grow hidden flex-col justify-center items-center">
+    <section id="stage-3" class="w-full flex-grow hidden flex-col justify-between items-center h-[90vh] overflow-hidden">
       
       <!-- Top Status Banner -->
-      <div class="w-full flex justify-between items-center mb-3 px-4">
+      <div class="w-full flex justify-between items-center mb-1.5 px-4 h-[6vh] shrink-0">
         <!-- Theme Title & Replay Button -->
-        <div class="flex items-center gap-3">
-          <div class="text-lg font-bold text-pink-700 bg-white/80 px-4 py-1.5 rounded-full shadow-sm border border-pink-200">
+        <div class="flex items-center gap-2">
+          <div class="text-sm font-bold text-pink-700 bg-white/80 px-3 py-1 rounded-full shadow-sm border border-pink-200/50">
             Theme: <span id="s3-theme-name" class="text-pink-600">Animals</span>
           </div>
-          <button onclick="announceThemeName()" class="bg-pink-100 text-pink-600 border border-pink-200 px-3 py-1.5 rounded-full text-sm font-bold hover:bg-pink-200 active:scale-95 transition-all">
+          <button onclick="announceThemeName()" class="bg-pink-100 text-pink-600 border border-pink-200/50 px-2.5 py-1 rounded-full text-[11px] font-bold hover:bg-pink-200 active:scale-95 transition-all">
             📢 Read Category Name
           </button>
         </div>
 
         <!-- Mode Notification -->
-        <div id="game-instruction-banner" class="text-lg font-bold text-pink-600 bg-yellow-100 border-2 border-yellow-300 px-6 py-1.5 rounded-full shadow-sm animate-bounce">
+        <div id="game-instruction-banner" class="text-sm font-bold text-pink-600 bg-yellow-100 border-2 border-yellow-200 px-5 py-1 rounded-full shadow-sm animate-bounce">
           👧 Let's ask questions and cross out the cards!
         </div>
       </div>
 
-      <!-- 6x4 Interactive Grid -->
-      <div id="s3-grid" class="grid grid-cols-6 gap-3 w-full p-2 bg-white/40 rounded-3xl border-4 border-white/60 shadow-inner">
+      <!-- 6x4 Interactive Grid (Stretches to 62vh, completely fits viewport) -->
+      <div id="s3-grid" class="grid grid-cols-6 grid-rows-4 gap-2.5 w-full p-2 bg-white/40 rounded-2xl border-4 border-white/60 shadow-inner h-[62vh] shrink-0">
         <!-- Dynmically loaded interactive cards -->
       </div>
 
       <!-- Action Footer for Stage 3 -->
-      <div class="mt-4 w-full flex justify-between items-center bg-white/60 p-3 rounded-2xl border border-pink-200">
-        <button onclick="exitToStage2()" class="px-5 py-2.5 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-full shadow-md transition-all active:scale-95">
+      <div class="mt-2 w-full flex justify-between items-center bg-white/60 p-2 rounded-2xl border border-pink-200 h-[8vh] shrink-0">
+        <button onclick="exitToStage2()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-bold text-xs rounded-full shadow-md transition-all active:scale-95">
           🚪 Exit / Change Secret
         </button>
 
         <div class="flex gap-4 items-center">
           <!-- Final Guess Mode Button -->
-          <button id="final-guess-mode-btn" onclick="toggleFinalGuessMode()" class="px-8 py-3 bg-gradient-to-r from-yellow-400 to-pink-500 hover:from-yellow-500 hover:to-pink-600 text-white font-bold text-lg rounded-full shadow-lg transform hover:scale-105 transition-all active:scale-95 animate-pulse">
+          <button id="final-guess-mode-btn" onclick="toggleFinalGuessMode()" class="px-6 py-2 bg-gradient-to-r from-yellow-400 to-pink-500 hover:from-yellow-500 hover:to-pink-600 text-white font-bold text-sm rounded-full shadow-lg transform hover:scale-105 transition-all active:scale-95 animate-pulse">
             🌟 Choose the Final Answer! 🌟
           </button>
         </div>
@@ -174,24 +189,24 @@
   
   <!-- Custom Modal for Game Complete / Win-Loss Result -->
   <div id="result-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex justify-center items-center p-4">
-    <div class="bg-white rounded-[2.5rem] max-w-lg w-full p-8 border-8 border-pink-300 shadow-2xl text-center transform scale-90 transition-transform duration-300">
+    <div class="bg-white rounded-[2rem] max-w-md w-full p-6 border-8 border-pink-300 shadow-2xl text-center transform scale-95 transition-transform duration-300">
       <!-- Huge Success Emoji or Try Again -->
-      <div id="result-emoji" class="text-8xl mb-4 animate-bounce">🎉</div>
-      <h2 id="result-title" class="text-4xl playful-title text-pink-600 mb-2">Wonderful Job!</h2>
-      <p id="result-text" class="text-lg text-pink-700/80 mb-6">You guessed perfectly! You matched the secret answer!</p>
+      <div id="result-emoji" class="text-6xl mb-2 animate-bounce">🎉</div>
+      <h2 id="result-title" class="text-3xl playful-title text-pink-600 mb-1">Wonderful Job!</h2>
+      <p id="result-text" class="text-sm text-pink-700/80 mb-4">You guessed perfectly! You matched the secret answer!</p>
       
       <!-- Show Secret Answer Card Info -->
-      <div class="bg-pink-50 border border-pink-100 rounded-2xl p-4 mb-6 flex flex-col items-center">
-        <p class="text-sm text-pink-500 font-bold mb-1">Daddy's Secret Card was:</p>
-        <span id="result-secret-emoji" class="text-6xl mb-1">🦁</span>
-        <span id="result-secret-word" class="text-2xl font-bold text-pink-700">Lion</span>
+      <div class="bg-pink-50 border border-pink-100 rounded-2xl p-3 mb-4 flex flex-col items-center">
+        <p class="text-xs text-pink-500 font-bold mb-0.5">Daddy's Secret Card was:</p>
+        <span id="result-secret-emoji" class="text-5xl mb-0.5">🦁</span>
+        <span id="result-secret-word" class="text-xl font-bold text-pink-700">Lion</span>
       </div>
 
-      <div class="flex gap-4 justify-center">
-        <button onclick="restartThisTheme()" class="px-6 py-3 bg-pink-500 hover:bg-pink-600 text-white font-bold text-lg rounded-full shadow-md active:scale-95 transition-all">
+      <div class="flex gap-3 justify-center">
+        <button onclick="restartThisTheme()" class="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white font-bold text-xs rounded-full shadow-md active:scale-95 transition-all">
           🔄 Play This Theme Again
         </button>
-        <button onclick="goToThemeSelection()" class="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-pink-900 font-bold text-lg rounded-full shadow-md active:scale-95 transition-all">
+        <button onclick="goToThemeSelection()" class="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-pink-900 font-bold text-xs rounded-full shadow-md active:scale-95 transition-all">
           🧸 Pick a New Theme
         </button>
       </div>
@@ -199,7 +214,7 @@
   </div>
 
   <!-- Footer Info -->
-  <footer class="w-full text-center text-xs text-pink-600/60 mt-2">
+  <footer class="w-full text-center text-[10px] text-pink-600/50 mt-1 shrink-0">
     Designed with 💖 for a lovely 6-year-old girl & her awesome dad • Guess Who I Am Board Game
   </footer>
 
@@ -209,7 +224,6 @@
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
     function playSound(type) {
-      // Resume audio context if suspended (browser security)
       if (audioCtx.state === 'suspended') {
         audioCtx.resume();
       }
@@ -236,7 +250,6 @@
         osc.start();
         osc.stop(audioCtx.currentTime + 0.15);
       } else if (type === 'win') {
-        // Play a cute rising major chord arpeggio
         const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
         notes.forEach((freq, idx) => {
           const oscNode = audioCtx.createOscillator();
@@ -251,7 +264,6 @@
           oscNode.stop(audioCtx.currentTime + idx * 0.12 + 0.4);
         });
       } else if (type === 'lose') {
-        // Sad sliding tone
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(250, audioCtx.currentTime);
         osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.4);
@@ -263,7 +275,6 @@
     }
 
     // Comprehensive 30 Themes x 24 Cards Data
-    // Handpicked emoji cards that are perfectly educational and highly recognizable for a 6-year-old
     const gameThemes = [
       {
         id: "animals",
@@ -313,7 +324,7 @@
           { name: "Airplane", emoji: "✈️" }, { name: "Helicopter", emoji: "🚁" }, { name: "Bicycle", emoji: "🚲" }, { name: "Motorcycle", emoji: "🏍️" },
           { name: "Ship", emoji: "🚢" }, { name: "Submarine", emoji: "🐙" }, { name: "Rocket", emoji: "🚀" }, { name: "Fire Truck", emoji: "🚒" },
           { name: "Police Car", emoji: "🚓" }, { name: "Ambulance", emoji: "🚑" }, { name: "Tractor", emoji: "🚜" }, { name: "Truck", emoji: "🚚" },
-          { name: "Hot Air Balloon", emoji: "🎈" }, { name: "Scooter", emoji: "🛴" }, { name: "Sailboat", emoji: "⛵" }, { name: "Cable Car", emoji: "🚡" },
+          { name: "Hot Balloon", emoji: "🎈" }, { name: "Scooter", emoji: "🛴" }, { name: "Sailboat", emoji: "⛵" }, { name: "Cable Car", emoji: "🚡" },
           { name: "Tram", emoji: "🚋" }, { name: "Metro", emoji: "🚇" }, { name: "Speedboat", emoji: "🚤" }, { name: "Spaceship", emoji: "🛸" }
         ]
       },
@@ -323,10 +334,10 @@
         emoji: "👩‍🚀",
         cards: [
           { name: "Doctor", emoji: "🧑‍⚕️" }, { name: "Teacher", emoji: "🧑‍🏫" }, { name: "Astronaut", emoji: "🧑‍🚀" }, { name: "Pilot", emoji: "🧑‍✈️" },
-          { name: "Firefighter", emoji: "🧑‍🚒" }, { name: "Police Officer", emoji: "👮" }, { name: "Chef", emoji: "🧑‍🍳" }, { name: "Artist", emoji: "🧑‍🎨" },
+          { name: "Firefighter", emoji: "🧑‍🚒" }, { name: "Police", emoji: "👮" }, { name: "Chef", emoji: "🧑‍🍳" }, { name: "Artist", emoji: "🧑‍🎨" },
           { name: "Singer", emoji: "🧑‍🎤" }, { name: "Farmer", emoji: "🧑‍🌾" }, { name: "Scientist", emoji: "🧑‍🔬" }, { name: "Builder", emoji: "👷" },
           { name: "Dancer", emoji: "💃" }, { name: "Writer", emoji: "✍️" }, { name: "Athlete", emoji: "🏃" }, { name: "Detective", emoji: "🕵️" },
-          { name: "Dentist", emoji: "🦷" }, { name: "Postman", emoji: "📬" }, { name: "Photographer", emoji: "📷" }, { name: "Gardener", emoji: "🌻" },
+          { name: "Dentist", emoji: "🦷" }, { name: "Postman", emoji: "📬" }, { name: "Camera Man", emoji: "📷" }, { name: "Gardener", emoji: "🌻" },
           { name: "Vet", emoji: "🐱" }, { name: "Lifeguard", emoji: "🛟" }, { name: "Baker", emoji: "🧁" }, { name: "Captain", emoji: "🧑‍✈️" }
         ]
       },
@@ -337,10 +348,10 @@
         cards: [
           { name: "Soccer", emoji: "⚽" }, { name: "Basketball", emoji: "🏀" }, { name: "Baseball", emoji: "⚾" }, { name: "Tennis", emoji: "🎾" },
           { name: "Badminton", emoji: "🏸" }, { name: "Golf", emoji: "⛳" }, { name: "Swimming", emoji: "🏊‍♀️" }, { name: "Running", emoji: "🏃‍♀️" },
-          { name: "Cycling", emoji: "🚴‍♀️" }, { name: "Skating", emoji: "⛸️" }, { name: "Skiing", emoji: "🎿" }, { name: "Gymnastics", emoji: "🤸‍♀️" },
-          { name: "Bowling", emoji: "🎳" }, { name: "Table Tennis", emoji: "🏓" }, { name: "Archery", emoji: "🏹" }, { name: "Surfing", emoji: "🏄‍♀️" },
+          { name: "Cycling", emoji: "🚴‍♀️" }, { name: "Skating", emoji: "⛸️" }, { name: "Skiing", emoji: "🎿" }, { name: "Gymnastic", emoji: "🤸‍♀️" },
+          { name: "Bowling", emoji: "🎳" }, { name: "Ping Pong", emoji: "🏓" }, { name: "Archery", emoji: "🏹" }, { name: "Surfing", emoji: "🏄‍♀️" },
           { name: "Hiking", emoji: "🥾" }, { name: "Yoga", emoji: "🧘‍♀️" }, { name: "Climbing", emoji: "🧗‍♀️" }, { name: "Boxing", emoji: "🥊" },
-          { name: "Rugby", emoji: "🏉" }, { name: "Skateboard", emoji: "🛹" }, { name: "Horse Riding", emoji: "🏇" }, { name: "Trophy", emoji: "🏆" }
+          { name: "Rugby", emoji: "🏉" }, { name: "Skateboard", emoji: "🛹" }, { name: "Horse Ride", emoji: "🏇" }, { name: "Trophy", emoji: "🏆" }
         ]
       },
       {
@@ -350,7 +361,7 @@
         cards: [
           { name: "Sun", emoji: "☀️" }, { name: "Cloud", emoji: "☁️" }, { name: "Rain", emoji: "🌧️" }, { name: "Thunder", emoji: "⚡" },
           { name: "Snow", emoji: "❄️" }, { name: "Wind", emoji: "💨" }, { name: "Rainbow", emoji: "🌈" }, { name: "Umbrella", emoji: "🌂" },
-          { name: "Tornado", emoji: "🌪️" }, { name: "Star", emoji: "⭐" }, { name: "Moon", emoji: "🌙" }, { name: "Sun & Cloud", emoji: "⛅" },
+          { name: "Tornado", emoji: "🌪️" }, { name: "Star", emoji: "⭐" }, { name: "Moon", emoji: "🌙" }, { name: "Cloudy Sun", emoji: "⛅" },
           { name: "Thermometer", emoji: "🌡️" }, { name: "Snowman", emoji: "⛄" }, { name: "Fog", emoji: "🌫️" }, { name: "Meteor", emoji: "☄️" },
           { name: "Sunset", emoji: "🌇" }, { name: "Sunrise", emoji: "🌅" }, { name: "Earth", emoji: "🌍" }, { name: "Comet", emoji: "☄️" },
           { name: "Lightning", emoji: "🌩️" }, { name: "Hot Sun", emoji: "🥵" }, { name: "Cold Wind", emoji: "🥶" }, { name: "Cloudy Sky", emoji: "🌥️" }
@@ -363,10 +374,10 @@
         cards: [
           { name: "Unicorn", emoji: "🦄" }, { name: "Dragon", emoji: "🐉" }, { name: "Fairy", emoji: "🧚‍♀️" }, { name: "Mermaid", emoji: "🧜‍♀️" },
           { name: "Wizard", emoji: "🧙‍♂️" }, { name: "Witch", emoji: "🧙‍♀️" }, { name: "Ghost", emoji: "👻" }, { name: "Alien", emoji: "👽" },
-          { name: "Castle", emoji: "🏰" }, { name: "Crown", emoji: "👑" }, { name: "Magic Wand", emoji: "🪄" }, { name: "Treasure Chest", emoji: "🏴‍☠️" },
-          { name: "Robot", emoji: "🤖" }, { name: "Monster", emoji: "👹" }, { name: "Super Hero", emoji: "🦸‍♀️" }, { name: "Genie", emoji: "🧞‍♂️" },
-          { name: "Pumpkin", emoji: "🎃" }, { name: "Elf", emoji: "🧝‍♀️" }, { name: "Crystal Ball", emoji: "🔮" }, { name: "Rainbow Bridge", emoji: "🌈" },
-          { name: "Frog Prince", emoji: "🐸" }, { name: "Flying Carpet", emoji: "🪁" }, { name: "Key", emoji: "🔑" }, { name: "Golden Star", emoji: "🌟" }
+          { name: "Castle", emoji: "🏰" }, { name: "Crown", emoji: "👑" }, { name: "Magic Wand", emoji: "🪄" }, { name: "Chest", emoji: "🏴‍☠️" },
+          { name: "Robot", emoji: "🤖" }, { name: "Monster", emoji: "👹" }, { name: "Hero", emoji: "🦸‍♀️" }, { name: "Genie", emoji: "🧞‍♂️" },
+          { name: "Pumpkin", emoji: "🎃" }, { name: "Elf", emoji: "🧝‍♀️" }, { name: "Magic Ball", emoji: "🔮" }, { name: "Rainbow", emoji: "🌈" },
+          { name: "Frog Prince", emoji: "🐸" }, { name: "Carpet", emoji: "🪁" }, { name: "Key", emoji: "🔑" }, { name: "Gold Star", emoji: "🌟" }
         ]
       },
       {
@@ -388,11 +399,11 @@
         emoji: "🎸",
         cards: [
           { name: "Guitar", emoji: "🎸" }, { name: "Piano", emoji: "🎹" }, { name: "Drum", emoji: "🥁" }, { name: "Violin", emoji: "🎻" },
-          { name: "Trumpet", emoji: "🎺" }, { name: "Microphone", emoji: "🎤" }, { name: "Saxophone", emoji: "🎷" }, { name: "Headphones", emoji: "🎧" },
+          { name: "Trumpet", emoji: "🎺" }, { name: "Microphone", emoji: "🎤" }, { name: "Saxophone", emoji: "🎷" }, { name: "Headphone", emoji: "🎧" },
           { name: "Music Note", emoji: "🎵" }, { name: "Bell", emoji: "🔔" }, { name: "Accordion", emoji: "🪗" }, { name: "Flute", emoji: "🪈" },
           { name: "Harp", emoji: "🪕" }, { name: "Speaker", emoji: "🔊" }, { name: "Radio", emoji: "📻" }, { name: "Tambourine", emoji: "🥁" },
-          { name: "Maracas", emoji: "🪇" }, { name: "Song Book", emoji: "🎶" }, { name: "Siren", emoji: "🚨" }, { name: "Chimes", emoji: "🎐" },
-          { name: "DJ Turntable", emoji: "💿" }, { name: "Metronome", emoji: "⏱️" }, { name: "Whistle", emoji: "🪈" }, { name: "Clarinet", emoji: "🎷" }
+          { name: "Maracas", emoji: "🪇" }, { name: "Music Book", emoji: "🎶" }, { name: "Siren", emoji: "🚨" }, { name: "Chimes", emoji: "🎐" },
+          { name: "CD Disc", emoji: "💿" }, { name: "Metronome", emoji: "⏱️" }, { name: "Whistle", emoji: "🪈" }, { name: "Clarinet", emoji: "🎷" }
         ]
       },
       {
@@ -401,7 +412,7 @@
         emoji: "🦈",
         cards: [
           { name: "Shark", emoji: "🦈" }, { name: "Whale", emoji: "🐋" }, { name: "Dolphin", emoji: "🐬" }, { name: "Fish", emoji: "🐟" },
-          { name: "Tropical Fish", emoji: "🐠" }, { name: "Blowfish", emoji: "🐡" }, { name: "Octopus", emoji: "🐙" }, { name: "Squid", emoji: "🦑" },
+          { name: "Goldfish", emoji: "🐠" }, { name: "Blowfish", emoji: "🐡" }, { name: "Octopus", emoji: "🐙" }, { name: "Squid", emoji: "🦑" },
           { name: "Crab", emoji: "🦀" }, { name: "Lobster", emoji: "🦞" }, { name: "Shrimp", emoji: "🦐" }, { name: "Sea Turtle", emoji: "🐢" },
           { name: "Seahorse", emoji: "🧜‍♀️" }, { name: "Starfish", emoji: "⭐" }, { name: "Shell", emoji: "🐚" }, { name: "Jellyfish", emoji: "🪼" },
           { name: "Seal", emoji: "🦭" }, { name: "Penguin", emoji: "🐧" }, { name: "Walrus", emoji: "🦭" }, { name: "Coral", emoji: "🪸" },
@@ -427,7 +438,7 @@
         emoji: "🧸",
         cards: [
           { name: "Teddy Bear", emoji: "🧸" }, { name: "Doll", emoji: "🪆" }, { name: "Robot", emoji: "🤖" }, { name: "Toy Car", emoji: "🏎️" },
-          { name: "Building Blocks", emoji: "🧱" }, { name: "Balloon", emoji: "🎈" }, { name: "Kite", emoji: "🪁" }, { name: "Yo-Yo", emoji: "🪀" },
+          { name: "Blocks", emoji: "🧱" }, { name: "Balloon", emoji: "🎈" }, { name: "Kite", emoji: "🪁" }, { name: "Yo-Yo", emoji: "🪀" },
           { name: "Puzzle", emoji: "🧩" }, { name: "Video Game", emoji: "🎮" }, { name: "Water Gun", emoji: "🔫" }, { name: "Bouncy Ball", emoji: "🏀" },
           { name: "Dice", emoji: "🎲" }, { name: "Crayons", emoji: "🖍️" }, { name: "Bubble Wand", emoji: "🫧" }, { name: "Magic Wand", emoji: "🪄" },
           { name: "Toy Train", emoji: "🚂" }, { name: "Paper Plane", emoji: "✈️" }, { name: "Duck Toy", emoji: "🐤" }, { name: "Chess", emoji: "♟️" },
@@ -444,7 +455,7 @@
           { name: "Cricket", emoji: "🦗" }, { name: "Scorpion", emoji: "🦂" }, { name: "Beetle", emoji: "🪲" }, { name: "Cockroach", emoji: "🪳" },
           { name: "Fly", emoji: "🪰" }, { name: "Mosquito", emoji: "🦟" }, { name: "Worm", emoji: "🪱" }, { name: "Spiderweb", emoji: "🕸️" },
           { name: "Centipede", emoji: "🐛" }, { name: "Grasshopper", emoji: "🦗" }, { name: "Moth", emoji: "🦋" }, { name: "Flea", emoji: "🐜" },
-          { name: "Beetle Bug", emoji: "🪲" }, { name: "Firefly", emoji: "🌟" }, { name: "Leaf Bug", emoji: "🍃" }, { name: "Water Strider", emoji: "💧" }
+          { name: "Beetle Bug", emoji: "🪲" }, { name: "Firefly", emoji: "🌟" }, { name: "Leaf Bug", emoji: "🍃" }, { name: "Water Bug", emoji: "💧" }
         ]
       },
       {
@@ -460,7 +471,6 @@
           { name: "Medal", emoji: "🏅" }, { name: "Certificate", emoji: "📜" }, { name: "Highlighter", emoji: "🖊️" }, { name: "Compass", emoji: "🧭" }
         ]
       },
-      // Adding 15 more unique and high quality kid friendly themes to reach 30 themes total
       {
         id: "birds",
         name: "Beautiful Birds",
@@ -497,7 +507,7 @@
           { name: "Pudding", emoji: "🍮" }, { name: "Honey", emoji: "🍯" }, { name: "Macaron", emoji: "🧁" }, { name: "Marshmallow", emoji: "🍡" },
           { name: "Popcorn", emoji: "🍿" }, { name: "Cherry Cake", emoji: "🎂" }, { name: "Pie", emoji: "🥧" }, { name: "Shaved Ice", emoji: "🍧" },
           { name: "Ice Pop", emoji: "🍧" }, { name: "Sweet Roll", emoji: "🥮" }, { name: "Cotton Candy", emoji: "☁️" }, { name: "Jelly Bean", emoji: "🍬" },
-          { name: "Strawberry Tart", emoji: "🍓" }, { name: "Waffle", emoji: "🧇" }, { name: "Cinnamon Roll", emoji: "🌀" }, { name: "Caramel", emoji: "🍯" }
+          { name: "Strawberry", emoji: "🍓" }, { name: "Waffle", emoji: "🧇" }, { name: "Cinnamon", emoji: "🌀" }, { name: "Caramel", emoji: "🍯" }
         ]
       },
       {
@@ -506,11 +516,11 @@
         emoji: "🏠",
         cards: [
           { name: "House", emoji: "🏠" }, { name: "Bed", emoji: "🛏️" }, { name: "Sofa", emoji: "🛋️" }, { name: "Chair", emoji: "🪑" },
-          { name: "Table", emoji: " 테이블" }, { name: "Door", emoji: "🚪" }, { name: "Window", emoji: "🪟" }, { name: "Key", emoji: "🔑" },
+          { name: "Table", emoji: "🪑" }, { name: "Door", emoji: "🚪" }, { name: "Window", emoji: "🪟" }, { name: "Key", emoji: "🔑" },
           { name: "Lamp", emoji: "💡" }, { name: "Clock", emoji: "⏰" }, { name: "Television", emoji: "📺" }, { name: "Telephone", emoji: "☎️" },
           { name: "Mirror", emoji: "🪞" }, { name: "Bathtub", emoji: "🛁" }, { name: "Shower", emoji: "🚿" }, { name: "Toilet", emoji: "🚽" },
           { name: "Toothbrush", emoji: "🪥" }, { name: "Soap", emoji: "🧼" }, { name: "Bookcase", emoji: "📚" }, { name: "Fridge", emoji: "🧊" },
-          { name: "Stove", emoji: "🍳" }, { name: "Washing Machine", emoji: "🧺" }, { name: "Fan", emoji: "🌀" }, { name: "Broom", emoji: "🧹" }
+          { name: "Stove", emoji: "🍳" }, { name: "Washer", emoji: "🧺" }, { name: "Fan", emoji: "🌀" }, { name: "Broom", emoji: "🧹" }
         ]
       },
       {
@@ -668,13 +678,10 @@
 
     function initTTS() {
       if ('speechSynthesis' in window) {
-        // Fetch voices and try to select a cute, high-quality English female voice
         const fetchVoices = () => {
           const voices = window.speechSynthesis.getVoices();
-          // Filter english voices
           const engVoices = voices.filter(v => v.lang.startsWith('en'));
           
-          // Try to look for Google US English (often very clear), Microsoft Zira, or any female sounding name
           const preferred = engVoices.find(v => 
             v.name.includes('Google US English') || 
             v.name.includes('Zira') || 
@@ -703,39 +710,37 @@
       }
     }
 
-    // Custom Speech Function
     function speak(text, speed = 1.0) {
       if ('speechSynthesis' in window) {
-        // Cancel current speech
         window.speechSynthesis.cancel();
         
         const utterance = new SpeechSynthesisUtterance(text);
         if (ttsVoice) {
           utterance.voice = ttsVoice;
         }
-        utterance.rate = speed; // Adjust reading rate
-        utterance.pitch = 1.25;  // Higher pitch for cute child-like/warm tone
+        utterance.rate = speed;
+        utterance.pitch = 1.25; // Lovely voice pitch
         window.speechSynthesis.speak(utterance);
       }
     }
 
     // --- GAME STAGE NAVIGATION ---
 
-    // 1. Initial State: Render Theme List
     function renderThemes() {
       const grid = document.getElementById('theme-grid');
       grid.innerHTML = '';
       
       gameThemes.forEach(theme => {
         const btn = document.createElement('button');
-        btn.className = `bg-white hover:bg-pink-50 border-4 border-pink-200 hover:border-pink-300 rounded-[2rem] p-4 flex flex-col items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-md hover:shadow-lg group relative overflow-hidden`;
+        btn.className = `bg-white hover:bg-pink-50 border-4 border-pink-200 hover:border-pink-300 rounded-3xl p-3 flex flex-row items-center justify-start gap-4 transition-all hover:scale-[1.03] active:scale-95 shadow-sm group relative overflow-hidden h-[11vh] min-h-[70px] w-full`;
         
         btn.innerHTML = `
-          <!-- Wave design inside -->
-          <div class="absolute -bottom-6 -left-6 w-16 h-16 bg-pink-100 rounded-full group-hover:scale-150 transition-transform pointer-events-none opacity-50"></div>
-          <span class="text-6xl mb-2 group-hover:animate-bounce transition-transform">${theme.emoji}</span>
-          <span class="text-lg font-extrabold text-pink-700 text-center">${theme.name}</span>
-          <span class="text-xs text-pink-400 mt-1 font-semibold">${theme.cards.length} Cards</span>
+          <div class="absolute -bottom-4 -left-4 w-12 h-12 bg-pink-100 rounded-full group-hover:scale-150 transition-transform pointer-events-none opacity-40"></div>
+          <span class="text-4xl shrink-0 z-10 group-hover:animate-bounce transition-transform select-none">${theme.emoji}</span>
+          <div class="flex flex-col items-start justify-center z-10 text-left overflow-hidden">
+            <span class="text-base font-bold text-pink-700 tracking-wide leading-tight truncate w-full">${theme.name}</span>
+            <span class="text-[10px] text-pink-400 font-bold uppercase tracking-wider">${theme.cards.length} cards</span>
+          </div>
         `;
         
         btn.onclick = () => {
@@ -747,33 +752,26 @@
       });
     }
 
-    // 2. Click Theme -> Go to Stage 2
     function selectTheme(theme) {
       currentTheme = theme;
       s2SelectedCard = null;
       
-      // Update displays
       document.getElementById('s2-theme-name').textContent = theme.name;
       document.getElementById('s3-theme-name').textContent = theme.name;
       
-      // Reset lock button state
       const lockBtn = document.getElementById('lock-btn');
       lockBtn.disabled = true;
-      lockBtn.className = "px-10 py-3 bg-gray-400 text-white font-bold text-xl rounded-full shadow-md cursor-not-allowed transition-all";
+      lockBtn.className = "px-8 py-2.5 bg-gray-400 text-white font-bold text-base rounded-full shadow-md cursor-not-allowed transition-all";
       lockBtn.innerHTML = "🔒 Select a card first";
 
-      // Render Stage 2 Cards
       renderStage2Cards();
 
-      // UI Transition
       document.getElementById('stage-1').classList.add('hidden');
       document.getElementById('stage-2').classList.remove('hidden');
 
-      // Voice prompt (sweet welcome to the theme)
       speak(`Excellent Choice! Let's play the ${theme.name} game! Daddy, please pick a secret card!`, 0.95);
     }
 
-    // Return to stage 1
     function goBackToThemes() {
       playSound('click');
       document.getElementById('stage-2').classList.add('hidden');
@@ -781,7 +779,7 @@
       speak("Let's pick another fun theme!", 1.0);
     }
 
-    // Render Stage 2 Grid (6x4 Cards Selection)
+    // Render Stage 2 Cards Selection Grid (Horizontal Rectangular Cards)
     function renderStage2Cards() {
       const grid = document.getElementById('s2-grid');
       grid.innerHTML = '';
@@ -789,11 +787,11 @@
       currentTheme.cards.forEach((card, idx) => {
         const btn = document.createElement('button');
         btn.id = `s2-card-${idx}`;
-        btn.className = `bg-white border-4 border-pink-200 hover:border-pink-400 rounded-2xl p-3 flex flex-col items-center justify-between aspect-square transition-all hover:scale-105 active:scale-95 shadow-sm`;
+        btn.className = `bg-white border-2 border-pink-200 hover:border-pink-400 rounded-xl flex flex-row items-center justify-start gap-3 px-3.5 transition-all hover:scale-[1.02] active:scale-95 shadow-sm h-full w-full overflow-hidden`;
         
         btn.innerHTML = `
-          <span class="text-5xl my-auto">${card.emoji}</span>
-          <span class="text-base font-bold text-pink-700 tracking-wide mt-1 leading-none">${card.name}</span>
+          <span class="text-4xl md:text-5xl select-none shrink-0">${card.emoji}</span>
+          <span class="text-sm md:text-base lg:text-lg font-bold text-pink-700 tracking-wide select-none text-left leading-tight truncate w-full">${card.name}</span>
         `;
 
         btn.onclick = () => {
@@ -805,65 +803,53 @@
       });
     }
 
-    // Dad selecting a card
     function selectStage2Card(card, idx) {
-      // Clear all previous borders
       currentTheme.cards.forEach((_, cIdx) => {
         const el = document.getElementById(`s2-card-${cIdx}`);
         if (el) {
-          el.classList.remove('border-pink-600', 'bg-pink-50', 'ring-4', 'ring-pink-300');
+          el.classList.remove('border-pink-600', 'bg-pink-50', 'ring-2', 'ring-pink-300');
           el.classList.add('border-pink-200', 'bg-white');
         }
       });
 
-      // Highlight current
       const activeCard = document.getElementById(`s2-card-${idx}`);
       activeCard.classList.remove('border-pink-200', 'bg-white');
-      activeCard.classList.add('border-pink-600', 'bg-pink-50', 'ring-4', 'ring-pink-300');
+      activeCard.classList.add('border-pink-600', 'bg-pink-50', 'ring-2', 'ring-pink-300');
 
       s2SelectedCard = card;
-
-      // Speak card name
       speak(card.name, 1.0);
 
-      // Enable Start Button
       const lockBtn = document.getElementById('lock-btn');
       lockBtn.disabled = false;
-      lockBtn.className = "px-10 py-3 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white font-bold text-xl rounded-full shadow-lg hover:scale-105 transform transition-all active:scale-95 cursor-pointer";
+      lockBtn.className = "px-8 py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white font-bold text-base rounded-full shadow-lg hover:scale-105 transform transition-all active:scale-95 cursor-pointer";
       lockBtn.innerHTML = `🔒 Lock Secret: "${card.name}" & Start!`;
     }
 
-    // Lock Answer -> Enter Stage 3 Interactive Gameplay
     function lockAnswerAndStart() {
       if (!s2SelectedCard) return;
 
       playSound('win');
       
-      // Reset Stage 3 state
       s3Guesses = [];
       isFinalGuessMode = false;
 
-      // Reset final guess button styling
       const finalBtn = document.getElementById('final-guess-mode-btn');
-      finalBtn.className = "px-8 py-3 bg-gradient-to-r from-yellow-400 to-pink-500 hover:from-yellow-500 hover:to-pink-600 text-white font-bold text-lg rounded-full shadow-lg transform hover:scale-105 transition-all active:scale-95 animate-pulse";
+      finalBtn.className = "px-6 py-2 bg-gradient-to-r from-yellow-400 to-pink-500 hover:from-yellow-500 hover:to-pink-600 text-white font-bold text-sm rounded-full shadow-lg transform hover:scale-105 transition-all active:scale-95 animate-pulse";
       finalBtn.innerHTML = "🌟 Choose the Final Answer! 🌟";
 
       const instructionBanner = document.getElementById('game-instruction-banner');
       instructionBanner.textContent = "👧 Let's ask questions and cross out the cards!";
-      instructionBanner.className = "text-lg font-bold text-pink-600 bg-yellow-100 border-2 border-yellow-300 px-6 py-1.5 rounded-full shadow-sm animate-bounce";
+      instructionBanner.className = "text-sm font-bold text-pink-600 bg-yellow-100 border-2 border-yellow-200 px-5 py-1 rounded-full shadow-sm animate-bounce";
 
-      // Render Interactive Board
       renderStage3Cards();
 
-      // UI transition
       document.getElementById('stage-2').classList.add('hidden');
       document.getElementById('stage-3').classList.remove('hidden');
 
-      // TTS Announces Game starts
       speak(`Game start! Let's discover who I am from the ${currentTheme.name} group! Sweetheart, it's your turn to ask and guess!`, 0.95);
     }
 
-    // Render Stage 3 Grid (6x4 Interactive Cards with crossed-out toggle)
+    // Render Stage 3 Cards Selection Grid (Horizontal Rectangular Cards)
     function renderStage3Cards() {
       const grid = document.getElementById('s3-grid');
       grid.innerHTML = '';
@@ -871,16 +857,16 @@
       currentTheme.cards.forEach((card, idx) => {
         const cardContainer = document.createElement('div');
         cardContainer.id = `s3-card-${idx}`;
-        cardContainer.className = `relative aspect-square rounded-2xl bg-white border-4 border-pink-200 hover:border-pink-400 p-3 flex flex-col items-center justify-between cursor-pointer transition-all hover:scale-105 shadow-sm overflow-hidden select-none`;
+        cardContainer.className = `relative rounded-xl bg-white border-2 border-pink-200 hover:border-pink-400 flex flex-row items-center justify-start gap-3 px-3.5 cursor-pointer transition-all hover:scale-[1.02] shadow-sm overflow-hidden select-none h-full w-full`;
 
         cardContainer.innerHTML = `
           <!-- Main card content -->
-          <span class="text-6xl my-auto select-none">${card.emoji}</span>
-          <span class="text-lg font-extrabold text-pink-700 tracking-wide mt-1 leading-none select-none">${card.name}</span>
+          <span class="text-4xl md:text-5xl select-none shrink-0">${card.emoji}</span>
+          <span class="text-sm md:text-base lg:text-lg font-bold text-pink-700 tracking-wide select-none text-left leading-tight truncate w-full">${card.name}</span>
           
-          <!-- Crossed out overlay (visual block) -->
+          <!-- Crossed out overlay (optimized perfectly for landscape rectangles) -->
           <div id="overlay-${idx}" class="absolute inset-0 bg-gray-500/80 backdrop-blur-[1px] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-200">
-            <span class="text-red-500 text-8xl font-black select-none">❌</span>
+            <span class="text-red-500 text-5xl font-black select-none">❌</span>
           </div>
         `;
 
@@ -892,50 +878,41 @@
       });
     }
 
-    // Handle interactive card clicking in Stage 3
     function handleStage3CardClick(card, idx) {
       const overlay = document.getElementById(`overlay-${idx}`);
       const cardEl = document.getElementById(`s3-card-${idx}`);
 
       if (isFinalGuessMode) {
-        // --- MODE: FINAL MATCH RESOLUTION ---
         playSound('click');
         resolveFinalGuess(card);
       } else {
-        // --- MODE: NORMAL QUESTIONING & CROSSING OUT ---
         const isCrossed = s3Guesses.includes(idx);
 
         if (isCrossed) {
-          // Uncross Card
           playSound('flip');
           s3Guesses = s3Guesses.filter(item => item !== idx);
           overlay.classList.add('opacity-0');
           overlay.classList.remove('opacity-100');
           cardEl.classList.remove('scale-95', 'rotate-1');
           
-          // Speak in normal pace
           speak(card.name, 1.0);
         } else {
-          // Cross Card (with slower pronunciation for kid learning)
           playSound('flip');
           s3Guesses.push(idx);
           overlay.classList.remove('opacity-0');
           overlay.classList.add('opacity-100');
           cardEl.classList.add('scale-95', 'rotate-1');
           
-          // SLOW speed pronunciation specifically for learning
-          speak(card.name, 0.65);
+          speak(card.name, 0.65); // Slow rate for learning English words
         }
       }
     }
 
-    // Read theme name loudly again upon request
     function announceThemeName() {
       playSound('click');
       speak(`The current category is: ${currentTheme.name}`, 0.95);
     }
 
-    // Toggle Final Guessing Mode
     function toggleFinalGuessMode() {
       playSound('click');
       const btn = document.getElementById('final-guess-mode-btn');
@@ -944,25 +921,24 @@
       if (!isFinalGuessMode) {
         isFinalGuessMode = true;
         btn.textContent = "❌ Cancel Guessing";
-        btn.className = "px-8 py-3 bg-red-500 hover:bg-red-600 text-white font-bold text-lg rounded-full shadow-lg transform hover:scale-105 transition-all active:scale-95";
+        btn.className = "px-6 py-2 bg-red-500 hover:bg-red-600 text-white font-bold text-sm rounded-full shadow-lg transform hover:scale-105 transition-all active:scale-95";
         
         instructionBanner.textContent = "🌟 Click your absolute final single card now! 🌟";
-        instructionBanner.className = "text-lg font-bold text-pink-900 bg-yellow-300 border-2 border-pink-400 px-6 py-1.5 rounded-full shadow-sm animate-pulse";
+        instructionBanner.className = "text-sm font-bold text-pink-900 bg-yellow-300 border-2 border-pink-400 px-5 py-1 rounded-full shadow-sm animate-pulse";
         
         speak("Who do you think I am? Please select your single final answer!", 0.95);
       } else {
         isFinalGuessMode = false;
         btn.textContent = "🌟 Choose the Final Answer! 🌟";
-        btn.className = "px-8 py-3 bg-gradient-to-r from-yellow-400 to-pink-500 hover:from-yellow-500 hover:to-pink-600 text-white font-bold text-lg rounded-full shadow-lg transform hover:scale-105 transition-all active:scale-95 animate-pulse";
+        btn.className = "px-6 py-2 bg-gradient-to-r from-yellow-400 to-pink-500 hover:from-yellow-500 hover:to-pink-600 text-white font-bold text-sm rounded-full shadow-lg transform hover:scale-105 transition-all active:scale-95 animate-pulse";
         
         instructionBanner.textContent = "👧 Let's ask questions and cross out the cards!";
-        instructionBanner.className = "text-lg font-bold text-pink-600 bg-yellow-100 border-2 border-yellow-300 px-6 py-1.5 rounded-full shadow-sm animate-bounce";
+        instructionBanner.className = "text-sm font-bold text-pink-600 bg-yellow-100 border-2 border-yellow-200 px-5 py-1 rounded-full shadow-sm animate-bounce";
         
         speak("Okay, let's keep playing!", 1.0);
       }
     }
 
-    // Resolve Final Guess & Match with Dad's choice
     function resolveFinalGuess(daughterCard) {
       const isCorrect = (daughterCard.name === s2SelectedCard.name);
       
@@ -973,7 +949,6 @@
       const secEmoji = document.getElementById('result-secret-emoji');
       const secWord = document.getElementById('result-secret-word');
 
-      // Set Secret Answer Card display inside modal
       secEmoji.textContent = s2SelectedCard.emoji;
       secWord.textContent = s2SelectedCard.name;
 
@@ -981,41 +956,33 @@
         playSound('win');
         emojiEl.textContent = "🎉✨🥳";
         titleEl.textContent = "Amazing! You Win!";
-        titleEl.className = "text-4xl playful-title text-pink-600 mb-2";
+        titleEl.className = "text-3xl playful-title text-pink-600 mb-1";
         textEl.textContent = `Wonderful! You correctly guessed "${daughterCard.name}"! You are a super star!`;
         
-        // Show modal
         modal.classList.remove('hidden');
-        
-        // Happy Victory TTS
         speak(`Yippee! You got it right! The answer is indeed ${daughterCard.name}! You are so smart! High five!`, 0.9);
       } else {
         playSound('lose');
         emojiEl.textContent = "🧸💡✨";
         titleEl.textContent = "Close Try! Let's learn!";
-        titleEl.className = "text-4xl playful-title text-yellow-600 mb-2";
+        titleEl.className = "text-3xl playful-title text-yellow-600 mb-1";
         textEl.textContent = `Aww, you guessed "${daughterCard.name}", but the secret card was actually:`;
         
-        // Show modal
         modal.classList.remove('hidden');
-        
-        // Encouraging TTS
         speak(`Nice try sweetie! You guessed ${daughterCard.name}, but daddy's secret was ${s2SelectedCard.name}. Let's try again! You are doing great!`, 0.9);
       }
     }
 
-    // Modal Action 1: Restart current theme
     function restartThisTheme() {
       playSound('click');
       document.getElementById('result-modal').classList.add('hidden');
       
-      // Go back to Stage 2 with current theme to choose a new card
       s2SelectedCard = null;
       renderStage2Cards();
       
       const lockBtn = document.getElementById('lock-btn');
       lockBtn.disabled = true;
-      lockBtn.className = "px-10 py-3 bg-gray-400 text-white font-bold text-xl rounded-full shadow-md cursor-not-allowed transition-all";
+      lockBtn.className = "px-8 py-2.5 bg-gray-400 text-white font-bold text-base rounded-full shadow-md cursor-not-allowed transition-all";
       lockBtn.innerHTML = "🔒 Select a card first";
 
       document.getElementById('stage-3').classList.add('hidden');
@@ -1024,7 +991,6 @@
       speak("Let's pick a new secret card, Daddy!", 1.0);
     }
 
-    // Modal Action 2: Go back to category picking
     function goToThemeSelection() {
       playSound('click');
       document.getElementById('result-modal').classList.add('hidden');
@@ -1034,17 +1000,14 @@
       speak("Let's pick a whole new theme to learn together!", 1.0);
     }
 
-    // Exit back to Stage 2 from Game Play Screen
     function exitToStage2() {
       playSound('click');
       document.getElementById('stage-3').classList.add('hidden');
       document.getElementById('stage-2').classList.remove('hidden');
       
-      // Keep old secret but allow choosing another
       speak("Going back. Daddy, would you like to choose another card?", 1.0);
     }
 
-    // Initialize Game on Window Load
     window.onload = function() {
       renderThemes();
       initTTS();
