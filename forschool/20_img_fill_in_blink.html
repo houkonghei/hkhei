@@ -515,12 +515,17 @@
           <h2 class="text-3xl font-extrabold text-slate-800">上傳成功！</h2>
           <p class="text-emerald-600 font-semibold font-mono">學生學號：<span id="success-student-id"></span></p>
           <p class="text-slate-500 text-sm">
-            作答內容已順利寫入老師的 Google Sheets 回應簿，您可以關閉此視窗或返回首頁作答其他題目。
+            作答內容已順利寫入老師的 Google Sheets 回應簿，您可以繼續作答其他題目。
           </p>
         </div>
 
-        <div class="border-t border-slate-100 pt-6">
-          <button onclick="showView('home')" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-semibold transition shadow">
+        <div class="border-t border-slate-100 pt-6 space-y-3">
+          <!-- 核心優化：允許不回首頁，直接繼續答別的題目 -->
+          <button onclick="continueAnswering()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold shadow-md transition flex items-center justify-center space-x-2">
+            <i data-lucide="arrow-right-circle" class="w-5 h-5"></i>
+            <span>繼續作答其他題目</span>
+          </button>
+          <button onclick="showView('home')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-semibold transition">
             返回首頁
           </button>
         </div>
@@ -614,6 +619,15 @@
     function showView(viewId) {
       document.querySelectorAll(".view-section").forEach(el => el.classList.add("hidden"));
       document.getElementById(`view-${viewId}`).classList.remove("hidden");
+      lucide.createIcons(); // 每次切換畫面時，確保動態渲染所有的小圖示
+
+      if (viewId === 'teacher-step2') {
+        renderTeacherCanvas();
+        renderBlankInputs();
+      }
+      if (viewId === 'student-workspace') {
+        renderStudentCanvas();
+      }
     }
 
     function confirmGoHome() {
@@ -689,9 +703,16 @@
       const res = await apiGetRequest("getQuestionsList");
       if (res && res.success) {
         questionsList = res.data || [];
+        localStorage.setItem("cached_questions_list", JSON.stringify(questionsList)); // 自動寫入本地快取
         updateConnectionStatus(true);
         renderTeacherQuestionsList();
       } else {
+        // 連線出錯時，嘗試讀取本地快取，防止功能鎖死
+        const cached = localStorage.getItem("cached_questions_list");
+        if (cached) {
+          questionsList = JSON.parse(cached);
+          renderTeacherQuestionsList();
+        }
         updateConnectionStatus(false);
       }
     }
@@ -751,7 +772,7 @@
       const file = event.target.files[0];
       if (!file) return;
 
-      // 修正：當選擇本地上傳檔案時，自動清空網址欄位，避免產生載入衝突
+      // 當選擇本地上傳檔案時，自動清空網址欄位，避免產生載入衝突
       document.getElementById("edit-q-img-url").value = "";
 
       const reader = new FileReader();
@@ -1152,16 +1173,41 @@
 
 
     // ==========================================
-    // 學生端功能 (多行半透明文字輸入框、高度適應)
+    // 學生端功能 (多行半透明文字輸入框、高度適應、本地快取機制)
     // ==========================================
 
     function enterStudentSide() {
+      customMessage("正在獲取最新考卷清單...", "info");
+      
       fetchLatestQuestionListStudent().then(() => {
+        // 如果聯網獲取失敗，嘗試載入本地快取，防止被鎖在外面
         if (questionsList.length === 0) {
-          customMessage("目前雲端尚無任何發布的考卷！", "error");
+          const cached = localStorage.getItem("cached_questions_list");
+          if (cached) {
+            questionsList = JSON.parse(cached);
+          }
+        }
+
+        if (questionsList.length === 0) {
+          customMessage("目前雲端與本地快取中尚無任何發布的考卷！請先在教師端建立考卷。", "error");
           return;
         }
-        showView("student-auth");
+
+        // 核心優化：若已經登入過（學號還保留在全域變數中），直接跳過驗證進入答題區
+        if (studentId) {
+          document.getElementById("display-student-id").innerText = studentId;
+          showView("student-workspace");
+          buildStudentQuestionSelector();
+          loadStudentQuestion(questionsList[0].id);
+          customMessage("已自動恢復學號作答狀態！", "success");
+        } else {
+          // 如果學號沒了，自動從 localStorage 讀取並預填，減少重複打字的負擔
+          const lastId = localStorage.getItem("last_student_id");
+          if (lastId) {
+            document.getElementById("student-id-input").value = lastId;
+          }
+          showView("student-auth");
+        }
       });
     }
 
@@ -1170,7 +1216,15 @@
       const res = await apiGetRequest("getQuestionsList");
       if (res && res.success) {
         questionsList = res.data || [];
+        localStorage.setItem("cached_questions_list", JSON.stringify(questionsList)); // 自動同步儲存本地快取
         updateConnectionStatus(true);
+      } else {
+        // 伺服器異常或斷網，讀取快取
+        const cached = localStorage.getItem("cached_questions_list");
+        if (cached) {
+          questionsList = JSON.parse(cached);
+        }
+        updateConnectionStatus(false);
       }
     }
 
@@ -1181,12 +1235,14 @@
 
       if (idPattern.test(idInput)) {
         studentId = idInput;
+        localStorage.setItem("last_student_id", studentId); // 記憶此學號
         errEl.classList.add("hidden");
         document.getElementById("display-student-id").innerText = studentId;
         
         showView("student-workspace");
         buildStudentQuestionSelector();
         loadStudentQuestion(questionsList[0].id); // 預設載入第一題
+        customMessage(`登入成功，祝作答順利！`, "success");
       } else {
         errEl.classList.remove("hidden");
         customMessage("格式錯誤！請輸入 8 位純數字的學號。", "error");
@@ -1195,8 +1251,8 @@
 
     function confirmResetStudent() {
       if (confirm("確認登出此學號？未提交的內容將遺失。")) {
-        studentId = "";
-        document.getElementById("student-id-input").value = "";
+        studentId = ""; // 清空登入變數，但 localStorage 中的快取預填保留
+        document.getElementById("student-id-input").value = localStorage.getItem("last_student_id") || "";
         showView("student-auth");
       }
     }
@@ -1210,6 +1266,10 @@
         opt.innerText = q.title;
         select.appendChild(opt);
       });
+      // 確保下拉選單的值對齊目前的題目
+      if (currentQId) {
+        select.value = currentQId;
+      }
     }
 
     function handleStudentSelectQuestion() {
@@ -1351,6 +1411,13 @@
       document.getElementById(id).classList.add("hidden");
     }
 
+    // 核心優化：作答成功後直接繼續作答其他題目的跳轉函數
+    function continueAnswering() {
+      showView("student-workspace");
+      buildStudentQuestionSelector();
+      loadStudentQuestion(currentQId); // 載入目前題目，且答案已安全清空，可直接選其它題目
+    }
+
     async function submitAnswersToCloud() {
       const spinner = document.getElementById("submit-spinner");
       const btnText = document.getElementById("submit-btn-text");
@@ -1380,6 +1447,14 @@
       if (result && result.success) {
         closeModal("modal-confirm-answers");
         document.getElementById("success-student-id").innerText = studentId;
+
+        // 作答提交成功後，將記憶體中目前這題已送出的答案欄位清空，避免學生重複送出
+        activeQuestion.blanks.forEach(b => b.studentAnswer = "");
+        const qIdx = questionsList.findIndex(x => x.id === activeQuestion.id);
+        if (qIdx !== -1) {
+          questionsList[qIdx].blanks.forEach(b => b.studentAnswer = "");
+        }
+
         showView("success");
         customMessage("作答成果已成功送出！", "success");
       } else {
