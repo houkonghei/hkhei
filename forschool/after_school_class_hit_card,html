@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>學生打卡系統</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 flex flex-col">
+
+  <!-- 全域載入中指示器 -->
+  <div id="loadingOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center max-w-xs w-full mx-4">
+      <div class="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent mb-4"></div>
+      <p class="text-slate-600 font-medium" id="loadingText">資料傳輸中...</p>
+    </div>
+  </div>
+
+  <!-- 自訂彈出提示框 (Modal) -->
+  <div id="customModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden transform transition-all scale-95 opacity-0 duration-300" id="modalContainer">
+      <div class="p-6 text-center" id="modalContent">
+        <!-- 動態插入內容 -->
+      </div>
+      <div class="bg-slate-50 px-6 py-4 flex justify-end border-t border-slate-100">
+        <button onclick="closeModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl transition duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800">
+          確定
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 頂部導航欄 -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('home')">
+        <div class="bg-emerald-500 text-white p-2 rounded-xl">
+          <i data-lucide="calendar-check" class="w-6 h-6"></i>
+        </div>
+        <span class="font-bold text-lg md:text-xl tracking-wider bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">學生課堂打卡系統</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button onclick="switchView('home')" class="text-slate-500 hover:text-slate-800 px-3 py-2 rounded-lg text-sm font-medium transition duration-200 flex items-center gap-1">
+          <i data-lucide="home" class="w-4 h-4"></i> 首頁
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主內容區域 -->
+  <main class="flex-grow max-w-6xl w-full mx-auto px-4 py-8">
+
+    <!-- ================= 首頁視圖 ================= -->
+    <section id="view-home" class="space-y-8 animate-fade-in">
+      <!-- 歡迎橫幅 -->
+      <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 rounded-3xl p-6 md:p-10 text-white shadow-lg relative overflow-hidden">
+        <div class="absolute right-0 bottom-0 opacity-10 translate-x-10 translate-y-10">
+          <i data-lucide="graduation-cap" class="w-96 h-96"></i>
+        </div>
+        <div class="relative z-10 max-w-lg space-y-4">
+          <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">GitHub Pages 已部署</span>
+          <h1 class="text-3xl md:text-4xl font-black leading-tight">雲端課堂簽到助手</h1>
+          <p class="text-slate-300 text-sm md:text-base leading-relaxed">
+            採用安全、流暢且即時的雲端機制。學生可快速完成今日簽到，教師能一鍵掌控所有課程出勤狀態。
+          </p>
+        </div>
+      </div>
+
+      <!-- 入口選擇卡片 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- 學生端入口 -->
+        <div onclick="enterStudentPortal()" class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-emerald-300 cursor-pointer transition-all duration-300 group">
+          <div class="flex items-start justify-between">
+            <div class="bg-emerald-50 text-emerald-600 p-4 rounded-2xl group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
+              <i data-lucide="user-check" class="w-8 h-8"></i>
+            </div>
+            <span class="text-slate-400 group-hover:text-emerald-500 transition-colors duration-300">
+              <i data-lucide="arrow-right" class="w-6 h-6"></i>
+            </span>
+          </div>
+          <h3 class="text-xl font-bold mt-6 mb-2 text-slate-800 group-hover:text-emerald-600 transition-colors">學生端簽到</h3>
+          <p class="text-slate-500 text-sm leading-relaxed">
+            選擇您的課程與姓名，一秒完成今日打卡。系統已啟用防重複代簽機制。
+          </p>
+        </div>
+
+        <!-- 教師端入口 -->
+        <div onclick="switchView('teacher-login')" class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-indigo-300 cursor-pointer transition-all duration-300 group">
+          <div class="flex items-start justify-between">
+            <div class="bg-indigo-50 text-indigo-600 p-4 rounded-2xl group-hover:bg-indigo-500 group-hover:text-white transition-all duration-300">
+              <i data-lucide="shield-check" class="w-8 h-8"></i>
+            </div>
+            <span class="text-slate-400 group-hover:text-indigo-500 transition-colors duration-300">
+              <i data-lucide="arrow-right" class="w-6 h-6"></i>
+            </span>
+          </div>
+          <h3 class="text-xl font-bold mt-6 mb-2 text-slate-800 group-hover:text-indigo-600 transition-colors">教師端後台</h3>
+          <p class="text-slate-500 text-sm leading-relaxed">
+            身分安全驗證。即時查閱 8 組學生名單的全部歷史簽到數據，支持出勤追蹤。
+          </p>
+        </div>
+      </div>
+
+      <!-- 課程列表區域 -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center space-x-2">
+            <span class="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
+            <h2 class="text-lg font-bold text-slate-800">當前開設課程清單</h2>
+          </div>
+          <button onclick="loadClasslist()" class="text-slate-400 hover:text-slate-600 transition duration-200 p-1.5 hover:bg-slate-100 rounded-lg" title="重新整理">
+            <i data-lucide="rotate-cw" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <div id="classlist-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- 課程卡片動態載入 -->
+          <div class="col-span-full py-12 text-center text-slate-400">
+            <div class="animate-pulse space-y-4">
+              <div class="h-4 bg-slate-200 rounded w-1/3 mx-auto"></div>
+              <div class="h-10 bg-slate-200 rounded max-w-md mx-auto"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 學生打卡視圖 ================= -->
+    <section id="view-student-checkin" class="max-w-xl mx-auto space-y-6 hidden animate-fade-in">
+      <!-- 返回按鈕 -->
+      <button onclick="switchView('home')" class="inline-flex items-center space-x-2 text-slate-500 hover:text-slate-800 transition text-sm font-medium">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        <span>返回首頁</span>
+      </button>
+
+      <div class="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
+        <div class="text-center space-y-2">
+          <div class="inline-flex bg-emerald-50 text-emerald-600 p-3.5 rounded-2xl mb-2">
+            <i data-lucide="user-check" class="w-8 h-8"></i>
+          </div>
+          <h2 class="text-2xl font-bold text-slate-800">學生自主打卡</h2>
+          <p class="text-slate-500 text-sm">請選擇您要打卡的課程與您本人的姓名</p>
+        </div>
+
+        <!-- 防代打卡警告標示 -->
+        <div id="duplicate-warning-banner" class="hidden bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm flex items-start space-x-3">
+          <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+          <div>
+            <span class="font-bold">打卡防護啟動：</span>
+            本裝置今天已經替其他同學或自己打卡過了。為維護公平性，今天內無法再進行第二次打卡。
+          </div>
+        </div>
+
+        <form id="checkin-form" onsubmit="handleCheckIn(event)" class="space-y-5">
+          <!-- 選擇課程 -->
+          <div class="space-y-1.5">
+            <label class="block text-sm font-semibold text-slate-600">步驟 1：選擇打卡課程</label>
+            <div class="relative">
+              <select id="student-course-select" onchange="onStudentCourseChange()" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition duration-200">
+                <option value="" disabled selected>請選擇課程...</option>
+              </select>
+              <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <i data-lucide="chevron-down" class="w-5 h-5"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- 選擇姓名 -->
+          <div class="space-y-1.5">
+            <label class="block text-sm font-semibold text-slate-600">步驟 2：選擇您的姓名</label>
+            <div class="relative">
+              <select id="student-name-select" required disabled class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition duration-200 disabled:opacity-60 disabled:cursor-not-allowed">
+                <option value="" disabled selected>請先選擇課程...</option>
+              </select>
+              <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <i data-lucide="chevron-down" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <p class="text-xs text-slate-400" id="student-load-status"></p>
+          </div>
+
+          <!-- 提交按鈕 -->
+          <button type="submit" id="checkin-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl shadow-md shadow-emerald-600/10 hover:shadow-lg transition duration-200 flex items-center justify-center space-x-2 text-base focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+            <i data-lucide="send" class="w-5 h-5"></i>
+            <span>打卡本節課</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================= 教師端密碼登入 ================= -->
+    <section id="view-teacher-login" class="max-w-md mx-auto space-y-6 hidden animate-fade-in">
+      <button onclick="switchView('home')" class="inline-flex items-center space-x-2 text-slate-500 hover:text-slate-800 transition text-sm font-medium">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        <span>返回首頁</span>
+      </button>
+
+      <div class="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
+        <div class="text-center space-y-2">
+          <div class="inline-flex bg-indigo-50 text-indigo-600 p-3.5 rounded-2xl mb-2">
+            <i data-lucide="lock" class="w-8 h-8"></i>
+          </div>
+          <h2 class="text-2xl font-bold text-slate-800">教師權限認證</h2>
+          <p class="text-slate-500 text-sm">請輸入教師專用安全金鑰進入後台</p>
+        </div>
+
+        <form onsubmit="handleTeacherLogin(event)" class="space-y-4">
+          <div class="space-y-1.5">
+            <label class="block text-sm font-semibold text-slate-600">後台登入密碼</label>
+            <input type="password" id="teacher-password" required placeholder="請輸入密碼" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition duration-200">
+          </div>
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-md shadow-indigo-600/10 hover:shadow-lg transition duration-200 text-base focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            驗證身分並登入
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================= 教師端後台面板 ================= -->
+    <section id="view-teacher-dashboard" class="space-y-6 hidden animate-fade-in">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <i data-lucide="layout-dashboard" class="w-7 h-7 text-indigo-600"></i>
+            教師端出勤主控台
+          </h2>
+          <p class="text-slate-500 text-sm mt-1">即時檢視 8 組學生清單工作簿中的歷史出勤打卡數據</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="loadTeacherRecords()" class="bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 px-4 py-2.5 rounded-xl text-sm font-semibold transition duration-200 flex items-center gap-1.5">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i> 重新載入數據
+          </button>
+          <button onclick="teacherLogout()" class="bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 px-4 py-2.5 rounded-xl text-sm font-semibold transition duration-200 flex items-center gap-1.5">
+            <i data-lucide="log-out" class="w-4 h-4"></i> 安全登出
+          </button>
+        </div>
+      </div>
+
+      <!-- 分頁頁籤：對應 8 個名單工作表 -->
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        <div class="bg-slate-50 border-b border-slate-200 p-2 overflow-x-auto flex gap-1 custom-scrollbar">
+          <button onclick="switchTeacherTab('stulist_a')" id="tab-stulist_a" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition shrink-0">名單 A</button>
+          <button onclick="switchTeacherTab('stulist_b')" id="tab-stulist_b" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition shrink-0">名單 B</button>
+          <button onclick="switchTeacherTab('stulist_c')" id="tab-stulist_c" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition shrink-0">名單 C</button>
+          <button onclick="switchTeacherTab('stulist_d')" id="tab-stulist_d" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition shrink-0">名單 D</button>
+          <button onclick="switchTeacherTab('stulist_e')" id="tab-stulist_e" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition shrink-0">名單 E</button>
+          <button onclick="switchTeacherTab('stulist_f')" id="tab-stulist_f" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition shrink-0">名單 F</button>
+          <button onclick="switchTeacherTab('stulist_g')" id="tab-stulist_g" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition shrink-0">名單 G</button>
+          <button onclick="switchTeacherTab('stulist_h')" id="tab-stulist_h" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition shrink-0">名單 H</button>
+        </div>
+
+        <!-- 數據展示表格 -->
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+              <span id="current-tab-title" class="text-indigo-600">stulist_a</span>
+              <span class="text-xs font-normal text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full" id="stulist-student-count">共 0 位學生</span>
+            </h3>
+            <div class="text-xs text-slate-400 flex items-center gap-4">
+              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-md bg-emerald-100 border border-emerald-200 inline-block text-center text-[10px] text-emerald-800 font-bold">1</span> 已簽到</span>
+              <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-md bg-slate-50 border border-slate-200 inline-block"></span> 未簽到</span>
+            </div>
+          </div>
+
+          <!-- 滾動包裝容器 -->
+          <div class="overflow-x-auto border border-slate-200 rounded-xl custom-scrollbar" id="table-scroll-container">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm font-bold" id="dashboard-table-header">
+                  <th class="py-3.5 px-4 sticky left-0 bg-slate-50 z-10 border-r border-slate-200 w-36 shadow-[2px_0_5px_rgba(0,0,0,0.03)]">學生姓名</th>
+                  <!-- 動態日期列將注入這裡 -->
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-slate-700 text-sm font-medium" id="dashboard-table-body">
+                <!-- 動態學生出勤行將注入這裡 -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 查無資料提示 -->
+          <div id="no-data-alert" class="hidden text-center py-16 text-slate-400 space-y-3">
+            <i data-lucide="folder-open" class="w-12 h-12 mx-auto text-slate-300"></i>
+            <p>目前此名單工作簿無任何學生或日期打卡紀錄。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 頁腳 -->
+  <footer class="bg-slate-900 text-slate-400 py-8 border-t border-slate-800">
+    <div class="max-w-6xl mx-auto px-4 text-center space-y-3 text-sm">
+      <p class="text-slate-300 font-semibold tracking-wide">學生課堂簽到與數據同步系統</p>
+      <p class="text-xs text-slate-500">
+        架構：GitHub Pages 前端網頁 + Google Apps Script Web App 後端 API + Google 試算表
+      </p>
+      <div class="flex items-center justify-center space-x-1.5 text-xs text-slate-500">
+        <i data-lucide="shield-alert" class="w-4 h-4"></i>
+        <span>本裝置設有本地安全鎖防護，拒絕重複/代人簽到。</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================= 核心邏輯 Javascript ================= -->
+  <script>
+    // 您的 Google Apps Script 部署 URL
+    const API_URL = "https://script.google.com/macros/s/AKfycbysPU4-fcPuiMNrAjFjx9-yi-y875VaxWlzEQK-Gp9DbNYp0v2htTjOA1tYlYEUiYVY/exec";
+    
+    // 全域狀態管理
+    let gClasslist = []; // 課程清單
+    let gTeacherRecords = {}; // 教師端撈回的所有 8 個表紀錄
+    let gCurrentActiveTab = "stulist_a"; // 教師端當前分頁
+
+    // 系統初始化
+    window.onload = function() {
+      lucide.createIcons();
+      loadClasslist();
+      
+      // 自動檢查 URL 參數是否有指定視圖（選填，方便連結直接進入特定視圖）
+      const urlParams = new URLSearchParams(window.location.search);
+      const view = urlParams.get('view');
+      if (view) {
+        switchView(view);
+      }
+    };
+
+    // ================= 輔助 UI 函式 =================
+
+    // 顯示自訂 Modal
+    function showModal(title, message, isSuccess = true) {
+      const content = document.getElementById('modalContent');
+      let iconColor = isSuccess ? 'text-emerald-500 bg-emerald-50' : 'text-rose-500 bg-rose-50';
+      let iconName = isSuccess ? 'check-circle' : 'alert-circle';
+      
+      content.innerHTML = `
+        <div class="inline-flex ${iconColor} p-4 rounded-full mb-4">
+          <i data-lucide="${iconName}" class="w-12 h-12"></i>
+        </div>
+        <h3 class="text-xl font-bold text-slate-800 mb-2">${title}</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">${message}</p>
+      `;
+      lucide.createIcons();
+
+      const modal = document.getElementById('customModal');
+      const container = document.getElementById('modalContainer');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        container.classList.remove('scale-95', 'opacity-0');
+        container.classList.add('scale-100', 'opacity-100');
+      }, 50);
+    }
+
+    // 關閉 Modal
+    function closeModal() {
+      const container = document.getElementById('modalContainer');
+      container.classList.remove('scale-100', 'opacity-100');
+      container.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        document.getElementById('customModal').classList.add('hidden');
+      }, 200);
+    }
+
+    // 顯示/隱藏載入畫面
+    function showLoading(show, text = "載入中...") {
+      const loader = document.getElementById('loadingOverlay');
+      document.getElementById('loadingText').innerText = text;
+      if (show) {
+        loader.classList.remove('hidden');
+      } else {
+        loader.classList.add('hidden');
+      }
+    }
+
+    // 視圖切換機制
+    function switchView(viewId) {
+      // 隱藏所有視圖
+      document.querySelectorAll('main > section').forEach(section => {
+        section.classList.add('hidden');
+      });
+      // 顯示目標視圖
+      const target = document.getElementById(`view-${viewId}`);
+      if (target) {
+        target.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
+
+    // ================= 核心邏輯 A：課程清單 (GET) =================
+
+    async function loadClasslist() {
+      showLoading(true, "正在向雲端讀取課程名單...");
+      try {
+        const response = await fetch(`${API_URL}?action=getClasslist`);
+        const result = await response.json();
+        
+        if (result.success) {
+          gClasslist = result.data;
+          renderClasslistHomepage();
+          populateStudentCourseSelect();
+        } else {
+          showModal("載入失敗", `無法讀取課程：${result.error}`, false);
+        }
+      } catch (err) {
+        showModal("連線錯誤", `連線至試算表失敗，請檢查網址或權限設定。<br><small class="text-slate-400">${err}</small>`, false);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    // 首頁課程列表渲染
+    function renderClasslistHomepage() {
+      const container = document.getElementById('classlist-container');
+      if (!gClasslist || gClasslist.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full py-12 text-center text-slate-400">
+            <i data-lucide="info" class="w-10 h-10 mx-auto text-slate-300 mb-2"></i>
+            <p>目前 classlist 工作表無任何課程數據。請先在 Google Sheets 中填寫！</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = gClasslist.map((item, index) => {
+        return `
+          <div class="border border-slate-100 bg-slate-50 rounded-xl p-5 hover:bg-white hover:border-emerald-300 hover:shadow-sm cursor-pointer transition-all duration-200" onclick="enterStudentWithCourse('${item.className}')">
+            <div class="flex items-center space-x-3">
+              <div class="bg-emerald-100 text-emerald-700 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm">
+                ${index + 1}
+              </div>
+              <div class="flex-grow min-w-0">
+                <h4 class="font-bold text-slate-800 truncate text-base">${item.className}</h4>
+                <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                  <i data-lucide="sheet" class="w-3 h-3"></i> 對應著名單: ${item.studentSheet}
+                </p>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+
+    // ================= 核心邏輯 B：學生打卡端 =================
+
+    // 填充打卡頁面的課程下拉選單
+    function populateStudentCourseSelect() {
+      const select = document.getElementById('student-course-select');
+      
+      // 保留第一個預設
+      select.innerHTML = '<option value="" disabled selected>請選擇課程...</option>';
+      gClasslist.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.className;
+        opt.innerText = item.className;
+        select.appendChild(opt);
+      });
+    }
+
+    // 學生由首頁點擊直接進特定課程
+    function enterStudentWithCourse(className) {
+      switchView('student-checkin');
+      const select = document.getElementById('student-course-select');
+      select.value = className;
+      onStudentCourseChange();
+    }
+
+    // 當首頁點選「學生端簽到」卡片
+    function enterStudentPortal() {
+      switchView('student-checkin');
+      checkAntiCheatStatus(); // 檢查此裝置本日是否打卡過
+    }
+
+    // 監聽學生選擇課程變更，以載入對應工作表的學生名單
+    async function onStudentCourseChange() {
+      const courseSelect = document.getElementById('student-course-select');
+      const nameSelect = document.getElementById('student-name-select');
+      const statusText = document.getElementById('student-load-status');
+      
+      const selectedCourse = courseSelect.value;
+      const courseObj = gClasslist.find(c => c.className === selectedCourse);
+      
+      if (!courseObj) return;
+
+      nameSelect.disabled = true;
+      nameSelect.innerHTML = '<option value="" disabled selected>名單加載中，請稍候...</option>';
+      statusText.innerText = "🔄 正在從後端拉取最新名單...";
+
+      try {
+        const response = await fetch(`${API_URL}?action=getStudentList&sheetName=${courseObj.studentSheet}`);
+        const result = await response.json();
+        
+        if (result.success) {
+          const students = result.data;
+          nameSelect.innerHTML = '<option value="" disabled selected>-- 請選取您的名字 --</option>';
+          
+          if (students.length === 0) {
+            nameSelect.innerHTML = '<option value="" disabled>此工作表沒有學生姓名資料</option>';
+            statusText.innerText = "⚠️ 名單內無學生，請與教師確認。";
+          } else {
+            students.forEach(student => {
+              const opt = document.createElement('option');
+              opt.value = student;
+              opt.innerText = student;
+              nameSelect.appendChild(opt);
+            });
+            nameSelect.disabled = false;
+            statusText.innerText = `✅ 成功載入 ${students.length} 位學生姓名。`;
+          }
+        } else {
+          nameSelect.innerHTML = '<option value="" disabled>載入失敗，請重試</option>';
+          statusText.innerText = `❌ 出錯: ${result.error}`;
+        }
+      } catch (err) {
+        nameSelect.innerHTML = '<option value="" disabled>連線失敗</option>';
+        statusText.innerText = `❌ 連線伺服器失敗。`;
+      }
+      checkAntiCheatStatus(); // 每一次變更也順便檢查防代簽卡
+    }
+
+    // 檢查防代簽打卡狀態 (localStorage 限制，當日此裝置只能簽到一次)
+    function checkAntiCheatStatus() {
+      const warningBanner = document.getElementById('duplicate-warning-banner');
+      const checkinBtn = document.getElementById('checkin-btn');
+      
+      // 獲取今天日期 YYYY-MM-DD
+      const today = new Date();
+      const todayString = today.getFullYear() + "-" + (today.getMonth() + 1) + "-" + today.getDate();
+      
+      const lastCheckIn = localStorage.getItem("student_last_checkin_date");
+      
+      if (lastCheckIn === todayString) {
+        warningBanner.classList.remove('hidden');
+        checkinBtn.disabled = true;
+        checkinBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+        checkinBtn.classList.add('bg-slate-300', 'cursor-not-allowed', 'text-slate-500');
+        return true; // 已被鎖定
+      } else {
+        warningBanner.classList.add('hidden');
+        checkinBtn.disabled = false;
+        checkinBtn.classList.remove('bg-slate-300', 'cursor-not-allowed', 'text-slate-500');
+        checkinBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+        return false;
+      }
+    }
+
+    // 處理打卡提交事件 (POST)
+    async function handleCheckIn(event) {
+      event.preventDefault();
+
+      if (checkAntiCheatStatus()) {
+        showModal("拒絕打卡", "您的裝置今日已有打卡紀錄。為了防止替人簽到，今日內無法再次進行打卡！", false);
+        return;
+      }
+
+      const courseSelect = document.getElementById('student-course-select');
+      const nameSelect = document.getElementById('student-name-select');
+      
+      const selectedCourse = courseSelect.value;
+      const selectedName = nameSelect.value;
+      
+      if (!selectedCourse || !selectedName) {
+        showModal("提示", "請填妥課程及學生姓名選項！", false);
+        return;
+      }
+
+      const courseObj = gClasslist.find(c => c.className === selectedCourse);
+      const sheetName = courseObj.studentSheet;
+
+      showLoading(true, `正在為 ${selectedName} 送出打卡...`);
+
+      const payload = {
+        sheetName: sheetName,
+        studentName: selectedName
+      };
+
+      try {
+        // 使用 text/plain 來規避某些瀏覽器與 GAS 的 CORS preflight 限制
+        const response = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify(payload),
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // 標記本日打卡，避免重複幫人簽
+          const today = new Date();
+          const todayString = today.getFullYear() + "-" + (today.getMonth() + 1) + "-" + today.getDate();
+          localStorage.setItem("student_last_checkin_date", todayString);
+          
+          // 打卡成功通知
+          const todayShowStr = `${today.getMonth() + 1}月${today.getDate()}日`;
+          showModal(
+            "打卡成功 🎉", 
+            `恭喜！在 <strong>${todayShowStr}</strong>，學生 <strong>${result.student}</strong> 成功簽到課程 <strong>${selectedCourse}</strong>。`, 
+            true
+          );
+          
+          // 重設表單與狀態
+          document.getElementById('checkin-form').reset();
+          document.getElementById('student-name-select').disabled = true;
+          document.getElementById('student-name-select').innerHTML = '<option value="" disabled selected>請先選擇課程...</option>';
+          document.getElementById('student-load-status').innerText = "";
+          
+          // 回到首頁並套用防代簽
+          checkAntiCheatStatus();
+          setTimeout(() => {
+            switchView('home');
+          }, 3500);
+
+        } else {
+          showModal("打卡未完成", `寫入發生異常：${result.message || result.error}`, false);
+        }
+      } catch (err) {
+        showModal("打卡失敗", `網路連線異常，未能成功與 Google Sheets 同步。<br><small class="text-slate-400">${err}</small>`, false);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+
+    // ================= 核心邏輯 C：教師後台 (GET + TABLE) =================
+
+    // 教師登入密碼驗證
+    function handleTeacherLogin(event) {
+      event.preventDefault();
+      const passwordInput = document.getElementById('teacher-password').value;
+      
+      if (passwordInput === "123456") {
+        document.getElementById('teacher-password').value = ""; // 清空
+        switchView('teacher-dashboard');
+        loadTeacherRecords();
+      } else {
+        showModal("密碼錯誤 🔒", "輸入的教師專用認證密碼不正確，請再試一次。", false);
+      }
+    }
+
+    // 教師登出
+    function teacherLogout() {
+      gTeacherRecords = {};
+      switchView('home');
+      showModal("已登出", "您已安全登出教師端後台系統。", true);
+    }
+
+    // 載入所有 8 個名單工作表的數據
+    async function loadTeacherRecords() {
+      showLoading(true, "正在整合 8 張工作表的出勤紀錄...");
+      try {
+        const response = await fetch(`${API_URL}?action=getAllRecords`);
+        const result = await response.json();
+        
+        if (result.success) {
+          gTeacherRecords = result.data;
+          switchTeacherTab(gCurrentActiveTab); // 渲染當前 Tab
+        } else {
+          showModal("讀取失敗", `教師後台讀取異常：${result.error}`, false);
+        }
+      } catch (err) {
+        showModal("連線出錯", `教師端連線伺服器失敗，請確認 Apps Script 部署。<br><small class="text-slate-400">${err}</small>`, false);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    // 切換教師端名單標籤頁
+    function switchTeacherTab(tabName) {
+      gCurrentActiveTab = tabName;
+      
+      // 修改按鈕 Active 樣式
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
+        btn.classList.add('bg-white', 'text-slate-600', 'border', 'border-slate-200', 'hover:bg-slate-100');
+      });
+      
+      const activeBtn = document.getElementById(`tab-${tabName}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-white', 'text-slate-600', 'border', 'border-slate-200', 'hover:bg-slate-100');
+        activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
+      }
+
+      document.getElementById('current-tab-title').innerText = tabName.toUpperCase().replace('_', ' ');
+
+      renderTeacherTable(tabName);
+    }
+
+    // 渲染表格內容
+    function renderTeacherTable(sheetName) {
+      const headerRow = document.getElementById('dashboard-table-header');
+      const bodyContainer = document.getElementById('dashboard-table-body');
+      const studentCountText = document.getElementById('stulist-student-count');
+      const noDataAlert = document.getElementById('no-data-alert');
+      const tableContainer = document.getElementById('table-scroll-container');
+
+      // 還原表頭，只留下「學生姓名」
+      headerRow.innerHTML = '<th class="py-3.5 px-4 sticky left-0 bg-slate-100 z-10 border-r border-slate-200 w-36 shadow-[2px_0_5px_rgba(0,0,0,0.03)] text-slate-700">學生姓名</th>';
+      bodyContainer.innerHTML = '';
+
+      const sheetData = gTeacherRecords[sheetName];
+
+      if (!sheetData || !sheetData.students || sheetData.students.length === 0) {
+        studentCountText.innerText = "共 0 位學生";
+        noDataAlert.classList.remove('hidden');
+        tableContainer.classList.add('hidden');
+        return;
+      }
+
+      noDataAlert.classList.add('hidden');
+      tableContainer.classList.remove('hidden');
+
+      studentCountText.innerText = `共 ${sheetData.students.length} 位學生`;
+
+      const dates = sheetData.dates || [];
+
+      // 1. 動態填充日期表頭 (Column Dates)
+      dates.forEach(date => {
+        const th = document.createElement('th');
+        th.className = "py-3.5 px-6 border-r border-slate-200 text-center min-w-[100px] text-xs font-bold text-slate-600 tracking-wider";
+        th.innerText = date;
+        headerRow.appendChild(th);
+      });
+
+      // 2. 動態填充每位學生的簽到格子
+      sheetData.students.forEach(student => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition duration-150";
+
+        // 第一欄：學生姓名 (Sticky 固定)
+        const tdName = document.createElement('td');
+        tdName.className = "py-3.5 px-4 sticky left-0 bg-white group-hover:bg-slate-50 z-10 font-bold border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.03)] text-slate-800";
+        tdName.innerText = student.name;
+        tr.appendChild(tdName);
+
+        // 依據日期順序填寫 1 或空
+        dates.forEach(date => {
+          const tdStatus = document.createElement('td');
+          tdStatus.className = "py-3 px-6 border-r border-slate-100 text-center text-sm";
+          
+          const val = student.attendance[date];
+          if (val === "1" || val === 1) {
+            tdStatus.innerHTML = `
+              <span class="inline-flex items-center justify-center w-7 h-7 bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-lg font-bold text-sm shadow-sm scale-100 animate-fade-in">
+                1
+              </span>
+            `;
+          } else {
+            tdStatus.innerHTML = '<span class="text-slate-300">-</span>';
+          }
+          tr.appendChild(tdStatus);
+        });
+
+        bodyContainer.appendChild(tr);
+      });
+    }
+
+  </script>
+</body>
+</html>
