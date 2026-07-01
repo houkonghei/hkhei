@@ -250,7 +250,10 @@
           </h2>
           <p class="text-slate-500 text-sm mt-1">即時檢視 8 組學生清單工作簿中的歷史出勤打卡數據</p>
         </div>
-        <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-2 flex-wrap gap-2">
+          <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition duration-200 flex items-center gap-1.5 shadow-sm">
+            <i data-lucide="download" class="w-4 h-4"></i> 匯出完整 CSV
+          </button>
           <button onclick="loadTeacherRecords()" class="bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 px-4 py-2.5 rounded-xl text-sm font-semibold transition duration-200 flex items-center gap-1.5">
             <i data-lucide="refresh-cw" class="w-4 h-4"></i> 重新載入數據
           </button>
@@ -276,10 +279,13 @@
         <!-- 數據展示表格 -->
         <div class="p-6">
           <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
-              <span id="current-tab-title" class="text-indigo-600">stulist_a</span>
-              <span class="text-xs font-normal text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full" id="stulist-student-count">共 0 位學生</span>
-            </h3>
+            <div class="flex flex-col">
+              <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                <span id="current-tab-title" class="text-indigo-600">stulist_a</span>
+                <span class="text-xs font-normal text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full" id="stulist-student-count">共 0 位學生</span>
+              </h3>
+              <p class="text-xs text-amber-600 mt-1 font-medium">⚠️ 畫面僅顯示「今日打卡狀況」，如需歷史五十次打卡大表，請點右上角「匯出完整 CSV」。</p>
+            </div>
             <div class="text-xs text-slate-400 flex items-center gap-4">
               <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-md bg-emerald-100 border border-emerald-200 inline-block text-center text-[10px] text-emerald-800 font-bold">1</span> 已簽到</span>
               <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-md bg-slate-50 border border-slate-200 inline-block"></span> 未簽到</span>
@@ -714,7 +720,7 @@
       renderTeacherTable(tabName);
     }
 
-    // 渲染表格內容
+    // 渲染表格內容 (僅呈現今天打卡情況)
     function renderTeacherTable(sheetName) {
       const headerRow = document.getElementById('dashboard-table-header');
       const bodyContainer = document.getElementById('dashboard-table-body');
@@ -722,8 +728,15 @@
       const noDataAlert = document.getElementById('no-data-alert');
       const tableContainer = document.getElementById('table-scroll-container');
 
-      // 還原表頭，只留下「學生姓名」
-      headerRow.innerHTML = '<th class="py-3.5 px-4 sticky left-0 bg-slate-100 z-10 border-r border-slate-200 w-36 shadow-[2px_0_5px_rgba(0,0,0,0.03)] text-slate-700">學生姓名</th>';
+      // 取得今天的日期格式 M/D (例如: "7/1")
+      const today = new Date();
+      const todayStr = (today.getMonth() + 1) + "/" + today.getDate();
+
+      // 還原表頭，只留下「學生姓名」並加上「今天日期」欄
+      headerRow.innerHTML = `
+        <th class="py-3.5 px-4 sticky left-0 bg-slate-100 z-10 border-r border-slate-200 w-36 shadow-[2px_0_5px_rgba(0,0,0,0.03)] text-slate-700">學生姓名</th>
+        <th class="py-3.5 px-6 border-r border-slate-200 text-center min-w-[120px] text-xs font-bold text-slate-600 tracking-wider">${todayStr} (今日狀態)</th>
+      `;
       bodyContainer.innerHTML = '';
 
       const sheetData = gTeacherRecords[sheetName];
@@ -740,17 +753,7 @@
 
       studentCountText.innerText = `共 ${sheetData.students.length} 位學生`;
 
-      const dates = sheetData.dates || [];
-
-      // 1. 動態填充日期表頭 (Column Dates)
-      dates.forEach(date => {
-        const th = document.createElement('th');
-        th.className = "py-3.5 px-6 border-r border-slate-200 text-center min-w-[100px] text-xs font-bold text-slate-600 tracking-wider";
-        th.innerText = date;
-        headerRow.appendChild(th);
-      });
-
-      // 2. 動態填充每位學生的簽到格子
+      // 動態填充每位學生在今天的簽到格子
       sheetData.students.forEach(student => {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 transition duration-150";
@@ -761,26 +764,65 @@
         tdName.innerText = student.name;
         tr.appendChild(tdName);
 
-        // 依據日期順序填寫 1 或空
-        dates.forEach(date => {
-          const tdStatus = document.createElement('td');
-          tdStatus.className = "py-3 px-6 border-r border-slate-100 text-center text-sm";
-          
-          const val = student.attendance[date];
-          if (val === "1" || val === 1) {
-            tdStatus.innerHTML = `
-              <span class="inline-flex items-center justify-center w-7 h-7 bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-lg font-bold text-sm shadow-sm scale-100 animate-fade-in">
-                1
-              </span>
-            `;
-          } else {
-            tdStatus.innerHTML = '<span class="text-slate-300">-</span>';
-          }
-          tr.appendChild(tdStatus);
-        });
+        // 第二欄：只看今天的狀態
+        const tdStatus = document.createElement('td');
+        tdStatus.className = "py-3 px-6 border-r border-slate-100 text-center text-sm";
+        
+        // 從 attendance 讀取今天是否打卡為 "1"
+        const val = student.attendance[todayStr];
+        if (val === "1" || val === 1) {
+          tdStatus.innerHTML = `
+            <span class="inline-flex items-center justify-center w-7 h-7 bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-lg font-bold text-sm shadow-sm scale-100 animate-fade-in">
+              1
+            </span>
+          `;
+        } else {
+          tdStatus.innerHTML = '<span class="text-slate-300">-</span>';
+        }
+        tr.appendChild(tdStatus);
 
         bodyContainer.appendChild(tr);
       });
+    }
+
+    // 教師端匯出完整 CSV 功能
+    function exportToCSV() {
+      const sheetName = gCurrentActiveTab;
+      const sheetData = gTeacherRecords[sheetName];
+
+      if (!sheetData || !sheetData.students || sheetData.students.length === 0) {
+        showModal("匯出失敗", "當前名單中無任何數據可供匯出！", false);
+        return;
+      }
+
+      const dates = sheetData.dates || [];
+      
+      // 構建 CSV 表頭：第一欄是學生姓名，後面是所有的歷史日期
+      let csvContent = "\uFEFF"; // 為了防止 Excel 開啟時出現中文亂碼，加上 UTF-8 BOM 首部
+      const headers = ["學生姓名", ...dates];
+      csvContent += headers.join(",") + "\n";
+
+      // 構建 CSV 每列數據 (完整歷史)
+      sheetData.students.forEach(student => {
+        const row = [student.name];
+        dates.forEach(date => {
+          const val = student.attendance[date];
+          row.push(val === "1" || val === 1 ? "1" : "");
+        });
+        csvContent += row.join(",") + "\n";
+      });
+
+      // 建立下載連結
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `學生出勤紀錄_${sheetName}_完整版.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showModal("匯出成功 🎉", `已成功生成完整歷史出勤表 (${sheetName})。<br>您可以直接以 Excel 開啟並複製貼上到您的總表！`, true);
     }
 
   </script>
