@@ -36,7 +36,7 @@
 </head>
 <body class="bg-gradient-to-br from-indigo-50/50 via-slate-50 to-emerald-50/30 text-slate-800 min-h-screen flex flex-col p-4 xl:p-6 overflow-x-hidden">
 
-  <!-- 💡 隱藏表單：用於發送資料，100% 繞過 iframe 與 CORS 限制 -->
+  <!-- 💡 隱藏表單：模仿 wordcloud 成功案例，100% 繞過 iframe 與 CORS 限制 -->
   <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
   <form id="submit_form" method="POST" target="hidden_iframe" class="hidden">
       <input type="hidden" name="action" id="form_action">
@@ -72,11 +72,11 @@
           <i data-lucide="save" class="w-3.5 h-3.5"></i>
           儲存設定
         </button>
-        <button onclick="fetchFromCloud()" id="btnFetch" class="px-3.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-xl text-xs font-semibold transition flex items-center gap-1.5" disabled>
+        <button onclick="fetchFromCloud()" id="btnFetch" class="px-3.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
           <i data-lucide="cloud-download" class="w-3.5 h-3.5"></i>
           載入雲端
         </button>
-        <button onclick="saveToCloud()" id="btnSync" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 rounded-xl text-xs font-bold text-white transition flex items-center gap-1.5 shadow-md shadow-emerald-200/50" disabled>
+        <button onclick="saveToCloud()" id="btnSync" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 rounded-xl text-xs font-bold text-white transition flex items-center gap-1.5 shadow-md shadow-emerald-200/50">
           <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
           同步雲端
         </button>
@@ -157,7 +157,7 @@
           </div>
         </div>
 
-        <!-- 智慧型快速複製控制面板 (預設折疊隱藏) -->
+        <!-- 智慧型快速複製控制面板 -->
         <div id="copyPanel" class="hidden p-4 bg-emerald-50/80 border border-emerald-100 rounded-2xl space-y-3 shadow-inner">
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-emerald-800 flex items-center gap-1">
@@ -168,24 +168,20 @@
           </div>
           
           <div class="grid grid-cols-3 gap-2">
-            <!-- 模式 1: 連續多天 -->
-            <button onclick="setCopyMode('daily')" id="btnCopyDaily" class="p-2 border border-emerald-300 bg-emerald-100/30 rounded-xl text-center transition">
+            <button onclick="setCopyMode('daily')" id="btnCopyDaily" class="p-2 border border-emerald-300 bg-emerald-50/50 rounded-xl text-center transition">
               <div class="text-xs font-bold text-emerald-800">連續多天</div>
               <div class="text-[9px] text-slate-400 mt-0.5">每日重複</div>
             </button>
-            <!-- 模式 2: 連續幾週 -->
             <button onclick="setCopyMode('weekly')" id="btnCopyWeekly" class="p-2 border border-slate-200 bg-white hover:bg-slate-50 rounded-xl text-center transition">
               <div class="text-xs font-bold text-slate-600">每週重複</div>
               <div class="text-[9px] text-slate-400 mt-0.5">同星期幾</div>
             </button>
-            <!-- 模式 3: 指定某天 -->
             <button onclick="setCopyMode('specific')" id="btnCopySpecific" class="p-2 border border-slate-200 bg-white hover:bg-slate-50 rounded-xl text-center transition">
               <div class="text-xs font-bold text-slate-600">手選單日</div>
               <div class="text-[9px] text-slate-400 mt-0.5">指定日期</div>
             </button>
           </div>
 
-          <!-- 複製參數動態輸入區 -->
           <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
             <div id="copyInputFields" class="flex-1">
               <!-- JS 動態插入對應的輸入框 -->
@@ -259,7 +255,7 @@
           <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
           <h3 class="text-base font-bold text-slate-800">日曆活動匯出成 Excel 記錄條</h3>
         </div>
-        <button onclick="closeExportModal()" class="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-50 transition">
+        <button onclick="closeExportModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-50 transition">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
@@ -332,6 +328,9 @@
 
     // 儲存所有活動的資料結構
     let calendarEvents = {};
+    
+    // 🔒 智慧防空置覆蓋安全鎖
+    let hasLoadedFromCloud = false;
 
     // 複製機制全域變數
     let activeEventToCopy = null;
@@ -342,62 +341,75 @@
     function getAttendeeClasses(attendee) {
       if (attendee === "淇") {
         return {
-          card: "bg-pink-50/90 hover:bg-pink-100/95 border-pink-400 text-pink-800",
-          badge: "bg-pink-100 text-pink-800 border-pink-200",
-          text: "text-pink-800"
+          card: "bg-pink-100 hover:bg-pink-200/90 border-pink-400 text-pink-900",
+          badge: "bg-pink-200 text-pink-900",
+          text: "text-pink-900"
         };
       } else if (attendee === "皓") {
         return {
-          card: "bg-blue-50/90 hover:bg-blue-100/95 border-blue-400 text-blue-800",
-          badge: "bg-blue-100 text-blue-800 border-blue-200",
-          text: "text-blue-800"
+          card: "bg-blue-100 hover:bg-blue-200/90 border-blue-400 text-blue-900",
+          badge: "bg-blue-200 text-blue-900",
+          text: "text-blue-900"
         };
       } else if (attendee === "熙") {
         return {
-          card: "bg-orange-50/90 hover:bg-orange-100/95 border-orange-400 text-orange-800",
-          badge: "bg-orange-100 text-orange-800 border-orange-200",
-          text: "text-orange-800"
+          card: "bg-orange-100 hover:bg-orange-200/90 border-orange-400 text-orange-900",
+          badge: "bg-orange-200 text-orange-900",
+          text: "text-orange-900"
         };
       } else if (attendee === "芳") {
         return {
-          card: "bg-purple-50/90 hover:bg-purple-100/95 border-purple-400 text-purple-800",
-          badge: "bg-purple-100 text-purple-800 border-purple-200",
-          text: "text-purple-800"
+          card: "bg-purple-100 hover:bg-purple-200/90 border-purple-400 text-purple-900",
+          badge: "bg-purple-200 text-purple-900",
+          text: "text-purple-900"
         };
       } else {
-        // 預設無參與人顏色
+        // 預設無參與人顏色 (清新馬卡龍淡綠)
         return {
-          card: "bg-emerald-50/70 hover:bg-emerald-100/90 border-emerald-400 text-emerald-800",
-          badge: "bg-emerald-100 text-emerald-800 border-emerald-200",
-          text: "text-emerald-800"
+          card: "bg-emerald-50 hover:bg-emerald-100/90 border-emerald-400 text-emerald-900",
+          badge: "bg-emerald-200 text-emerald-900",
+          text: "text-emerald-900"
         };
       }
     }
 
-    // --- 💡 智慧日期格式標準化 (e.g. 2026/7/6 -> 2026-07-06) ---
+    // --- 💡 智慧日期格式標準化 ---
     function normalizeDateString(dateInput) {
       if (!dateInput) return "";
-      let d = new Date(dateInput);
       
-      // 如果原生 parsing 失敗（有些瀏覽器不支援 slash 的部分寫法），手動切割處理
-      if (isNaN(d.getTime())) {
-        const parts = String(dateInput).split(/[\/\-\.]/);
-        if (parts.length === 3) {
-          let y = parseInt(parts[0]);
-          let m = parseInt(parts[1]);
-          let day = parseInt(parts[2]);
-          if (y < 100) y += 2000; // 補足年份
-          d = new Date(y, m - 1, day);
-        }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateInput).trim())) {
+        return String(dateInput).trim();
       }
-      
-      if (!isNaN(d.getTime())) {
-        const yStr = d.getFullYear();
-        const mStr = String(d.getMonth() + 1).padStart(2, '0');
-        const dStr = String(d.getDate()).padStart(2, '0');
+
+      if (dateInput instanceof Date) {
+        const y = dateInput.getFullYear();
+        const m = String(dateInput.getMonth() + 1).padStart(2, '0');
+        const d = String(dateInput.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+
+      let s = String(dateInput).trim();
+      if (s.includes('T')) s = s.split('T')[0];
+      s = s.replace(/[\/\.]/g, '-');
+
+      const parts = s.split('-');
+      if (parts.length === 3) {
+        let y = parts[0].trim();
+        let m = parts[1].trim().padStart(2, '0');
+        let d = parts[2].trim().padStart(2, '0');
+        if (y.length === 2) y = "20" + y;
+        return `${y}-${m}-${d}`;
+      }
+
+      let dObj = new Date(dateInput);
+      if (!isNaN(dObj.getTime())) {
+        const yStr = dObj.getFullYear();
+        const mStr = String(dObj.getMonth() + 1).padStart(2, '0');
+        const dStr = String(dObj.getDate()).padStart(2, '0');
         return `${yStr}-${mStr}-${dStr}`;
       }
-      return String(dateInput).trim(); // 備用方案原樣輸出
+
+      return "";
     }
 
     // --- 初始化載入 ---
@@ -413,7 +425,6 @@
       document.getElementById('webAppUrl').value = savedUrl;
       updateApiButtonState(!!savedUrl);
 
-      // 優先載入本地快取資料（確保即使網路受阻也絕對能即時看見、100% 不留白）
       const cachedEvents = localStorage.getItem('calendar_events_data');
       if (cachedEvents) {
         try {
@@ -426,7 +437,7 @@
       renderCalendar();
 
       if (savedUrl) {
-        fetchFromCloud(true); // 背景靜默加載，防止卡死
+        fetchFromCloud(true); 
       }
     });
 
@@ -475,42 +486,61 @@
       lucide.createIcons();
     }
 
-    // 將拉取到的雲端原始資料合併回本機手帳結構
+    // 💡 智慧辨識中英文及多語系欄位名稱，防堵欄位解析失敗而呈現空白
     function processCloudData(result) {
       if (result && result.status === "success" && result.data) {
         const cloudEvents = {};
         
         result.data.forEach(row => {
-          if (!row.Date) return;
+          // 動態模糊尋找屬性名稱
+          const kDate = Object.keys(row).find(k => /date|日期/i.test(k));
+          const kTime = Object.keys(row).find(k => /time|時間/i.test(k));
+          const kLoc = Object.keys(row).find(k => /location|地點/i.test(k));
+          const kAct = Object.keys(row).find(k => /activity|活動/i.test(k));
+          const kAtt = Object.keys(row).find(k => /attendee|參與/i.test(k));
+          const kNote = Object.keys(row).find(k => /note|補充|備註/i.test(k));
+
+          if (!kDate || !row[kDate]) return;
           
-          // 💡 智慧修復：將 Google Sheets 日期格式（e.g. 2026/7/6）標準化為 2026-07-06
-          let dateStr = normalizeDateString(row.Date);
-          if (!dateStr) return; // 跳過無效資料
+          let dateStr = normalizeDateString(row[kDate]);
+          if (!dateStr) return;
           
           if (!cloudEvents[dateStr]) {
             cloudEvents[dateStr] = [];
           }
           
           cloudEvents[dateStr].push({
-            Location: row.Location || "",
-            Activity: row.Activity || "",
-            Attendee: row.Attendee || "",
-            Notes: row.Notes || "",
-            Time: row.Time || ""
+            Location: kLoc ? String(row[kLoc] || "") : "",
+            Activity: kAct ? String(row[kAct] || "") : "",
+            Attendee: kAtt ? String(row[kAtt] || "") : "",
+            Notes: kNote ? String(row[kNote] || "") : "",
+            Time: kTime ? String(row[kTime] || "") : ""
           });
         });
 
-        // 合併至本機，並重繪日曆格子
         calendarEvents = cloudEvents;
         saveLocalCache();
         renderCalendar();
+        hasLoadedFromCloud = true;
         return true;
       }
       return false;
     }
 
-    // 取得雲端資料
-    function fetchFromCloud(isBackground = false) {
+    // 💡 解析並防堵 Apps Script 的錯誤 HTML 返回
+    function parseSafeJSON(text) {
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            if (typeof text === 'string' && (text.includes('<html') || text.includes('Exception'))) {
+                throw new Error("SERVER_HTML_ERROR");
+            }
+            throw e;
+        }
+    }
+
+    // 💡 取得雲端資料（內置高相容安全代理與錯誤診斷）
+    async function fetchFromCloud(isBackground = false) {
       const url = getApiUrl();
       if (!url) return;
 
@@ -523,49 +553,86 @@
         lucide.createIcons();
       }
 
-      // 加上 cache buster 防快取
       const cacheBuster = `_cb=${Date.now()}`;
       const fetchUrl = url.includes('?') ? `${url}&${cacheBuster}` : `${url}?${cacheBuster}`;
 
-      fetch(fetchUrl, { redirect: 'follow' })
-      .then(res => {
-          if (!res.ok) throw new Error("網路回應失敗");
-          return res.json();
-      })
-      .then(result => {
-          if (processCloudData(result)) {
-              if (!isBackground) showToast('成功載入雲端行程！✨', 'success');
-          } else {
-              if (!isBackground) showToast('資料格式不對，請確認網頁部署選項。', 'error');
-          }
-      })
-      .catch(err => {
+      try {
+        let textResponse = '';
+        try {
+            // 第一步：試用原生直連（適合發佈至 GitHub Pages 的正常環境）
+            const res = await fetch(fetchUrl, { redirect: 'follow' });
+            textResponse = await res.text();
+        } catch (e) {
+            console.warn("直接載入受阻，自動切換至 AllOrigins 代理通道...");
+            // 第二步：使用 AllOrigins 封裝代理繞過限制 (解決沙盒 iframe / blob CORS 封鎖)
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(fetchUrl)}`;
+            const resProxy = await fetch(proxyUrl);
+            const wrapper = await resProxy.json();
+            if (wrapper && wrapper.contents) {
+                textResponse = wrapper.contents;
+            } else {
+                throw new Error("代理伺服器回傳異常資料");
+            }
+        }
+
+        const result = parseSafeJSON(textResponse);
+
+        if (processCloudData(result)) {
+            if (!isBackground) showToast('成功載入雲端行程！✨', 'success');
+        } else {
+            if (!isBackground) showToast('資料已取得，但無法辨識（請確認試算表首行欄位標題）。', 'error');
+        }
+      } catch (err) {
           console.error("載入失敗：", err);
-          if (!isBackground) showToast('目前正透過本機快取完美運作中！', 'success');
-      })
-      .finally(() => {
+          if (!isBackground) {
+              if (err.message === "SERVER_HTML_ERROR") {
+                  showToast('Google 伺服器錯誤：請檢查您的 Apps Script 是否已清除 .setHeader()！', 'error');
+              } else {
+                  showToast('雲端載入連線受阻，目前維持本機手帳模式運作！', 'info');
+              }
+          }
+      } finally {
           btn.disabled = false;
           btn.innerHTML = originalHtml;
           lucide.createIcons();
-      });
+      }
     }
 
-    // 💡 寫入雲端資料（一次性將本機所有行程打包，重寫至 Sheets）
+    // 💡 寫入雲端資料
     function saveToCloud(isAuto = false) {
       const url = getApiUrl();
       if (!url) return;
 
+      if (isAuto && !hasLoadedFromCloud) {
+         console.warn("尚未成功載入過雲端資料，為保護數據安全，暫時禁止自動同步！");
+         return;
+      }
+
       const btn = document.getElementById('btnSync');
       const originalHtml = btn.innerHTML;
       
+      if (!isAuto) {
+        btn.disabled = true;
+        btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> 同步中...`;
+        lucide.createIcons();
+        showToast('正在同步至雲端...', 'info');
+      }
+
       try {
         const flatRecords = [];
         
-        // 打包本地快取中您所有的活動
+        // 打包本地快取中全部日期底下的日程
         Object.keys(calendarEvents).forEach(dateStr => {
           calendarEvents[dateStr].forEach(evt => {
+            const parts = dateStr.split('-');
+            const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            const dayOfWeek = dateObj.getDay(); 
+            const mappedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
+            const weekDayStr = `星期${mappedDay}`;
+
             flatRecords.push({
               Date: dateStr,
+              Week: weekDayStr,
               Time: evt.Time || "",
               Location: evt.Location || "",
               Activity: evt.Activity || "",
@@ -575,31 +642,21 @@
           });
         });
 
-        // 💡 智慧防誤刪機制：若本地沒有任何行程，自動同步要進行安全保護，防止清空雲端
-        if (flatRecords.length === 0) {
-          if (isAuto) {
-            console.log("本地無日程，自動同步已跳過，以防止誤刪雲端資料。");
-            return;
-          }
-          if (!confirm("⚠️ 您的日曆目前沒有任何行程，同步將會【清空】您 Google 試算表上的所有日程！\n\n您確定要清空雲端資料嗎？")) {
-            return;
-          }
+        if (!isAuto && flatRecords.length === 0) {
+           if (!confirm("⚠️ 警告：目前本機沒有任何日程。同步將會「完全清空」Google 試算表上的所有日程！您確定要這樣做嗎？")) {
+              btn.disabled = false;
+              btn.innerHTML = originalHtml;
+              lucide.createIcons();
+              return;
+           }
         }
 
-        if (!isAuto) {
-          btn.disabled = true;
-          btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> 同步中...`;
-          lucide.createIcons();
-          showToast('正在同步至雲端...', 'info');
-        }
-
-        // 日期排序
         flatRecords.sort((a, b) => {
           if (a.Date !== b.Date) return a.Date.localeCompare(b.Date);
           return (a.Time || "").localeCompare(b.Time || "");
         });
 
-        // 設置表單的 action 與內容，並透過隱藏 Iframe 送出
+        // 透過隱藏 Iframe 送出
         const form = document.getElementById('submit_form');
         form.action = url;
         document.getElementById('form_action').value = "saveAll";
@@ -629,17 +686,14 @@
 
     // --- 日曆渲染與邏輯 ---
 
-    // 取得當月總天數
     function getDaysInMonth(year, month) {
       return new Date(year, month + 1, 0).getDate();
     }
 
-    // 取得當月第一天是星期幾
     function getFirstDayOfMonth(year, month) {
       return new Date(year, month, 1).getDay();
     }
 
-    // 渲染整個日曆視圖
     function renderCalendar() {
       const grid = document.getElementById('calendarGrid');
       grid.innerHTML = '';
@@ -650,7 +704,6 @@
       const totalDays = getDaysInMonth(currentYear, currentMonth);
       let firstDayIndex = getFirstDayOfMonth(currentYear, currentMonth);
 
-      // 星期一在最左邊 (Index 0)，星期日在最右邊 (Index 6)
       let adjustedFirstDay = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
 
       const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
@@ -660,7 +713,6 @@
       const totalCellsNeeded = (totalDays + adjustedFirstDay) > 35 ? 42 : 35;
       let cellCount = 0;
 
-      // 1. 前一個月的餘白 (淺灰色)
       for (let i = adjustedFirstDay - 1; i >= 0; i--) {
         const dayNum = prevDays - i;
         const dStr = formatDateString(prevYear, prevMonth, dayNum);
@@ -668,14 +720,12 @@
         cellCount++;
       }
 
-      // 2. 本月天數 (主體清新白色)
       for (let dayNum = 1; dayNum <= totalDays; dayNum++) {
         const dStr = formatDateString(currentYear, currentMonth, dayNum);
         grid.appendChild(createCalendarCell(currentYear, currentMonth, dayNum, dStr, true));
         cellCount++;
       }
 
-      // 3. 下一個月的餘白
       let nextMonthDay = 1;
       const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
       const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
@@ -695,7 +745,6 @@
       return `${year}-${mStr}-${dStr}`;
     }
 
-    // 建立單個日曆儲存格 HTML 節點
     function createCalendarCell(year, month, day, dateStr, isCurrentMonth) {
       const cell = document.createElement('div');
       
@@ -707,17 +756,14 @@
         cell.className += `bg-slate-100/40 border-slate-200/40 opacity-40 hover:opacity-75`;
       }
 
-      // 檢查是否為「今天」(2026年7月2日)
       const isToday = (year === 2026 && month === 6 && day === 2);
       if (isToday) {
         cell.className += ` ring-2 ring-emerald-500 ring-offset-2 ring-offset-slate-100 border-transparent shadow-sm`;
       }
 
-      // 週末標記
       const dayOfWeek = new Date(year, month, day).getDay();
       const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
 
-      // 上半部
       const headerDiv = document.createElement('div');
       headerDiv.className = `flex justify-between items-center mb-1.5`;
 
@@ -732,7 +778,6 @@
         dayLabel.appendChild(todayBadge);
       }
 
-      // 新增按鈕
       const addBtn = document.createElement('button');
       addBtn.className = `p-1 bg-slate-100 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200`;
       addBtn.innerHTML = `<i data-lucide="plus" class="w-3.5 h-3.5"></i>`;
@@ -741,7 +786,6 @@
       headerDiv.appendChild(addBtn);
       cell.appendChild(headerDiv);
 
-      // 下半部：容納當天行程卡片
       const eventsContainer = document.createElement('div');
       eventsContainer.className = `flex-1 overflow-y-auto custom-scrollbar space-y-1.5 pr-0.5`;
 
@@ -749,12 +793,11 @@
         calendarEvents[dateStr].forEach((evt, idx) => {
           const evtCard = document.createElement('div');
           
-          // 💡 智慧色彩：取得該參與人（淇、皓、熙、芳）專屬的粉嫩調色盤樣式
           const colors = getAttendeeClasses(evt.Attendee);
           evtCard.className = `p-1.5 border-l-[3px] rounded-r-xl text-[11px] transition shadow-sm relative group/card ${colors.card}`;
           
           let cardHtml = `
-            <div class="font-bold truncate mb-0.5 flex items-center justify-between ${colors.text}">
+            <div class="font-bold truncate mb-0.5 flex items-center justify-between">
               <span>${evt.Time ? `[${evt.Time}] ` : ''}${escapeHtml(evt.Activity)}</span>
               <button onclick="event.stopPropagation(); deleteEventDirectly('${dateStr}', ${idx})" class="opacity-0 group-hover/card:opacity-100 text-rose-500 hover:text-rose-600 transition pl-1">
                 <i data-lucide="trash-2" class="w-3 h-3"></i>
@@ -826,7 +869,7 @@
       document.getElementById('modalTitle').textContent = `管理日程 - ${formattedDateText}`;
 
       clearForm();
-      closeCopyPanel(); // 預設關閉複製面板
+      closeCopyPanel();
       refreshExistingActivitiesList(dateStr);
 
       modal.classList.remove('hidden');
@@ -861,33 +904,31 @@
       }
 
       events.forEach((evt, idx) => {
-        // 💡 這裡也套用參與人專屬顏色
-        const colors = getAttendeeClasses(evt.Attendee);
         const item = document.createElement('div');
+        const colors = getAttendeeClasses(evt.Attendee);
         item.className = `p-2.5 border rounded-2xl flex items-start justify-between gap-3 group/item transition cursor-pointer shadow-sm ${colors.card}`;
         
         item.onclick = () => loadEventToForm(idx, evt);
 
         let detailsText = '';
         if (evt.Location) detailsText += `📍 ${evt.Location} `;
-        if (evt.Attendee) detailsText += `👤 參與人: ${evt.Attendee} `;
+        if (evt.Attendee) detailsText += `👤 ${evt.Attendee} `;
         if (evt.Notes) detailsText += `📝 ${evt.Notes}`;
 
         item.innerHTML = `
           <div class="flex-1 min-w-0">
             <div class="text-xs font-bold truncate flex items-center gap-1.5 ${colors.text}">
-              ${evt.Time ? `<span class="px-1.5 py-0.5 bg-white/80 rounded text-[9px] font-bold shadow-sm">${evt.Time}</span>` : ''}
+              ${evt.Time ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${colors.badge}">${evt.Time}</span>` : ''}
               <span>${escapeHtml(evt.Activity)}</span>
             </div>
-            ${detailsText ? `<p class="text-[10px] opacity-85 truncate mt-1">${escapeHtml(detailsText)}</p>` : ''}
+            ${detailsText ? `<p class="text-[10px] opacity-75 truncate mt-1">${escapeHtml(detailsText)}</p>` : ''}
           </div>
           <div class="flex items-center gap-1.5">
-            <!-- 快速複製按鈕 -->
             <button onclick="event.stopPropagation(); openCopyPanel('${dateStr}', ${idx})" class="p-1 text-slate-400 hover:text-emerald-500 rounded transition" title="複製此日程到其他日期">
               <i data-lucide="copy" class="w-3.5 h-3.5"></i>
             </button>
-            <span class="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full opacity-0 group-hover/item:opacity-100 transition-opacity">修改</span>
-            <button onclick="event.stopPropagation(); deleteEvent('${dateStr}', ${idx})" class="p-1 text-slate-500 hover:text-rose-400 rounded transition" title="刪除此日程">
+            <span class="text-[10px] bg-white/60 px-2 py-0.5 rounded-full opacity-0 group-hover/item:opacity-100 transition-opacity">修改</span>
+            <button onclick="event.stopPropagation(); deleteEvent('${dateStr}', ${idx})" class="p-1 text-slate-500 hover:text-rose-500 rounded transition" title="刪除此日程">
               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
             </button>
           </div>
@@ -919,7 +960,6 @@
       activeCopyMode = mode;
       const modes = ['daily', 'weekly', 'specific'];
       
-      // 更新按鈕樣式
       modes.forEach(m => {
         const btn = document.getElementById(`btnCopy${m.charAt(0).toUpperCase() + m.slice(1)}`);
         const titleDiv = btn.querySelector('div:first-child');
@@ -932,7 +972,6 @@
         }
       });
 
-      // 渲染對應輸入介面
       const inputContainer = document.getElementById('copyInputFields');
       if (mode === 'daily') {
         inputContainer.innerHTML = `
@@ -990,30 +1029,23 @@
         targetDates.push(chosenDate);
       }
 
-      // 將日程拷貝至所有算好的目標日期
       targetDates.forEach(dateStr => {
         if (!calendarEvents[dateStr]) {
           calendarEvents[dateStr] = [];
         }
-        // 深拷貝物件
         calendarEvents[dateStr].push({ ...activeEventToCopy });
       });
 
-      // 本機優先儲存並重繪
       saveLocalCache();
       renderCalendar();
       closeCopyPanel();
       
-      // 更新對話盒當日的清單
       const modalDate = document.getElementById('modalDate').value;
       refreshExistingActivitiesList(modalDate);
 
       showToast(`✨ 行程已成功複製到 ${targetDates.length} 個日子！`, 'success');
 
-      // 背景同步雲端
-      if (getApiUrl()) {
-        saveToCloud(true);
-      }
+      if (getApiUrl()) saveToCloud(true);
     }
 
     function loadEventToForm(index, evt) {
@@ -1060,16 +1092,12 @@
         showToast('活動已添加到今日手帳！🌸', 'success');
       }
 
-      // 本機資料更新後，立刻更新網頁視圖（不須等待雲端 Fetch 回應）
       saveLocalCache();
       renderCalendar();
       refreshExistingActivitiesList(dateStr);
       clearForm();
 
-      // 在背景進行靜默雲端即時同步
-      if (getApiUrl()) {
-        saveToCloud(true);
-      }
+      if (getApiUrl()) saveToCloud(true);
     }
 
     function deleteEvent(dateStr, index) {
@@ -1080,16 +1108,12 @@
         delete calendarEvents[dateStr];
       }
 
-      // 本機立刻更新視圖
       saveLocalCache();
       renderCalendar();
       refreshExistingActivitiesList(dateStr);
       showToast('項目已從手帳中移出。', 'info');
 
-      // 背景雲端即時同步
-      if (getApiUrl()) {
-        saveToCloud(true);
-      }
+      if (getApiUrl()) saveToCloud(true);
     }
 
     function deleteEventDirectly(dateStr, index) {
@@ -1097,7 +1121,6 @@
         deleteEvent(dateStr, index);
       }
     }
-
 
     // --- CSV 匯出邏輯區 ---
 
@@ -1120,7 +1143,6 @@
       let thisMonthCount = 0;
       const monthsSet = new Set();
 
-      // 欄位調整：在「日期」欄位右邊多添加了一個「星期」欄位
       let csvRows = ["日期,星期,時間,地點,活動名稱,參與人,補充資料"];
 
       keys.forEach(dateStr => {
@@ -1131,9 +1153,8 @@
         const dy = parts[2];
         monthsSet.add(`${yr}-${mo}`);
 
-        // 計算星期：將日期對應為 星期1 至 星期7 (星期日對應為星期7)
         const dateObj = new Date(parseInt(yr), parseInt(mo) - 1, parseInt(dy));
-        const dayOfWeek = dateObj.getDay(); // 0 是星期日, 1-6 是星期一至六
+        const dayOfWeek = dateObj.getDay(); 
         const mappedDay = dayOfWeek === 0 ? 7 : dayOfWeek;
         const weekDayStr = `星期${mappedDay}`;
 
@@ -1143,7 +1164,6 @@
             thisMonthCount++;
           }
 
-          // rowValues 之中加入了 weekDayStr
           const rowValues = [
             dateStr,
             weekDayStr,
@@ -1172,7 +1192,6 @@
       document.getElementById('statMonthsCount').textContent = `${monthsSet.size} 個`;
     }
 
-    // 相容 iframe 剪貼簿 API 複製機制
     function copyCsvContent() {
       const text = document.getElementById('csvPreviewText').value;
       const tempTextarea = document.createElement('textarea');
@@ -1219,7 +1238,6 @@
         closeExportModal();
         showToast('本機資料已全部清除。', 'info');
 
-        // 自動雲端同步
         if (getApiUrl()) saveToCloud(true);
       }
     }
@@ -1236,7 +1254,6 @@
       return `${y}年${parseInt(m)}月${parseInt(d)}日`;
     }
 
-    // 安全跳過字串中的 HTML 格式（防 XSS 注入）
     function escapeHtml(string) {
       return String(string).replace(/[&<>"']/g, function (s) {
         return {
