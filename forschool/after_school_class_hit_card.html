@@ -284,7 +284,7 @@
                 <span id="current-tab-title" class="text-indigo-600">stulist_a</span>
                 <span class="text-xs font-normal text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full" id="stulist-student-count">共 0 位學生</span>
               </h3>
-              <p class="text-xs text-amber-600 mt-1 font-medium">⚠️ 畫面僅顯示「今日打卡狀況」，如需歷史五十次打卡大表，請點右上角「匯出完整 CSV」。</p>
+              <p class="text-xs text-indigo-600 mt-1 font-medium">💡 畫面現已與試算表同步「顯示所有歷史日期打卡大表」，您可在下方表格內橫向滾動查閱。</p>
             </div>
             <div class="text-xs text-slate-400 flex items-center gap-4">
               <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-md bg-emerald-100 border border-emerald-200 inline-block text-center text-[10px] text-emerald-800 font-bold">1</span> 已簽到</span>
@@ -310,7 +310,7 @@
           <!-- 查無資料提示 -->
           <div id="no-data-alert" class="hidden text-center py-16 text-slate-400 space-y-3">
             <i data-lucide="folder-open" class="w-12 h-12 mx-auto text-slate-300"></i>
-            <p>目前此名單工作簿無任何學生或日期打卡紀錄。</p>
+            <p>目前此名單工作簿無 any 學生或日期打卡紀錄。</p>
           </div>
         </div>
       </div>
@@ -720,7 +720,7 @@
       renderTeacherTable(tabName);
     }
 
-    // 渲染表格內容 (僅呈現今天打卡情況)
+    // 渲染表格內容 (呈現所有歷史與今天打卡情況)
     function renderTeacherTable(sheetName) {
       const headerRow = document.getElementById('dashboard-table-header');
       const bodyContainer = document.getElementById('dashboard-table-body');
@@ -731,13 +731,6 @@
       // 取得今天的日期格式 M/D (例如: "7/1")
       const today = new Date();
       const todayStr = (today.getMonth() + 1) + "/" + today.getDate();
-
-      // 還原表頭，只留下「學生姓名」並加上「今天日期」欄
-      headerRow.innerHTML = `
-        <th class="py-3.5 px-4 sticky left-0 bg-slate-100 z-10 border-r border-slate-200 w-36 shadow-[2px_0_5px_rgba(0,0,0,0.03)] text-slate-700">學生姓名</th>
-        <th class="py-3.5 px-6 border-r border-slate-200 text-center min-w-[120px] text-xs font-bold text-slate-600 tracking-wider">${todayStr} (今日狀態)</th>
-      `;
-      bodyContainer.innerHTML = '';
 
       const sheetData = gTeacherRecords[sheetName];
 
@@ -753,7 +746,25 @@
 
       studentCountText.innerText = `共 ${sheetData.students.length} 位學生`;
 
-      // 動態填充每位學生在今天的簽到格子
+      const dates = sheetData.dates || [];
+
+      // 建立表頭：第一欄是「學生姓名」，後面接著所有打卡日期
+      let headerHTML = `
+        <th class="py-3.5 px-4 sticky left-0 bg-slate-100 z-10 border-r border-slate-200 w-36 shadow-[2px_0_5px_rgba(0,0,0,0.03)] text-slate-700">學生姓名</th>
+      `;
+      
+      dates.forEach(date => {
+        const isToday = (date === todayStr);
+        headerHTML += `
+          <th class="py-3.5 px-6 border-r border-slate-200 text-center min-w-[100px] text-xs font-bold ${isToday ? 'text-emerald-600 bg-emerald-50 border-emerald-300' : 'text-slate-600'} tracking-wider">
+            ${date} ${isToday ? '<span class="block text-[10px] text-emerald-500 font-normal">(今天)</span>' : ''}
+          </th>
+        `;
+      });
+      headerRow.innerHTML = headerHTML;
+      bodyContainer.innerHTML = '';
+
+      // 填充每位學生的打卡列
       sheetData.students.forEach(student => {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 transition duration-150";
@@ -764,22 +775,23 @@
         tdName.innerText = student.name;
         tr.appendChild(tdName);
 
-        // 第二欄：只看今天的狀態
-        const tdStatus = document.createElement('td');
-        tdStatus.className = "py-3 px-6 border-r border-slate-100 text-center text-sm";
-        
-        // 從 attendance 讀取今天是否打卡為 "1"
-        const val = student.attendance[todayStr];
-        if (val === "1" || val === 1) {
-          tdStatus.innerHTML = `
-            <span class="inline-flex items-center justify-center w-7 h-7 bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-lg font-bold text-sm shadow-sm scale-100 animate-fade-in">
-              1
-            </span>
-          `;
-        } else {
-          tdStatus.innerHTML = '<span class="text-slate-300">-</span>';
-        }
-        tr.appendChild(tdStatus);
+        // 後續欄：歷史上所有日期的狀態
+        dates.forEach(date => {
+          const tdStatus = document.createElement('td');
+          tdStatus.className = "py-3 px-6 border-r border-slate-100 text-center text-sm";
+          
+          const val = student.attendance[date];
+          if (val === "1" || val === 1) {
+            tdStatus.innerHTML = `
+              <span class="inline-flex items-center justify-center w-7 h-7 bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-lg font-bold text-sm shadow-sm scale-100 animate-fade-in">
+                1
+              </span>
+            `;
+          } else {
+            tdStatus.innerHTML = '<span class="text-slate-300">-</span>';
+          }
+          tr.appendChild(tdStatus);
+        });
 
         bodyContainer.appendChild(tr);
       });
