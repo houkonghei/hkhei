@@ -373,40 +373,36 @@
       }
     }
 
-    // --- 💡 智慧日期格式標準化 ---
+    // --- 💡 智慧日期格式標準化 (完美防堵 UTC 時區偏移導致的亂跳日 bug) ---
     function normalizeDateString(dateInput) {
       if (!dateInput) return "";
       
-      if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateInput).trim())) {
-        return String(dateInput).trim();
+      // 1. 如果已經是純字串 YYYY-MM-DD，直接回傳
+      if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput.trim())) {
+        return dateInput.trim();
       }
 
-      if (dateInput instanceof Date) {
-        const y = dateInput.getFullYear();
-        const m = String(dateInput.getMonth() + 1).padStart(2, '0');
-        const d = String(dateInput.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
+      // 2. 如果是包含 T 的 ISO 字串 (如 2026-07-03T16:00:00.000Z)，或者是原生 Date 物件，交給 Date 透過瀏覽器解析為「本地時區」
+      if (dateInput instanceof Date || (typeof dateInput === 'string' && dateInput.includes('T'))) {
+        const dObj = new Date(dateInput);
+        if (!isNaN(dObj.getTime())) {
+          const yStr = dObj.getFullYear();
+          const mStr = String(dObj.getMonth() + 1).padStart(2, '0');
+          const dStr = String(dObj.getDate()).padStart(2, '0');
+          return `${yStr}-${mStr}-${dStr}`;
+        }
       }
 
+      // 3. 處理其他像是 2026/7/6 或是 2026.7.6 這類不規則字串
       let s = String(dateInput).trim();
-      if (s.includes('T')) s = s.split('T')[0];
       s = s.replace(/[\/\.]/g, '-');
-
       const parts = s.split('-');
       if (parts.length === 3) {
         let y = parts[0].trim();
         let m = parts[1].trim().padStart(2, '0');
         let d = parts[2].trim().padStart(2, '0');
-        if (y.length === 2) y = "20" + y;
+        if (y.length === 2) y = "20" + y; // 處理類似 26-07-06 這類簡寫年份
         return `${y}-${m}-${d}`;
-      }
-
-      let dObj = new Date(dateInput);
-      if (!isNaN(dObj.getTime())) {
-        const yStr = dObj.getFullYear();
-        const mStr = String(dObj.getMonth() + 1).padStart(2, '0');
-        const dStr = String(dObj.getDate()).padStart(2, '0');
-        return `${yStr}-${mStr}-${dStr}`;
       }
 
       return "";
