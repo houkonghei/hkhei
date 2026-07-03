@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>晧淇雲端月曆</title>
+  <title>青春日常 ∙ 雲端月曆手帳</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Google Fonts -->
@@ -373,6 +373,41 @@
       }
     }
 
+    // --- 💡 智慧時間格式洗淨引擎：過濾 1899-12-30 及轉換時區偏移 ---
+    function formatTimeClean(timeInput) {
+      if (!timeInput) return "";
+      let s = String(timeInput).trim();
+      if (!s) return "";
+
+      // 如果時間字串包含 Google 基準日 1899-12-30
+      if (s.includes('1899-12-30')) {
+        const dObj = new Date(s);
+        if (!isNaN(dObj.getTime())) {
+          const hours = String(dObj.getHours()).padStart(2, '0');
+          const minutes = String(dObj.getMinutes()).padStart(2, '0');
+          return `${hours}:${minutes}`;
+        }
+      }
+
+      // 如果是標準 ISO Date 且含有 T
+      if (s.includes('T')) {
+        const dObj = new Date(s);
+        if (!isNaN(dObj.getTime())) {
+          const hours = String(dObj.getHours()).padStart(2, '0');
+          const minutes = String(dObj.getMinutes()).padStart(2, '0');
+          return `${hours}:${minutes}`;
+        }
+      }
+
+      // 常規 HH:mm:ss 或 H:mm 解析轉換
+      const match = s.match(/^(\d{1,2}):(\d{2})/);
+      if (match) {
+        return `${match[1].padStart(2, '0')}:${match[2]}`;
+      }
+
+      return s;
+    }
+
     // --- 💡 智慧日期格式標準化 (完美防堵 UTC 時區偏移導致的亂跳日 bug) ---
     function normalizeDateString(dateInput) {
       if (!dateInput) return "";
@@ -510,7 +545,7 @@
             Activity: kAct ? String(row[kAct] || "") : "",
             Attendee: kAtt ? String(row[kAtt] || "") : "",
             Notes: kNote ? String(row[kNote] || "") : "",
-            Time: kTime ? String(row[kTime] || "") : ""
+            Time: kTime ? formatTimeClean(row[kTime]) : "" // 💡 在此完美套用時間洗淨器
           });
         });
 
@@ -629,7 +664,7 @@
             flatRecords.push({
               Date: dateStr,
               Week: weekDayStr,
-              Time: evt.Time || "",
+              Time: formatTimeClean(evt.Time) || "", // 💡 寫入時也進行洗淨確保格式完美
               Location: evt.Location || "",
               Activity: evt.Activity || "",
               Attendee: evt.Attendee || "",
@@ -794,7 +829,7 @@
           
           let cardHtml = `
             <div class="font-bold truncate mb-0.5 flex items-center justify-between">
-              <span>${evt.Time ? `[${evt.Time}] ` : ''}${escapeHtml(evt.Activity)}</span>
+              <span>${evt.Time ? `[${formatTimeClean(evt.Time)}] ` : ''}${escapeHtml(evt.Activity)}</span>
               <button onclick="event.stopPropagation(); deleteEventDirectly('${dateStr}', ${idx})" class="opacity-0 group-hover/card:opacity-100 text-rose-500 hover:text-rose-600 transition pl-1">
                 <i data-lucide="trash-2" class="w-3 h-3"></i>
               </button>
@@ -911,10 +946,12 @@
         if (evt.Attendee) detailsText += `👤 ${evt.Attendee} `;
         if (evt.Notes) detailsText += `📝 ${evt.Notes}`;
 
+        const cleanTime = formatTimeClean(evt.Time);
+
         item.innerHTML = `
           <div class="flex-1 min-w-0">
             <div class="text-xs font-bold truncate flex items-center gap-1.5 ${colors.text}">
-              ${evt.Time ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${colors.badge}">${evt.Time}</span>` : ''}
+              ${cleanTime ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${colors.badge}">${cleanTime}</span>` : ''}
               <span>${escapeHtml(evt.Activity)}</span>
             </div>
             ${detailsText ? `<p class="text-[10px] opacity-75 truncate mt-1">${escapeHtml(detailsText)}</p>` : ''}
@@ -1049,7 +1086,7 @@
       document.getElementById('inputActivity').value = evt.Activity || '';
       document.getElementById('inputLocation').value = evt.Location || '';
       document.getElementById('inputAttendee').value = evt.Attendee || '';
-      document.getElementById('inputTime').value = evt.Time || '';
+      document.getElementById('inputTime').value = formatTimeClean(evt.Time) || '';
       document.getElementById('inputNotes').value = evt.Notes || '';
       document.getElementById('formActionTitle').textContent = `正在修改第 ${index + 1} 筆日程`;
     }
@@ -1076,7 +1113,7 @@
         Activity: activity,
         Location: location,
         Attendee: attendee,
-        Time: time,
+        Time: formatTimeClean(time), // 💡 儲存與新增時也一併洗淨時間格式
         Notes: notes
       };
 
@@ -1163,7 +1200,7 @@
           const rowValues = [
             dateStr,
             weekDayStr,
-            evt.Time || "",
+            formatTimeClean(evt.Time) || "",
             evt.Location || "",
             evt.Activity || "",
             evt.Attendee || "",
@@ -1250,6 +1287,7 @@
       return `${y}年${parseInt(m)}月${parseInt(d)}日`;
     }
 
+    // 安全跳過字串中的 HTML 格式（防 XSS 注入）
     function escapeHtml(string) {
       return String(string).replace(/[&<>"']/g, function (s) {
         return {
