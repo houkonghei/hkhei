@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 英文情境對話教練</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 自定義滾動條美化 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        
+        .typing-dot {
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans h-screen flex flex-col overflow-hidden">
+
+    <!-- 頂部導航與設定 -->
+    <header class="bg-gray-800 border-b border-gray-700 p-4 flex flex-col sm:flex-row justify-between items-center gap-4 z-10">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 p-2 rounded-lg">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+            </div>
+            <h1 class="text-xl font-bold text-white tracking-wide">AI 英文情境教練 <span class="text-xs bg-blue-500 text-white py-1 px-2 rounded-full ml-2">50+ 情境 ‧ 雙聲道與單字簿儲存版</span></h1>
+        </div>
+
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+            <!-- 預設填入你的 API Key，上傳 GitHub 前記得清空 value 屬性！ -->
+            <input type="password" id="apiKeyInput" value="sk-bd62115e6b424f17b69fb9cb09e65d85" placeholder="輸入 DeepSeek API Key" class="bg-gray-700 text-sm border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 w-full sm:w-64">
+            <button onclick="saveSettings()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap">
+                儲存設定
+            </button>
+        </div>
+    </header>
+
+    <!-- 錯誤訊息提示框 -->
+    <div id="toast" class="hidden absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity">
+        <span id="toastMsg">錯誤訊息</span>
+    </div>
+
+    <!-- 主要內容區 -->
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        
+        <!-- 左側：對話區 -->
+        <section class="w-full md:w-2/3 flex flex-col h-full border-r border-gray-700">
+            <!-- 場景選擇 -->
+            <div class="bg-gray-800/50 p-4 border-b border-gray-700 flex items-center gap-3">
+                <label class="text-sm text-gray-400 whitespace-nowrap">目前場景：</label>
+                <select id="sceneSelect" onchange="changeScene()" class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 w-full max-w-lg">
+                    <optgroup label="✈️ 旅遊出行 (Travel & Transport)">
+                        <option value="airport_checkin">01. 機場登機櫃檯辦理手續 (Airport Check-in)</option>
+                        <option value="airport_customs" selected>02. 機場海關入境受審 (Airport Customs)</option>
+                        <option value="flight_attendant">03. 飛機上向空服員要毛毯/點餐 (In-Flight Service)</option>
+                        <option value="hotel_checkin">04. 飯店辦理入住手續 (Hotel Check-in)</option>
+                        <option value="hotel_roomservice">05. 飯店客房服務叫餐/要備品 (Hotel Room Service)</option>
+                        <option value="hotel_checkout_issue">06. 飯店退房並爭議帳單金額 (Hotel Checkout & Bill Dispute)</option>
+                        <option value="taxi_ride">07. 街頭搭計程車跟司機溝通 (Taking a Taxi)</option>
+                        <option value="car_rental">08. 租車門市辦理租車手續 (Car Rental Counter)</option>
+                        <option value="subway_ticket">09. 在地鐵站向工作人員詢問買票與路線 (Buying Subway Tickets)</option>
+                        <option value="asking_directions">10. 國外街頭迷路向路人問路 (Asking for Directions)</option>
+                        <option value="lost_property">11. 在地鐵或景點失物招領處報失 (Lost & Found)</option>
+                    </optgroup>
+                    <optgroup label="☕ 餐飲美食 (Dining & Food)">
+                        <option value="starbucks">12. 星巴克咖啡廳點飲料 (Starbucks Order)</option>
+                        <option value="restaurant_booking">13. 打電話到熱門餐廳預約訂位 (Restaurant Booking by Phone)</option>
+                        <option value="fine_dining">14. 高級西餐廳服務生介紹菜單並點餐 (Fine Dining Ordering)</option>
+                        <option value="food_delivery">15. 外送地址送錯打電話聯絡客服/外送員 (Food Delivery Issue)</option>
+                        <option value="bar_drinks">16. 英式小酒館/酒吧調酒點單 (Ordering Drinks at a Bar)</option>
+                        <option value="fast_food">17. 麥當勞得來速點餐 (Fast Food Drive-Thru)</option>
+                        <option value="restaurant_complain">18. 餐廳上錯菜/湯太冷向經理抱怨 (Restaurant Complaint)</option>
+                        <option value="paying_bill">19. 餐廳用膳完畢要求買單與拆帳 (Paying & Splitting the Bill)</option>
+                        <option value="supermarket">20. 在大超市尋找特定亞洲調味料 (Supermarket Shopping)</option>
+                        <option value="bakery">21. 在傳統歐式麵包店挑選新鮮烘焙 (Local Bakery Shop)</option>
+                    </optgroup>
+                    <optgroup label="🛍️ 購物零售 (Shopping & Retail)">
+                        <option value="clothing_store">22. 服飾店找尺寸試穿與店員溝通 (Trying Clothes & Sizing)</option>
+                        <option value="returning_item">23. 購買後不合適前往門市退貨退款 (Returning an Item for Refund)</option>
+                        <option value="jewelry_shop">24. 珠寶名店挑選給伴侶的週年禮物 (Buying Jewelry)</option>
+                        <option value="bookstore">25. 在書店向店員尋找暢銷小說 (Bookstore Help)</option>
+                        <option value="garage_repair">26. 車輛拋錨開進修車廠進行檢修 (Auto Repair Shop)</option>
+                        <option value="electronics_buy">27. 電器行詢問平板電腦規格與折扣 (Buying Electronics)</option>
+                        <option value="pharmacy">28. 藥局向藥劑師描述症狀並買感冒藥 (Pharmacy OTC Medicine)</option>
+                        <option value="bank_account">29. 銀行櫃檯開立個人支票帳戶 (Opening a Bank Account)</option>
+                        <option value="post_office">30. 郵局寄送跨國快遞包裹 (Mailing a Package at Post Office)</option>
+                        <option value="telecom_sim">31. 當地電信行辦理短期旅客預付卡 (Buying a Tourist SIM Card)</option>
+                    </optgroup>
+                    <optgroup label="💼 商務職場 (Business & Career)">
+                        <option value="interview">32. 跨國科技公司英文求職面試 (Tech Job Interview)</option>
+                        <option value="daily_scrum">33. 每日站立會議報告工作進度 (Daily Scrum Standup)</option>
+                        <option value="business_negotiation">34. 與國外供應商進行商業價格談判 (Price & Contract Negotiation)</option>
+                        <option value="client_pitch">35. 線上會議向客戶提案介紹新產品 (Product Pitch to Clients)</option>
+                        <option value="salary_raise">36. 年度考績面談向主管爭取加薪 (Asking Supervisor for a Raise)</option>
+                        <option value="leaving_job">37. 與直屬主管正式提出辭職並商討交接 (Resigning from Your Job)</option>
+                        <option value="office_it">38. 公司電腦中毒打給 IT 部門工程師報修 (IT Support Helpdesk)</option>
+                        <option value="customer_support">39. 擔任客服應對打電話來暴怒的客戶 (Handling an Angry Customer)</option>
+                        <option value="networking_event">40. 商業論壇茶歇時間跟陌生同業攀談 (Business Networking Event)</option>
+                        <option value="colleague_onboarding">41. 熱情歡迎第一天報到的新同事 (Welcoming a New Team Member)</option>
+                    </optgroup>
+                    <optgroup label="🗣️ 日常社交 (Daily Socializing)">
+                        <option value="smalltalk">42. 派對上與朋友的朋友破冰閒聊 (Party Small Talk)</option>
+                        <option value="first_date">43. 與交友軟體認識的人第一次約會見面 (First Date Meetup)</option>
+                        <option value="seeing_doctor">44. 在全科診所向醫生描述發燒偏頭痛症狀 (Seeing a General Doctor)</option>
+                        <option value="gym_trainer">45. 健身房櫃檯詢問會員資格與私人教練課程 (Gym Membership & Trainer)</option>
+                        <option value="renting_apartment">46. 約房仲現場看房並討論租約細節 (Renting an Apartment)</option>
+                        <option value="neighbor_complaint">47. 敲鄰居門客氣抱怨深夜派對音響太吵 (Complaining about Noise)</option>
+                        <option value="museum_guide">48. 在大英博物館購票處報名真人導覽 (Museum Guided Tour)</option>
+                        <option value="hair_salon">49. 時尚髮廊與設計師溝通要理什麼髮型 (Getting a Haircut)</option>
+                        <option value="vet_visit">50. 帶家裡拉肚子的貓咪去看獸醫 (Taking Pet to the Vet)</option>
+                    </optgroup>
+                </select>
+                <button onclick="resetChat()" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-lg text-sm transition-colors whitespace-nowrap" title="重新開始">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+            </div>
+
+            <!-- 聊天記錄 -->
+            <div id="chatHistory" class="flex-1 overflow-y-auto p-4 space-y-6 bg-gray-900">
+                <!-- 歡迎訊息會由 JS 動態生成 -->
+            </div>
+
+            <!-- 輸入區 -->
+            <div class="p-4 bg-gray-800 border-t border-gray-700">
+                <div class="flex gap-2">
+                    <textarea id="userInput" rows="2" placeholder="請用英文回覆... (按 Enter 快速發送，Shift+Enter 換行)" class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 resize-none"></textarea>
+                    <button onclick="sendMessage()" id="sendBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 右側：語法教練區 + 詞字簿 -->
+        <section class="w-full md:w-1/3 bg-gray-800 flex flex-col h-1/3 md:h-full border-t md:border-t-0 border-gray-700 shadow-xl z-20 overflow-hidden">
+            <!-- Tab 切換選單 -->
+            <div class="flex border-b border-gray-700 bg-gray-850 shrink-0">
+                <button onclick="switchTab('feedback')" id="tabBtn-feedback" class="flex-1 py-3 text-center text-sm font-bold border-b-2 border-blue-500 text-blue-400 transition-all flex items-center justify-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                    💡 語法分析
+                </button>
+                <button onclick="switchTab('vocab')" id="tabBtn-vocab" class="flex-1 py-3 text-center text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-white transition-all flex items-center justify-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                    📓 單字簿 (<span id="vocabCount">0</span>)
+                </button>
+            </div>
+            
+            <!-- 區塊 A：語法分析頁面 -->
+            <div id="feedbackArea" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- 預設提示 -->
+                <div class="text-center text-gray-500 mt-10">
+                    <p class="mb-2">開始對話後，</p>
+                    <p>AI 會在這裡即時糾正你的語法，</p>
+                    <p>並提供更道地的表達方式！</p>
+                </div>
+            </div>
+
+            <!-- 區塊 B：單字簿頁面 -->
+            <div id="vocabArea" class="hidden flex-1 flex flex-col overflow-hidden p-4 space-y-4">
+                <!-- 收集功能卡片 -->
+                <div class="bg-gray-700/40 p-4 rounded-xl border border-gray-600 space-y-3">
+                    <h3 class="text-sm font-bold text-gray-300 flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        滑鼠反白收集器
+                    </h3>
+                    <p class="text-xs text-gray-400 leading-relaxed">
+                        在左側對話框、綠色建議氣泡內，用滑鼠選取（反白）你想記憶的英文單字或段落，然後點擊下方按鈕加入：
+                    </p>
+                    <button onclick="addSelectedToVocab()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-3 rounded-lg text-sm transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-[0.98]">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        將選取文字加入單字簿
+                    </button>
+                </div>
+
+                <!-- 收集清單 -->
+                <div class="flex-1 flex flex-col overflow-hidden">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">已收集的單字/句子</h4>
+                    <div id="vocabList" class="flex-1 overflow-y-auto space-y-2 pr-1">
+                        <!-- 動態插入字詞清單 -->
+                        <div class="text-center text-gray-500 mt-8 py-4">
+                            <p>目前還沒有收集字詞喔！</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 快速複製一鍵匯出 -->
+                <div class="border-t border-gray-700 pt-3 space-y-2 shrink-0">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-emerald-400 font-bold tracking-wide flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                            📋 一鍵匯出複製區
+                        </span>
+                        <button onclick="copyAllVocab()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded-md transition-all shadow-sm active:scale-[0.95]">
+                            複製全部
+                        </button>
+                    </div>
+                    <textarea id="vocabExportText" rows="3" readonly placeholder="此處會自動產生字詞列表，方便你一鍵貼上到 Notion、Anki 或 Obsidian 筆記裡..." class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-xs text-gray-300 resize-none focus:outline-none"></textarea>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- 設定與狀態 ---
+        let chatContext = []; // 保存對話上下文給 API
+        let vocabBook = []; // 儲存使用者收集的字詞列表
+        
+        // 50個超實用英文對話情境資料庫
+        const scenes = {
+            // == 旅遊出行 (1-11) ==
+            airport_checkin: {
+                name: "機場櫃檯登機手續",
+                greeting: "Good morning! Welcome to Star Alliance Airlines. May I please have your passport and booking reference?",
+                translation: "早安！歡迎搭乘星空聯盟航空。能請您出示您的護照和訂位代號嗎？",
+                character: "A polite and professional airline check-in agent. Asking for passport, baggage details, and window/aisle seat preferences."
+            },
+            airport_customs: {
+                name: "機場海關入境",
+                greeting: "Next in line, please. Passport and arrival card.",
+                translation: "下一位。請出示護照和入境卡。",
+                character: "Customs Officer (professional, serious, asking about purpose of visit and duration)"
+            },
+            flight_attendant: {
+                name: "飛機上升空服務",
+                greeting: "Excuse me, sir/ma'am. We are currently preparing the meal service. Would you prefer the beef with rice or the chicken with pasta?",
+                translation: "不好意思，先生/女士。我們現在準備提供餐點。您想要牛肉配飯，還是雞肉配義大利麵呢？",
+                character: "A helpful and gentle flight attendant. Providing meals or blankets, replying to basic requests onboard."
+            },
+            hotel_checkin: {
+                name: "飯店辦理入住手續",
+                greeting: "Welcome to the Grand Horizon Hotel. How can I assist you today? Do you have a reservation under your name?",
+                translation: "歡迎光臨地平線大飯店。今天有什麼我可以協助您的嗎？請問您有預約訂房嗎？",
+                character: "Front Desk Receptionist (polite, welcoming, checking ID, credit card for deposit, and explaining breakfast hours)."
+            },
+            hotel_roomservice: {
+                name: "飯店客房服務",
+                greeting: "Good evening, Room Service. This is David speaking. How may I help you tonight?",
+                translation: "晚安，客房服務。我是 David，今晚有什麼能幫您的？",
+                character: "Hotel Room Service Representative (efficient, friendly, taking food orders or arranging extra pillows and towels)."
+            },
+            hotel_checkout_issue: {
+                name: "飯店退房並爭議帳單",
+                greeting: "Good morning! Checking out? Room 1402, is that correct? Let me print your folio.",
+                translation: "早安！要辦理退房嗎？房號 1402 對嗎？我幫您列印明細。",
+                character: "Hotel Clerk (polite but firm, explaining an accidental mini-bar or Wi-Fi charge that the user claims they didn't use)."
+            },
+            taxi_ride: {
+                name: "街頭搭計程車",
+                greeting: "Hey there! Where to? Put your bags in the back if you need to.",
+                translation: "嗨！去哪裡？需要的話行李可以放後面。",
+                character: "A local, talkative taxi driver. Asking for destination, preferring highway or local roads, and discussing traffic."
+            },
+            car_rental: {
+                name: "租車門市手續",
+                greeting: "Hi! Welcome to Hertz Car Rental. Do you have a reservation, or are you looking to rent a car today?",
+                translation: "嗨！歡迎來到赫茲租車。您有預先訂車，還是今天想現場租車？",
+                character: "Car rental agent (friendly, detail-oriented, proposing insurance packages and explaining fuel return policies)."
+            },
+            subway_ticket: {
+                name: "地鐵站問路買票",
+                greeting: "Hello, can I help you? The ticket machines are right behind you, but you look a bit confused.",
+                translation: "你好，需要幫忙嗎？售票機就在你後面，不過你看起來有點迷惘。",
+                character: "A helpful metro station agent (clear, patient, explaining ticket options like single ride, day pass, and directions to major sights)."
+            },
+            asking_directions: {
+                name: "街頭迷路問路",
+                greeting: "Hi there! I saw you looking at your map for a while. Are you trying to find something around here?",
+                translation: "你好！我看到你盯著地圖好一陣子了。你在這附近找什麼地方嗎？",
+                character: "A friendly local resident on the street. Willing to give simple step-by-step directions."
+            },
+            lost_property: {
+                name: "失物招領處報失",
+                greeting: "Hello, this is the Central Transit Lost and Found. How can I help you today? Did you lose something on the train?",
+                translation: "你好，這裡是中央運輸失物招領處。今天有什麼能幫忙的？您是在火車上掉了東西嗎？",
+                character: "Transit clerk (helpful, practical, asking for details like color, brand, approximate time, and location of the lost item)."
+            },
+
+            // == 餐飲美食 (12-21) ==
+            starbucks: {
+                name: "星巴克點餐",
+                greeting: "Hi there! What can I get for you today?",
+                translation: "嗨！今天想來點什麼？",
+                character: "Starbucks Barista (friendly, fast-paced)"
+            },
+            restaurant_booking: {
+                name: "餐廳電話訂位",
+                greeting: "Thank you for calling Bella Italia. This is Maria. How can I help you? Are you looking to make a reservation?",
+                translation: "感謝致電 Bella Italia。我是 Maria。有什麼能幫您的？您是想訂位嗎？",
+                character: "Restaurant reservationist (checking availability of dates, times, party size, and outdoor/indoor dining preferences)."
+            },
+            fine_dining: {
+                name: "高級餐廳點餐",
+                greeting: "Good evening, welcome to Le Bistro. I am your server tonight, Thomas. Our chef specials are written on the board. Shall I start you off with some drinks?",
+                translation: "晚安，歡迎光臨 Le Bistro。我是今晚服務您的 Thomas。主廚特餐寫在黑板上。要先幫您來點飲料嗎？",
+                character: "An elegant, attentive fine-dining waiter. Introducing wine pairings, explaining ingredients, and taking main course orders."
+            },
+            food_delivery: {
+                name: "外送問題電話客服",
+                greeting: "UberEats support, this is Sarah. I understand your order shows 'delivered' but you haven't received it? Let me look into this.",
+                translation: "UberEats 客服，我是 Sarah。我了解到您的訂單顯示「已送達」但您還沒收到對嗎？讓我幫您查查看。",
+                character: "Empathetic customer support agent resolving a food delivery error (wrong address or missing items)."
+            },
+            bar_drinks: {
+                name: "酒吧點酒",
+                greeting: "Hey, what can I get started for you? We have craft beers on tap and a great cocktail list.",
+                translation: "嘿，想來點什麼？我們有現拉精釀啤酒和很棒的雞尾酒單。",
+                character: "A cool, casual bartender. Suggesting sweet, strong, or bitter drinks, and asking for ID."
+            },
+            fast_food: {
+                name: "麥當勞得來速點餐",
+                greeting: "Welcome to McDonald's. Would you like to try our new double bacon burger meal today, or order something else?",
+                translation: "歡迎光臨麥當勞。您今天想試試我們全新的雙層培根牛肉堡套餐，還是點別的？",
+                character: "A busy fast-food intercom worker. Promptly taking orders, upselling, and directing to the pickup window."
+            },
+            restaurant_complain: {
+                name: "餐廳上錯菜/抱怨",
+                greeting: "Hello, I am the floor manager. My server told me there was an issue with your steak? I am terribly sorry about that.",
+                translation: "您好，我是值班經理。服務生告訴我您的牛排有些問題？對此我感到非常抱歉。",
+                character: "An apologetic, professional restaurant manager offering solutions (re-cooking, free dessert, or discount)."
+            },
+            paying_bill: {
+                name: "餐廳買單分帳",
+                greeting: "Here is your bill! Will this be together on one card, or did you want to split it?",
+                translation: "這是您的帳單！要一起刷一張卡，還是你們想分開付？",
+                character: "Friendly waiter wrapping up service. Helping split the bill between cards or cash."
+            },
+            supermarket: {
+                name: "超市找商品詢問",
+                greeting: "Hi there! Looking for something in particular? Our aisles can be a bit confusing.",
+                translation: "嗨！在找什麼特別的東西嗎？我們的貨架區可能有點讓人摸不著頭緒。",
+                character: "Supermarket clerk restocking shelves. Pointing the user to correct aisles and offering substitutions."
+            },
+            bakery: {
+                name: "歐式麵包店購買",
+                greeting: "Good morning! Our fresh sourdough croissants just came out of the oven. What would you like today?",
+                translation: "早安！我們剛出爐了新鮮的酸種可頌。您今天想要些什麼？",
+                character: "A cheerful local baker. Describing sweet pastries and savory breads."
+            },
+
+            // == 🛍️ 購物零售 (22-31) ==
+            clothing_store: {
+                name: "服飾店試穿溝通",
+                greeting: "Hi! Welcome to Zara. Let me know if you need another size or if I can open a fitting room for you.",
+                translation: "嗨！歡迎來到 Zara。如果您需要別的尺寸，或者要我幫您開試衣間，請隨時告訴我。",
+                character: "Helpful retail store assistant suggesting matching clothes and helping with sizes."
+            },
+            returning_item: {
+                name: "購物退貨退款",
+                greeting: "Hello! Looking to do a return or exchange today? I'll need your receipt and the original card used.",
+                translation: "您好！今天是要辦理退貨還是換貨？我需要您的收據和原本付款用的卡片。",
+                character: "Store cashier checking the condition of the return (tags on, unworn) and explaining refund processing times."
+            },
+            jewelry_shop: {
+                name: "珠寶店挑禮物",
+                greeting: "Welcome to Tiffany's. Are you looking for something special today? Maybe a gift, or something for yourself?",
+                translation: "歡迎來到蒂芙尼。您今天在尋找什麼特別的飾品嗎？是當禮物，還是給您自己的？",
+                character: "High-end jewelry consultant guiding the user through necklaces, rings, and budgets."
+            },
+            bookstore: {
+                name: "在書店找書",
+                greeting: "Hello! Welcome to Barnes & Noble. Can I help you find a specific title or recommendation?",
+                translation: "您好！歡迎光臨巴諾書店。我能幫您找特定書名或提供推薦嗎？",
+                character: "Knowledgeable bookseller talking about genres, fiction/non-fiction, and checking inventory."
+            },
+            garage_repair: {
+                name: "修車廠汽車檢修",
+                greeting: "Hey, what seems to be the problem with your car? I heard some squeaking sounds when you pulled in.",
+                translation: "嘿，你的車出什麼狀況了？剛才你開進來時我聽到了一些吱吱聲。",
+                character: "A practical mechanic identifying car issues (engine, brakes, oil change) and giving cost estimates."
+            },
+            electronics_buy: {
+                name: "電器行挑平板折扣",
+                greeting: "Hi! Looking at the new iPad models? We actually have a bundle deal with the keyboard case this week.",
+                translation: "嗨！在看新款 iPad 嗎？我們這週其實有搭配鍵盤保護套的同捆優惠喔。",
+                character: "Tech sales representative comparing specifications, battery life, and student discounts."
+            },
+            pharmacy: {
+                name: "藥局買感冒藥",
+                greeting: "Hello! Are you looking for something to treat a cold, or did you have a prescription to pick up?",
+                translation: "您好！您是在找治療感冒的藥，還是有處方箋要拿藥？",
+                character: "A caring, professional pharmacist asking about symptoms (cough, fever, runny nose) to suggest OTC medicine."
+            },
+            bank_account: {
+                name: "銀行櫃檯開戶",
+                greeting: "Good afternoon. Welcome to Chase Bank. What can I do for you? Opening a checking or savings account?",
+                translation: "午安。歡迎來到大通銀行。我能為您做些什麼？想開立支票帳戶還是儲蓄帳戶？",
+                character: "Bank teller explaining transaction fees, minimum balance requirements, and issuing debit cards."
+            },
+            post_office: {
+                name: "郵局寄國際快遞",
+                greeting: "Next please! How are we shipping this package today? Ground, priority, or express international?",
+                translation: "下一位！這個包裹今天打算怎麼寄？陸運、優先，還是國際快遞？",
+                character: "Postal worker asking about parcel weight, contents, customs declarations, and tracking numbers."
+            },
+            telecom_sim: {
+                name: "電信行辦遊客卡",
+                greeting: "Hi! Welcome to T-Mobile. Are you looking to set up a tourist prepaid plan during your stay?",
+                translation: "嗨！歡迎來到 T-Mobile。您是在旅途中想辦理遊客預付卡方案嗎？",
+                character: "Telecom sales agent comparing data packages, network coverage, and set-up process."
+            },
+
+            // == 💼 商務職場 (32-41) ==
+            interview: {
+                name: "科技公司面試",
+                greeting: "Hello! Thanks for coming in today. Could you start by telling me a little bit about yourself?",
+                translation: "你好！感謝你今天過來。你可以先簡單自我介紹一下嗎？",
+                character: "Tech Company Interviewer (professional, probing, evaluating skills)"
+            },
+            daily_scrum: {
+                name: "每日站立會議",
+                greeting: "Alright, let's start the standup. Who wants to go first? Maybe you can share what you did yesterday and any blockers?",
+                translation: "好的，我們開始站立會議。誰想先開始？也許你可以分享你昨天做了什麼，以及有什麼卡住的地方？",
+                character: "A Scrum Master/Team Lead hosting a quick daily meeting, checking project progress and hurdles."
+            },
+            business_negotiation: {
+                name: "供應商價格談判",
+                greeting: "Thank you for the proposal. However, at $15 per unit, we are slightly over our budget. What can we do here?",
+                translation: "感謝您的提案。不過，每件 15 美元的價格，稍微超出了我們的預算。這裡有什麼我們能調整的空間嗎？",
+                character: "A purchasing manager or external supplier trying to negotiate discounts for bulk orders."
+            },
+            client_pitch: {
+                name: "向客戶產品提案",
+                greeting: "Thanks for joining the call. I'd love to walk you through our software platform and show you how it can save your team 10 hours a week.",
+                translation: "感謝參與這場會議。我想向您介紹我們的軟體平台，並向您展示它如何為您的團隊每週節省 10 個小時。",
+                character: "A business client listening to your product sales pitch, asking about integration, price, and security."
+            },
+            salary_raise: {
+                name: "爭取年度加薪",
+                greeting: "Hi, thanks for setting up this performance review. I've had a chance to review your achievements this year.",
+                translation: "嗨，謝謝你安排這次的績效評估會議。我有機會看過你今年的成就了。",
+                character: "A supportive but budget-conscious manager discussing your achievements and evaluating your salary adjustment requests."
+            },
+            leaving_job: {
+                name: "向主管提辭職",
+                greeting: "Hi, you wanted to speak with me privately? What's on your mind?",
+                translation: "嗨，你找我想私下聊聊？你心裡在想些什麼？",
+                character: "A surprised manager hearing your resignation, asking about your future plans and transition plan."
+            },
+            office_it: {
+                name: "IT 部門電腦報修",
+                greeting: "IT helpdesk, this is Mike. Is your computer completely locked up, or are you just getting an error code?",
+                translation: "IT 服務台，我是 Mike。您的電腦是完全當機，還是只出現了錯誤代碼？",
+                character: "An IT support technician troubleshooting software bugs, password resets, or blue screens."
+            },
+            customer_support: {
+                name: "客服應對暴怒客戶",
+                greeting: "I demand a full refund! I've been waiting for three weeks and your company has done absolutely nothing!",
+                translation: "我要求全額退款！我已經等了三個星期，你們公司什麼事都沒做！",
+                character: "An extremely angry, frustrated customer demanding immediate solutions or escalating to managers."
+            },
+            networking_event: {
+                name: "商業交流酒會",
+                greeting: "Hi! Great keynote presentation earlier, wasn't it? I'm in digital marketing myself. What line of work are you in?",
+                translation: "嗨！剛才的主題演講很棒，對吧？我自己是做數位行銷的。您是從事什麼行業的呢？",
+                character: "An approachable, professional networking attendee sharing contact cards and professional interests."
+            },
+            colleague_onboarding: {
+                name: "歡迎報到新同事",
+                greeting: "Welcome to the team! I'm so excited to finally meet you in person. Let me show you around the office and your desk.",
+                translation: "歡迎加入團隊！很高興終於見到你本人了。我帶你參觀辦公室和你的座位吧。",
+                character: "A friendly, warm colleague onboarding a new hire, offering help on lunches and company culture."
+            },
+
+            // == 🗣️ 日常社交 (42-50) ==
+            smalltalk: {
+                name: "派對閒聊",
+                greeting: "Hey! I don't think we've met. I'm Alex, a friend of the host. How do you know them?",
+                translation: "嘿！我們好像沒見過。我是 Alex，主辦人的朋友。你怎麼認識他們的？",
+                character: "Friendly party guest (casual, enthusiastic, asking open-ended questions)"
+            },
+            first_date: {
+                name: "第一次約會見面",
+                greeting: "Hi! It's so nice to finally meet you off the app! I love the vibe of this coffee shop. Did you find it easily?",
+                translation: "嗨！很高興終於在應用程式外見到你！我喜歡這家咖啡廳的氛圍。你有順利找到這裡嗎？",
+                character: "An excited, slightly nervous date. Chatting about hobbies, jobs, and favorite movies."
+            },
+            seeing_doctor: {
+                name: "全科診所看醫生",
+                greeting: "Hello, please take a seat. I see you're not feeling well today. What seems to be the trouble?",
+                translation: "你好，請坐。我看得出你今天身體不太舒服。是哪裡不舒服呢？",
+                character: "A calm, professional medical doctor asking about symptoms, pain levels, and prescribing rest or medicine."
+            },
+            gym_trainer: {
+                name: "健身房諮詢課程",
+                greeting: "Hey there! Welcome to Iron Gym. Are you looking to build muscle, lose weight, or just stay healthy?",
+                translation: "嘿！歡迎來到鋼鐵健身房。您是想增肌、減脂，還是只是保持健康？",
+                character: "An energetic, motivating personal trainer presenting different workout and pricing programs."
+            },
+            renting_apartment: {
+                name: "現場看房租約",
+                greeting: "Hello! This is the apartment I emailed you about. As you can see, there is plenty of natural light. Any questions so far?",
+                translation: "你好！這就是我發郵件給你的那間公寓。正如你所見，這裡採光非常好。目前有任何問題嗎？",
+                character: "Real estate agent showing features of an apartment (utilities, rent, deposit, and pet policy)."
+            },
+            neighbor_complaint: {
+                name: "客氣抱怨噪音",
+                greeting: "Oh, hi! Sorry, is the music too loud? I didn't realize what time it was.",
+                translation: "喔，嗨！抱歉，音樂太吵了嗎？我沒注意到現在幾點了。",
+                character: "A polite, slightly embarrassed neighbor throwing a late-night party, responsive to polite complaints."
+            },
+            museum_guide: {
+                name: "博物館預約導覽",
+                greeting: "Welcome to the Art Museum. Our main exhibit guided tour starts in 10 minutes. Would you like to join?",
+                translation: "歡迎光臨藝術博物館。我們主展區的導覽將在 10 分鐘內開始。您想加入嗎？",
+                character: "Museum guide describing exhibition themes, ticket costs, and headphones rental."
+            },
+            hair_salon: {
+                name: "時尚髮廊剪髮",
+                greeting: "Welcome! Take a seat. Are we doing a trim today, or are you looking for a completely new style and color?",
+                translation: "歡迎！請坐。我們今天是要修剪，還是你想換個全新的造型 and 顏色？",
+                character: "A trendy hair stylist discussing hair texture, lengths, and lifestyle preferences."
+            },
+            vet_visit: {
+                name: "帶寵物看獸醫",
+                greeting: "Hello! Who is this cute little patient today? Let's get them weighed first. What brings you in?",
+                translation: "你好！今天這位可愛的小病人是誰呀？我們先幫牠稱個體重。今天怎麼過來了？",
+                character: "A compassionate veterinarian examining a dog or cat, asking about diet, energy, and symptoms."
+            }
+        };
+
+        // --- 初始化 ---
+        document.addEventListener("DOMContentLoaded", () => {
+            // 1. 從 LocalStorage 載入 API Key
+            const savedKey = localStorage.getItem('deepseekApiKey');
+            if (savedKey) {
+                document.getElementById('apiKeyInput').value = savedKey;
+            }
+            
+            // 2. 從 LocalStorage 載入字詞簿資料
+            const savedVocab = localStorage.getItem('englishVocabBook');
+            if (savedVocab) {
+                vocabBook = JSON.parse(savedVocab);
+            }
+            renderVocab(); // 渲染字詞簿
+
+            // 3. 監聽 Enter 鍵發送
+            document.getElementById('userInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            startScene();
+        });
+
+        // --- 核心功能與標籤切換 ---
+
+        function switchTab(tabId) {
+            const feedbackBtn = document.getElementById('tabBtn-feedback');
+            const vocabBtn = document.getElementById('tabBtn-vocab');
+            const feedbackArea = document.getElementById('feedbackArea');
+            const vocabArea = document.getElementById('vocabArea');
+
+            if (tabId === 'feedback') {
+                // 切換到語法分析
+                feedbackBtn.className = "flex-1 py-3 text-center text-sm font-bold border-b-2 border-blue-500 text-blue-400 transition-all flex items-center justify-center gap-1.5";
+                vocabBtn.className = "flex-1 py-3 text-center text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-white transition-all flex items-center justify-center gap-1.5";
+                feedbackArea.classList.remove('hidden');
+                vocabArea.classList.add('hidden');
+            } else {
+                // 切換到單字簿
+                feedbackBtn.className = "flex-1 py-3 text-center text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-white transition-all flex items-center justify-center gap-1.5";
+                vocabBtn.className = "flex-1 py-3 text-center text-sm font-bold border-b-2 border-emerald-500 text-emerald-400 transition-all flex items-center justify-center gap-1.5";
+                feedbackArea.classList.add('hidden');
+                vocabArea.classList.remove('hidden');
+            }
+        }
+
+        function saveSettings() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if(key) {
+                localStorage.setItem('deepseekApiKey', key);
+                showToast('設定已儲存！', 'success');
+            } else {
+                showToast('請輸入 API Key');
+            }
+        }
+
+        function changeScene() {
+            startScene();
+        }
+
+        function resetChat() {
+            startScene();
+        }
+
+        function startScene() {
+            const sceneKey = document.getElementById('sceneSelect').value;
+            const scene = scenes[sceneKey];
+            
+            // 清空畫面與對話上下文
+            document.getElementById('chatHistory').innerHTML = '';
+            document.getElementById('feedbackArea').innerHTML = `
+                <div class="text-center text-gray-500 mt-10">
+                    <p class="mb-2">開始對話後，</p>
+                    <p>AI 會在這裡即時糾正你的語法，</p>
+                    <p>並提供更道地的表達方式！</p>
+                </div>
+            `;
+            chatContext = [];
+
+            // 設定 System Prompt
+            const systemPrompt = `
+You are an advanced AI English Coach. We are roleplaying.
+Scenario: ${scene.name}. You are playing the role of: ${scene.character}.
+
+You have THREE tasks for every turn:
+1. Respond to the user naturally as the character. Keep it conversational.
+2. Translate your response into Traditional Chinese.
+3. Analyze the user's English input. Provide constructive feedback in Traditional Chinese, AND provide a perfect, native-sounding "suggested_reply" for what they were trying to say.
+
+CRITICAL: You MUST respond ONLY in valid JSON format. Do not include markdown code blocks like \`\`\`json.
+Format:
+{
+  "reply": "Your character's response in English",
+  "translation": "繁體中文翻譯",
+  "feedback": "對用戶剛剛說的英文進行語法糾正或給予更道地表達的建議 (用繁體中文撰寫)。",
+  "suggested_reply": "根據用戶的意圖，提供一句最完美、道地的英文替代句子。"
+}`;
+            
+            chatContext.push({ role: "system", content: systemPrompt });
+
+            // 顯示第一句問候
+            appendMessage('assistant', scene.greeting, scene.translation);
+            chatContext.push({ role: "assistant", content: JSON.stringify({ reply: scene.greeting, translation: scene.translation, feedback: "", suggested_reply: "" }) });
+            
+            // 嘗試自動朗讀 (女聲)
+            setTimeout(() => speakText(scene.greeting, 'female'), 500);
+        }
+
+        async function sendMessage() {
+            const inputEl = document.getElementById('userInput');
+            const message = inputEl.value.trim();
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+
+            if (!message) return;
+            if (!apiKey) {
+                showToast('請先在右上方輸入 DeepSeek API Key');
+                return;
+            }
+
+            // 1. 顯示我的訊息氣泡
+            appendMessage('user', message);
+            inputEl.value = '';
+            
+            // 2. 加入歷史記錄
+            chatContext.push({ role: "user", content: message });
+
+            // 3. 顯示讀取動畫
+            const loadingId = appendLoading();
+            const btn = document.getElementById('sendBtn');
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            try {
+                // 4. 發送 API 請求
+                const response = await fetch('https://api.deepseek.com/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat', 
+                        messages: chatContext,
+                        temperature: 0.7,
+                        response_format: { type: "json_object" } 
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API 請求失敗: ${response.status}`);
+                }
+
+                const data = await response.json();
+                let resultText = data.choices[0].message.content;
+                
+                resultText = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
+                const parsedResult = JSON.parse(resultText);
+
+                // 移除讀取動畫
+                removeLoading(loadingId);
+
+                // 5. 立即在用戶對話氣泡正下方加入深綠色建議回答框
+                if (parsedResult.suggested_reply) {
+                    appendSuggestedReplyBubble(parsedResult.suggested_reply);
+                }
+
+                // 6. 顯示 AI 角色下一輪提問氣泡
+                if (parsedResult.reply) {
+                    appendMessage('assistant', parsedResult.reply, parsedResult.translation);
+                    chatContext.push({ role: "assistant", content: JSON.stringify(parsedResult) });
+                }
+                
+                // 7. 更新右側分析面板
+                if (parsedResult.feedback) {
+                    appendFeedback(message, parsedResult.feedback, parsedResult.suggested_reply);
+                }
+
+                // 8. 雙向自動朗讀鏈：先播放建議的道地句子(男聲)，播放完 600ms 後播放 AI 的下一步追問(女聲)
+                if (parsedResult.suggested_reply) {
+                    speakText(parsedResult.suggested_reply, 'male', () => {
+                        if (parsedResult.reply) {
+                            setTimeout(() => speakText(parsedResult.reply, 'female'), 600);
+                        }
+                    });
+                } else if (parsedResult.reply) {
+                    speakText(parsedResult.reply, 'female');
+                }
+
+            } catch (error) {
+                console.error(error);
+                removeLoading(loadingId);
+                showToast('發生錯誤：請確認 API Key 是否正確。');
+                chatContext.pop(); 
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                inputEl.focus();
+            }
+        }
+
+        // --- 單字簿 (Vocab Book) 專用邏輯 ---
+
+        function addSelectedToVocab() {
+            // 獲取目前使用者在網頁上反白選取的文字
+            let selectedText = window.getSelection().toString().trim();
+            
+            if (!selectedText) {
+                showToast('請先在左側對話區選取（反白）想要記下的單字或句子！', 'error');
+                return;
+            }
+
+            // 清理前後的標點符號，例如多餘引號
+            selectedText = selectedText.replace(/^["'「『【]+|["'」』】]+$/g, '').trim();
+
+            if (vocabBook.includes(selectedText)) {
+                showToast('這個單字/字詞已經在單字簿中囉！', 'error');
+                return;
+            }
+
+            // 加到陣列
+            vocabBook.push(selectedText);
+            
+            // 儲存到本地 LocalStorage
+            localStorage.setItem('englishVocabBook', JSON.stringify(vocabBook));
+            
+            // 更新 UI
+            renderVocab();
+            showToast(`已成功收錄：「${selectedText.length > 15 ? selectedText.substring(0, 15) + '...' : selectedText}」`, 'success');
+        }
+
+        function deleteVocab(index) {
+            vocabBook.splice(index, 1);
+            localStorage.setItem('englishVocabBook', JSON.stringify(vocabBook));
+            renderVocab();
+            showToast('已刪除該字詞。', 'success');
+        }
+
+        function renderVocab() {
+            const vocabList = document.getElementById('vocabList');
+            const vocabCount = document.getElementById('vocabCount');
+            const vocabExportText = document.getElementById('vocabExportText');
+
+            // 1. 更新頁籤上的計數器
+            vocabCount.textContent = vocabBook.length;
+
+            // 2. 渲染清單 (從新到舊倒序呈現，最新收集的排在上面)
+            if (vocabBook.length === 0) {
+                vocabList.innerHTML = `
+                    <div class="text-center text-gray-500 mt-10 py-4">
+                        <p class="text-sm">目前單字簿空空如也 🐾</p>
+                        <p class="text-xs text-gray-600 mt-1">選取英文反白並點擊上方按鈕來收集吧！</p>
+                    </div>
+                `;
+                vocabExportText.value = '';
+                return;
+            }
+
+            vocabList.innerHTML = '';
+            for (let i = vocabBook.length - 1; i >= 0; i--) {
+                const word = vocabBook[i];
+                
+                const card = document.createElement('div');
+                card.className = "bg-gray-700/60 hover:bg-gray-700 border border-gray-600 rounded-lg p-3 flex justify-between items-center gap-3 transition-colors animate-[fadeIn_0.2s_ease-out]";
+                card.innerHTML = `
+                    <p class="text-sm font-medium text-gray-100 leading-relaxed break-words flex-1 select-all" title="點擊三次可全選此行">${escapeHTML(word)}</p>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button onclick="speakText(this.dataset.word, 'male')" data-word="${escapeHTML(word)}" class="p-1 rounded text-gray-400 hover:text-emerald-400 hover:bg-gray-600 transition-all" title="播放發音 (男聲)">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+                        </button>
+                        <button onclick="deleteVocab(${i})" class="p-1 rounded text-gray-500 hover:text-red-400 hover:bg-gray-600 transition-all" title="從清單中移除">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                `;
+                vocabList.appendChild(card);
+            }
+
+            // 3. 將收集下來的單字用換行連結，呈現在導出文本框中
+            vocabExportText.value = vocabBook.join('\n');
+        }
+
+        function copyAllVocab() {
+            const exportTextEl = document.getElementById('vocabExportText');
+            if (!exportTextEl.value) {
+                showToast('單字簿還是空的，先收集一些字詞吧！', 'error');
+                return;
+            }
+            
+            exportTextEl.select();
+            exportTextEl.setSelectionRange(0, 99999); // 手機端相容
+            
+            try {
+                // 因 iframe 安全限制，這裡採用 document.execCommand 進行剪貼相容
+                const success = document.execCommand('copy');
+                if(success) {
+                    showToast('📋 已複製全部字詞！快去貼到 Notion 吧！', 'success');
+                } else {
+                    throw new Error('Fallback Copy Failed');
+                }
+            } catch (err) {
+                showToast('複製失敗，請手動全選下方文本框複製！', 'error');
+            }
+        }
+
+        // --- UI 更新工具 ---
+
+        function appendMessage(role, text, translation = "") {
+            const history = document.getElementById('chatHistory');
+            const isUser = role === 'user';
+            const msgId = 'msg-' + Date.now();
+            
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `flex ${isUser ? 'justify-end' : 'justify-start'} w-full animate-[fadeIn_0.25s_ease-out]`;
+            
+            let innerHTML = `
+                <div class="max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 relative ${
+                    isUser ? 'bg-blue-600 text-white rounded-br-none shadow-md' : 'bg-gray-700 text-gray-100 rounded-bl-none shadow-md border border-gray-600'
+                }">
+                    <p class="whitespace-pre-wrap leading-relaxed font-normal">${escapeHTML(text)}</p>
+            `;
+
+            // 如果是 AI 回覆，加入朗讀與翻譯按鈕
+            if (!isUser) {
+                innerHTML += `
+                    <div class="flex gap-4 mt-3 pt-2 border-t border-gray-600">
+                        <button onclick="speakText(this.dataset.text, 'female')" data-text="${escapeHTML(text)}" class="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors font-medium" title="播放發音 (女聲)">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+                            朗讀 (女聲)
+                        </button>
+                        ${translation ? `
+                        <button onclick="document.getElementById('trans-${msgId}').classList.toggle('hidden')" class="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors font-medium" title="顯示/隱藏翻譯">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path></svg>
+                            中/英
+                        </button>
+                        ` : ''}
+                    </div>
+                    ${translation ? `<p id="trans-${msgId}" class="hidden mt-2 text-sm text-gray-300 bg-gray-900 border border-gray-600 p-2 rounded-lg leading-relaxed">${escapeHTML(translation)}</p>` : ''}
+                `;
+            }
+
+            innerHTML += `</div>`;
+            msgDiv.innerHTML = innerHTML;
+            history.appendChild(msgDiv);
+            history.scrollTop = history.scrollHeight;
+        }
+
+        // 新增：在用戶回答氣泡的正下方呈現象徵建議的深綠色氣泡框
+        function appendSuggestedReplyBubble(text) {
+            const history = document.getElementById('chatHistory');
+            const msgId = 'suggested-' + Date.now();
+            
+            const msgDiv = document.createElement('div');
+            msgDiv.className = "flex justify-end w-full mt-1 mb-2 animate-[fadeIn_0.3s_ease-out]";
+            
+            msgDiv.innerHTML = `
+                <div class="max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 bg-emerald-800 text-emerald-100 rounded-tr-none border border-emerald-600 shadow-md">
+                    <div class="flex justify-between items-center mb-1 pb-1 border-b border-emerald-700/60">
+                        <span class="text-xs text-emerald-300 font-bold tracking-wide flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            💡 AI 建議道地說法 (Suggested)
+                        </span>
+                        <button onclick="speakText(this.dataset.text, 'male')" data-text="${escapeHTML(text)}" class="text-emerald-300 hover:text-white transition-colors" title="播放建議說法 (男聲)">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+                        </button>
+                    </div>
+                    <p class="text-base font-semibold leading-relaxed italic">"${escapeHTML(text)}"</p>
+                </div>
+            `;
+            
+            history.appendChild(msgDiv);
+            history.scrollTop = history.scrollHeight;
+        }
+
+        function appendFeedback(userMsg, feedback, suggestedReply = "") {
+            const area = document.getElementById('feedbackArea');
+            
+            // 移除預設提示
+            if(area.children.length > 0 && area.children[0].classList.contains('text-center')) {
+                area.innerHTML = '';
+            }
+
+            const card = document.createElement('div');
+            card.className = "bg-gray-700/50 rounded-xl p-4 border border-gray-600 shadow-sm mb-4 animate-[fadeIn_0.3s_ease-out]";
+            
+            let innerHTML = `
+                <div class="mb-3 pb-3 border-b border-gray-600">
+                    <span class="text-xs text-gray-400 font-bold uppercase tracking-wider">You said:</span>
+                    <p class="text-sm text-gray-300 italic mt-1 leading-relaxed">"${escapeHTML(userMsg)}"</p>
+                </div>
+                <div class="${suggestedReply ? 'mb-3 pb-3 border-b border-gray-600' : ''}">
+                    <span class="text-xs text-yellow-500 font-bold uppercase tracking-wider">Coach says:</span>
+                    <p class="text-sm text-white mt-1 leading-relaxed">${escapeHTML(feedback)}</p>
+                </div>
+            `;
+
+            if (suggestedReply) {
+                innerHTML += `
+                <div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="text-xs text-green-400 font-bold uppercase tracking-wider">💡 建議道地說法:</span>
+                        <button onclick="speakText(this.dataset.text, 'male')" data-text="${escapeHTML(suggestedReply)}" class="text-gray-400 hover:text-green-400 transition-colors" title="播放建議說法 (男聲)">
+                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+                        </button>
+                    </div>
+                    <p class="text-base font-semibold text-green-300 mt-2 leading-relaxed">"${escapeHTML(suggestedReply)}"</p>
+                </div>
+                `;
+            }
+
+            card.innerHTML = innerHTML;
+            // 插在最上面
+            area.insertBefore(card, area.firstChild);
+        }
+
+        function appendLoading() {
+            const history = document.getElementById('chatHistory');
+            const id = 'loading-' + Date.now();
+            const msgDiv = document.createElement('div');
+            msgDiv.id = id;
+            msgDiv.className = `flex justify-start w-full`;
+            
+            msgDiv.innerHTML = `
+                <div class="bg-gray-700 text-gray-100 rounded-2xl rounded-bl-none px-4 py-4 shadow-md flex items-center gap-1">
+                    <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+                </div>
+            `;
+            history.appendChild(msgDiv);
+            history.scrollTop = history.scrollHeight;
+            return id;
+        }
+
+        function removeLoading(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        let toastTimeout;
+        function showToast(msg, type = 'error') {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toastMsg');
+            
+            toast.className = `absolute top-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300 ${
+                type === 'error' ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'
+            }`;
+            msgEl.textContent = msg;
+            toast.classList.remove('hidden');
+            
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+
+        // --- 雙聲道語音合成 (TTS) 功能 ---
+        let englishFemaleVoices = [];
+        let englishMaleVoices = [];
+        
+        function loadVoices() {
+            const voices = window.speechSynthesis.getVoices();
+            const enVoices = voices.filter(v => v.lang.startsWith('en'));
+
+            // 1. 篩選女聲
+            englishFemaleVoices = enVoices.filter(v => 
+                v.name.includes('Zira') || 
+                v.name.includes('Samantha') || 
+                v.name.includes('Victoria') || 
+                v.name.includes('Hazel') ||
+                v.name.includes('Google US English') ||
+                v.name.toLowerCase().includes('female')
+            );
+            if (englishFemaleVoices.length === 0) {
+                englishFemaleVoices = enVoices;
+            }
+
+            // 2. 篩選男聲
+            englishMaleVoices = enVoices.filter(v => 
+                v.name.includes('David') || 
+                v.name.includes('George') || 
+                v.name.includes('Mark') || 
+                v.name.includes('Ravi') ||
+                v.name.includes('Daniel') ||
+                v.name.includes('Google UK English Male') ||
+                v.name.toLowerCase().includes('male')
+            );
+            if (englishMaleVoices.length === 0) {
+                englishMaleVoices = enVoices;
+            }
+        }
+        
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+            loadVoices();
+        }
+
+        function speakText(text, gender = 'female', onEndCallback = null) {
+            if (!('speechSynthesis' in window) || !text) {
+                if(onEndCallback) onEndCallback();
+                return;
+            }
+            
+            window.speechSynthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.82; 
+            
+            if (gender === 'male') {
+                utterance.pitch = 0.90; 
+                if (englishMaleVoices.length > 0) {
+                    utterance.voice = englishMaleVoices[0]; 
+                }
+            } else {
+                utterance.pitch = 1.12; 
+                if (englishFemaleVoices.length > 0) {
+                    utterance.voice = englishFemaleVoices[0]; 
+                }
+            }
+            
+            utterance.onend = () => {
+                if (onEndCallback) onEndCallback();
+            };
+            
+            utterance.onerror = () => {
+                if (onEndCallback) onEndCallback();
+            };
+            
+            window.speechSynthesis.speak(utterance);
+        }
+    </script>
+</body>
+</html>
