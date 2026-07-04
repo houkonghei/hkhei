@@ -212,11 +212,11 @@
 
     <!-- 邏輯腳本 -->
     <script>
-        // 全域狀態
+        // 全域狀態：已預先載入您提供的最新 GAS API 連結
         let state = {
             sboy: 0,
             sgirl: 0,
-            scriptUrl: ""
+            scriptUrl: "https://script.google.com/macros/s/AKfycbxcrB8U5Gk1LaGqF6FwJwJ1PduIOc7TTcN01RDB9XBkxL-pmU1GzJn8d2Z78aX3o8FR/exec"
         };
 
         // 暫存家長準備進行的操作
@@ -228,14 +228,17 @@
 
         // 頁面初始化
         window.addEventListener('load', () => {
+            // 如果瀏覽器本機內有手動存過其他 URL 則以它優先，否則直接使用上面寫好的預設網址
             const savedUrl = localStorage.getItem('gas_script_url');
             const cachedBoy = localStorage.getItem('cached_sboy');
             const cachedGirl = localStorage.getItem('cached_sgirl');
 
             if (savedUrl) {
                 state.scriptUrl = savedUrl;
-                document.getElementById('api-url-input').value = savedUrl;
             }
+            
+            // 將目前的網址呈現在設定欄位內
+            document.getElementById('api-url-input').value = state.scriptUrl;
 
             if (cachedBoy !== null) state.sboy = parseInt(cachedBoy, 10);
             if (cachedGirl !== null) state.sgirl = parseInt(cachedGirl, 10);
