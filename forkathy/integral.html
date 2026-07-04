@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>寶貝積分排行榜</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 圖標 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 鎖定手機視窗，防止不必要的滾動 */
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        /* 增加按鈕點擊時的縮放反饋 */
+        .tap-feedback:active {
+            transform: scale(0.92);
+            filter: brightness(0.9);
+        }
+        /* 客製化滑動條外觀 */
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+        .slider-boy::-webkit-slider-thumb {
+            background: #0284c7; /* Sky 600 */
+        }
+        .slider-girl::-webkit-slider-thumb {
+            background: #db2777; /* Pink 600 */
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 flex flex-col h-screen">
+
+    <!-- 頂部控制列 (改為高雅的白色半透明) -->
+    <header class="bg-white/90 backdrop-blur px-4 py-2 flex justify-between items-center z-10 border-b border-slate-200/80 h-12 shrink-0">
+        <h1 class="text-base font-bold tracking-wider text-slate-700">
+            <i class="fa-solid fa-face-smile text-amber-500 mr-1.5"></i> 乖乖積分表
+        </h1>
+        <div class="flex items-center space-x-3">
+            <!-- 同步狀態指示 -->
+            <span id="sync-status" class="text-xs text-slate-500 flex items-center">
+                <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 mr-1.5 animate-pulse" id="status-dot"></span>
+                <span id="status-text" class="font-medium">未連接資料庫</span>
+            </span>
+            <!-- 設定按鈕 -->
+            <button onclick="toggleSettings(true)" class="text-slate-400 hover:text-slate-600 p-1 text-lg tap-feedback">
+                <i class="fa-solid fa-gear"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- 主操作區域：左右 50% 等分 -->
+    <main class="flex flex-1 w-full overflow-hidden">
+        
+        <!-- 左半邊：皓 (Boy - 柔和粉藍色調) -->
+        <section class="w-1/2 bg-gradient-to-b from-sky-100 via-sky-150 to-sky-200 flex flex-col justify-between p-4 relative border-r border-sky-200/60">
+            <!-- 姓名 (放大50%，置中醒目) -->
+            <div class="text-center pt-4">
+                <h2 class="text-6xl font-black tracking-widest text-sky-900 drop-shadow-sm">皓</h2>
+            </div>
+
+            <!-- 當前積分展示 -->
+            <div class="text-center my-auto flex flex-col items-center justify-center">
+                <p class="text-xs font-bold text-sky-700/80 tracking-widest uppercase mb-1">現時積分</p>
+                <div class="flex items-baseline justify-center">
+                    <span id="score-boy" class="text-7xl sm:text-8xl font-black text-sky-950 tracking-tight">0</span>
+                    <span class="text-base font-extrabold text-sky-800 ml-1">分</span>
+                </div>
+            </div>
+
+            <!-- 控制面板 -->
+            <div class="space-y-4 pb-4">
+                <!-- 分數滑動桿 (Range Slider) -->
+                <div class="bg-white/60 backdrop-blur-sm rounded-2xl p-3 border border-sky-300/30">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs font-bold text-sky-800/80">變更分數</span>
+                        <span id="label-boy" class="bg-sky-600 text-white text-sm font-black px-3 py-0.5 rounded-full">3 分</span>
+                    </div>
+                    <input type="range" id="points-boy" min="1" max="10" value="3" oninput="updateSliderLabel('boy')" class="slider-boy w-full h-2 bg-sky-200 rounded-lg appearance-none cursor-pointer">
+                    <div class="flex justify-between text-[10px] font-bold text-sky-700/60 mt-1 px-1">
+                        <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+                    </div>
+                </div>
+
+                <!-- 極簡加減按鈕 (+ / -) -->
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="confirmChange('boy', 'sub')" class="bg-rose-500/90 active:bg-rose-600 text-white rounded-2xl py-4 flex items-center justify-center tap-feedback transition-all shadow-md shadow-rose-200">
+                        <i class="fa-solid fa-minus text-3xl"></i>
+                    </button>
+                    <button onclick="confirmChange('boy', 'add')" class="bg-emerald-500/90 active:bg-emerald-600 text-white rounded-2xl py-4 flex items-center justify-center tap-feedback transition-all shadow-md shadow-emerald-200">
+                        <i class="fa-solid fa-plus text-3xl"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 右半邊：淇 (Girl - 柔和粉紅色調) -->
+        <section class="w-1/2 bg-gradient-to-b from-pink-100 via-pink-150 to-pink-200 flex flex-col justify-between p-4 relative">
+            <!-- 姓名 (放大50%，置中醒目) -->
+            <div class="text-center pt-4">
+                <h2 class="text-6xl font-black tracking-widest text-pink-900 drop-shadow-sm">淇</h2>
+            </div>
+
+            <!-- 當前積分展示 -->
+            <div class="text-center my-auto flex flex-col items-center justify-center">
+                <p class="text-xs font-bold text-pink-700/80 tracking-widest uppercase mb-1">現時積分</p>
+                <div class="flex items-baseline justify-center">
+                    <span id="score-girl" class="text-7xl sm:text-8xl font-black text-pink-950 tracking-tight">0</span>
+                    <span class="text-base font-extrabold text-pink-800 ml-1">分</span>
+                </div>
+            </div>
+
+            <!-- 控制面板 -->
+            <div class="space-y-4 pb-4">
+                <!-- 分數滑動桿 (Range Slider) -->
+                <div class="bg-white/60 backdrop-blur-sm rounded-2xl p-3 border border-pink-300/30">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs font-bold text-pink-800/80">變更分數</span>
+                        <span id="label-girl" class="bg-pink-600 text-white text-sm font-black px-3 py-0.5 rounded-full">3 分</span>
+                    </div>
+                    <input type="range" id="points-girl" min="1" max="10" value="3" oninput="updateSliderLabel('girl')" class="slider-girl w-full h-2 bg-pink-200 rounded-lg appearance-none cursor-pointer">
+                    <div class="flex justify-between text-[10px] font-bold text-pink-700/60 mt-1 px-1">
+                        <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+                    </div>
+                </div>
+
+                <!-- 極簡加減按鈕 (+ / -) -->
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="confirmChange('girl', 'sub')" class="bg-rose-500/90 active:bg-rose-600 text-white rounded-2xl py-4 flex items-center justify-center tap-feedback transition-all shadow-md shadow-rose-200">
+                        <i class="fa-solid fa-minus text-3xl"></i>
+                    </button>
+                    <button onclick="confirmChange('girl', 'add')" class="bg-emerald-500/90 active:bg-emerald-600 text-white rounded-2xl py-4 flex items-center justify-center tap-feedback transition-all shadow-md shadow-emerald-200">
+                        <i class="fa-solid fa-plus text-3xl"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 家長確認對話框 (Custom Confirmation Modal) -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6 z-50 hidden">
+        <div class="bg-white border border-slate-200 w-full max-w-xs rounded-3xl p-6 shadow-2xl relative text-center">
+            <!-- 裝飾小插圖 -->
+            <div id="confirm-icon-bg" class="w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 text-3xl">
+                <i id="confirm-icon" class="fa-solid"></i>
+            </div>
+            
+            <h3 class="text-xl font-bold text-slate-800 mb-2">請確認操作</h3>
+            <p id="confirm-text" class="text-base text-slate-600 mb-6 leading-relaxed">
+                確定要幫 <span class="font-extrabold text-blue-600">皓</span> 進行加分嗎？
+            </p>
+
+            <!-- 按鈕列 -->
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="closeConfirmModal(false)" class="bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl py-3 text-sm font-bold tap-feedback">
+                    我再想想
+                </button>
+                <button onclick="closeConfirmModal(true)" id="confirm-submit-btn" class="text-white rounded-2xl py-3 text-sm font-bold tap-feedback shadow-lg">
+                    確定操作
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 系統設置視窗 (Modal) -->
+    <div id="settings-modal" class="fixed inset-0 bg-slate-900/65 backdrop-blur-sm flex items-center justify-center p-6 z-50 hidden">
+        <div class="bg-white border border-slate-200 w-full max-w-sm rounded-3xl p-6 shadow-2xl relative">
+            <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center">
+                <i class="fa-solid fa-gears text-slate-500 mr-2"></i> 系統設置
+            </h3>
+            
+            <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+                請在下方貼上您部署好的 Google Apps Script 網頁應用程式網址，系統會自動在後台同步分數至您的 Google Sheet A1 & A2 儲存格。
+            </p>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1.5">Apps Script 網址 (URL)</label>
+                    <input type="text" id="api-url-input" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-50 border border-slate-300 text-slate-800 rounded-xl py-3 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+            </div>
+
+            <!-- 按鈕列 -->
+            <div class="grid grid-cols-2 gap-3 mt-6">
+                <button onclick="toggleSettings(false)" class="bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl py-2.5 text-sm font-bold tap-feedback">
+                    取消
+                </button>
+                <button onclick="saveSettings()" class="bg-sky-600 hover:bg-sky-500 text-white rounded-xl py-2.5 text-sm font-bold tap-feedback shadow-lg shadow-sky-100">
+                    儲存並載入
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示框 (Toast) -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/95 text-white px-5 py-3 rounded-full text-sm font-semibold shadow-2xl flex items-center space-x-2 z-50 transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
+        <span id="toast-icon"></span>
+        <span id="toast-message">提示訊息</span>
+    </div>
+
+    <!-- 邏輯腳本 -->
+    <script>
+        // 全域狀態
+        let state = {
+            sboy: 0,
+            sgirl: 0,
+            scriptUrl: ""
+        };
+
+        // 暫存家長準備進行的操作
+        let pendingAction = {
+            child: '',  // 'boy' 或 'girl'
+            action: '', // 'add' 或 'sub'
+            value: 0
+        };
+
+        // 頁面初始化
+        window.addEventListener('load', () => {
+            const savedUrl = localStorage.getItem('gas_script_url');
+            const cachedBoy = localStorage.getItem('cached_sboy');
+            const cachedGirl = localStorage.getItem('cached_sgirl');
+
+            if (savedUrl) {
+                state.scriptUrl = savedUrl;
+                document.getElementById('api-url-input').value = savedUrl;
+            }
+
+            if (cachedBoy !== null) state.sboy = parseInt(cachedBoy, 10);
+            if (cachedGirl !== null) state.sgirl = parseInt(cachedGirl, 10);
+
+            updateUI();
+            
+            if (state.scriptUrl) {
+                fetchScores();
+            } else {
+                showToast("⚠️ 請點擊右上角齒輪設定資料庫連結", "info");
+            }
+        });
+
+        // 動態更新滑動桿旁的數值標籤
+        function updateSliderLabel(child) {
+            const val = document.getElementById(`points-${child}`).value;
+            document.getElementById(`label-${child}`).innerText = `${val} 分`;
+        }
+
+        // 更新介面顯示
+        function updateUI() {
+            document.getElementById('score-boy').innerText = state.sboy;
+            document.getElementById('score-girl').innerText = state.sgirl;
+
+            localStorage.setItem('cached_sboy', state.sboy);
+            localStorage.setItem('cached_sgirl', state.sgirl);
+
+            // 更新同步狀態燈號
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            if (!state.scriptUrl) {
+                dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-amber-500 mr-1.5";
+                text.innerText = "未設定資料庫";
+            } else {
+                dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5";
+                text.innerText = "已連線雲端";
+            }
+        }
+
+        // 開啟/關閉確認視窗
+        function confirmChange(child, action) {
+            const val = parseInt(document.getElementById(`points-${child}`).value, 10);
+            pendingAction = { child, action, value: val };
+
+            const childName = child === 'boy' ? '皓' : '淇';
+            const actionText = action === 'add' ? '加分 ➕' : '減分 ➖';
+            const actionColorClass = action === 'add' ? 'text-emerald-600' : 'text-rose-600';
+            const childColorClass = child === 'boy' ? 'text-sky-600' : 'text-pink-600';
+
+            // 設定彈窗內容
+            const modalText = `確定要幫 <span class="font-black ${childColorClass} text-lg">${childName}</span> <span class="font-black ${actionColorClass} text-lg">${actionText} ${val} 分</span> 嗎？`;
+            document.getElementById('confirm-text').innerHTML = modalText;
+
+            // 調整彈窗主題圖標
+            const iconBg = document.getElementById('confirm-icon-bg');
+            const icon = document.getElementById('confirm-icon');
+            const submitBtn = document.getElementById('confirm-submit-btn');
+
+            if (action === 'add') {
+                iconBg.className = "w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 text-3xl bg-emerald-50 text-emerald-500";
+                icon.className = "fa-solid fa-circle-plus";
+                submitBtn.className = "bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl py-3 text-sm font-bold tap-feedback shadow-lg shadow-emerald-150";
+            } else {
+                iconBg.className = "w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 text-3xl bg-rose-50 text-rose-500";
+                icon.className = "fa-solid fa-circle-minus";
+                submitBtn.className = "bg-rose-500 hover:bg-rose-600 text-white rounded-2xl py-3 text-sm font-bold tap-feedback shadow-lg shadow-rose-150";
+            }
+
+            // 顯現彈窗
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        }
+
+        // 關閉確認視窗並決定是否執行
+        function closeConfirmModal(isConfirmed) {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            
+            if (isConfirmed && pendingAction.child) {
+                executeScoreChange(pendingAction.child, pendingAction.action, pendingAction.value);
+            }
+            
+            // 清除暫存
+            pendingAction = { child: '', action: '', value: 0 };
+        }
+
+        // 執行分數變更
+        function executeScoreChange(child, action, changeVal) {
+            let originalBoy = state.sboy;
+            let originalGirl = state.sgirl;
+
+            if (child === 'boy') {
+                if (action === 'add') state.sboy += changeVal;
+                else state.sboy = Math.max(0, state.sboy - changeVal);
+            } else {
+                if (action === 'add') state.sgirl += changeVal;
+                else state.sgirl = Math.max(0, state.sgirl - changeVal);
+            }
+
+            updateUI();
+
+            if (!state.scriptUrl) {
+                showToast("⚠️ 已於手機端更新（未連接雲端）", "info");
+                return;
+            }
+
+            showToast("正在同步雲端...", "loading");
+
+            fetch(`${state.scriptUrl}?action=update&sboy=${state.sboy}&sgirl=${state.sgirl}&_t=${Date.now()}`)
+                .then(response => {
+                    if (!response.ok) throw new Error("同步失敗");
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.status === "success") {
+                        state.sboy = data.sboy;
+                        state.sgirl = data.sgirl;
+                        updateUI();
+                        showToast(`✨ 同步成功！`, "success");
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    state.sboy = originalBoy;
+                    state.sgirl = originalGirl;
+                    updateUI();
+                    showToast("❌ 雲端同步失敗，分數已還原", "error");
+                });
+        }
+
+        // 開關設定對話框
+        function toggleSettings(show) {
+            const modal = document.getElementById('settings-modal');
+            if (show) {
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        // 儲存設定
+        function saveSettings() {
+            const urlInput = document.getElementById('api-url-input').value.trim();
+            if (!urlInput) {
+                showToast("❌ 網址不能為空！", "error");
+                return;
+            }
+            state.scriptUrl = urlInput;
+            localStorage.setItem('gas_script_url', urlInput);
+            toggleSettings(false);
+            showToast("💾 設定已儲存，正在連線...", "success");
+            fetchScores();
+        }
+
+        // 自製彈出提示 (Toast)
+        function showToast(message, type = "success") {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+
+            msg.innerText = message;
+            if (type === "success") {
+                icon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400"></i>';
+            } else if (type === "error") {
+                icon.innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-400"></i>';
+            } else if (type === "loading") {
+                icon.innerHTML = '<i class="fa-solid fa-spinner animate-spin text-sky-400"></i>';
+            } else {
+                icon.innerHTML = '<i class="fa-solid fa-circle-info text-amber-400"></i>';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            if (type !== "loading") {
+                setTimeout(() => {
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                    toast.classList.remove('translate-y-0', 'opacity-100');
+                }, 2000);
+            }
+        }
+
+        // 關閉 Loading 提示
+        function dismissToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.add('translate-y-20', 'opacity-0');
+            toast.classList.remove('translate-y-0', 'opacity-100');
+        }
+
+        // 從雲端取得分數 (GET)
+        function fetchScores() {
+            if (!state.scriptUrl) return;
+            
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-sky-500 mr-1.5 animate-pulse";
+            text.innerText = "同步中...";
+
+            fetch(`${state.scriptUrl}?_t=${Date.now()}`)
+                .then(response => {
+                    if (!response.ok) throw new Error("網路連線錯誤");
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.status === "success") {
+                        state.sboy = data.sboy;
+                        state.sgirl = data.sgirl;
+                        updateUI();
+                        dismissToast();
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-rose-500 mr-1.5";
+                    text.innerText = "同步失敗";
+                    showToast("❌ 連線失敗，請檢查 API 網址", "error");
+                });
+        }
+    </script>
+</body>
+</html>
