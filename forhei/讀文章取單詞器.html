@@ -1,24 +1,39 @@
 <!DOCTYPE html>
-<html lang="zh-TW" class="transition-colors duration-300 dark">
+<html lang="zh-TW" class="transition-colors duration-300 dark" style="--highlight-bg: #00ff00;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>英文學習輔助工具 - AI & OCR 版</title>
-    <!-- 引入核心庫 -->
+    <title>英文學習輔助工具 - DeepSeek AI &amp; OCR 版</title>
+    
+    <!-- 引入核心 CDN 套件，確保在 GitHub 部署時可直接載入 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/tesseract.js@5.0.3/dist/tesseract.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script>
-        tailwind.config = { darkMode: 'class' }
-        // 設定 PDF.js 的 Worker 
+        // 設定 PDF.js 的 Worker 來源
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
     </script>
+
     <style>
         :root { --highlight-bg: #00ff00; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; transition: background-color 0.3s, color 0.3s; }
+        
+        /* 查單字模式樣式 */
         .clickable-word { cursor: pointer; border-bottom: 2px transparent solid; transition: all 0.2s; display: inline-block; }
-        .clickable-word:hover { background-color: var(--highlight-bg); color: #000 !important; border-radius: 4px; }
+        .study-mode-word .clickable-word:hover { background-color: var(--highlight-bg); color: #000 !important; border-radius: 4px; }
         .active-word { background-color: var(--highlight-bg) !important; border-radius: 4px; color: #000 !important; }
+        
+        /* 句子模式樣式 */
+        .clickable-sentence { cursor: pointer; transition: all 0.2s; border-radius: 4px; display: inline; }
+        .study-mode-sentence .clickable-sentence:hover { background-color: rgba(59, 130, 246, 0.15); }
+        .study-mode-sentence .clickable-word { pointer-events: none; cursor: default; }
+        .active-sentence { background-color: rgba(59, 130, 246, 0.25) !important; border-radius: 4px; padding: 2px 0; }
+
         #studyContent { font-size: 1.25rem; line-height: 2; white-space: pre-wrap; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .ai-loading { display: inline-block; width: 1rem; height: 1rem; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.75s linear infinite; }
@@ -31,11 +46,11 @@
         <!-- 頂部導覽 -->
         <header class="bg-white dark:bg-gray-900 shadow-sm md:rounded-2xl p-4 flex flex-wrap gap-4 border-b dark:border-gray-800 items-center mb-4 transition-colors">
             <h1 class="text-xl font-bold text-blue-600 dark:text-blue-400 mr-auto flex items-center gap-2">
-                ✨ AI & OCR 學習助手
+                ✨ AI &amp; OCR 學習助手 (DeepSeek 版)
             </h1>
             
             <nav class="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl order-3 w-full md:w-auto md:order-2">
-                <button onclick="switchTab('input')" id="tab-input" class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all">輸入</button>
+                <button onclick="switchTab('input')" id="tab-input" class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all bg-white dark:bg-gray-700 shadow-sm text-blue-600">輸入</button>
                 <button onclick="switchTab('study')" id="tab-study" class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all hidden">學習</button>
                 <button onclick="switchTab('vocab')" id="tab-vocab" class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all">生詞</button>
                 <button onclick="switchTab('textVocab')" id="tab-textVocab" class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all">匯出</button>
@@ -85,24 +100,31 @@
             </div>
 
             <!-- 視圖 2: 學習模式 -->
-            <div id="view-study" class="h-full flex flex-col hidden relative">
+            <div id="view-study" class="h-full flex flex-col relative hidden">
                 <div class="p-4 border-b dark:border-gray-800 flex flex-wrap items-center gap-4 bg-gray-50/50 dark:bg-gray-800/50">
                     <button onclick="readWholeArticle()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold">▶ 朗讀全文</button>
                     <button onclick="stopReading()" class="bg-rose-500 text-white px-4 py-2 rounded-lg text-sm font-bold">■ 停止</button>
                     <button onclick="aiSummarize()" id="aiSummaryBtn" class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md flex items-center gap-2">
-                        ✨ AI 總結
+                        ✨ DeepSeek 總結
                     </button>
+                    
+                    <!-- 模式切換器 -->
+                    <div class="flex bg-gray-200 dark:bg-gray-800 p-1 rounded-xl ml-2">
+                        <button onclick="setStudyMode('word')" id="mode-word-btn" class="px-4 py-1 rounded-lg text-xs font-bold transition-all bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-white">查單字</button>
+                        <button onclick="setStudyMode('sentence')" id="mode-sentence-btn" class="px-4 py-1 rounded-lg text-xs font-bold transition-all text-gray-500 dark:text-gray-400">翻句子</button>
+                    </div>
+
                     <div class="ml-auto flex items-center gap-2">
                         <span class="text-xs font-bold text-gray-500">語速</span>
                         <input type="range" id="speedSlider" min="0.5" max="1.5" step="0.1" value="0.8" class="w-20 accent-indigo-600">
                     </div>
                 </div>
                 
-                <div id="summaryArea" class="hidden mx-8 mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-2xl">
+                <div id="summaryArea" class="mx-8 mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-2xl hidden">
                     <div id="summaryContent" class="text-sm text-gray-600 dark:text-gray-300"></div>
                 </div>
 
-                <div class="overflow-y-auto p-8 pb-48 no-scrollbar" id="studyContent"></div>
+                <div class="overflow-y-auto p-8 pb-48 no-scrollbar study-mode-word" id="studyContent"></div>
 
                 <!-- 單字操作面板 -->
                 <div id="wordPanel" class="absolute bottom-6 left-6 right-6 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 p-6 shadow-2xl transform translate-y-[150%] transition-transform duration-500 z-30 flex flex-col gap-4">
@@ -112,16 +134,34 @@
                                 <h3 id="currentWordText" class="text-3xl font-black text-blue-600 dark:text-blue-400 capitalize">Word</h3>
                                 <button onclick="playPronunciation()" class="text-xl">🔊</button>
                             </div>
-                            <p id="currentTranslation" class="text-lg font-medium text-gray-600 dark:text-gray-300 italic">翻譯載入中...</p>
+                            <p id="currentTranslation" class="text-lg font-medium text-gray-600 dark:text-gray-300 italic">翻譯中...</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            <button onclick="aiExplainWord()" id="aiExplainBtn" class="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-6 py-3 rounded-2xl font-bold text-sm">✨ AI 深度解釋</button>
-                            <button onclick="addCurrentWordToVocab(event)" id="addVocabBtn" class="bg-slate-900 dark:bg-white dark:text-slate-900 text-white px-8 py-3 rounded-2xl font-bold text-sm">加入生詞本 (A)</button>
+                            <button onclick="aiExplainWord()" id="aiExplainBtn" class="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-6 py-3 rounded-2xl font-bold text-sm">✨ DeepSeek 深度解釋</button>
+                            <button onclick="addCurrentWordToVocab(event)" id="addVocabBtn" class="bg-slate-900 dark:bg-white dark:text-slate-900 text-white px-8 py-3 rounded-2xl font-bold text-sm">加入生詞本</button>
                             <button onclick="closeWordPanel()" class="p-3 text-gray-400">✕</button>
                         </div>
                     </div>
-                    <div id="aiExplanationArea" class="hidden border-t dark:border-gray-700 pt-4">
+                    <div id="aiExplanationArea" class="border-t dark:border-gray-700 pt-4 hidden">
                         <div id="aiExplanationContent" class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed"></div>
+                    </div>
+                </div>
+
+                <!-- 句子操作面板 -->
+                <div id="sentencePanel" class="absolute bottom-6 left-6 right-6 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 p-6 shadow-2xl transform translate-y-[150%] transition-transform duration-500 z-30 flex flex-col gap-4">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div class="flex-grow">
+                            <h4 class="text-xs font-bold text-gray-400 mb-1">已選取句子：</h4>
+                            <p id="currentSentenceText" class="text-base font-bold text-gray-800 dark:text-gray-100 leading-relaxed"></p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <button onclick="playSentencePronunciation()" class="bg-gray-100 dark:bg-gray-700 p-3 rounded-xl text-sm font-bold">🔊 朗讀句子</button>
+                            <button onclick="closeSentencePanel()" class="p-3 text-gray-400">✕</button>
+                        </div>
+                    </div>
+                    <div class="border-t dark:border-gray-700 pt-4">
+                        <h4 class="text-sm font-bold text-blue-600 dark:text-blue-400 mb-2">✨ DeepSeek 句子翻譯與文法拆解：</h4>
+                        <div id="sentenceTranslationContent" class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">AI 翻譯中...</div>
                     </div>
                 </div>
             </div>
@@ -130,7 +170,7 @@
             <div id="view-vocab" class="p-6 h-full flex flex-col hidden">
                 <div class="flex items-center justify-between mb-6">
                     <h2 class="text-2xl font-bold">我的生詞本 <span id="vocabCount" class="ml-2 text-sm font-normal text-gray-400">0</span></h2>
-                    <button onclick="clearAllVocab()" class="text-xs text-rose-500">清空全部</button>
+                    <button onclick="clearAllVocab()" class="text-xs text-rose-500 hover:underline">清空全部</button>
                 </div>
                 <div class="overflow-y-auto flex-grow no-scrollbar">
                     <div id="vocabList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
@@ -150,9 +190,12 @@
     </div>
 
     <script>
-        const apiKey = ""; // Gemini API
+        // DeepSeek API 金鑰
+        const apiKey = "sk-bd62115e6b424f17b69fb9cb09e65d85";
         let vocabList = JSON.parse(localStorage.getItem('smartVocab_v4')) || [];
-        let currentWord = "", currentMeaning = "", currentContext = "", isDark = localStorage.getItem('theme') !== 'light';
+        let currentWord = "", currentMeaning = "", currentContext = "", currentSentence = "";
+        let isDark = localStorage.getItem('theme') !== 'light';
+        let studyMode = "word"; // "word" (查單字) 或 "sentence" (翻句子)
 
         window.onload = () => {
             if (isDark) document.documentElement.classList.add('dark');
@@ -161,7 +204,6 @@
         };
 
         // --- OCR 功能實作 ---
-
         async function handleFileUpload(input) {
             const file = input.files[0];
             if (!file) return;
@@ -211,15 +253,12 @@
 
             for (let i = 1; i <= totalPages; i++) {
                 const page = await pdf.getPage(i);
-                
-                // 優先提取 PDF 中的文字層
                 const textContent = await page.getTextContent();
                 const text = textContent.items.map(item => item.str).join(' ');
                 
                 if (text.trim().length > 10) {
                     pageCallback(text);
                 } else {
-                    // 如果沒有文字層（掃描檔），則進行 OCR
                     const viewport = page.getViewport({ scale: 2 });
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
@@ -234,46 +273,80 @@
             }
         }
 
-        // --- Gemini AI 功能 ---
-
-        async function callGemini(prompt, system = "You are a professional English teacher.") {
+        // --- DeepSeek AI 功能實作 ───
+        async function callDeepSeek(prompt, system = "You are a professional English teacher.") {
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                const response = await fetch(`https://api.deepseek.com/chat/completions`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        systemInstruction: { parts: [{ text: system }] }
+                        model: "deepseek-chat",
+                        messages: [
+                            { role: "system", content: system },
+                            { role: "user", content: prompt }
+                        ],
+                        stream: false
                     })
                 });
                 const data = await response.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text;
-            } catch (err) { return "AI 暫時無法連線。"; }
+                if (data.error) {
+                    return `DeepSeek 錯誤: ${data.error.message}`;
+                }
+                return data.choices?.[0]?.message?.content || "AI 未回傳任何內容。";
+            } catch (err) { 
+                console.error(err);
+                return "DeepSeek 暫時無法連線，請檢查網路或 API 金鑰可用性。"; 
+            }
         }
 
+        // DeepSeek 總結全文
         async function aiSummarize() {
             const text = document.getElementById('articleInput').value;
-            const btn = document.getElementById('aiSummaryBtn');
             const area = document.getElementById('summaryArea');
             const content = document.getElementById('summaryContent');
             if (!text.trim()) return;
             area.classList.remove('hidden');
-            content.innerHTML = '<span class="ai-loading"></span> 正在生成總結...';
-            const res = await callGemini(`請用繁體中文總結這篇文章的 3 個重點：\n${text}`);
+            content.innerHTML = '<span class="ai-loading"></span> 正在使用 DeepSeek 生成總結...';
+            const res = await callDeepSeek(`請用繁體中文總結這篇文章的 3 個核心重點，並用條列式呈現：\n\n${text}`);
             content.innerText = res;
         }
 
+        // DeepSeek 深度單字解釋
         async function aiExplainWord() {
             const area = document.getElementById('aiExplanationArea');
             const content = document.getElementById('aiExplanationContent');
             area.classList.remove('hidden');
-            content.innerHTML = '<span class="ai-loading"></span> AI 深度分析中...';
-            const res = await callGemini(`請解釋單字 "${currentWord}" 在此句中的意義：\n"${currentContext}"\n請提供中文翻譯、用法說明與一個新例句。`);
+            content.innerHTML = '<span class="ai-loading"></span> DeepSeek 深度分析中...';
+            const res = await callDeepSeek(`請解釋單字 "${currentWord}" 在以下句子中的精確意義與語境：\n"${currentContext}"\n\n請務必提供：\n1. 此處的中文翻譯\n2. 常見用法與搭配詞說明\n3. 一個生活化的英文例句與中文對照。`, "你是一位善於引導學生的初級英文老師，請用繁體中文回答。");
             content.innerText = res;
         }
 
-        // --- 基礎邏輯 ---
+        // --- 學習模式切換 ---
+        function setStudyMode(mode) {
+            studyMode = mode;
+            const container = document.getElementById('studyContent');
+            const wordBtn = document.getElementById('mode-word-btn');
+            const sentenceBtn = document.getElementById('mode-sentence-btn');
+            
+            // 關閉開啟中的舊面板，並清空高亮狀態
+            closeWordPanel();
+            closeSentencePanel();
+            
+            if (mode === 'word') {
+                container.className = "overflow-y-auto p-8 pb-48 no-scrollbar study-mode-word";
+                wordBtn.className = "px-4 py-1 rounded-lg text-xs font-bold transition-all bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-white";
+                sentenceBtn.className = "px-4 py-1 rounded-lg text-xs font-bold transition-all text-gray-500 dark:text-gray-400";
+            } else {
+                container.className = "overflow-y-auto p-8 pb-48 no-scrollbar study-mode-sentence";
+                sentenceBtn.className = "px-4 py-1 rounded-lg text-xs font-bold transition-all bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-white";
+                wordBtn.className = "px-4 py-1 rounded-lg text-xs font-bold transition-all text-gray-500 dark:text-gray-400";
+            }
+        }
 
+        // --- 主題與版面管理 ---
         function toggleTheme() {
             isDark = !isDark;
             document.documentElement.classList.toggle('dark');
@@ -299,26 +372,56 @@
             }
         }
 
+        // 開始分析文章：完美拆分「單字」與「句子」結構
         function startLearning() {
             const text = document.getElementById('articleInput').value;
             if (!text.trim()) return;
-            const formatted = text.replace(/([a-zA-Z']+)/g, (m) => `<span class="clickable-word" onclick="handleWordClick(this, \`${m.replace(/'/g, "\\'")}\`)">${m}</span>`);
-            document.getElementById('studyContent').innerHTML = formatted;
+
+            const lines = text.split('\n');
+            const formattedLines = lines.map(line => {
+                if (!line.trim()) return "";
+                
+                // 用正則拆分句子，確保保留句尾標點符號 (. ! ?)
+                const sentences = line.match(/[^.!?]+[.!?]*\s*/g) || [line];
+                
+                return sentences.map(sentence => {
+                    if (!sentence.trim()) return sentence;
+                    
+                    // 句子內部包裹單字 spans
+                    const wordsHtml = sentence.replace(/([a-zA-Z']+)/g, (m) => {
+                        return `<span class="clickable-word" onclick="handleWordClick(this, \`${m.replace(/'/g, "\\'")}\`, event)">${m}</span>`;
+                    });
+                    
+                    // 整句包裹為 sentence span
+                    return `<span class="clickable-sentence" onclick="handleSentenceClick(this, event)">${wordsHtml}</span>`;
+                }).join('');
+            });
+
+            document.getElementById('studyContent').innerHTML = formattedLines.join('\n');
             document.getElementById('tab-study').classList.remove('hidden');
+            setStudyMode('word'); // 預設為查單字模式
             switchTab('study');
         }
 
-        function handleWordClick(el, word) {
+        // 單字點擊事件
+        function handleWordClick(el, word, event) {
+            if (studyMode !== 'word') return;
+            if (event) event.stopPropagation(); // 阻止事件冒泡到句子層
+            closeSentencePanel();
+            
             currentWord = word.toLowerCase();
             const text = document.getElementById('articleInput').value;
             const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
             currentContext = sentences.find(s => s.toLowerCase().includes(currentWord))?.trim() || "";
+            
             document.querySelectorAll('.clickable-word').forEach(w => w.classList.remove('active-word'));
             el.classList.add('active-word');
+            
             document.getElementById('currentWordText').innerText = word;
             document.getElementById('currentTranslation').innerText = "查詢中...";
             document.getElementById('wordPanel').classList.remove('translate-y-[150%]');
             document.getElementById('aiExplanationArea').classList.add('hidden');
+            
             fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|zh-TW`)
                 .then(r => r.json()).then(d => {
                     currentMeaning = d.responseData.translatedText;
@@ -327,10 +430,43 @@
             playPronunciation();
         }
 
+        // 句子點擊事件 (翻句子模式下作用)
+        async function handleSentenceClick(el, event) {
+            if (studyMode !== 'sentence') return;
+            if (event) event.stopPropagation();
+            closeWordPanel();
+
+            currentSentence = el.innerText.trim();
+            if (!currentSentence) return;
+
+            document.querySelectorAll('.clickable-sentence').forEach(s => s.classList.remove('active-sentence'));
+            el.classList.add('active-sentence');
+
+            document.getElementById('currentSentenceText').innerText = currentSentence;
+            const content = document.getElementById('sentenceTranslationContent');
+            content.innerHTML = '<span class="ai-loading"></span> DeepSeek 正在全力翻譯與解析句子中...';
+            document.getElementById('sentencePanel').classList.remove('translate-y-[150%]');
+
+            // 專為英文初學者設計的深度語法與翻譯提示詞 (Prompt)
+            const prompt = `你是一位非常有耐心的英文老師。請將以下英文句子翻譯成流暢、自然的繁體中文。\n翻譯完後，請用最通俗易懂的語言，幫我指出這個句子「最重要的1-2個核心結構」或「關鍵文法點/單字搭配」，協助英文不好的學生理解其句型結構。\n\n句子："${currentSentence}"`;
+            
+            const res = await callDeepSeek(prompt, "You are a friendly English teacher who explains sentences clearly in Traditional Chinese.");
+            content.innerText = res;
+        }
+
+        // 語音朗讀
         function playPronunciation() {
             window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(currentWord);
             u.lang = 'en-US'; u.rate = 0.8;
+            window.speechSynthesis.speak(u);
+        }
+
+        function playSentencePronunciation() {
+            if (!currentSentence) return;
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(currentSentence);
+            u.lang = 'en-US'; u.rate = document.getElementById('speedSlider').value;
             window.speechSynthesis.speak(u);
         }
 
@@ -343,20 +479,21 @@
 
         function stopReading() { window.speechSynthesis.cancel(); }
 
+        // --- 生詞本管理 ---
         function addCurrentWordToVocab(e) {
             if (vocabList.some(v => v.word === currentWord)) return;
             vocabList.unshift({ word: currentWord, meaning: currentMeaning, context: currentContext });
             localStorage.setItem('smartVocab_v4', JSON.stringify(vocabList));
             updateVocabCount();
             e.currentTarget.innerText = "✅ 已加入";
-            setTimeout(() => e.currentTarget.innerText = "加入生詞本 (A)", 1000);
+            setTimeout(() => e.currentTarget.innerText = "加入生詞本", 1000);
         }
 
         function renderVocabList() {
             const container = document.getElementById('vocabList');
             container.innerHTML = vocabList.map(item => `
                 <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 relative group">
-                    <button onclick="deleteVocab('${item.word}')" class="absolute top-2 right-2 text-gray-300 opacity-0 group-hover:opacity-100">✕</button>
+                    <button onclick="deleteVocab('${item.word}')" class="absolute top-2 right-2 text-gray-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                     <h4 class="font-bold text-blue-600 dark:text-blue-400 capitalize">${item.word}</h4>
                     <p class="text-sm font-medium mb-1">${item.meaning}</p>
                     <p class="text-xs text-gray-400 italic">"${item.context}"</p>
@@ -370,13 +507,37 @@
             updateVocabCount(); renderVocabList();
         }
 
-        function clearAllVocab() { if(confirm('清空？')) { vocabList = []; localStorage.removeItem('smartVocab_v4'); updateVocabCount(); renderVocabList(); } }
-        function updateVocabCount() { document.getElementById('vocabCount').innerText = vocabList.length; }
-        function closeWordPanel() { document.getElementById('wordPanel').classList.add('translate-y-[150%]'); }
+        function clearAllVocab() { 
+            if(confirm('確定要清空所有的生詞嗎？')) { 
+                vocabList = []; 
+                localStorage.removeItem('smartVocab_v4'); 
+                updateVocabCount(); 
+                renderVocabList(); 
+            } 
+        }
+
+        function updateVocabCount() { 
+            document.getElementById('vocabCount').innerText = vocabList.length; 
+        }
+        
+        function closeWordPanel() { 
+            document.getElementById('wordPanel').classList.add('translate-y-[150%]'); 
+            document.querySelectorAll('.clickable-word').forEach(w => w.classList.remove('active-word'));
+        }
+        
+        function closeSentencePanel() { 
+            document.getElementById('sentencePanel').classList.add('translate-y-[150%]'); 
+            document.querySelectorAll('.clickable-sentence').forEach(s => s.classList.remove('active-sentence'));
+        }
+
         function copyTextVocab() { 
-            const tx = document.getElementById('plainTextOutput'); tx.select(); 
+            const tx = document.getElementById('plainTextOutput'); 
+            tx.select(); 
             document.execCommand('copy'); 
             document.getElementById('copyBtn').innerText = "✅ 已複製";
+            setTimeout(() => {
+                document.getElementById('copyBtn').innerText = "📋 複製內容";
+            }, 2000);
         }
     </script>
 </body>
