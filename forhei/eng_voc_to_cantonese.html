@@ -13,13 +13,19 @@
         body {
             font-family: 'Noto Sans TC', sans-serif;
         }
+        /* 自定義美化滾動條 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+<!-- 響應式 App 佈局：桌面端鎖定全螢幕高度，內部獨立滾動；移動端則保持自然向下滾動 -->
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col lg:h-screen lg:overflow-hidden">
 
-    <!-- Header -->
-    <header class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md">
-        <div class="max-w-6xl mx-auto px-4 py-6 flex flex-col md:flex-row justify-between items-center gap-4">
+    <!-- Header (固定於頂部不壓縮) -->
+    <header class="shrink-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md z-10">
+        <div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
                 <div class="bg-white/20 p-2.5 rounded-xl backdrop-blur-sm flex items-center justify-center">
                     <i data-lucide="brain-circuit" class="w-8 h-8 text-yellow-300"></i>
@@ -27,7 +33,7 @@
                 <div>
                     <h1 class="text-2xl font-black tracking-wider flex items-center flex-wrap gap-2">
                         粵英聯想記憶大師
-                        <span class="text-xs bg-yellow-400 text-yellow-900 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                        <span class="text-xs bg-yellow-400 text-yellow-900 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-sm">
                             <i data-lucide="volume-2" class="w-3 h-3"></i> 語音升級版
                         </span>
                     </h1>
@@ -41,41 +47,42 @@
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="flex-grow max-w-6xl w-full mx-auto px-4 py-8">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <!-- Main Content (動態填滿剩餘高度) -->
+    <main class="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 py-6 flex flex-col lg:min-h-0">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 lg:min-h-0">
             
-            <!-- Left Panel: Input & Settings -->
-            <div class="lg:col-span-5 flex flex-col gap-6">
-                <!-- Input Field Card -->
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex-grow flex flex-col min-h-[400px]">
-                    <div class="flex justify-between items-center mb-3">
+            <!-- Left Panel: Input Area (佔 4 欄) -->
+            <div class="lg:col-span-4 flex flex-col lg:min-h-0">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex-1 flex flex-col min-h-[400px] lg:min-h-0">
+                    <div class="shrink-0 flex justify-between items-center mb-3">
                         <div class="flex items-center gap-2">
                             <i data-lucide="file-text" class="w-5 h-5 text-indigo-500"></i>
                             <h2 class="font-bold text-lg text-slate-700">輸入英文單詞</h2>
                         </div>
-                        <span class="text-xs text-slate-400" id="wordCount">0 個單詞</span>
+                        <span class="text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-1 rounded-md" id="wordCount">0 個單詞</span>
                     </div>
                     
-                    <p class="text-xs text-slate-400 mb-4">每一行輸入一個英文單詞（按 Enter 換行）。支持同時處理多個單詞。</p>
+                    <p class="shrink-0 text-xs text-slate-400 mb-3">每一行輸入一個英文單詞（按 Enter 換行）。支援同時處理大量單詞。</p>
                     
+                    <!-- 輸入框在桌面端會自動拉伸填滿剩餘高度 -->
                     <textarea id="wordsInput" 
-                              class="w-full flex-grow p-4 bg-slate-50 border border-slate-200 rounded-xl text-base font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none transition-all focus:bg-white"
+                              class="w-full flex-1 p-4 bg-slate-50 border border-slate-200 rounded-xl text-base font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none transition-all focus:bg-white overflow-y-auto"
                               placeholder="例如：&#10;abandon&#10;ambulance&#10;bullet&#10;dangerous"
                               oninput="updateWordCount()"></textarea>
                     
                     <button id="btnGenerate" onclick="startGeneration()" 
-                            class="w-full mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-indigo-200 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
+                            class="shrink-0 w-full mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-indigo-200 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
                         <i data-lucide="wand-2" class="w-5 h-5"></i>
-                        <span>開始 AI 批次分析</span>
+                        <span class="tracking-wide">開始 AI 批次分析</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Right Panel: Output & Controls -->
-            <div class="lg:col-span-7 flex flex-col gap-6">
-                <!-- Status & Export Controls -->
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <!-- Right Panel: Output & Controls (佔 8 欄，善用橫向空間) -->
+            <div class="lg:col-span-8 flex flex-col gap-4 lg:min-h-0">
+                
+                <!-- 控制列 (固定不壓縮) -->
+                <div class="shrink-0 bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
                             <h2 class="font-bold text-lg text-slate-700 flex items-center gap-2">
@@ -85,11 +92,11 @@
                             <p class="text-xs text-slate-400 mt-1" id="statusText">等待生成中...</p>
                         </div>
                         <div class="flex gap-2 w-full sm:w-auto">
-                            <button onclick="exportCSV()" id="btnExportCsv" disabled class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-xs font-semibold border border-emerald-200 transition-all">
+                            <button onclick="exportCSV()" id="btnExportCsv" disabled class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-semibold border border-emerald-200 transition-all">
                                 <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
                                 複製 CSV
                             </button>
-                            <button onclick="exportText()" id="btnExportTxt" disabled class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-xs font-semibold border border-slate-200 transition-all">
+                            <button onclick="exportText()" id="btnExportTxt" disabled class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-semibold border border-slate-200 transition-all">
                                 <i data-lucide="clipboard" class="w-4 h-4"></i>
                                 複製純文字
                             </button>
@@ -102,21 +109,15 @@
                     </div>
                 </div>
 
-                <!-- Custom Notification Toast -->
-                <div id="toast" class="hidden fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 z-50 transition-all">
-                    <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
-                    <span id="toastMsg" class="text-sm">複製成功！</span>
-                </div>
-
-                <!-- Live Results View -->
-                <div class="flex-grow flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-2" id="resultsContainer">
+                <!-- Live Results View (桌面端在此區塊內部獨立滾動，絕不撐破版面) -->
+                <div id="resultsContainer" class="flex flex-col gap-4 lg:flex-1 lg:overflow-y-auto lg:pr-2 lg:min-h-0 pb-10 lg:pb-0">
                     <!-- Placeholder when empty -->
-                    <div id="emptyState" class="flex-grow flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-dashed border-slate-200">
+                    <div id="emptyState" class="flex-1 flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-dashed border-slate-200 min-h-[300px]">
                         <div class="bg-indigo-50 p-4 rounded-full mb-4">
                             <i data-lucide="sparkles" class="w-8 h-8 text-indigo-500"></i>
                         </div>
-                        <h3 class="font-bold text-slate-700">尚未生成數據</h3>
-                        <p class="text-slate-400 text-sm max-w-sm mt-1">在左側輸入英文單詞並點擊分析，AI 將在這裡為您構建爆笑好記的粵語諧音故事！</p>
+                        <h3 class="font-bold text-slate-700 text-lg">尚未生成數據</h3>
+                        <p class="text-slate-400 text-sm max-w-sm mt-2 leading-relaxed">在左側輸入英文單詞並點擊分析，AI 將在這裡為您構建爆笑好記的粵語諧音故事！</p>
                     </div>
                 </div>
             </div>
@@ -124,9 +125,15 @@
         </div>
     </main>
 
+    <!-- Custom Notification Toast -->
+    <div id="toast" class="hidden fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 z-50 transition-all">
+        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+        <span id="toastMsg" class="text-sm font-medium">複製成功！</span>
+    </div>
+
     <!-- Footer -->
-    <footer class="bg-white border-t border-slate-100 mt-12 py-6">
-        <div class="max-w-6xl mx-auto px-4 text-center text-xs text-slate-400 space-y-2">
+    <footer class="shrink-0 bg-white border-t border-slate-100 py-4">
+        <div class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 text-center text-xs text-slate-400 flex flex-col sm:flex-row justify-between items-center gap-2">
             <p>粵英聯想記憶大師 v2.0 (語音升級版) &copy; 2026</p>
             <p class="text-[10px]">聲明：所有運算皆在客戶端與 DeepSeek 伺服器間進行，安全無虞。</p>
         </div>
@@ -136,14 +143,13 @@
         // 配置區：隱藏在背景的金鑰與模型設定
         const API_CONFIG = {
             KEY: "sk-bd62115e6b424f17b69fb9cb09e65d85",
-            MODEL: "deepseek-chat", // 使用速度快且推薦的 V3 模型
-            URL: "https://api.deepseek.com/chat/completions" // 絕對乾淨的 API 網址字串
+            MODEL: "deepseek-chat", 
+            URL: "https://api.deepseek.com/chat/completions" 
         };
 
         // 初始化 Lucide 圖標
         lucide.createIcons();
 
-        // 儲存解析結果的全局陣列
         let analysisResults = [];
 
         // 初始化語音系統列表 (確保載入各國語音包)
@@ -151,7 +157,6 @@
             window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
         }
 
-        // 頁面加載時更新字數
         window.onload = function() {
             updateWordCount();
         };
@@ -163,11 +168,11 @@
                 return;
             }
             const text = analysisResults[index].word;
-            window.speechSynthesis.cancel(); // 停止當前正在播放的語音
+            window.speechSynthesis.cancel(); 
             
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'en-US';
-            utterance.rate = 0.6; // 0.6 代表慢速
+            utterance.rate = 0.6; 
             window.speechSynthesis.speak(utterance);
         }
 
@@ -177,15 +182,13 @@
                 showToast('❌ 您的瀏覽器不支援語音合成');
                 return;
             }
-            // 讀出中文解釋和記憶故事
             const text = analysisResults[index].translation + '。記憶法：' + analysisResults[index].memory_story;
-            window.speechSynthesis.cancel(); // 停止當前正在播放的語音
+            window.speechSynthesis.cancel(); 
             
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'zh-HK'; // 請求系統香港粵語發音
-            utterance.rate = 1.0; // 1.0 正常速度
+            utterance.lang = 'zh-HK'; 
+            utterance.rate = 1.0; 
             
-            // 尋找更精確的粵語語音包（適用於部分瀏覽器匹配優化）
             const voices = window.speechSynthesis.getVoices();
             const hkVoice = voices.find(v => v.lang === 'zh-HK' || v.lang === 'yue-HK' || v.name.toLowerCase().includes('hong kong'));
             if (hkVoice) {
@@ -195,14 +198,12 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        // 計算輸入框單詞數量
         function updateWordCount() {
             const input = document.getElementById('wordsInput').value;
             const words = input.split('\n').map(w => w.trim()).filter(w => w.length > 0);
             document.getElementById('wordCount').textContent = `${words.length} 個單詞`;
         }
 
-        // 顯示通知自定義 Toast
         function showToast(message) {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toastMsg');
@@ -213,7 +214,6 @@
             }, 3000);
         }
 
-        // 核心：開始批次分析
         async function startGeneration() {
             const rawInput = document.getElementById('wordsInput').value;
             const words = rawInput.split('\n').map(w => w.trim()).filter(w => w.length > 0);
@@ -223,7 +223,6 @@
                 return;
             }
 
-            // UI 狀態切換
             const btnGenerate = document.getElementById('btnGenerate');
             const progressContainer = document.getElementById('progressContainer');
             const progressBar = document.getElementById('progressBar');
@@ -232,7 +231,7 @@
             const statusText = document.getElementById('statusText');
 
             btnGenerate.disabled = true;
-            btnGenerate.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> <span>AI 正在全力分析中...</span>`;
+            btnGenerate.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> <span class="tracking-wide">AI 正在全力分析中...</span>`;
             lucide.createIcons();
 
             progressContainer.classList.remove('hidden');
@@ -242,28 +241,26 @@
                 emptyState.remove();
             }
 
-            // 清空先前的結果容器與數據陣列
             resultsContainer.innerHTML = '';
             analysisResults = [];
 
-            // 禁用複製按鈕
             document.getElementById('btnExportCsv').disabled = true;
             document.getElementById('btnExportTxt').disabled = true;
 
-            // 逐個單詞調用 API
             for (let i = 0; i < words.length; i++) {
                 const word = words[i];
                 statusText.textContent = `正在分析：${word} (${i + 1}/${words.length})`;
                 
-                // 創建一個載入中的骨架屏卡片
                 const cardId = `card-${i}`;
                 createLoadingCard(resultsContainer, cardId, word);
+
+                // 自動滾動到底部以顯示最新進度
+                resultsContainer.scrollTop = resultsContainer.scrollHeight;
 
                 try {
                     const result = await fetchWordAnalysisWithRetry(word);
                     if (result) {
                         analysisResults.push(result);
-                        // 成功後更新該卡片的內容 (加入按鈕)
                         updateCardWithData(cardId, result, analysisResults.length - 1);
                     } else {
                         updateCardWithError(cardId, word, '無法生成該單詞數據');
@@ -273,14 +270,12 @@
                     updateCardWithError(cardId, word, error.message || '連線錯誤');
                 }
 
-                // 更新進度條
                 const progressPercentage = ((i + 1) / words.length) * 100;
                 progressBar.style.width = `${progressPercentage}%`;
             }
 
-            // 結束後的 UI 更新
             btnGenerate.disabled = false;
-            btnGenerate.innerHTML = `<i data-lucide="wand-2" class="w-5 h-5"></i> <span>重新 AI 批次分析</span>`;
+            btnGenerate.innerHTML = `<i data-lucide="wand-2" class="w-5 h-5"></i> <span class="tracking-wide">重新 AI 批次分析</span>`;
             statusText.textContent = `分析完成！共生成了 ${analysisResults.length} 個單詞的記憶聯想。`;
             lucide.createIcons();
 
@@ -290,7 +285,6 @@
             }
         }
 
-        // 帶有指數退避重試機制的 API 調用
         async function fetchWordAnalysisWithRetry(word, retries = 5, delay = 1000) {
             for (let attempt = 1; attempt <= retries; attempt++) {
                 try {
@@ -305,7 +299,6 @@
             }
         }
 
-        // 輔助函數：從可能有 Markdown 標記的文本中安全提取 JSON
         function cleanAndParseJSON(text) {
             let cleanText = text.trim();
             if (cleanText.startsWith("```json")) {
@@ -319,7 +312,6 @@
             return JSON.parse(cleanText.trim());
         }
 
-        // 調用 DeepSeek API 獲取單個單詞聯想
         async function fetchWordAnalysis(word) {
             const systemPrompt = `你是一個極具創意的英語與粵語雙語記憶大師。
 你的任務是為用戶輸入的「英文單詞」生成一個方便粵語使用者（廣東話）速記的「粵語諧音故事記憶法」。
@@ -370,7 +362,6 @@ JSON 結構必須為以下對象格式：
             return cleanAndParseJSON(textResult);
         }
 
-        // 創建加載中卡片
         function createLoadingCard(container, cardId, word) {
             const cardHtml = `
                 <div id="${cardId}" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 animate-pulse flex flex-col gap-3">
@@ -387,12 +378,11 @@ JSON 結構必須為以下對象格式：
             container.insertAdjacentHTML('beforeend', cardHtml);
         }
 
-        // 更新卡片內容為正式數據 (包含語音按鈕)
         function updateCardWithData(cardId, data, index) {
             const card = document.getElementById(cardId);
             if (!card) return;
 
-            card.className = "bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:border-indigo-100 transition-all flex flex-col gap-3 relative overflow-hidden group";
+            card.className = "bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-indigo-100 hover:shadow-md transition-all flex flex-col gap-3 relative overflow-hidden group";
             card.innerHTML = `
                 <!-- Accent Tag -->
                 <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-indigo-500 to-purple-500"></div>
@@ -401,43 +391,43 @@ JSON 結構必須為以下對象格式：
                     <div>
                         <div class="flex flex-wrap justify-between items-baseline gap-2">
                             <div class="flex items-baseline gap-2">
-                                <span class="text-xl font-extrabold text-slate-800 tracking-wide">${data.word}</span>
-                                <span class="text-xs text-slate-400 font-mono">${data.phonetic}</span>
+                                <span class="text-2xl font-extrabold text-slate-800 tracking-wide">${data.word}</span>
+                                <span class="text-sm text-slate-400 font-mono">${data.phonetic}</span>
                             </div>
-                            <span class="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-bold">${data.translation.split(' ')[0] || '意思'}</span>
+                            <span class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full font-bold">${data.translation.split(' ')[0] || '意思'}</span>
                         </div>
 
-                        <div class="mt-1 text-sm font-medium text-slate-600">
+                        <div class="mt-2 text-base font-medium text-slate-600">
                             解釋：<span class="text-slate-800 font-semibold">${data.translation}</span>
                         </div>
 
-                        <div class="mt-3 flex items-center gap-2 bg-yellow-50/70 border border-yellow-100 rounded-xl p-3">
-                            <div class="bg-yellow-400 text-slate-900 rounded-lg p-1 px-2 font-black text-sm tracking-widest shrink-0">
+                        <div class="mt-4 flex items-center gap-3 bg-yellow-50/70 border border-yellow-100 rounded-xl p-3.5">
+                            <div class="bg-yellow-400 text-slate-900 rounded-lg p-1.5 px-2.5 font-black text-sm tracking-widest shrink-0">
                                 粵音諧音：${data.cantonese_homophone}
                             </div>
-                            <div class="text-xs font-mono text-amber-700 italic">
+                            <div class="text-sm font-mono text-amber-700 italic">
                                 [ ${data.cantonese_pron} ]
                             </div>
                         </div>
 
-                        <div class="mt-3">
-                            <div class="text-xs text-slate-400 font-semibold mb-1 flex items-center gap-1">
-                                <i data-lucide="image" class="w-3.5 h-3.5 text-indigo-400"></i>
+                        <div class="mt-4">
+                            <div class="text-sm text-slate-400 font-semibold mb-2 flex items-center gap-1.5">
+                                <i data-lucide="image" class="w-4 h-4 text-indigo-400"></i>
                                 圖像故事記憶法
                             </div>
-                            <p class="text-sm text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <p class="text-base text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
                                 ${data.memory_story}
                             </p>
                         </div>
                     </div>
 
                     <!-- Action Buttons (TTS) -->
-                    <div class="mt-4 pt-3 border-t border-slate-100 flex gap-2">
-                        <button onclick="speakEnglish(${index})" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold transition-all border border-blue-100">
+                    <div class="mt-5 pt-4 border-t border-slate-100 flex gap-3">
+                        <button onclick="speakEnglish(${index})" class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-sm font-bold transition-all border border-blue-100 hover:shadow-sm">
                             <i data-lucide="volume-1" class="w-4 h-4"></i>
                             聽單詞 (慢速)
                         </button>
-                        <button onclick="speakCantonese(${index})" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg text-xs font-bold transition-all border border-amber-100">
+                        <button onclick="speakCantonese(${index})" class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-xl text-sm font-bold transition-all border border-amber-100 hover:shadow-sm">
                             <i data-lucide="volume-2" class="w-4 h-4"></i>
                             聽故事 (粵語)
                         </button>
@@ -447,7 +437,6 @@ JSON 結構必須為以下對象格式：
             lucide.createIcons();
         }
 
-        // 卡片渲染錯誤狀態
         function updateCardWithError(cardId, word, errorMsg) {
             const card = document.getElementById(cardId);
             if (!card) return;
@@ -463,7 +452,6 @@ JSON 結構必須為以下對象格式：
             lucide.createIcons();
         }
 
-        // 輔助函數：執行文本複製到剪貼簿
         function copyToClipboard(text) {
             const textarea = document.createElement('textarea');
             textarea.value = text;
@@ -479,7 +467,6 @@ JSON 結構必須為以下對象格式：
             document.body.removeChild(textarea);
         }
 
-        // 導出/複製為 CSV
         function exportCSV() {
             if (analysisResults.length === 0) return;
             const headers = ['單詞', '音標', '中文翻譯', '粵語諧音', '粵語拼音', '圖像聯想記憶法故事'];
@@ -499,7 +486,6 @@ JSON 結構必須為以下對象格式：
             copyToClipboard(csvContent);
         }
 
-        // 導出/複製為純文字
         function exportText() {
             if (analysisResults.length === 0) return;
             let textContent = `===== 粵語諧音英語單詞記憶清單 =====\n\n`;
