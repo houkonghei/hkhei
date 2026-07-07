@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 英文生詞互動測驗系統 (含答錯生詞收集箱)</title>
+    <title>AI 英文生詞互動測驗系統 (含滑鼠選取收集功能)</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -12,9 +12,18 @@
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* 浮動按鈕淡入效果 */
+        #floatingCollectBtn {
+            animation: popIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.9) translateY(5px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col relative">
 
     <!-- 頂部導航列 -->
     <header class="bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-md p-5 shrink-0">
@@ -27,11 +36,11 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold tracking-wide">AI 英文生詞互動測驗</h1>
-                    <p class="text-xs text-sky-100 mt-0.5">生詞盲測 ‧ 慢速朗讀 ‧ 錯題生詞自動打包收集</p>
+                    <p class="text-xs text-sky-100 mt-0.5">生詞盲測 ‧ 慢速朗讀 ‧ 隨手選詞收集 ‧ 錯題自動打包</p>
                 </div>
             </div>
             <div class="text-xs bg-white/20 px-3 py-1.5 rounded-full border border-white/30 backdrop-blur-sm">
-                💻 寬螢幕加強版
+                💻 寬螢幕雙欄加強版
             </div>
         </div>
     </header>
@@ -41,8 +50,16 @@
         <span id="toastMsg">錯誤訊息</span>
     </div>
 
+    <!-- 智慧浮動「收集生詞」按鈕 -->
+    <button id="floatingCollectBtn" onclick="collectSelectedText()" class="hidden absolute z-50 bg-gradient-to-r from-sky-500 to-teal-500 hover:from-sky-600 hover:to-teal-600 text-white font-bold py-1.5 px-3.5 rounded-full shadow-xl text-xs flex items-center gap-1 active:scale-95 transition-all">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+        </svg>
+        收集生詞
+    </button>
+
     <!-- 主要互動區（置中大容器，完美分配左右空間） -->
-    <main class="flex-1 max-w-6xl w-full mx-auto p-6 md:p-10">
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-10">
         
         <!-- 第一頁：生詞輸入面板 -->
         <section id="page-input" class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-8 space-y-6">
@@ -77,35 +94,72 @@
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div>
                     <h2 class="text-base font-bold text-slate-700 flex items-center gap-2">
-                        <span class="inline-block w-2 h-2 rounded-full bg-sky-500"></span>
+                        <span class="inline-block w-2.5 h-2.5 rounded-full bg-sky-500"></span>
                         步驟 2：進行自我實力測驗
                     </h2>
-                    <p class="text-xs text-slate-400 mt-0.5">題目順序已隨機打亂，請聽讀音或閱讀上下文，選出最適合的生詞。</p>
-                </div>
-                <div id="scoreBox" class="hidden bg-teal-50 border border-teal-200 px-5 py-2 rounded-xl text-center">
-                    <span class="text-xs text-teal-600 font-bold block uppercase tracking-wider">測驗得分</span>
-                    <span id="scoreText" class="text-2xl font-black text-teal-600">0 / 0</span>
+                    <p class="text-xs text-slate-400 mt-0.5">題目已打亂。您可用滑鼠選取畫面中想學的任何單字，點擊浮現的「收集生詞」放入個人字箱。</p>
                 </div>
             </div>
 
-            <!-- 題目動態渲染容器 -->
-            <div id="quizContainer" class="space-y-6"></div>
-
-            <!-- 答錯生詞自動收集箱 (預設隱藏，交卷後顯示) -->
-            <div id="wrongWordsPanel" class="hidden bg-rose-50/50 border border-rose-100 rounded-2xl p-6 md:p-8 space-y-4 shadow-sm transition-all duration-300">
-                <div class="flex justify-between items-center border-l-4 border-rose-500 pl-4">
-                    <div>
-                        <h3 class="text-lg font-bold text-rose-900">💡 答錯生詞複習收集箱</h3>
-                        <p class="text-xs text-rose-600 mt-0.5">已自動幫您過濾出答錯題目對應的英語生詞，您可以一鍵複製，重新貼到輸入框再測試一次！</p>
-                    </div>
-                    <button onclick="copyWrongWords()" class="bg-white hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold py-2 px-4 rounded-lg shadow-sm transition-all active:scale-95 flex items-center gap-1.5">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
-                        </svg>
-                        複製全部生詞
-                    </button>
+            <!-- 雙欄寬螢幕排版結構 -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                <!-- 左側：題目作答區 (佔 8/12 寬度) -->
+                <div class="lg:col-span-8 space-y-6">
+                    <div id="quizContainer" class="space-y-6"></div>
                 </div>
-                <textarea id="wrongWordsArea" rows="5" readonly class="w-full bg-white border border-rose-200 rounded-xl p-4 text-base font-mono tracking-wide text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-300 shadow-inner resize-none" placeholder="這次測驗全對！太棒了，這裡沒有不熟的生詞。"></textarea>
+
+                <!-- 右側：智慧型常駐側邊欄 (佔 4/12 寬度, 滾動時自動固定) -->
+                <div class="lg:col-span-4 lg:sticky lg:top-6 space-y-6">
+                    
+                    <!-- A. 得分看板 (提交後才會解鎖顯示) -->
+                    <div id="scoreBox" class="hidden bg-gradient-to-br from-teal-500 to-sky-500 text-white p-5 rounded-2xl shadow-md text-center">
+                        <span class="text-xs font-bold uppercase tracking-wider opacity-85">測驗得分</span>
+                        <span id="scoreText" class="text-3xl font-black block mt-1">0 / 0</span>
+                    </div>
+
+                    <!-- B. 自訂選取單字收集箱 (一直常駐顯示，方便隨選隨看) -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between border-l-4 border-sky-500 pl-3">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-700">📌 自訂選取單字箱</h3>
+                                <p class="text-[11px] text-slate-400 mt-0.5">滑鼠選取文字後，點選浮現的「收集生詞」</p>
+                            </div>
+                        </div>
+                        <textarea id="customCollectedArea" rows="8" readonly class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm font-mono tracking-wide text-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-300 shadow-inner resize-none" placeholder="尚未收集單字...&#10;請用滑鼠在題目或翻譯中直接選取英文單字或中文解釋試試看！"></textarea>
+                        
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="clearCustomWords()" class="bg-slate-100 hover:bg-slate-200 text-slate-500 text-xs font-bold py-2.5 rounded-lg transition-all active:scale-95">
+                                清空字箱
+                            </button>
+                            <button onclick="copyCustomWords()" class="bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold py-2.5 rounded-lg shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+                                </svg>
+                                複製生詞
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- C. 答錯生詞自動收集箱 (預設隱藏，交卷後顯示，與自訂選取單字分開) -->
+                    <div id="wrongWordsPanel" class="hidden bg-rose-50/40 border border-rose-100 rounded-2xl p-6 space-y-4 shadow-sm transition-all duration-300">
+                        <div class="flex items-center justify-between border-l-4 border-rose-500 pl-3">
+                            <div>
+                                <h3 class="text-base font-bold text-rose-950">💡 答錯生詞複習箱</h3>
+                                <p class="text-[11px] text-rose-600 mt-0.5">系統自動提取不熟或答錯的生詞</p>
+                            </div>
+                        </div>
+                        <textarea id="wrongWordsArea" rows="6" readonly class="w-full bg-white border border-rose-200 rounded-xl p-3.5 text-sm font-mono tracking-wide text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-300 shadow-inner resize-none" placeholder="這次測驗全對！太棒了。"></textarea>
+                        
+                        <button onclick="copyWrongWords()" class="w-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-2.5 rounded-lg shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+                            </svg>
+                            複製全部答錯字
+                        </button>
+                    </div>
+
+                </div>
             </div>
 
             <!-- 底部提交與控制鈕 -->
@@ -130,6 +184,115 @@
         const API_KEY = "sk-bd62115e6b424f17b69fb9cb09e65d85"; 
         let quizData = []; // 儲存經隨機打亂後的完整題目資訊
 
+        // 監聽滑鼠選取文字事件，用來顯示/隱藏浮動「收集」按鈕
+        document.addEventListener('mouseup', handleTextSelection);
+        document.addEventListener('mousedown', function(e) {
+            const btn = document.getElementById('floatingCollectBtn');
+            // 如果點選的地方不是浮動按鈕本身，就先隱藏它
+            if (!btn.classList.contains('hidden') && !e.target.closest('#floatingCollectBtn')) {
+                btn.classList.add('hidden');
+            }
+        });
+
+        /**
+         * 處理滑鼠選取事件並定位浮動按鈕
+         */
+        function handleTextSelection(e) {
+            const btn = document.getElementById('floatingCollectBtn');
+            
+            // 如果是在點擊浮動按鈕，不做處理
+            if (e.target.closest('#floatingCollectBtn')) {
+                return;
+            }
+
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+
+            if (selectedText.length > 0) {
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+
+                btn.classList.remove('hidden');
+
+                // 計算按鈕位置：水平置中於選取文字，垂直於文字上方 10px 處
+                let left = rect.left + window.scrollX + (rect.width / 2) - (btn.offsetWidth / 2);
+                let top = rect.top + window.scrollY - btn.offsetHeight - 10;
+
+                // 邊界防護：防止按鈕超出視窗左側或頂部
+                if (left < 10) left = 10;
+                if (top < 10) {
+                    // 若頂部空間不足，則顯示在選取文字的下方
+                    top = rect.bottom + window.scrollY + 10;
+                }
+
+                btn.style.left = `${left}px`;
+                btn.style.top = `${top}px`;
+            } else {
+                btn.classList.add('hidden');
+            }
+        }
+
+        /**
+         * 將滑鼠選取到的字詞加入自訂單字收集箱
+         */
+        function collectSelectedText() {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+
+            if (selectedText) {
+                // 自動清理前後不必要的標點符號，保留英文、數字、中文、空格與連字號
+                const cleanedText = selectedText.replace(/^[^a-zA-Z0-9\u4e00-\u9fa5\s-]+|[^a-zA-Z0-9\u4e00-\u9fa5\s-]+$/g, "").trim();
+
+                if (cleanedText) {
+                    const customArea = document.getElementById('customCollectedArea');
+                    let currentVal = customArea.value.trim();
+                    let wordList = currentVal ? currentVal.split('\n') : [];
+
+                    // 避免重複收集同一個詞彙
+                    if (!wordList.includes(cleanedText)) {
+                        wordList.push(cleanedText);
+                        customArea.value = wordList.join('\n');
+                        showToast(`已成功收集："${cleanedText}"`);
+                    } else {
+                        showToast(`"${cleanedText}" 已經在您的自訂收集箱囉！`);
+                    }
+                }
+            }
+
+            // 隱藏浮動按鈕並清除選取高亮，恢復乾淨畫面
+            document.getElementById('floatingCollectBtn').classList.add('hidden');
+            window.getSelection().removeAllRanges();
+        }
+
+        /**
+         * 複製自訂選取收集箱內的所有生詞
+         */
+        function copyCustomWords() {
+            const area = document.getElementById('customCollectedArea');
+            if (!area.value || area.value.startsWith('尚未收集')) {
+                showToast('收集箱是空的，還沒有任何選取生詞可以複製喔。');
+                return;
+            }
+            area.select();
+            area.setSelectionRange(0, 99999);
+            try {
+                document.execCommand('copy');
+                showToast('已複製所有自訂選取的單字！');
+            } catch (err) {
+                showToast('複製失敗，請手動複製。');
+            }
+        }
+
+        /**
+         * 清空自訂單字箱
+         */
+        function clearCustomWords() {
+            if (confirm('確定要清空自訂選取的單字箱嗎？')) {
+                document.getElementById('customCollectedArea').value = '';
+                showToast('已清空自訂單字收集箱。');
+            }
+        }
+
         /**
          * 呼叫 AI 生成題目
          */
@@ -140,17 +303,14 @@
                 return;
             }
 
-            // 解析單字清單，去除空白行
             const vocabList = rawText.split('\n').map(word => word.trim()).filter(word => word.length > 0);
             if (vocabList.length === 0) {
                 showToast('請確認輸入的內容格式正確。');
                 return;
             }
 
-            // 切換至讀取狀態
             showPage('loading');
 
-            // 擬定發送給 DeepSeek 的 Prompt
             const systemPrompt = `You are an expert English teacher. The user will provide a list of English words or phrases. 
 For EACH item in the list, create a professional context-appropriate multiple-choice question.
 
@@ -196,12 +356,10 @@ Format example:
                 const resData = await response.json();
                 let cleanText = resData.choices[0].message.content.trim();
                 
-                // 保險清除可能夾雜的 markdown 語法外殼
                 cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
                 
                 let parsedJson = JSON.parse(cleanText);
                 
-                // 有時大模型外層會包裝成一個物件如 { "questions": [...] }，在此進行標準化化解為陣列
                 if (!Array.isArray(parsedJson) && typeof parsedJson === 'object') {
                     const keys = Object.keys(parsedJson);
                     if (keys.length === 1 && Array.isArray(parsedJson[keys[0]])) {
@@ -209,10 +367,8 @@ Format example:
                     }
                 }
 
-                // 進行題目順序隨機打亂 (Fisher-Yates Shuffle)
                 quizData = shuffleArray(parsedJson);
 
-                // 渲染至介面
                 renderQuiz();
                 showPage('quiz');
 
@@ -241,7 +397,6 @@ Format example:
                 card.id = `q-card-${qIndex}`;
                 card.className = "bg-white rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm space-y-4 transition-all duration-300";
                 
-                // 產生選項 HTML
                 let optionsHtml = `<div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">`;
                 q.options.forEach((opt, optIndex) => {
                     optionsHtml += `
@@ -253,7 +408,6 @@ Format example:
                 });
                 optionsHtml += `</div>`;
 
-                // 將題目準備給語音朗讀（過濾底線，並在後面加上選項的直接朗讀文字）
                 const speakFullText = buildFullSpeechText(q);
 
                 card.innerHTML = `
@@ -262,7 +416,6 @@ Format example:
                             <span class="text-xs font-bold tracking-wider text-sky-500 bg-sky-50 px-2.5 py-1 rounded-md">QUESTION ${qIndex + 1}</span>
                             <h3 class="text-xl font-semibold text-slate-800 pt-2 leading-relaxed font-serif">${escapeHTML(q.sentence)}</h3>
                         </div>
-                        <!-- 工具按鈕組 -->
                         <div class="flex items-center gap-2 shrink-0">
                             <button onclick="speakText('${escapeHTML(speakFullText)}')" class="p-2.5 bg-slate-50 hover:bg-sky-50 text-slate-400 hover:text-sky-500 rounded-xl border border-slate-200 transition-colors" title="慢速朗讀題目與選項 (女聲)">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -277,15 +430,12 @@ Format example:
                         </div>
                     </div>
 
-                    <!-- 預載隱藏的翻譯區塊 -->
                     <div id="trans-block-${qIndex}" class="hidden bg-emerald-50/50 border border-emerald-100 p-3.5 rounded-xl text-sm text-emerald-800 leading-relaxed">
                         💡 <strong>中文對照：</strong> ${escapeHTML(q.translation)}
                     </div>
 
-                    <!-- 選項區塊 -->
                     ${optionsHtml}
                     
-                    <!-- 判定回饋區塊 -->
                     <div id="feedback-${qIndex}" class="hidden text-sm font-semibold rounded-xl p-3 flex items-center gap-2"></div>
                 `;
                 
@@ -294,37 +444,30 @@ Format example:
         }
 
         /**
-         * 建立包含題目及四個選項的完整朗讀字串
+         * 建立包含題目及四個選項的完整朗讀字串 (移除 'blank'、'choices' 等發音，改用逗號、點號來停頓)
          */
         function buildFullSpeechText(q) {
-            // 將底線 _______ 更換為逗號，使 TTS 在該處產生自然短暫停頓，不再唸出 "blank" 
             const readableSentence = q.sentence.replace(/_+/g, ', ');
-            
-            // 拼裝選項：直接朗讀單字，各選項間以句號停頓
             const optionsVoiceList = q.options.map(opt => `${opt}.`).join(' ');
-            
-            // 完全移除 "Choices."，題目唸完後直接停頓並開始朗讀選項
             return `${readableSentence}. ... ${optionsVoiceList}`;
         }
 
         /**
-         * 提交答案並進行本地列表核對，同時搜集答錯的生詞
+         * 提交答案並核對，將答錯生詞送入獨立的「答錯生詞複習箱」
          */
         function submitQuiz() {
             let score = 0;
             let answeredAll = true;
-            let wrongWords = []; // 答錯單字收集器
+            let wrongWords = []; 
 
             quizData.forEach((q, qIndex) => {
                 const selectedInput = document.querySelector(`input[name="question-${qIndex}"]:checked`);
                 const card = document.getElementById(`q-card-${qIndex}`);
                 const feedback = document.getElementById(`feedback-${qIndex}`);
 
-                // 先行還原樣式
                 feedback.classList.add('hidden');
                 feedback.className = "text-sm font-semibold rounded-xl p-3 flex items-center gap-2";
 
-                // 將所有該題的選項 label 還原基礎色彩
                 const labels = card.querySelectorAll('label');
                 labels.forEach(l => l.className = "flex items-center gap-3 border border-slate-200 p-4 rounded-xl cursor-not-allowed transition-all");
                 card.querySelectorAll('input').forEach(i => i.disabled = true);
@@ -335,15 +478,12 @@ Format example:
 
                 const isCorrect = selectedInput && selectedInput.value === q.answer;
 
-                // 精細化處理選項視覺回報
                 labels.forEach(label => {
                     const radioVal = label.querySelector('input').value;
                     if (radioVal === q.answer) {
-                        // 正確答案一律顯示綠框與綠底
                         label.classList.add('border-emerald-500', 'bg-emerald-50/40', 'text-emerald-900');
                     }
                     if (selectedInput && radioVal === selectedInput.value && !isCorrect) {
-                        // 猜錯的選項顯示紅框與紅底
                         label.classList.add('border-rose-300', 'bg-rose-50/40', 'text-rose-900');
                     }
                 });
@@ -354,8 +494,6 @@ Format example:
                     feedback.classList.add('bg-emerald-50', 'text-emerald-700');
                     feedback.innerHTML = `✓ 答對了！答得漂亮。`;
                 } else {
-                    // 若答錯、或未作答，皆視為不熟，放入收集器
-                    // 使用當初生成時記錄的 target word
                     wrongWords.push(q.word);
 
                     feedback.classList.remove('hidden');
@@ -364,13 +502,12 @@ Format example:
                 }
             });
 
-            // 處理「答錯生詞自動收集箱」
+            // 處理與展示「答錯生詞自動收集箱」
             const wrongWordsPanel = document.getElementById('wrongWordsPanel');
             const wrongWordsArea = document.getElementById('wrongWordsArea');
             wrongWordsPanel.classList.remove('hidden');
 
             if (wrongWords.length > 0) {
-                // 將重複的生詞過濾掉，然後每行顯示一個
                 const uniqueWrong = [...new Set(wrongWords)];
                 wrongWordsArea.value = uniqueWrong.join('\n');
             } else {
@@ -378,40 +515,37 @@ Format example:
                 wrongWordsArea.placeholder = '太厲害了！本次測驗獲得滿分，沒有任何答錯的生詞！';
             }
 
-            // 更新得分顯示
+            // 展示得分板
             document.getElementById('scoreText').textContent = `${score} / ${quizData.length}`;
             document.getElementById('scoreBox').classList.remove('hidden');
             
-            // 關閉交卷鈕功能避免重複點擊
+            // 禁用交卷按鈕
             document.getElementById('submitBtn').disabled = true;
             document.getElementById('submitBtn').className = "bg-slate-300 text-slate-500 font-bold py-3 px-8 rounded-xl cursor-not-allowed";
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
 
             if (!answeredAll) {
-                showToast('您有部分題目未作答，已自動為您結算。未作答生詞已放入收集箱。');
+                showToast('您有部分題目未作答，未作答生詞已為您打包放入複習箱。');
             }
         }
 
         /**
-         * 複製收集箱中所有答錯的生詞
+         * 複製答錯複習箱內所有生詞
          */
         function copyWrongWords() {
             const area = document.getElementById('wrongWordsArea');
             if (!area.value) {
-                showToast('收集箱目前是空的，沒有生詞可以複製喔！');
+                showToast('複習箱目前是空的，沒有生詞可以複製喔！');
                 return;
             }
-            
             area.select();
-            area.setSelectionRange(0, 99999); // 針對手機載具的相容性
-            
+            area.setSelectionRange(0, 99999);
             try {
-                // 依據提示規範，在 iframe 限制環境下使用此命令複製
                 document.execCommand('copy');
-                showToast('已成功複製所有答錯的生詞！');
+                showToast('已複製所有答錯複習的生詞！');
             } catch (err) {
-                showToast('複製失敗，請手動全選複製。');
+                showToast('複製失敗，請手動複製。');
             }
         }
 
@@ -434,7 +568,6 @@ Format example:
 
         // --- 功能型輔助工具 (Utilities) ---
 
-        // 專為切換頁面設計
         function showPage(pageId) {
             document.getElementById('page-input').classList.add('hidden');
             document.getElementById('page-loading').classList.add('hidden');
@@ -482,10 +615,10 @@ Format example:
             
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'en-US';
-            utterance.rate = 0.55; // 語速慢，方便聽清楚每一個發音與連音細節
-            utterance.pitch = 1.15; // 微調頻率使其更像柔和女聲
+            utterance.rate = 0.55; // 慢速語音，方便聽清咬字
+            utterance.pitch = 1.15; // 柔和女聲頻率
 
-            // 嘗試鎖定系統預設的英文女聲
+            // 鎖定系統預設的英文女聲
             const voices = window.speechSynthesis.getVoices();
             const femaleVoice = voices.find(v => 
                 v.lang.startsWith('en') && 
@@ -496,7 +629,6 @@ Format example:
             window.speechSynthesis.speak(utterance);
         }
 
-        // 確保語音資源加載完畢
         if ('speechSynthesis' in window) {
             window.speechSynthesis.onvoiceschanged = () => {};
         }
