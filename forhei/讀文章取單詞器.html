@@ -38,6 +38,12 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .ai-loading { display: inline-block; width: 1rem; height: 1rem; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.75s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* 針對彈出面板中滾動條的美化 */
+        .panel-scroll::-webkit-scrollbar { width: 6px; }
+        .panel-scroll::-webkit-scrollbar-track { background: transparent; }
+        .panel-scroll::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.5); border-radius: 20px; }
+        .dark .panel-scroll::-webkit-scrollbar-thumb { background-color: rgba(75, 85, 99, 0.5); }
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-950 text-gray-800 dark:text-gray-100">
@@ -95,7 +101,7 @@
                 <textarea id="articleInput" class="w-full flex-grow p-5 border border-gray-200 dark:border-gray-800 rounded-2xl bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none text-lg resize-none" placeholder="在此貼上文章內容..."></textarea>
                 
                 <button onclick="startLearning()" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-lg transition transform hover:scale-[1.01] active:scale-95">
-                    🚀 開始分析文章
+                    🚀 開始 analysis 文章
                 </button>
             </div>
 
@@ -126,41 +132,47 @@
 
                 <div class="overflow-y-auto p-8 pb-48 no-scrollbar study-mode-word" id="studyContent"></div>
 
-                <!-- 單字操作面板 -->
-                <div id="wordPanel" class="absolute bottom-6 left-6 right-6 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 p-6 shadow-2xl transform translate-y-[150%] transition-transform duration-500 z-30 flex flex-col gap-4">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <!-- 單字操作面板 (優化：固定高度、內部滾動、永遠可見關閉按鈕) -->
+                <div id="wordPanel" class="absolute bottom-6 left-6 right-6 max-h-[50vh] bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 p-5 shadow-2xl transform translate-y-[150%] transition-transform duration-500 z-30 flex flex-col gap-3 overflow-hidden">
+                    <!-- 固定頭部 -->
+                    <div class="flex items-start justify-between gap-4 border-b dark:border-gray-700 pb-3 shrink-0">
                         <div class="flex-grow">
                             <div class="flex items-center gap-3 mb-1">
-                                <h3 id="currentWordText" class="text-3xl font-black text-blue-600 dark:text-blue-400 capitalize">Word</h3>
-                                <button onclick="playPronunciation()" class="text-xl">🔊</button>
+                                <h3 id="currentWordText" class="text-2xl font-black text-blue-600 dark:text-blue-400 capitalize">Word</h3>
+                                <button onclick="playPronunciation()" class="text-lg hover:scale-110 transition-transform">🔊</button>
                             </div>
-                            <p id="currentTranslation" class="text-lg font-medium text-gray-600 dark:text-gray-300 italic">翻譯中...</p>
+                            <p id="currentTranslation" class="text-base font-semibold text-gray-600 dark:text-gray-300 italic">翻譯中...</p>
                         </div>
-                        <div class="flex flex-wrap gap-2">
-                            <button onclick="aiExplainWord()" id="aiExplainBtn" class="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-6 py-3 rounded-2xl font-bold text-sm">✨ DeepSeek 深度解釋</button>
-                            <button onclick="addCurrentWordToVocab(event)" id="addVocabBtn" class="bg-slate-900 dark:bg-white dark:text-slate-900 text-white px-8 py-3 rounded-2xl font-bold text-sm">加入生詞本</button>
-                            <button onclick="closeWordPanel()" class="p-3 text-gray-400">✕</button>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button onclick="aiExplainWord()" id="aiExplainBtn" class="bg-purple-100 dark:bg-purple-900/40 hover:bg-purple-200 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 px-4 py-2 rounded-xl font-bold text-xs transition-colors">✨ 深度解釋</button>
+                            <button onclick="addCurrentWordToVocab(event)" id="addVocabBtn" class="bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-gray-100 text-white px-4 py-2 rounded-xl font-bold text-xs transition-colors">加入生詞本</button>
+                            <button onclick="closeWordPanel()" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg">✕</button>
                         </div>
                     </div>
-                    <div id="aiExplanationArea" class="border-t dark:border-gray-700 pt-4 hidden">
-                        <div id="aiExplanationContent" class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed"></div>
+                    <!-- 可滾動內容區 -->
+                    <div id="wordScrollContainer" class="overflow-y-auto flex-grow panel-scroll pr-1">
+                        <div id="aiExplanationArea" class="hidden">
+                            <div id="aiExplanationContent" class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed"></div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- 句子操作面板 -->
-                <div id="sentencePanel" class="absolute bottom-6 left-6 right-6 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 p-6 shadow-2xl transform translate-y-[150%] transition-transform duration-500 z-30 flex flex-col gap-4">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <!-- 句子操作面板 (優化：固定高度、內部滾動、永遠可見關閉按鈕) -->
+                <div id="sentencePanel" class="absolute bottom-6 left-6 right-6 max-h-[50vh] bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 p-5 shadow-2xl transform translate-y-[150%] transition-transform duration-500 z-30 flex flex-col gap-3 overflow-hidden">
+                    <!-- 固定頭部 -->
+                    <div class="flex items-start justify-between gap-4 border-b dark:border-gray-700 pb-3 shrink-0">
                         <div class="flex-grow">
                             <h4 class="text-xs font-bold text-gray-400 mb-1">已選取句子：</h4>
-                            <p id="currentSentenceText" class="text-base font-bold text-gray-800 dark:text-gray-100 leading-relaxed"></p>
+                            <p id="currentSentenceText" class="text-sm font-bold text-gray-800 dark:text-gray-100 leading-relaxed max-h-[4.5rem] overflow-y-auto panel-scroll pr-1"></p>
                         </div>
-                        <div class="flex flex-wrap gap-2 items-center">
-                            <button onclick="playSentencePronunciation()" class="bg-gray-100 dark:bg-gray-700 p-3 rounded-xl text-sm font-bold">🔊 朗讀句子</button>
-                            <button onclick="closeSentencePanel()" class="p-3 text-gray-400">✕</button>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <button onclick="playSentencePronunciation()" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 p-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1 text-gray-700 dark:text-gray-200">🔊 朗讀</button>
+                            <button onclick="closeSentencePanel()" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg">✕</button>
                         </div>
                     </div>
-                    <div class="border-t dark:border-gray-700 pt-4">
-                        <h4 class="text-sm font-bold text-blue-600 dark:text-blue-400 mb-2">✨ DeepSeek 句子翻譯與文法拆解：</h4>
+                    <!-- 可滾動內容區 -->
+                    <div class="overflow-y-auto flex-grow panel-scroll pr-1">
+                        <h4 class="text-xs font-bold text-blue-600 dark:text-blue-400 mb-2">✨ DeepSeek 句子翻譯與文法拆解：</h4>
                         <div id="sentenceTranslationContent" class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">AI 翻譯中...</div>
                     </div>
                 </div>
@@ -320,8 +332,16 @@
             const content = document.getElementById('aiExplanationContent');
             area.classList.remove('hidden');
             content.innerHTML = '<span class="ai-loading"></span> DeepSeek 深度分析中...';
+            
+            // 自動向下滾動到底部以確保能看到加載狀態
+            const scroller = document.getElementById('wordScrollContainer');
+            setTimeout(() => { scroller.scrollTop = scroller.scrollHeight; }, 100);
+
             const res = await callDeepSeek(`請解釋單字 "${currentWord}" 在以下句子中的精確意義與語境：\n"${currentContext}"\n\n請務必提供：\n1. 此處的中文翻譯\n2. 常見用法與搭配詞說明\n3. 一個生活化的英文例句與中文對照。`, "你是一位善於引導學生的初級英文老師，請用繁體中文回答。");
             content.innerText = res;
+            
+            // 翻譯完成後，再次滾動到頂部方便閱讀
+            setTimeout(() => { scroller.scrollTop = 0; }, 200);
         }
 
         // --- 學習模式切換 ---
@@ -422,6 +442,9 @@
             document.getElementById('wordPanel').classList.remove('translate-y-[150%]');
             document.getElementById('aiExplanationArea').classList.add('hidden');
             
+            // 重設滾動條位置
+            document.getElementById('wordScrollContainer').scrollTop = 0;
+            
             fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|zh-TW`)
                 .then(r => r.json()).then(d => {
                     currentMeaning = d.responseData.translatedText;
@@ -446,6 +469,9 @@
             const content = document.getElementById('sentenceTranslationContent');
             content.innerHTML = '<span class="ai-loading"></span> DeepSeek 正在全力翻譯與解析句子中...';
             document.getElementById('sentencePanel').classList.remove('translate-y-[150%]');
+
+            // 確保每次點擊新句子時，翻譯面板滾動到頂端
+            content.parentElement.scrollTop = 0;
 
             // 專為英文初學者設計的深度語法與翻譯提示詞 (Prompt)
             const prompt = `你是一位非常有耐心的英文老師。請將以下英文句子翻譯成流暢、自然的繁體中文。\n翻譯完後，請用最通俗易懂的語言，幫我指出這個句子「最重要的1-2個核心結構」或「關鍵文法點/單字搭配」，協助英文不好的學生理解其句型結構。\n\n句子："${currentSentence}"`;
