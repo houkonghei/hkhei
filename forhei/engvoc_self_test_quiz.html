@@ -297,13 +297,14 @@ Format example:
          * 建立包含題目及四個選項的完整朗讀字串
          */
         function buildFullSpeechText(q) {
-            // 將底線 _______ 更換成 "blank" 來朗讀
-            const readableSentence = q.sentence.replace(/_+/g, 'blank');
+            // 將底線 _______ 更換為逗號，使 TTS 在該處產生自然短暫停頓，不再唸出 "blank" 
+            const readableSentence = q.sentence.replace(/_+/g, ', ');
             
-            // 拼裝選項：直接朗讀單字，並以句號和空格在語音中形成短暫、舒適的停頓，避免 Option A/B/C/D 的干擾
+            // 拼裝選項：直接朗讀單字，各選項間以句號停頓
             const optionsVoiceList = q.options.map(opt => `${opt}.`).join(' ');
             
-            return `${readableSentence}. Choices. ... ${optionsVoiceList}`;
+            // 完全移除 "Choices."，題目唸完後直接停頓並開始朗讀選項
+            return `${readableSentence}. ... ${optionsVoiceList}`;
         }
 
         /**
@@ -433,6 +434,7 @@ Format example:
 
         // --- 功能型輔助工具 (Utilities) ---
 
+        // 專為切換頁面設計
         function showPage(pageId) {
             document.getElementById('page-input').classList.add('hidden');
             document.getElementById('page-loading').classList.add('hidden');
@@ -480,7 +482,7 @@ Format example:
             
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'en-US';
-            utterance.rate = 0.55; // 語速已再調慢（原 0.70），方便聽清楚每一個發音與連音細節
+            utterance.rate = 0.55; // 語速慢，方便聽清楚每一個發音與連音細節
             utterance.pitch = 1.15; // 微調頻率使其更像柔和女聲
 
             // 嘗試鎖定系統預設的英文女聲
