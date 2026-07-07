@@ -253,7 +253,7 @@ Format example:
                 });
                 optionsHtml += `</div>`;
 
-                // 將題目準備給語音朗讀（過濾底線，並在後面加上選項的朗讀文字）
+                // 將題目準備給語音朗讀（過濾底線，並在後面加上選項的直接朗讀文字）
                 const speakFullText = buildFullSpeechText(q);
 
                 card.innerHTML = `
@@ -300,11 +300,10 @@ Format example:
             // 將底線 _______ 更換成 "blank" 來朗讀
             const readableSentence = q.sentence.replace(/_+/g, 'blank');
             
-            // 拼裝 A, B, C, D 選項
-            const labels = ["Option A", "Option B", "Option C", "Option D"];
-            const optionsVoiceList = q.options.map((opt, i) => `${labels[i]}: ${opt}.`).join(' ');
+            // 拼裝選項：直接朗讀單字，並以句號和空格在語音中形成短暫、舒適的停頓，避免 Option A/B/C/D 的干擾
+            const optionsVoiceList = q.options.map(opt => `${opt}.`).join(' ');
             
-            return `${readableSentence}. Now, here are the choices. ${optionsVoiceList}`;
+            return `${readableSentence}. Choices. ... ${optionsVoiceList}`;
         }
 
         /**
@@ -481,7 +480,7 @@ Format example:
             
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'en-US';
-            utterance.rate = 0.70; // 慢速(0.70)方便聽清每個單詞的咬字
+            utterance.rate = 0.55; // 語速已再調慢（原 0.70），方便聽清楚每一個發音與連音細節
             utterance.pitch = 1.15; // 微調頻率使其更像柔和女聲
 
             // 嘗試鎖定系統預設的英文女聲
