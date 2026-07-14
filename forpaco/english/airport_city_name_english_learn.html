@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>亞洲航點英語學習地圖 - AirAsia & Asian Cities Explorer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* 自定義閃爍紅點樣式 */
+        .pulsing-marker {
+            background: #ef4444;
+            border-radius: 50%;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            animation: pulse 1.6s infinite;
+            border: 2px solid white;
+        }
+        @keyframes pulse {
+            0% {
+                transform: scale(0.9);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.8);
+            }
+            70% {
+                transform: scale(1.1);
+                box-shadow: 0 0 0 12px rgba(239, 68, 68, 0);
+            }
+            100% {
+                transform: scale(0.9);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+        /* 隱藏滾動條但保持功能 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col">
+
+    <!-- 導航欄 -->
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="bg-red-600 p-2.5 rounded-xl shadow-lg shadow-red-900/30">
+                <i data-lucide="plane" class="w-6 h-6 text-white animate-pulse"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wide text-white flex items-center gap-2">
+                    亞洲航點英語學習地圖
+                    <span class="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full">200+ 城市特訓</span>
+                </h1>
+                <p class="text-xs text-slate-400">專為旅遊愛好者設計 · 聽力、口語、地理全方位互動學習</p>
+            </div>
+        </div>
+        
+        <!-- 頂部快速控制 -->
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 bg-slate-700/50 px-3 py-1.5 rounded-lg border border-slate-600/50">
+                <i data-lucide="volume-2" class="w-4 h-4 text-slate-400"></i>
+                <span class="text-xs text-slate-300">女聲英語速度：</span>
+                <input id="rateSlider" type="range" min="0.5" max="1" step="0.05" value="0.7" class="w-20 accent-red-500 h-1 rounded-lg cursor-pointer">
+                <span id="rateValue" class="text-xs text-red-400 font-semibold w-8">0.7x</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主內容區 -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-[calc(100vh-73px)]">
+        
+        <!-- 左側：城市列表與學習面板 (5 cols) -->
+        <section class="lg:col-span-5 flex flex-col border-r border-slate-800 h-full overflow-hidden bg-slate-950">
+            
+            <!-- 分頁標籤 -->
+            <div class="flex border-b border-slate-800 bg-slate-900/50 p-2 gap-1">
+                <button onclick="switchTab('explore')" id="tab-explore" class="flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 bg-red-600 text-white">
+                    <i data-lucide="compass" class="w-4 h-4"></i>
+                    航點探索
+                </button>
+                <button onclick="switchTab('flashcard')" id="tab-flashcard" class="flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                    <i data-lucide="layers" class="w-4 h-4"></i>
+                    智能閃卡
+                </button>
+                <button onclick="switchTab('quiz')" id="tab-quiz" class="flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                    <i data-lucide="trophy" class="w-4 h-4"></i>
+                    挑戰測試
+                </button>
+            </div>
+
+            <!-- 標籤內容 1：城市探索 -->
+            <div id="content-explore" class="flex-1 flex flex-col overflow-hidden">
+                <!-- 搜索與篩選 -->
+                <div class="p-4 border-b border-slate-800 bg-slate-900/30 flex flex-col gap-3">
+                    <div class="relative">
+                        <i data-lucide="search" class="w-5 h-5 absolute left-3 top-3 text-slate-500"></i>
+                        <input id="searchInput" type="text" placeholder="搜尋城市名稱（例：Hong Kong / 香港）..." 
+                               class="w-full bg-slate-800 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-red-500 transition-all">
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-slate-400">
+                        <span>排序：由最熱門(常見)至較冷門</span>
+                        <div class="flex gap-2">
+                            <select id="filterType" class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-slate-300 focus:outline-none">
+                                <option value="all">全部城市 (200)</option>
+                                <option value="top50">最熱門 Top 50</option>
+                                <option value="mid">熱門 51-120</option>
+                                <option value="regional">特色航點 121-200</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 城市滾動列表 -->
+                <div id="cityList" class="flex-1 overflow-y-auto p-4 space-y-2.5 no-scrollbar">
+                    <!-- 動態載入 -->
+                </div>
+            </div>
+
+            <!-- 標籤內容 2：智能閃卡 -->
+            <div id="content-flashcard" class="hidden flex-1 flex flex-col p-6 justify-between overflow-y-auto">
+                <div class="text-center">
+                    <h3 class="text-lg font-bold text-white mb-1">精選高頻航點記憶卡</h3>
+                    <p class="text-xs text-slate-400">翻轉卡片學習英文發音與位置</p>
+                </div>
+
+                <!-- 卡片主體 -->
+                <div id="flashcard-container" onclick="flipCard()" class="relative w-full h-64 my-6 cursor-pointer group perspective">
+                    <div id="flashcard-inner" class="relative w-full h-full transition-transform duration-500 transform style-3d bg-slate-800 border border-slate-700 rounded-2xl flex flex-col items-center justify-center p-8 text-center shadow-2xl">
+                        <!-- 正面：英文 -->
+                        <div id="card-front" class="absolute inset-0 flex flex-col items-center justify-center p-6 backface-hidden">
+                            <span class="text-xs text-red-400 uppercase tracking-widest font-semibold mb-2">English Name</span>
+                            <h2 id="card-en" class="text-3xl font-extrabold text-white tracking-wide mb-4">Hong Kong</h2>
+                            <button onclick="event.stopPropagation(); playCurrentCardSpeech('en')" class="bg-red-500 hover:bg-red-600 p-3 rounded-full text-white shadow-lg transition-transform transform active:scale-95">
+                                <i data-lucide="volume-2" class="w-6 h-6"></i>
+                            </button>
+                            <p class="text-xs text-slate-500 mt-6 flex items-center gap-1"><i data-lucide="help-circle" class="w-3.5 h-3.5"></i> 點擊卡片顯示中文與地圖</p>
+                        </div>
+                        <!-- 反面：中文 + 地圖按鈕 -->
+                        <div id="card-back" class="absolute inset-0 flex flex-col items-center justify-center p-6 backface-hidden hidden opacity-0 transition-opacity duration-300">
+                            <span class="text-xs text-teal-400 uppercase tracking-widest font-semibold mb-2">中文名稱 (粵語發音)</span>
+                            <h2 id="card-zh" class="text-3xl font-bold text-white mb-4">香港</h2>
+                            <div class="flex gap-3">
+                                <button onclick="event.stopPropagation(); playCurrentCardSpeech('zh')" class="bg-teal-500 hover:bg-teal-600 px-4 py-2 rounded-lg text-xs font-semibold text-white flex items-center gap-1.5 shadow-md">
+                                    <i data-lucide="volume-1" class="w-4 h-4"></i> 粵語
+                                </button>
+                                <button onclick="event.stopPropagation(); locateCardOnMap()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-xs font-semibold text-slate-200 flex items-center gap-1.5 border border-slate-600">
+                                    <i data-lucide="map-pin" class="w-4 h-4 text-red-400"></i> 地圖定位
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 卡片控制按鈕 -->
+                <div class="flex items-center justify-between gap-4">
+                    <button onclick="prevCard()" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 py-3 rounded-xl font-medium transition-all text-sm flex items-center justify-center gap-2">
+                        <i data-lucide="arrow-left" class="w-4 h-4"></i> 上一個
+                    </button>
+                    <button onclick="nextCard()" class="flex-1 bg-red-600 hover:bg-red-500 py-3 rounded-xl font-medium transition-all text-sm flex items-center justify-center gap-2 text-white">
+                        下一個 <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 標籤內容 3：挑戰測試 -->
+            <div id="content-quiz" class="hidden flex-1 flex flex-col p-6 justify-between overflow-y-auto">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-white">常飛航點默記挑戰</h3>
+                        <span id="quizScore" class="bg-teal-500/20 text-teal-400 border border-teal-500/30 px-3 py-1 rounded-full text-xs font-bold">得分: 0 / 0</span>
+                    </div>
+
+                    <!-- 題型選擇 -->
+                    <div class="grid grid-cols-2 gap-2 mb-6">
+                        <button id="btn-quiz-listening" onclick="startQuiz('listening')" class="py-2.5 px-3 rounded-lg text-xs font-bold transition-all border border-red-500/50 bg-red-600/20 text-red-400">
+                            1. 聽力與翻譯測驗
+                        </button>
+                        <button id="btn-quiz-spelling" onclick="startQuiz('spelling')" class="py-2.5 px-3 rounded-lg text-xs font-bold transition-all border border-slate-700 bg-slate-800 text-slate-400">
+                            2. 拼寫與地理挑戰
+                        </button>
+                    </div>
+
+                    <!-- 測驗卡片 -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl mb-4">
+                        <!-- 聽力測驗介面 -->
+                        <div id="quiz-listening-view" class="space-y-4">
+                            <div class="text-center py-4">
+                                <p class="text-xs text-slate-500 mb-2">請聽英文發音，選出正確的城市中文名：</p>
+                                <button onclick="playQuizAudio()" class="mx-auto w-16 h-16 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center shadow-lg transition-transform active:scale-95">
+                                    <i data-lucide="volume-2" class="w-8 h-8"></i>
+                                </button>
+                                <p class="text-xs text-red-400 mt-2 font-medium">點擊播放慢速英語</p>
+                            </div>
+                            <div id="quiz-options" class="grid grid-cols-2 gap-3">
+                                <!-- 4個選項按鈕 -->
+                            </div>
+                        </div>
+
+                        <!-- 拼寫測驗介面 -->
+                        <div id="quiz-spelling-view" class="space-y-4 hidden">
+                            <div class="text-center">
+                                <span class="bg-slate-800 text-slate-400 px-3 py-1 rounded text-xs">請拼寫此城市的英文</span>
+                                <h3 id="spell-zh" class="text-3xl font-extrabold text-white mt-3">曼谷</h3>
+                                <p id="spell-hint" class="text-xs text-slate-500 mt-1">首字母提示: B...</p>
+                            </div>
+                            <div class="space-y-3">
+                                <input id="spellInput" type="text" placeholder="在此輸入英文名稱..." class="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-center text-lg font-semibold tracking-wider text-white focus:outline-none focus:border-teal-500">
+                                <button onclick="checkSpelling()" class="w-full bg-teal-600 hover:bg-teal-500 py-3 rounded-xl font-bold text-white text-sm transition-all shadow-lg">
+                                    提交答案
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <button onclick="skipQuiz()" class="flex-1 bg-slate-800 hover:bg-slate-700 py-2.5 rounded-lg text-xs font-semibold text-slate-400">
+                        跳過此題
+                    </button>
+                    <button onclick="resetQuizScore()" class="bg-slate-800 hover:bg-slate-700 p-2.5 rounded-lg text-slate-400" title="重置分數">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- 右側：地圖展示區與城市詳細資料 (7 cols) -->
+        <section class="lg:col-span-7 flex flex-col h-full relative">
+            <!-- 懸浮詳細資訊視窗 (Top bar/overlay) -->
+            <div id="detailsCard" class="absolute top-4 left-4 right-4 z-[1000] bg-slate-900/95 border border-slate-700/80 rounded-2xl p-4 shadow-2xl backdrop-blur-md flex flex-wrap items-center justify-between gap-4 transition-all">
+                <div class="flex items-center gap-4">
+                    <div class="bg-red-500/10 p-3 rounded-xl border border-red-500/20">
+                        <i data-lucide="navigation" class="w-7 h-7 text-red-500"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline gap-2">
+                            <h2 id="detail-zh" class="text-2xl font-black text-white">香港</h2>
+                            <h3 id="detail-en" class="text-lg font-bold text-slate-300">Hong Kong</h3>
+                        </div>
+                        <p id="detail-desc" class="text-xs text-slate-400 mt-1 max-w-md">亞洲國際大都市，亞洲航空極為繁忙的常規航點，以美食、購物和維多利亞港夜景聞名。</p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button onclick="playDetailSpeech('en')" class="bg-red-600 hover:bg-red-500 p-3 rounded-xl text-white shadow-lg flex items-center gap-2 text-xs font-bold transition-transform active:scale-95">
+                        <i data-lucide="volume-2" class="w-5 h-5"></i> 慢速英語
+                    </button>
+                    <button onclick="playDetailSpeech('zh')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 p-3 rounded-xl text-slate-200 flex items-center gap-2 text-xs font-bold transition-transform active:scale-95">
+                        <i data-lucide="volume-1" class="w-5 h-5"></i> 粵語
+                    </button>
+                </div>
+            </div>
+
+            <!-- 地圖本體 -->
+            <div id="map" class="w-full h-full bg-slate-950 z-10"></div>
+            
+            <!-- 底部地圖版權 & 控制提示 -->
+            <div class="absolute bottom-4 left-4 z-[1000] bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-lg text-[10px] text-slate-400 flex items-center gap-2 backdrop-blur-sm">
+                <i data-lucide="info" class="w-3.5 h-3.5 text-red-400"></i>
+                點擊地圖上的城市大頭針，可隨時發音並了解其英文名稱！
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 自定義Toast通知 -->
+    <div id="toast" class="fixed bottom-6 right-6 z-[9999] bg-slate-800 border border-slate-700 px-5 py-3.5 rounded-xl shadow-2xl text-sm font-semibold flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300">
+        <div id="toast-icon" class="p-1 rounded-full"></div>
+        <span id="toast-msg" class="text-slate-100"></span>
+    </div>
+
+    <script>
+        // --- 200 個亞洲精選航點數據列表 (依熱門、常見程度由高到低排序，包含精確經緯度與趣味備忘錄) ---
+        const cities = [
+            { id: 1, en: "Hong Kong", zh: "香港", lat: 22.3193, lng: 114.1694, tier: "top50", desc: "亞洲頂級金融與航空樞紐，以維多利亞港、美食與購物著稱。" },
+            { id: 2, en: "Kuala Lumpur", zh: "吉隆坡", lat: 3.1390, lng: 101.6869, tier: "top50", desc: "馬來西亞首都，AirAsia 最大的全球總部大本營。" },
+            { id: 3, en: "Bangkok", zh: "曼谷", lat: 13.7563, lng: 100.5018, tier: "top50", desc: "泰國首都，極受歡迎的旅遊聖地與廉航交通門戶。" },
+            { id: 4, en: "Singapore", zh: "新加坡", lat: 1.3521, lng: 103.8198, tier: "top50", desc: "花園城市，高端、整潔，是亞太地區的核心中轉機場。" },
+            { id: 5, en: "Taipei", zh: "台北", lat: 25.0330, lng: 121.5654, tier: "top50", desc: "台灣最繁華的都會區，以豐富的夜市小吃 and 101 大樓名揚海外。" },
+            { id: 6, en: "Tokyo", zh: "東京", lat: 35.6762, lng: 139.6503, tier: "top50", desc: "日本首都，潮流與傳統完美並存，自由行最熱門首選。" },
+            { id: 7, en: "Seoul", zh: "首爾", lat: 37.5665, lng: 126.9780, tier: "top50", desc: "韓國首都，美妝、潮流、韓流音樂與現代科技的發源地。" },
+            { id: 8, en: "Osaka", zh: "大阪", lat: 34.6937, lng: 135.5023, tier: "top50", desc: "關西第一大城，著名的天下廚房與環球影城所在地。" },
+            { id: 9, en: "Manila", zh: "馬尼拉", lat: 14.5995, lng: 120.9842, tier: "top50", desc: "菲律賓首都，熱情洋溢的群島中轉站與歷史交匯點。" },
+            { id: 10, en: "Phuket", zh: "普吉島", lat: 7.8804, lng: 98.3922, tier: "top50", desc: "安達曼海的明珠，泰國最大的海島，度假享樂天堂。" },
+            { id: 11, en: "Penang", zh: "檳城", lat: 5.4141, lng: 100.3288, tier: "top50", desc: "馬來西亞的美食之都，擁有喬治市壁畫及豐富的南洋歷史文化。" },
+            { id: 12, en: "Macau", zh: "澳門", lat: 22.1987, lng: 113.5439, tier: "top50", desc: "融合葡萄牙風情與現代娛樂，擁有世界遺產歷史城區。" },
+            { id: 13, en: "Beijing", zh: "北京", lat: 39.9042, lng: 116.4074, tier: "top50", desc: "中國首都，擁有故宮、長城等世界級宏偉歷史文化遺產。" },
+            { id: 14, en: "Shanghai", zh: "上海", lat: 31.2304, lng: 121.4737, tier: "top50", desc: "繁華的國際金融魔都，外灘萬國建築群與東方明珠璀璨奪目。" },
+            { id: 15, en: "Ho Chi Minh City", zh: "胡志明市", lat: 10.8231, lng: 106.6297, tier: "top50", desc: "越南最大城市，充滿法式風情與熱鬧的東南亞機車文化。" },
+            { id: 16, en: "Guangzhou", zh: "廣州", lat: 23.1291, lng: 113.2644, tier: "top50", desc: "南中國門戶，食在廣州，自古以來就是海上絲綢之路重鎮。" },
+            { id: 17, en: "Shenzhen", zh: "深圳", lat: 22.5431, lng: 114.0579, tier: "top50", desc: "中國科技創新矽谷，緊鄰香港，朝氣蓬勃的現代城市。" },
+            { id: 18, en: "Bali", zh: "峇里島", lat: -8.4095, lng: 115.1889, tier: "top50", desc: "印尼神話之島，以衝浪、精緻梯田與獨特的印度教神廟吸引全球遊客。" },
+            { id: 19, en: "Hanoi", zh: "河內", lat: 21.0285, lng: 105.8542, tier: "top50", desc: "越南首都，保留許多古街、湖泊與典雅的法式殖民建築。" },
+            { id: 20, en: "Chiang Mai", zh: "清邁", lat: 18.7883, lng: 98.9853, tier: "top50", desc: "泰北古城，氣候宜人，充滿文青氛圍與慢節奏生活風格。" },
+            { id: 21, en: "Kaohsiung", zh: "高雄", lat: 22.6273, lng: 120.3014, tier: "top50", desc: "台灣南部港口大城，駁二藝術特區與愛河景緻迷人。" },
+            { id: 22, en: "Sabah Kota Kinabalu", zh: "亞庇", lat: 5.9804, lng: 116.0735, tier: "top50", desc: "馬來西亞沙巴首府，著名的神山、世界級日落與浮潛天堂。" },
+            { id: 23, en: "Fukuoka", zh: "福岡", lat: 33.5904, lng: 130.4017, tier: "top50", desc: "日本九州最大城市，以豚骨拉麵、屋台小吃及友善好客聞名。" },
+            { id: 24, en: "Jakarta", zh: "雅加達", lat: -6.2088, lng: 106.8456, tier: "top50", desc: "印尼首都與最大政治經濟中心，展現充滿活力的都市群貌。" },
+            { id: 25, en: "Chengdu", zh: "成都", lat: 30.5728, lng: 104.0668, tier: "top50", desc: "天府之國，大熊貓的家鄉，以麻辣川菜與安逸茶館文化見長。" },
+            { id: 26, en: "Kunming", zh: "昆明", lat: 25.0422, lng: 102.7122, tier: "top50", desc: "雲南省會，四季如春的春城，是通往滇西、香格里拉的起點。" },
+            { id: 27, en: "Krabi", zh: "喀比", lat: 8.0863, lng: 98.9063, tier: "top50", desc: "泰國南部絕美海岸，以鬼斧神工的石灰岩懸崖與攀岩運動著名。" },
+            { id: 28, en: "Surabaya", zh: "泗水", lat: -7.2575, lng: 112.7521, tier: "top50", desc: "印尼第二大城市，歷史名城，通往婆羅摩火山的重要門戶。" },
+            { id: 29, en: "Da Nang", zh: "峴港", lat: 16.0544, lng: 108.2022, tier: "top50", desc: "越南中部海濱度假勝地，擁有超美的巴拿山黃金佛手橋。" },
+            { id: 30, en: "Nagoya", zh: "名古屋", lat: 35.1815, lng: 136.9066, tier: "top50", desc: "日本中部工業重鎮，擁有名古屋城、美食炸雞翅與味噌豬排。" },
+            { id: 31, en: "Okinawa", zh: "沖繩", lat: 26.2124, lng: 127.6809, tier: "top50", desc: "日本熱帶群島，水質極清澈，具獨特的琉球風情與水族館。" },
+            { id: 32, en: "Sydney", zh: "雪梨", lat: -33.8688, lng: 151.2093, tier: "top50", desc: "澳洲最大城市，標誌性的歌劇院與港灣大橋，南半球門戶。" },
+            { id: 33, en: "Melbourne", zh: "墨爾本", lat: -37.8136, lng: 144.9631, tier: "top50", desc: "澳洲文化之都，巷弄塗鴉、精品咖啡與文創產業蓬勃發展。" },
+            { id: 34, en: "Hangzhou", zh: "杭州", lat: 30.2741, lng: 120.1551, tier: "top50", desc: "江南名城，西湖美景如畫，傳遞極致的中式美學。" },
+            { id: 35, en: "Xi'an", zh: "西安", lat: 34.3416, lng: 108.9398, tier: "top50", desc: "十三朝古都，兵馬俑、古城牆所在地，中華文明的重要象徵。" },
+            { id: 36, en: "Cebu", zh: "宿霧", lat: 10.3157, lng: 123.8854, tier: "top50", desc: "菲律賓度假重鎮，與鯨鯊共游的熱門勝地。" },
+            { id: 37, en: "Boracay", zh: "長灘島", lat: 11.9719, lng: 121.9213, tier: "top50", desc: "菲律賓最美的粉狀白沙灘，世界知名水上娛樂海島。" },
+            { id: 38, en: "Siem Reap", zh: "暹粒", lat: 13.3633, lng: 103.8564, tier: "top50", desc: "柬埔寨古城，世界七大奇景之一『吳哥窟』的所在地。" },
+            { id: 39, en: "Nha Trang", zh: "芽莊", lat: 12.2388, lng: 109.1967, tier: "top50", desc: "越南優質的海灘度假勝地，以泥漿浴、離島浮潛聞名。" },
+            { id: 40, en: "Langkawi", zh: "蘭卡威", lat: 6.3500, lng: 99.8000, tier: "top50", desc: "馬來西亞免稅神話之島，擁有超長的天空之橋與紅樹林生態。" },
+            { id: 41, en: "Kathmandu", zh: "加德滿都", lat: 27.7172, lng: 85.3240, tier: "top50", desc: "尼泊爾首都，喜馬拉雅山脈下的神秘佛國，登山者的天堂。" },
+            { id: 42, en: "Male", zh: "馬累", lat: 4.1755, lng: 73.5093, tier: "top50", desc: "馬爾地夫首都，進入印度洋群島一島一別墅的天堂入口。" },
+            { id: 43, en: "Colombo", zh: "可倫坡", lat: 6.9271, lng: 79.8612, tier: "top50", desc: "斯里蘭卡最大港口城市，融合英式殖民與佛教文化風情。" },
+            { id: 44, en: "New Delhi", zh: "新德里", lat: 28.6139, lng: 77.2090, tier: "top50", desc: "印度首都，歷史古蹟、古老廟宇與繽紛市集編織奇幻面紗。" },
+            { id: 45, en: "Mumbai", zh: "孟買", lat: 19.0760, lng: 72.8777, tier: "top50", desc: "印度金融與娛樂中心，著名的寶萊塢電影大本營。" },
+            { id: 46, en: "Nanning", zh: "南寧", lat: 22.8170, lng: 108.3665, tier: "top50", desc: "綠城南寧，鄰近東南亞，是中國與東盟經盟往來的重地。" },
+            { id: 47, en: "Chongqing", zh: "重慶", lat: 29.5630, lng: 106.5516, tier: "top50", desc: "奇幻的 3D 魔幻山城，以九宮格麻辣火鍋、洪崖洞夜景名動全國。" },
+            { id: 48, en: "Sapporo", zh: "札幌", lat: 43.0618, lng: 141.3545, tier: "top50", desc: "日本北海道首府，雪祭、白色戀人巧克力與超美味螃蟹盛宴。" },
+            { id: 49, en: "Sendai", zh: "仙台", lat: 38.2682, lng: 140.8694, tier: "top50", desc: "日本東北第一大城，有著『杜之都』美譽，牛舌美食不容錯過。" },
+            { id: 50, en: "Perth", zh: "伯斯", lat: -31.9505, lng: 115.8605, tier: "top50", desc: "西澳最大城市，地中海氣候，被譽為世界上最孤獨的陽光城市。" },
+
+            // 中等熱門 51-120
+            { id: 51, en: "Luang Prabang", zh: "龍坡邦", lat: 19.8833, lng: 102.1333, tier: "mid", desc: "寮國清晨僧侶化緣歷史名城，已被列為世界文化遺產。" },
+            { id: 52, en: "Yangon", zh: "仰光", lat: 16.8661, lng: 96.1951, tier: "mid", desc: "緬甸最大門戶與舊都，雄偉壯麗的仰光大金塔為其象徵。" },
+            { id: 53, en: "Mandalay", zh: "曼德勒", lat: 21.9588, lng: 96.0891, tier: "mid", desc: "緬甸古皇城，烏本橋日落極致浪漫，是佛教文化的重鎮。" },
+            { id: 54, en: "Phnom Penh", zh: "金邊", lat: 11.5564, lng: 104.9282, tier: "mid", desc: "柬埔寨首都，湄公河畔風光旖旎，帶有悲壯歷史的皇宮之城。" },
+            { id: 55, en: "Vientiane", zh: "萬象", lat: 17.9757, lng: 102.6331, tier: "mid", desc: "寮國首都，坐落於湄公河畔，氣氛慵懶悠閒，凱旋門最著名。" },
+            { id: 56, en: "Medan", zh: "棉蘭", lat: 3.5952, lng: 98.6722, tier: "mid", desc: "蘇門答臘最大都會，是探索野生紅毛猩猩與多巴湖的基地。" },
+            { id: 57, en: "Yogyakarta", zh: "日惹", lat: -7.7956, lng: 110.3695, tier: "mid", desc: "印尼爪哇文化靈魂，擁有世界最大佛教遺跡婆羅浮屠。" },
+            { id: 58, en: "Bandung", zh: "萬隆", lat: -6.9175, lng: 107.6191, tier: "mid", desc: "印尼火山之城，氣候涼爽，有著爪哇巴黎的美稱，深受購物客喜愛。" },
+            { id: 59, en: "Johor Bahru", zh: "新山", lat: 1.4854, lng: 103.7618, tier: "mid", desc: "大馬南部與新加坡接壤的門戶，樂高樂園吸引許多家庭。" },
+            { id: 60, en: "Kuching", zh: "古晉", lat: 1.5533, lng: 110.3592, tier: "mid", desc: "砂拉越貓城，寧靜溫馨，歷史悠久的河畔步道風光迷人。" },
+            { id: 61, en: "Miri", zh: "美里", lat: 4.3995, lng: 113.9914, tier: "mid", desc: "砂拉越第二大城，探索世界遺產姆魯山國家公園巨型洞穴的樞紐。" },
+            { id: 62, en: "Sibu", zh: "詩巫", lat: 2.3000, lng: 111.8167, tier: "mid", desc: "馬來西亞福州人聚集地，拉讓江畔充滿濃厚在地生活氣息。" },
+            { id: 63, en: "Sandakan", zh: "山打根", lat: 5.8394, lng: 118.1172, tier: "mid", desc: "大自然與生態愛好者的天堂，看海龜與人猿的聖地。" },
+            { id: 64, en: "Tawau", zh: "斗湖", lat: 4.2444, lng: 117.8911, tier: "mid", desc: "沙巴東海岸城市，也是通往潛水聖地西巴丹島的海空大門。" },
+            { id: 65, en: "Labuan", zh: "納閩", lat: 5.2767, lng: 115.2417, tier: "mid", desc: "大馬聯邦直轄區，免稅島，亦是南中國海著名的避稅與金融港。" },
+            { id: 66, en: "Hat Yai", zh: "合艾", lat: 7.0084, lng: 100.4747, tier: "mid", desc: "泰南最大商業中心，馬來西亞人最愛造訪的泰國美食購物之都。" },
+            { id: 67, en: "Surat Thani", zh: "素叻他尼", lat: 9.1400, lng: 99.3331, tier: "mid", desc: "泰國南部大省，是前往蘇美島、帕岸島的重要船運中轉樞紐。" },
+            { id: 68, en: "Udon Thani", zh: "烏隆他尼", lat: 17.4138, lng: 102.7872, tier: "mid", desc: "泰國東北門戶，著名的紅蓮花海景觀在冬季極為浪漫。" },
+            { id: 69, en: "Khon Kaen", zh: "孔敬", lat: 16.4396, lng: 102.8274, tier: "mid", desc: "泰國東北依善地區的教育與商業核心，恐龍化石發掘地。" },
+            { id: 70, en: "Nakhon Si Thammarat", zh: "洛坤", lat: 8.4333, lng: 99.9667, tier: "mid", desc: "泰南千年古城，具有濃厚的佛教與傳統影偶文化底蘊。" },
+            { id: 71, en: "Dalat", zh: "大叻", lat: 11.9404, lng: 108.4583, tier: "mid", desc: "越南高山避暑小城，四季涼爽，法式洋房與高山湖泊十分典雅。" },
+            { id: 72, en: "Can Tho", zh: "芹苴", lat: 10.0452, lng: 105.7469, tier: "mid", desc: "湄公河三角洲中心，有名的丐Rang水上市場非常壯觀。" },
+            { id: 73, en: "Haiphong", zh: "海防", lat: 20.8449, lng: 106.6881, tier: "mid", desc: "越南北部工業大港，鄰近著名的下龍灣，紅花楹樹開滿城區。" },
+            { id: 74, en: "Nanning", zh: "南寧", lat: 22.8170, lng: 108.3665, tier: "mid", desc: "廣西壯族自治區首府，綠意盎然，是中國與東協貿易樞紐。" },
+            { id: 75, en: "Guilin", zh: "桂林", lat: 25.2736, lng: 110.2901, tier: "mid", desc: "桂林山水甲天下，灕江兩岸的喀斯特地貌如夢似幻。" },
+            { id: 76, en: "Shantou", zh: "汕頭", lat: 23.3541, lng: 116.6818, tier: "mid", desc: "潮汕文化與潮州菜大本營，眾多華僑的故鄉。" },
+            { id: 77, en: "Xiamen", zh: "廈門", lat: 24.4798, lng: 118.0894, tier: "mid", desc: "海濱文青城市，鼓浪嶼的老別墅與悠閒的海風聞名遐邇。" },
+            { id: 78, en: "Quanzhou", zh: "泉州", lat: 24.8741, lng: 118.6759, tier: "mid", desc: "宋元時期世界第一大港，海上絲綢之路起點，閩南佛國文化保存良好。" },
+            { id: 79, en: "Wuhan", zh: "武漢", lat: 30.5928, lng: 114.3055, tier: "mid", desc: "九省通衢，長江大橋與櫻花季、黃鶴樓為城市特色。" },
+            { id: 80, en: "Changsha", zh: "長沙", lat: 28.2282, lng: 112.9388, tier: "mid", desc: "網紅美食之城，著名的茶顏悅色奶茶與香辣湘菜大本營。" },
+            { id: 81, en: "Macau", zh: "澳門", lat: 22.1987, lng: 113.5439, tier: "mid", desc: "多元歷史交融地，大三巴牌坊、葡撻與國際度假酒店密佈。" },
+            { id: 82, en: "Jeju", zh: "濟州島", lat: 33.4996, lng: 126.5312, tier: "mid", desc: "韓國度假蜜月島，壯麗的火山熔岩結構、黑豬肉極具特色。" },
+            { id: 83, en: "Busan", zh: "釜山", lat: 35.1796, lng: 129.0756, tier: "mid", desc: "韓國最大港口都市，海雲台沙灘、甘川洞文化村風光優美。" },
+            { id: 84, en: "Hiroshima", zh: "廣島", lat: 34.3853, lng: 132.4553, tier: "mid", desc: "日本歷史和平之城，嚴島神社水中紅色大鳥居是奇景。" },
+            { id: 85, en: "Okinawa Naha", zh: "那霸", lat: 26.2124, lng: 127.6809, tier: "mid", desc: "沖繩門戶，漫步國際通、造訪首里城世界文化遺產。" },
+            { id: 86, en: "Kochi", zh: "高知", lat: 33.5597, lng: 133.5311, tier: "mid", desc: "日本四國名城，阪本龍馬的故鄉，以鮮美烤鰹魚出名。" },
+            { id: 87, en: "Miyazaki", zh: "宮崎", lat: 31.9077, lng: 131.4202, tier: "mid", desc: "日本南九洲棕櫚樹環繞的海濱城市，充滿陽光度假風情。" },
+            { id: 88, en: "Kumamoto", zh: "熊本", lat: 32.7898, lng: 130.7417, tier: "mid", desc: "熊本熊的家鄉，擁有壯麗的熊本城與阿蘇火山。" },
+            { id: 89, en: "Gold Coast", zh: "黃金海岸", lat: -28.0167, lng: 153.4000, tier: "mid", desc: "澳洲衝浪度假首選，綿延數十公里的金黃色細沙沙灘。" },
+            { id: 90, en: "Brisbane", zh: "布里斯本", lat: -27.4698, lng: 153.0251, tier: "mid", desc: "昆士蘭州首府，陽光充沛，生活步調悠閒宜人。" },
+            { id: 91, en: "Adelaide", zh: "阿德雷德", lat: -34.9285, lng: 138.6007, tier: "mid", desc: "澳洲南部優雅的文化藝術之都，附近Barossa產出世界頂級葡萄酒。" },
+            { id: 92, en: "Cairns", zh: "凱恩斯", lat: -16.9186, lng: 145.7781, tier: "mid", desc: "大堡礁與遠古熱帶雨林的入口，充滿野性冒險活力。" },
+            { id: 93, en: "Auckland", zh: "奧克蘭", lat: -36.8485, lng: 174.7633, tier: "mid", desc: "紐西蘭最大城市，千帆之都，周邊有豐富火山與酒莊地貌。" },
+            { id: 94, en: "Christchurch", zh: "基督城", lat: -43.5320, lng: 172.6362, tier: "mid", desc: "紐西蘭南島花園城市，充滿英式懷舊風情。" },
+            { id: 95, en: "Kathmandu", zh: "加德滿都", lat: 27.7172, lng: 85.3240, tier: "mid", desc: "尼泊爾古色古香首都，杜巴廣場歷史氣息濃厚。" },
+            { id: 96, en: "Dhaka", zh: "達卡", lat: 23.8103, lng: 90.4125, tier: "mid", desc: "孟加拉首都，歷史老清真寺林立，人口密度極高、活力無窮。" },
+            { id: 97, en: "Chennai", zh: "清奈", lat: 13.0827, lng: 80.2707, tier: "mid", desc: "印度南部第一門戶，古典音樂、精美神廟與長沙灘特色鮮明。" },
+            { id: 98, en: "Bangalore", zh: "班加羅爾", lat: 12.9716, lng: 77.5946, tier: "mid", desc: "印度矽谷，氣候涼爽宜人，是花園城市及高新科技中心。" },
+            { id: 99, en: "Kochi", zh: "科欽", lat: 9.9312, lng: 76.2673, tier: "mid", desc: "印度喀拉拉邦的水鄉，著名的中國漁網與中世紀歐洲風格交融。" },
+            { id: 100, en: "Kolkata", zh: "加爾各答", lat: 22.5726, lng: 88.3639, tier: "mid", desc: "印度文化與藝術之都，充滿斑駁的英屬印度維多利亞風格歷史印記。" },
+            { id: 101, en: "Tiruchirappalli", zh: "特里奇", lat: 10.7905, lng: 78.7047, tier: "mid", desc: "印度南部古老神廟之城，宏偉的岩石古堡最吸睛。" },
+            { id: 102, en: "Amritsar", zh: "阿姆利則", lat: 31.6340, lng: 74.8723, tier: "mid", desc: "錫克教聖城，金碧輝煌的黃金廟令人震撼，教友熱情好客。" },
+            { id: 103, en: "Hyderabad", zh: "海德拉巴", lat: 17.3850, lng: 78.4867, tier: "mid", desc: "珍珠之城，以皇家宮殿、高科技IT園區與香濃的Biryani香米飯著稱。" },
+            { id: 104, en: "Jaipur", zh: "齋浦爾", lat: 26.9124, lng: 75.7873, tier: "mid", desc: "印度粉紅之城，宏偉的風之宮殿與琥珀堡為必去打卡點。" },
+            { id: 105, en: "Visakhapatnam", zh: "維薩卡帕特南", lat: 17.6868, lng: 83.2185, tier: "mid", desc: "印度東海岸港口大城市，風景秀美的沙灘與潛艇博物館特色獨具。" },
+            { id: 106, en: "Goa", zh: "果阿", lat: 15.2993, lng: 74.1240, tier: "mid", desc: "印度的葡萄牙風情海灘，派對勝地，擁有古老白色天主教教堂。" },
+            { id: 107, en: "Male", zh: "馬累", lat: 4.1755, lng: 73.5093, tier: "mid", desc: "地中海般的湛藍海水，馬爾地夫首都，感受精巧迷你小島。" },
+            { id: 108, en: "Lhasa", zh: "拉薩", lat: 29.6524, lng: 91.1172, tier: "mid", desc: "日光之城，宏偉的布達拉宮是藏傳佛教與西藏高原文化核心。" },
+            { id: 109, en: "Urumqi", zh: "烏魯木齊", lat: 43.8284, lng: 87.6168, tier: "mid", desc: "世界上距離海洋最遠的內陸大城，新疆多元文化與大盤雞美食大本營。" },
+            { id: 110, en: "Sanya", zh: "三亞", lat: 18.2528, lng: 109.5119, tier: "mid", desc: "中國的夏威夷，四季溫暖、椰影婆娑，是過冬度假天堂。" },
+            { id: 111, en: "Haikou", zh: "海口", lat: 20.0173, lng: 110.3492, tier: "mid", desc: "海南省會，椰城歷史底蘊豐厚，老騎樓老街極富南洋風情。" },
+            { id: 112, en: "Ningbo", zh: "寧波", lat: 29.8683, lng: 121.5440, tier: "mid", desc: "書藏古今港通天下，歷史悠久的天一閣藏書樓是重要景點。" },
+            { id: 113, en: "Wenzhou", zh: "溫州", lat: 27.9943, lng: 120.6986, tier: "mid", desc: "著名商賈之鄉，秀美山水如雁蕩山藏於溫潤之州中。" },
+            { id: 114, en: "Tianjin", zh: "天津", lat: 39.3434, lng: 117.3616, tier: "mid", desc: "充滿歐陸近代租界建築的相聲名城，著名的海河夜景與天津之眼摩天輪。" },
+            { id: 115, en: "Dalian", zh: "大連", lat: 38.9140, lng: 121.6147, tier: "mid", desc: "浪漫之都，東北海濱明珠，擁有極富異國情調的廣場與海濱公路。" },
+            { id: 116, en: "Qingdao", zh: "青島", lat: 36.0671, lng: 120.3826, tier: "mid", desc: "紅瓦綠樹碧海藍天，青島啤酒大本營，歐風建築極具特色。" },
+            { id: 117, en: "Shenyang", zh: "瀋陽", lat: 41.8057, lng: 123.4315, tier: "mid", desc: "滿族歷史發源地，著名的瀋陽故宮與大帥府，東北重工業起點。" },
+            { id: 118, en: "Harbin", zh: "哈爾濱", lat: 45.8038, lng: 126.5350, tier: "mid", desc: "冰城，充滿俄羅斯風情的中央大街與精雕細琢的冬季冰雪大世界。" },
+            { id: 119, en: "Changchun", zh: "長春", lat: 43.8170, lng: 125.3235, tier: "mid", desc: "汽車城與電影摇籃，淨月潭森林公園清幽秀美。" },
+            { id: 120, en: "Shijiazhuang", zh: "石家莊", lat: 38.0422, lng: 114.5143, tier: "mid", desc: "河北省會，臨近天下奇觀蒼岩山與趙州橋。" },
+
+            // 特色與更小、少見城市 121-200
+            { id: 121, en: "Surat Thani", zh: "素叻他尼", lat: 9.1400, lng: 99.3331, tier: "regional", desc: "椰林大省，通往蘇美島滿月派對的樞紐轉運站。" },
+            { id: 122, en: "Bacolod", zh: "巴科羅", lat: 10.6765, lng: 122.9509, tier: "regional", desc: "菲律賓微笑之城，著名的微笑面具節歡樂無比。" },
+            { id: 123, en: "Iloilo", zh: "怡朗", lat: 10.7202, lng: 122.5621, tier: "regional", desc: "菲律賓歷史名城，保留完好的西班牙古教堂與老豪宅。" },
+            { id: 124, en: "Davao", zh: "達沃", lat: 7.1907, lng: 125.4553, tier: "regional", desc: "棉蘭老島最大安全城市，盛產榴槤，是食客狂歡地。" },
+            { id: 125, en: "Tacloban", zh: "塔克洛班", lat: 11.2444, lng: 125.0039, tier: "regional", desc: "雷伊泰島歷史名港，二戰麥克阿瑟將軍登陸重歸地。" },
+            { id: 126, en: "Zamboanga", zh: "三寶顏", lat: 6.9214, lng: 122.0790, tier: "regional", desc: "亞洲拉丁之城，其獨特方言保留大量西班牙語彙。" },
+            { id: 127, en: "Puerto Princesa", zh: "公主港", lat: 9.7392, lng: 118.7353, tier: "regional", desc: "巴拉望首府，擁有令人驚嘆的世界奇觀地下河公園。" },
+            { id: 128, en: "Kalibo", zh: "卡利博", lat: 11.7062, lng: 122.3653, tier: "regional", desc: "通往長灘島的第二門戶，一月的阿提阿提漢狂歡節遠近聞名。" },
+            { id: 129, en: "Laoag", zh: "佬沃", lat: 18.1960, lng: 120.5927, tier: "regional", desc: "呂宋島北部歷史重鎮，以巴洛克風格的老教堂與沙丘吉普車名揚。" },
+            { id: 130, en: "Dumaguete", zh: "杜馬蓋地", lat: 9.3068, lng: 123.3080, tier: "regional", desc: "菲律賓大學城，溫馨儒雅，是看海龜與小丑魚的潛水聖地。" },
+            { id: 131, en: "Manado", zh: "美娜多", lat: 1.4722, lng: 124.8413, tier: "regional", desc: "印尼椰風大港，世界前五的布納肯潛水天堂，海洋生態極豐富。" },
+            { id: 132, en: "Makassar", zh: "馬卡薩", lat: -5.1477, lng: 119.4327, tier: "regional", desc: "蘇拉威西最大門戶，著名的荷蘭鹿特丹堡保留完好。" },
+            { id: 133, en: "Balikpapan", zh: "巴里巴伴", lat: -1.2654, lng: 116.8312, tier: "regional", desc: "印尼婆羅洲石油重鎮，靠近印尼規劃中的未來新首都。" },
+            { id: 134, en: "Banjarmasin", zh: "馬辰", lat: -3.3167, lng: 114.5900, tier: "regional", desc: "千河之城，古老熱鬧的水上市場極具印尼水鄉魅力。" },
+            { id: 135, en: "Pontianak", zh: "坤甸", lat: -0.0263, lng: 109.3425, tier: "regional", desc: "赤道之城，建有宏偉赤道紀念碑，大馬、華人文化交匯。" },
+            { id: 136, en: "Palembang", zh: "巨港", lat: -2.9909, lng: 104.7566, tier: "regional", desc: "蘇門答臘古老皇城，古室利佛逝王國的中心，大橋夜景優美。" },
+            { id: 137, en: "Pekanbaru", zh: "北干巴魯", lat: 0.5070, lng: 101.4478, tier: "regional", desc: "蘇門答臘油田城市，清真寺建築融入馬來伊斯蘭美學。" },
+            { id: 138, en: "Banda Aceh", zh: "班達亞齊", lat: 5.5483, lng: 95.3238, tier: "regional", desc: "印尼最西端，著名的亞齊大清真寺與壯觀的海嘯博物館。" },
+            { id: 139, en: "Lombok", zh: "龍目島", lat: -8.6500, lng: 116.3500, tier: "regional", desc: "印尼峇里島旁的寧靜天堂，擁有林賈尼神聖活火山。" },
+            { id: 140, en: "Solo City", zh: "梭羅", lat: -7.5755, lng: 110.8243, tier: "regional", desc: "爪哇皇城文化重地，以傳統蠟染藝術、古典舞蹈見長。" },
+            { id: 141, en: "Semarang", zh: "三寶瓏", lat: -6.9932, lng: 110.4203, tier: "regional", desc: "紀念鄭和下西洋的名城，保存極佳的千門之屋與中式老廟。" },
+            { id: 142, en: "Trang", zh: "董里", lat: 7.5564, lng: 99.6114, tier: "regional", desc: "泰國南部低調秘境，翡翠洞與豐富道地泰式早茶最迷人。" },
+            { id: 143, en: "Ranong", zh: "拉廊", lat: 9.9658, lng: 98.6348, tier: "regional", desc: "泰緬邊界山城，著名的天然溫泉與雨季翠綠山嵐。" },
+            { id: 144, en: "Chumphon", zh: "春蓬", lat: 10.4930, lng: 99.1800, tier: "regional", desc: "泰國南部海濱，盛產椰子、水果，是通向龜島潛水的中轉站。" },
+            { id: 145, en: "Hua Hin", zh: "華欣", lat: 12.5684, lng: 99.9577, tier: "regional", desc: "泰國皇家避暑勝地，擁有典雅精美百年木造老車站與寧靜海灘。" },
+            { id: 146, en: "Pattaya", zh: "芭達雅", lat: 12.9236, lng: 100.8824, tier: "regional", desc: "不夜之城，海濱派對天堂與超大水上樂園，離曼谷僅兩小時。" },
+            { id: 147, en: "Pai", zh: "拜縣", lat: 19.3582, lng: 98.4367, tier: "regional", desc: "泰北山谷童話小鎮，田園吊橋、峽谷與溫泉吸引無數背包客。" },
+            { id: 148, en: "Sukhothai", zh: "素可泰", lat: 17.0078, lng: 99.8262, tier: "regional", desc: "泰國第一個王朝的古都遺址，在護城河落日下極其莊嚴宏偉。" },
+            { id: 149, en: "Buriram", zh: "武里南", lat: 15.0013, lng: 103.1116, tier: "regional", desc: "泰國東北運動名城，擁有世界級賽車道與輝煌的高棉古石廟。" },
+            { id: 150, en: "Phrae", zh: "帕府", lat: 18.1444, lng: 100.1408, tier: "regional", desc: "泰北極幽靜木造城，以柚木大宅、藍染工藝、大自然生態見稱。" },
+            { id: 151, en: "Nan", zh: "難府", lat: 18.7831, lng: 100.7816, tier: "regional", desc: "泰寮邊界幽靜古城，寺廟壁畫『愛的低語』吸引各國文青。" },
+            { id: 152, en: "Loei", zh: "黎府", lat: 17.4890, lng: 101.7223, tier: "regional", desc: "泰國的高山清涼省份，著名的鬼臉節狂歡與Phu Kradueng大懸崖。" },
+            { id: 153, en: "Mae Hong Son", zh: "湄宏順", lat: 19.2985, lng: 97.9620, tier: "regional", desc: "泰國與緬甸交界的迷霧山城，湖光山色令人洗滌心靈。" },
+            { id: 154, en: "Sakon Nakhon", zh: "沙功那空", lat: 17.1612, lng: 104.1486, tier: "regional", desc: "泰國東北佛教高僧修行地，擁有神秘美麗的野蓮花大湖。" },
+            { id: 155, en: "Roi Et", zh: "黎逸", lat: 16.0538, lng: 103.6521, tier: "regional", desc: "泰國東北大平原，巨型立佛與造型奇特的環形大塔極為雄偉。" },
+            { id: 156, en: "Alor Setar", zh: "亞羅士打", lat: 6.1248, lng: 100.3678, tier: "regional", desc: "吉打州首府，米之鄉，擁有極其精美的百年泰式、回式古建築。" },
+            { id: 157, en: "Kuala Terengganu", zh: "瓜拉登嘉樓", lat: 5.3302, lng: 103.1408, tier: "regional", desc: "登嘉樓首府，迷人的唐人街與進入絕美熱浪島的門戶港口。" },
+            { id: 158, en: "Kota Bharu", zh: "哥打巴魯", lat: 6.1254, lng: 102.2386, tier: "regional", desc: "吉蘭丹州首府，擁有濃郁的馬來傳統皮影戲與風箏手工藝。" },
+            { id: 159, en: "Kuantan", zh: "關丹", lat: 3.8077, lng: 103.3260, tier: "regional", desc: "彭亨州首府，東海岸純樸的海濱，出產著名的手工編織巴迪布。" },
+            { id: 160, en: "Ipoh", zh: "怡保", lat: 4.5921, lng: 101.0901, tier: "regional", desc: "山城怡保，以白咖啡、美味芽菜雞、宏偉石灰岩極樂洞著稱。" },
+            { id: 161, en: "Melaka", zh: "馬六甲", lat: 2.1896, lng: 102.2501, tier: "regional", desc: "世界歷史遺產名城，荷蘭紅屋、娘惹文化與雞場街最有名。" },
+            { id: 162, en: "Bintulu", zh: "民都魯", lat: 3.1670, lng: 113.0333, tier: "regional", desc: "砂拉越石油天然氣重鎮，鄰近的沙米拉勞國家公園生態原始。" },
+            { id: 163, en: "Tarakan", zh: "打拉根", lat: 3.3000, lng: 117.6333, tier: "regional", desc: "印尼北加里曼丹群島關卡，盛產美味大螃蟹，也是歷史戰場。" },
+            { id: 164, en: "Banyuwangi", zh: "外南夢", lat: -8.2192, lng: 114.3691, tier: "regional", desc: "爪哇最東端，神秘的伊真藍色火焰活火山徒步大本營。" },
+            { id: 165, en: "Silangit", zh: "西蘭吉特", lat: 2.2511, lng: 98.9836, tier: "regional", desc: "進入東南亞最大高山火山湖——多巴湖（Lake Toba）的快捷門戶。" },
+            { id: 166, en: "Belitung", zh: "勿里洞島", lat: -2.8500, lng: 107.9000, tier: "regional", desc: "擁有夢幻巨大白花崗岩巨石沙灘的低調避世海島，水質極清澈。" },
+            { id: 167, en: "Phu Quoc", zh: "富國島", lat: 10.2625, lng: 103.9634, tier: "regional", desc: "越南唯一免簽海島，盛產胡椒與魚露，有世界上最長的跨海纜車。" },
+            { id: 168, en: "Hue", zh: "順化", lat: 16.4637, lng: 107.5908, tier: "regional", desc: "越南最後封建皇朝阮朝的故都，順化皇城宮廷氣質典雅。" },
+            { id: 169, en: "Qui Nhon", zh: "歸仁", lat: 13.7830, lng: 109.2170, tier: "regional", desc: "越南中部悠閒海濱，擁有千年占婆磚塔古蹟與小馬爾地夫沙灘。" },
+            { id: 170, en: "Vinh City", zh: "榮市", lat: 18.6734, lng: 105.6813, tier: "regional", desc: "越南中部工業樞紐，胡志明主席的故鄉故居坐落於此。" },
+            { id: 171, en: "Shenyang", zh: "瀋陽", lat: 41.8057, lng: 123.4315, tier: "regional", desc: "歷史名城，渾河之畔，擁有關外紫禁城瀋陽故宮與北陵公園。" },
+            { id: 172, en: "Wuxi", zh: "無錫", lat: 31.4912, lng: 120.3119, tier: "regional", desc: "太湖明珠，黿頭渚櫻花季與惠山古鎮的優美江南水鄉。" },
+            { id: 173, en: "Changzhou", zh: "常州", lat: 31.7832, lng: 119.9644, tier: "regional", desc: "龍城常州，極受親子家庭喜愛的恐龍園主題樂園所在地。" },
+            { id: 174, en: "Xuzhou", zh: "徐州", lat: 34.2634, lng: 117.1855, tier: "regional", desc: "兩漢文化發源地，擁有宏偉的漢兵馬俑與漢墓群地宮。" },
+            { id: 175, en: "Yichang", zh: "宜昌", lat: 30.6955, lng: 111.2908, tier: "regional", desc: "三峽門戶，舉世矚目的三峽大壩所在地，屈原的故里。" },
+            { id: 176, en: "Zhanjiang", zh: "湛江", lat: 21.1913, lng: 110.3891, tier: "regional", desc: "中國海鮮之都，雷州半島上的法國殖民歷史建築群極富韻味。" },
+            { id: 177, en: "Meixian", zh: "梅縣", lat: 24.2882, lng: 116.1170, tier: "regional", desc: "世界客都，以獨特的客家圍龍屋與清甜沙田柚聞名。" },
+            { id: 178, en: "Jieyang", zh: "揭陽", lat: 23.5492, lng: 116.3725, tier: "regional", desc: "潮汕三市之一，著名玉器雕刻之鄉，嶺南水鄉古廟密佈。" },
+            { id: 179, en: "Yulin", zh: "榆林", lat: 38.2902, lng: 109.7348, tier: "regional", desc: "陜北塞上明珠，萬里長城第一雄關紅石峽巍峨壯觀。" },
+            { id: 180, en: "Lanzhou", zh: "蘭州", lat: 36.0611, lng: 103.8343, tier: "regional", desc: "黃河穿城而過的西北重鎮，一碗地道手工蘭州牛肉拉麵名震天下。" },
+            { id: 181, en: "Xining", zh: "西寧", lat: 36.6231, lng: 101.7785, tier: "regional", desc: "夏都西寧，青藏高原入口，前往聖湖青海湖與塔爾寺的樞紐。" },
+            { id: 182, en: "Yinchuan", zh: "銀川", lat: 38.4872, lng: 106.2309, tier: "regional", desc: "塞上江南，神秘的西夏王陵與賀蘭山岩畫靜靜訴說歷史風霜。" },
+            { id: 183, en: "Hohhot", zh: "呼和浩特", lat: 40.8415, lng: 111.7516, tier: "regional", desc: "青色之城，走進希拉穆仁大草原騎馬、住蒙古包感受游牧風情。" },
+            { id: 184, en: "Guiyang", zh: "貴陽", lat: 26.6477, lng: 106.6301, tier: "regional", desc: "森林之城，氣候無比清涼，苗族、侗族等多元少數民族文化璀璨。" },
+            { id: 185, en: "Zunyi", zh: "遵義", lat: 27.7121, lng: 106.9274, tier: "regional", desc: "歷史轉折名城，盛產享譽全球的貴州茅台酒。" },
+            { id: 186, en: "Tirupati", zh: "蒂魯帕蒂", lat: 13.6288, lng: 79.4192, tier: "regional", desc: "印度著名的朝盛名城，山頂的神廟據稱是全球最富有的廟宇之一。" },
+            { id: 187, en: "Madurai", zh: "馬杜賴", lat: 9.9252, lng: 78.1198, tier: "regional", desc: "印度古城，宏偉壯觀、雕刻無數浮雕的米納克希神廟極為震撼。" },
+            { id: 188, en: "Coimbatore", zh: "哥印拜陀", lat: 11.0168, lng: 76.9558, tier: "regional", desc: "南印度的曼徹斯特，紡織發達，山谷中巨型濕婆神頭像引人朝聖。" },
+            { id: 189, en: "Bhubaneswar", zh: "布巴內斯瓦爾", lat: 20.2961, lng: 85.8245, tier: "regional", desc: "印度千廟之城，展示了東印度極高超的砂岩雕刻古寺藝術。" },
+            { id: 190, en: "Pune", zh: "浦那", lat: 18.5204, lng: 73.8567, tier: "regional", desc: "印度的東方牛津，著名文化與教育重鎮，也是新興汽車工業中心。" },
+            { id: 191, en: "Surat", zh: "蘇拉特", lat: 21.1702, lng: 72.8311, tier: "regional", desc: "印度鑽石切磨加工之都，也是高新技術極速發展的潔淨名城。" },
+            { id: 192, en: "Ahmedabad", zh: "阿美達巴德", lat: 23.0225, lng: 72.5714, tier: "regional", desc: "印度首個入選世界文化遺產的城市，聖雄甘地的非暴力抗爭發源地。" },
+            { id: 193, en: "Nagpur", zh: "納格浦爾", lat: 21.1458, lng: 79.0882, tier: "regional", desc: "印度的橘子之城，位於印度的地理中心點標誌處。" },
+            { id: 194, en: "Lucknow", zh: "勒克瑙", lat: 26.8467, lng: 80.9462, tier: "regional", desc: "黃金宮殿之城，保留許多精美宏大的莫臥兒與英式殖民古典建築。" },
+            { id: 195, en: "Gaya", zh: "菩提伽耶", lat: 24.6961, lng: 84.9914, tier: "regional", desc: "佛教四大聖地之首，釋迦牟尼在菩提樹下證悟成佛的聖地。" },
+            { id: 196, en: "Varanasi", zh: "瓦拉納西", lat: 25.3176, lng: 82.9739, tier: "regional", desc: "印度教最神聖的恆河古城，清晨的河畔沐浴與夜晚的祭祀極具震撼。" },
+            { id: 197, en: "Guwahati", zh: "古瓦哈提", lat: 26.1445, lng: 91.7362, tier: "regional", desc: "進入印度東北部阿薩姆邦的門戶，雅魯藏布江流經此處，盛產阿薩姆紅茶。" },
+            { id: 198, en: "Bagdogra", zh: "巴格多格拉", lat: 26.6812, lng: 88.3225, tier: "regional", desc: "前往喜馬拉雅山脈避暑勝地大吉嶺、錫金王國的門戶山腳機場。" },
+            { id: 199, en: "Port Blair", zh: "布萊爾港", lat: 11.6234, lng: 92.7265, tier: "regional", desc: "安達曼和尼科巴群島首府，印度洋深處的絕美原始珊瑚礁海島。" },
+            { id: 200, en: "Srinagar", zh: "斯里那加", lat: 34.0837, lng: 74.7973, tier: "regional", desc: "喀什米爾的明珠，達爾湖上的夢幻水上船屋與喜馬拉雅雪山背景交相輝映。" }
+        ];
+
+        // --- 全局變量 ---
+        let map;
+        let activeMarker = null;
+        let currentActiveCity = null;
+        let selectedTab = 'explore';
+        let speechRate = 0.7; // 慢速英語
+        
+        // 閃卡與問答狀態
+        let cardIndex = 0;
+        let currentQuizType = 'listening'; // 'listening' or 'spelling'
+        let currentQuizItem = null;
+        let quizScore = { correct: 0, total: 0 };
+
+        // --- 初始化地圖與應用 ---
+        window.onload = function() {
+            // 初始化圖標
+            lucide.createIcons();
+            
+            // 初始化地圖 (定位在亞洲中心：泰國曼谷附近)
+            map = L.map('map', {
+                center: [13.7563, 100.5018],
+                zoom: 4.5,
+                zoomControl: false,
+                attributionControl: false
+            });
+
+            // 添加自定義夜空/暗色優雅主題地圖瓦片 (完美襯托紅色閃爍點)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 18
+            }).addTo(map);
+
+            // 把地圖縮放按鈕移到右下角
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            // 渲染城市列表與地圖標記
+            renderCities(cities);
+            plotMapMarkers(cities);
+
+            // 綁定控制速度
+            const rateSlider = document.getElementById('rateSlider');
+            rateSlider.addEventListener('input', (e) => {
+                speechRate = parseFloat(e.target.value);
+                document.getElementById('rateValue').innerText = speechRate.toFixed(2) + 'x';
+            });
+
+            // 搜索監聽
+            document.getElementById('searchInput').addEventListener('input', handleSearch);
+            document.getElementById('filterType').addEventListener('change', handleSearch);
+
+            // 初始化第一個閃卡與問答
+            setupFlashcard();
+            generateNewQuiz();
+
+            // 監聽鍵盤Enter鍵 (用於拼寫提交)
+            document.getElementById('spellInput').addEventListener('keydown', function(e) {
+                if(e.key === 'Enter') checkSpelling();
+            });
+
+            // 修正點：使用一個短暫的延遲，確保 Leaflet 容器尺寸完成渲染計算 (解決 NaN 報錯)
+            setTimeout(() => {
+                if (map) {
+                    map.invalidateSize();
+                    selectCity(cities[0]);
+                }
+            }, 200);
+        };
+
+        // --- 渲染城市列表 ---
+        function renderCities(cityArray) {
+            const container = document.getElementById('cityList');
+            container.innerHTML = '';
+
+            if (cityArray.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-500">
+                        <i data-lucide="frown" class="w-10 h-10 mx-auto mb-2 text-slate-600"></i>
+                        <p class="text-sm">找不到符合條件的城市...</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            cityArray.forEach((city, index) => {
+                const isSelected = currentActiveCity && currentActiveCity.id === city.id;
+                const card = document.createElement('div');
+                card.id = `city-card-${city.id}`;
+                card.className = `p-3.5 rounded-xl cursor-pointer transition-all border flex items-center justify-between gap-3 ${
+                    isSelected 
+                    ? 'bg-red-600/10 border-red-500/80 shadow-md shadow-red-950/20' 
+                    : 'bg-slate-900 border-slate-800 hover:border-slate-700 hover:bg-slate-800/50'
+                }`;
+                card.onclick = () => selectCity(city);
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <span class="text-xs font-bold text-slate-500 w-6 text-right font-mono">${city.id}</span>
+                        <div>
+                            <div class="flex items-baseline gap-1.5 flex-wrap">
+                                <h4 class="font-bold text-sm text-white">${city.zh}</h4>
+                                <h5 class="text-xs text-slate-400 truncate">${city.en}</h5>
+                            </div>
+                            <p class="text-[10px] text-slate-500 truncate max-w-[240px] mt-0.5">${city.desc}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1.5 shrink-0">
+                        <button onclick="event.stopPropagation(); playSpeech('${city.en}', 'en')" class="p-1.5 rounded-md hover:bg-slate-700 text-slate-400 hover:text-red-400 transition-colors" title="慢速英語">
+                            <i data-lucide="volume-2" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="event.stopPropagation(); playSpeech('${city.zh}', 'zh')" class="p-1.5 rounded-md hover:bg-slate-700 text-slate-400 hover:text-teal-400 transition-colors" title="粵語翻譯">
+                            <i data-lucide="volume-1" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        // --- 繪製地圖標記 (帶簡易小紅點，選中時觸發飛向和脈衝紅點) ---
+        function plotMapMarkers(cityArray) {
+            cityArray.forEach(city => {
+                // 一般靜態地圖標記，透明度適中，鼠標懸停顯示中英文
+                const dotIcon = L.divIcon({
+                    className: 'static-dot',
+                    html: `<div class="w-2.5 h-2.5 bg-slate-400/80 hover:bg-red-500 rounded-full border border-slate-900 transition-colors shadow"></div>`,
+                    iconSize: [10, 10],
+                    iconAnchor: [5, 5]
+                });
+
+                const marker = L.marker([city.lat, city.lng], { icon: dotIcon }).addTo(map);
+                
+                // 點擊標記觸發與卡片相同的行為
+                marker.on('click', () => {
+                    selectCity(city);
+                });
+
+                // 工具提示
+                marker.bindTooltip(`<div class="font-bold text-xs">${city.zh} <span class="text-slate-400 font-normal">${city.en}</span></div>`, {
+                    direction: 'top',
+                    offset: [0, -5],
+                    className: 'bg-slate-900 border border-slate-700 text-white rounded-lg p-1.5 shadow-xl font-sans'
+                });
+            });
+        }
+
+        // --- 選擇特定城市 (地圖脈衝與滾動對齊) ---
+        function selectCity(city) {
+            // 修正點：加入城市與坐標數值安全驗證
+            if (!city || typeof city.lat !== 'number' || typeof city.lng !== 'number' || isNaN(city.lat) || isNaN(city.lng)) {
+                console.warn('無效的城市座標:', city);
+                return;
+            }
+
+            currentActiveCity = city;
+
+            // 1. 更新卡片高亮狀態
+            const previousSelected = document.querySelector('.border-red-500\\/80');
+            if (previousSelected) {
+                // 恢復原樣
+                const prevId = previousSelected.id.replace('city-card-', '');
+                const prevCity = cities.find(c => c.id == prevId);
+                if (prevCity) {
+                    previousSelected.className = 'p-3.5 rounded-xl cursor-pointer transition-all border flex items-center justify-between gap-3 bg-slate-900 border-slate-800 hover:border-slate-700 hover:bg-slate-800/50';
+                }
+            }
+
+            const currentCard = document.getElementById(`city-card-${city.id}`);
+            if (currentCard) {
+                currentCard.className = 'p-3.5 rounded-xl cursor-pointer transition-all border flex items-center justify-between gap-3 bg-red-600/10 border-red-500/80 shadow-md shadow-red-950/20';
+                // 自動滾動對齊
+                currentCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            // 2. 更新右側詳細資訊面板
+            document.getElementById('detail-zh').innerText = city.zh;
+            document.getElementById('detail-en').innerText = city.en;
+            document.getElementById('detail-desc').innerText = city.desc;
+
+            // 3. 地圖閃爍動態紅點（一閃一閃）
+            if (activeMarker) {
+                map.removeLayer(activeMarker);
+            }
+
+            const pulsingIcon = L.divIcon({
+                className: 'pulsing-marker-wrapper',
+                html: `<div class="pulsing-marker w-5 h-5"></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+
+            activeMarker = L.marker([city.lat, city.lng], { icon: pulsingIcon }).addTo(map);
+
+            // 修正點：調用 flyTo 之前強制校正地圖大小計算，以確保 viewport 正確
+            map.invalidateSize();
+
+            // 4. 平滑飛行地圖定位到選中城市 (加入錯誤防護，防止 flyTo 動畫循環出錯)
+            try {
+                map.flyTo([city.lat, city.lng], 6, {
+                    animate: true,
+                    duration: 1.5
+                });
+            } catch (err) {
+                // 如果 flyTo 因計算問題失敗，降級使用直達定位 setView
+                map.setView([city.lat, city.lng], 6);
+            }
+
+            // 5. 自動播放英語發音
+            playSpeech(city.en, 'en');
+        }
+
+        // --- 搜索與篩選處理 ---
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const filter = document.getElementById('filterType').value;
+
+            const filtered = cities.filter(city => {
+                const matchesSearch = city.en.toLowerCase().includes(query) || city.zh.toLowerCase().includes(query);
+                
+                let matchesFilter = true;
+                if (filter === 'top50') {
+                    matchesFilter = city.id <= 50;
+                } else if (filter === 'mid') {
+                    matchesFilter = city.id > 50 && city.id <= 120;
+                } else if (filter === 'regional') {
+                    matchesFilter = city.id > 120;
+                }
+
+                return matchesSearch && matchesFilter;
+            });
+
+            renderCities(filtered);
+        }
+
+        // --- 分頁標籤切換 ---
+        function switchTab(tab) {
+            selectedTab = tab;
+            // 按鈕樣式切換
+            ['explore', 'flashcard', 'quiz'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const content = document.getElementById(`content-${t}`);
+                
+                if (t === tab) {
+                    btn.className = "flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 bg-red-600 text-white shadow-lg";
+                    content.classList.remove('hidden');
+                } else {
+                    btn.className = "flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200";
+                    content.classList.add('hidden');
+                }
+            });
+
+            // 切換時的一些重置
+            if (tab === 'flashcard') {
+                setupFlashcard();
+            } else if (tab === 'quiz') {
+                generateNewQuiz();
+            }
+        }
+
+        // --- 智能閃卡模式控制 ---
+        function setupFlashcard() {
+            const city = cities[cardIndex];
+            document.getElementById('card-en').innerText = city.en;
+            document.getElementById('card-zh').innerText = city.zh;
+
+            // 恢復至正面狀態
+            const inner = document.getElementById('flashcard-inner');
+            inner.style.transform = 'rotateY(0deg)';
+            document.getElementById('card-front').classList.remove('hidden');
+            document.getElementById('card-back').classList.add('hidden');
+            document.getElementById('card-back').style.opacity = '0';
+        }
+
+        function flipCard() {
+            const inner = document.getElementById('flashcard-inner');
+            const isFlipped = inner.style.transform === 'rotateY(180deg)';
+            
+            if (isFlipped) {
+                inner.style.transform = 'rotateY(0deg)';
+                setTimeout(() => {
+                    document.getElementById('card-front').classList.remove('hidden');
+                    document.getElementById('card-back').classList.add('hidden');
+                }, 150);
+            } else {
+                inner.style.transform = 'rotateY(180deg)';
+                setTimeout(() => {
+                    document.getElementById('card-front').classList.add('hidden');
+                    document.getElementById('card-back').classList.remove('hidden');
+                    document.getElementById('card-back').style.opacity = '1';
+                }, 150);
+            }
+        }
+
+        function nextCard() {
+            cardIndex = (cardIndex + 1) % cities.length;
+            setupFlashcard();
+        }
+
+        function prevCard() {
+            cardIndex = (cardIndex - 1 + cities.length) % cities.length;
+            setupFlashcard();
+        }
+
+        function locateCardOnMap() {
+            const city = cities[cardIndex];
+            selectCity(city);
+            showToast('map-pin', 'bg-teal-600', `已地圖定位: ${city.zh} (${city.en})`);
+        }
+
+        function playCurrentCardSpeech(lang) {
+            const city = cities[cardIndex];
+            const text = lang === 'en' ? city.en : city.zh;
+            playSpeech(text, lang);
+        }
+
+        // --- 挑戰測試模式控制 ---
+        function startQuiz(type) {
+            currentQuizType = type;
+            const btnListening = document.getElementById('btn-quiz-listening');
+            const btnSpelling = document.getElementById('btn-quiz-spelling');
+            const viewListening = document.getElementById('quiz-listening-view');
+            const viewSpelling = document.getElementById('quiz-spelling-view');
+
+            if (type === 'listening') {
+                btnListening.className = "py-2.5 px-3 rounded-lg text-xs font-bold transition-all border border-red-500/50 bg-red-600/20 text-red-400";
+                btnSpelling.className = "py-2.5 px-3 rounded-lg text-xs font-bold transition-all border border-slate-700 bg-slate-800 text-slate-400";
+                viewListening.classList.remove('hidden');
+                viewSpelling.classList.add('hidden');
+            } else {
+                btnListening.className = "py-2.5 px-3 rounded-lg text-xs font-bold transition-all border border-slate-700 bg-slate-800 text-slate-400";
+                btnSpelling.className = "py-2.5 px-3 rounded-lg text-xs font-bold transition-all border border-teal-500/50 bg-teal-600/20 text-teal-400";
+                viewListening.classList.add('hidden');
+                viewSpelling.classList.remove('hidden');
+            }
+            generateNewQuiz();
+        }
+
+        function generateNewQuiz() {
+            // 從數據中隨機挑選1個城市作為正確答案
+            const randomIndex = Math.floor(Math.random() * cities.length);
+            currentQuizItem = cities[randomIndex];
+
+            if (currentQuizType === 'listening') {
+                // 1. 聽力與翻譯測驗：準備4個選項
+                let options = [currentQuizItem];
+                while (options.length < 4) {
+                    const randomOption = cities[Math.floor(Math.random() * cities.length)];
+                    if (!options.some(opt => opt.id === randomOption.id)) {
+                        options.push(randomOption);
+                    }
+                }
+                // 打亂選項順序
+                options.sort(() => Math.random() - 0.5);
+
+                const optionsContainer = document.getElementById('quiz-options');
+                optionsContainer.innerHTML = '';
+                options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = "bg-slate-800 hover:bg-slate-700 border border-slate-700 p-3 rounded-xl text-xs font-bold text-slate-200 transition-all hover:scale-[1.02] active:scale-[0.98]";
+                    btn.innerText = opt.zh;
+                    btn.onclick = () => submitListeningAnswer(opt);
+                    optionsContainer.appendChild(btn);
+                });
+
+                // 自動播放聽力音效
+                setTimeout(() => playQuizAudio(), 500);
+
+            } else {
+                // 2. 拼寫與地理挑戰
+                document.getElementById('spell-zh').innerText = currentQuizItem.zh;
+                
+                // 首字母+星號提示
+                const cleanEn = currentQuizItem.en.replace(/[^a-zA-Z]/g, '');
+                const firstChar = currentQuizItem.en.charAt(0);
+                const placeholder = firstChar + currentQuizItem.en.substring(1).replace(/[a-zA-Z]/g, '_');
+                
+                document.getElementById('spell-hint').innerText = `提示首字母: ${placeholder} (共 ${currentQuizItem.en.length} 個字元)`;
+                document.getElementById('spellInput').value = '';
+                document.getElementById('spellInput').focus();
+
+                // 同時在地圖上亮起它的紅點但不標明是誰，助於地理位置學習
+                selectQuizMapLocation(currentQuizItem);
+            }
+        }
+
+        function playQuizAudio() {
+            if (currentQuizItem) {
+                playSpeech(currentQuizItem.en, 'en');
+            }
+        }
+
+        function selectQuizMapLocation(city) {
+            if (!city || typeof city.lat !== 'number' || typeof city.lng !== 'number' || isNaN(city.lat) || isNaN(city.lng)) {
+                return;
+            }
+            if (activeMarker) map.removeLayer(activeMarker);
+            const pulsingIcon = L.divIcon({
+                className: 'pulsing-marker-wrapper',
+                html: `<div class="pulsing-marker w-5 h-5"></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            activeMarker = L.marker([city.lat, city.lng], { icon: pulsingIcon }).addTo(map);
+
+            // 修正點：在地圖飛行定位到挑戰題城市時也加上 invalidatesize 確保安全
+            map.invalidateSize();
+            try {
+                map.flyTo([city.lat, city.lng], 5);
+            } catch (err) {
+                map.setView([city.lat, city.lng], 5);
+            }
+        }
+
+        function submitListeningAnswer(selectedOpt) {
+            quizScore.total++;
+            if (selectedOpt.id === currentQuizItem.id) {
+                quizScore.correct++;
+                showToast('check-circle', 'bg-teal-600', `答對了！就是 ${currentQuizItem.zh} (${currentQuizItem.en})`);
+                selectCity(currentQuizItem); // 地圖聯動與詳情
+                setTimeout(() => generateNewQuiz(), 1800);
+            } else {
+                showToast('x-circle', 'bg-red-600', `答錯囉，正確答案是: ${currentQuizItem.zh}`);
+                setTimeout(() => generateNewQuiz(), 2200);
+            }
+            updateScoreUI();
+        }
+
+        function checkSpelling() {
+            const input = document.getElementById('spellInput').value.trim().toLowerCase();
+            const answer = currentQuizItem.en.toLowerCase();
+
+            quizScore.total++;
+            if (input === answer) {
+                quizScore.correct++;
+                showToast('check-circle', 'bg-teal-600', `超級棒！完全拼對了: ${currentQuizItem.en}`);
+                selectCity(currentQuizItem); // 定位
+                setTimeout(() => generateNewQuiz(), 2000);
+            } else {
+                showToast('x-circle', 'bg-red-600', `拼寫有誤，正確是: ${currentQuizItem.en}`);
+                setTimeout(() => generateNewQuiz(), 2500);
+            }
+            updateScoreUI();
+        }
+
+        function skipQuiz() {
+            showToast('arrow-right', 'bg-slate-600', `已跳過，這座城市是: ${currentQuizItem.zh} (${currentQuizItem.en})`);
+            generateNewQuiz();
+        }
+
+        function updateScoreUI() {
+            document.getElementById('quizScore').innerText = `得分: ${quizScore.correct} / ${quizScore.total}`;
+        }
+
+        function resetQuizScore() {
+            quizScore = { correct: 0, total: 0 };
+            updateScoreUI();
+            generateNewQuiz();
+            showToast('rotate-ccw', 'bg-slate-600', '分數已重置！');
+        }
+
+        // --- 全局詳細定位發音按鈕 ---
+        function playDetailSpeech(lang) {
+            if (currentActiveCity) {
+                const text = lang === 'en' ? currentActiveCity.en : currentActiveCity.zh;
+                playSpeech(text, lang);
+            }
+        }
+
+
+        // --- 文字轉語音 TTS 核心驅動器 (使用 Web Speech API 最佳化) ---
+        function playSpeech(text, lang) {
+            if (!('speechSynthesis' in window)) {
+                showToast('alert-triangle', 'bg-yellow-600', '您的瀏覽器不支援語音播放。');
+                return;
+            }
+
+            // 先停止可能正在播放的聲音
+            window.speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            
+            if (lang === 'zh') {
+                // 粵語 TTS 發音設定
+                utterance.lang = 'zh-HK';
+                utterance.rate = 0.9;
+                
+                // 優先選擇香港(粵語)音源
+                const voices = window.speechSynthesis.getVoices();
+                const hkVoice = voices.find(v => v.lang === 'zh-HK' || v.lang === 'zh-YUE' || v.name.includes('Hong Kong') || v.name.includes('Cantonese'));
+                if (hkVoice) utterance.voice = hkVoice;
+            } else {
+                // 英語慢速女聲音設定
+                utterance.lang = 'en-US';
+                utterance.rate = speechRate; // 使用使用者設定的慢速 (預設0.7)
+                
+                // 尋找英語女聲
+                const voices = window.speechSynthesis.getVoices();
+                const femaleVoice = voices.find(v => 
+                    v.lang.startsWith('en') && 
+                    (v.name.toLowerCase().includes('female') || 
+                     v.name.toLowerCase().includes('zira') || 
+                     v.name.toLowerCase().includes('google us english') || 
+                     v.name.toLowerCase().includes('samantha'))
+                );
+                if (femaleVoice) utterance.voice = femaleVoice;
+            }
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // 一些瀏覽器在啟動時未加載 voice 列表，加載事件補丁
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = () => {
+                // 讓瀏覽器在後台異步預載入發音包
+            };
+        }
+
+
+        // --- 輔助自定義 Toast 通知系統 (不使用 Alert) ---
+        function showToast(iconName, bgColorClass, message) {
+            const toast = document.getElementById('toast');
+            const toastIcon = document.getElementById('toast-icon');
+            const toastMsg = document.getElementById('toast-msg');
+
+            // 設置樣式與圖標
+            toastIcon.className = `p-1 rounded-full ${bgColorClass} text-white`;
+            toastIcon.innerHTML = `<i data-lucide="${iconName}" class="w-4 h-4"></i>`;
+            toastMsg.innerText = message;
+
+            lucide.createIcons();
+
+            // 滑入顯示
+            toast.className = `fixed bottom-6 right-6 z-[9999] bg-slate-900 border border-slate-700/80 px-5 py-3.5 rounded-xl shadow-2xl text-sm font-semibold flex items-center gap-3 transform translate-y-0 opacity-100 backdrop-blur-md transition-all duration-300`;
+
+            // 3秒後消失
+            setTimeout(() => {
+                toast.className = `fixed bottom-6 right-6 z-[9999] bg-slate-900 border border-slate-700/80 px-5 py-3.5 rounded-xl shadow-2xl text-sm font-semibold flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300`;
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
