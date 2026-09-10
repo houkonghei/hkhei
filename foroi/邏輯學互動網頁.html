@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full bg-slate-900 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>邏輯學神奇魔法屋 - 互動學習教件</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+TC:wght@400;600;700;900&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Noto Sans TC', 'Inter', sans-serif;
+    }
+    .glow-card {
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .glow-card:hover {
+      box-shadow: 0 0 25px rgba(129, 140, 248, 0.3);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.5);
+      border-radius: 4px;
+    }
+    @keyframes pulse-light {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.85; }
+    }
+    .animate-pulse-glow {
+      animation: pulse-light 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col bg-slate-900 text-slate-100 overflow-x-hidden custom-scrollbar">
+
+  <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700/60 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-xl shadow-lg shadow-indigo-500/30">
+          <i class="fa-solid fa-brain text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-extrabold text-lg sm:text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-purple-200 to-pink-300">
+            邏輯律魔法學院
+          </h1>
+          <p class="text-xs text-slate-400">互動式布林代數與形式邏輯學習教件</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex items-center gap-1 sm:gap-2 bg-slate-950/60 p-1.5 rounded-xl border border-slate-800 text-xs sm:text-sm font-semibold overflow-x-auto max-w-full">
+        <button onclick="switchTab('cards')" id="tab-cards" class="tab-btn px-3.5 py-1.5 rounded-lg transition-all duration-200 bg-indigo-600 text-white shadow">
+          <i class="fa-solid fa-book-open mr-1.5"></i>律法圖鑑
+        </button>
+        <button onclick="switchTab('matching')" id="tab-matching" class="tab-btn px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition-all duration-200">
+          <i class="fa-solid fa-puzzle-piece mr-1.5"></i>配對遊戲
+        </button>
+        <button onclick="switchTab('dungeon')" id="tab-dungeon" class="tab-btn px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition-all duration-200">
+          <i class="fa-solid fa-gamepad mr-1.5"></i>邏輯大冒險
+        </button>
+        <button onclick="switchTab('lab')" id="tab-lab" class="tab-btn px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition-all duration-200">
+          <i class="fa-solid fa-flask mr-1.5"></i>化簡實驗室
+        </button>
+      </nav>
+
+      <!-- Player Score Badge -->
+      <div class="hidden md:flex items-center gap-4 bg-slate-900/80 border border-slate-700/80 px-3.5 py-1.5 rounded-xl text-xs font-medium">
+        <div class="flex items-center gap-1.5 text-amber-400">
+          <i class="fa-solid fa-star"></i>
+          <span id="global-stars">0</span> 積分
+        </div>
+        <div class="h-3 w-px bg-slate-700"></div>
+        <div class="flex items-center gap-1.5 text-emerald-400">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span id="mastery-level">邏輯新手</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+    <!-- ================= SECTON 1: LOGIC LAWS EXPLORER ================= -->
+    <section id="sec-cards" class="space-y-6">
+      <!-- Section Header -->
+      <div class="bg-gradient-to-r from-indigo-900/40 via-purple-900/20 to-slate-900 p-6 rounded-2xl border border-indigo-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> 11 大核心邏輯律探索圖鑑
+          </h2>
+          <p class="text-slate-300 text-sm mt-1">
+            點擊下方任一邏輯律可切換測試，$A$ 與 $B$ 的真假開關能即時驗證等式左右兩邊是否完美相等！
+          </p>
+        </div>
+        <!-- Legend Quick Guide -->
+        <div class="flex items-center gap-3 text-xs bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+          <span class="flex items-center gap-1 text-emerald-400"><i class="fa-solid fa-circle-check"></i> 1 / 真 (True)</span>
+          <span class="flex items-center gap-1 text-rose-400"><i class="fa-solid fa-circle-xmark"></i> 0 / 假 (False)</span>
+          <span class="text-slate-400">∧=且(AND), ∨=或(OR), ¬=非(NOT)</span>
+        </div>
+      </div>
+
+      <!-- Laws Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="laws-container">
+        <!-- JS dynamically populates interactive cards here -->
+      </div>
+    </section>
+
+    <!-- ================= SECTION 2: MATCHING GAME ================= -->
+    <section id="sec-matching" class="hidden space-y-6">
+      <div class="bg-slate-800/60 p-6 rounded-2xl border border-slate-700/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-puzzle-piece text-amber-400"></i> 邏輯連連看 (Matching Challenge)
+          </h2>
+          <p class="text-slate-300 text-sm mt-1">
+            請點擊左側「律名稱」，然後點擊右側對應的「邏輯公式」或「生活例子」來完成連線！
+          </p>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="text-right">
+            <div class="text-xs text-slate-400">配對時間</div>
+            <div id="match-timer" class="text-2xl font-mono font-bold text-cyan-400">00:00</div>
+          </div>
+          <button onclick="initMatchingGame()" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold rounded-xl shadow-lg transition duration-200">
+            <i class="fa-solid fa-rotate-right mr-1"></i> 重置遊戲
+          </button>
+        </div>
+      </div>
+
+      <!-- Game Board -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Left Column: Names -->
+        <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-800 space-y-3">
+          <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+            <span>1. 選擇邏輯律名稱</span>
+            <span class="text-xs text-indigo-400" id="selected-name-label">未選擇</span>
+          </h3>
+          <div id="matching-names" class="space-y-2.5">
+            <!-- JS inserts name cards -->
+          </div>
+        </div>
+
+        <!-- Right Column: Formulas / Examples -->
+        <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-800 space-y-3">
+          <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
+            2. 選擇對應的邏輯公式 / 白話比喻
+          </h3>
+          <div id="matching-targets" class="space-y-2.5">
+            <!-- JS inserts target cards -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SECTION 3: DUNGEON QUIZ ================= -->
+    <section id="sec-dungeon" class="hidden space-y-6">
+      <div class="bg-gradient-to-r from-purple-900/40 via-indigo-900/40 to-slate-900 p-6 rounded-2xl border border-purple-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-gamepad text-purple-400"></i> 邏輯冒險島 (Logic Dungeon)
+          </h2>
+          <p class="text-slate-300 text-sm mt-1">
+            透過解答邏輯推論與公式化簡題目，考驗你對各大邏輯律的融會貫通能力！
+          </p>
+        </div>
+        <div class="flex items-center gap-6 bg-slate-950/70 p-3 px-5 rounded-2xl border border-slate-800">
+          <div class="text-center">
+            <span class="text-xs text-slate-400 block">生命值</span>
+            <div id="quiz-hp" class="text-xl text-rose-500 font-bold flex gap-1 mt-0.5">
+              <i class="fa-solid fa-heart"></i>
+              <i class="fa-solid fa-heart"></i>
+              <i class="fa-solid fa-heart"></i>
+            </div>
+          </div>
+          <div class="h-8 w-px bg-slate-800"></div>
+          <div class="text-center">
+            <span class="text-xs text-slate-400 block">當前關卡</span>
+            <span id="quiz-level-num" class="text-lg font-bold text-indigo-400">1 / 8</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quiz Card Area -->
+      <div id="quiz-card-container" class="bg-slate-800/50 glow-card p-6 sm:p-8 rounded-2xl border border-slate-700/80 max-w-3xl mx-auto space-y-6">
+        <!-- JS renders active question -->
+      </div>
+    </section>
+
+    <!-- ================= SECTION 4: SIMPLIFICATION LAB ================= -->
+    <section id="sec-lab" class="hidden space-y-6">
+      <div class="bg-slate-800/60 p-6 rounded-2xl border border-slate-700/60">
+        <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-flask text-emerald-400"></i> 邏輯表達式化簡實驗室
+        </h2>
+        <p class="text-slate-300 text-sm mt-1">
+          點擊邏輯律按鈕，體驗如何一步步將複雜的邏輯表達式簡化到最極致！
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Interactive Stepper -->
+        <div class="lg:col-span-2 bg-slate-800/40 p-6 rounded-2xl border border-slate-700/70 space-y-6">
+          <div class="flex items-center justify-between border-b border-slate-700/80 pb-4">
+            <span class="text-sm font-semibold text-slate-400">當前化簡題目</span>
+            <div id="lab-problem-selector" class="flex gap-2">
+              <button onclick="loadLabProblem(0)" class="px-3 py-1 rounded-lg text-xs bg-indigo-600 font-medium text-white">題目 1</button>
+              <button onclick="loadLabProblem(1)" class="px-3 py-1 rounded-lg text-xs bg-slate-700 hover:bg-slate-600 font-medium text-slate-300">題目 2</button>
+              <button onclick="loadLabProblem(2)" class="px-3 py-1 rounded-lg text-xs bg-slate-700 hover:bg-slate-600 font-medium text-slate-300">題目 3</button>
+            </div>
+          </div>
+
+          <!-- Sandbox Display -->
+          <div class="bg-slate-950 p-6 rounded-xl border border-slate-800 text-center space-y-2">
+            <span class="text-xs text-slate-500 uppercase tracking-widest font-mono">Current Expression</span>
+            <div id="lab-current-expr" class="text-2xl sm:text-3xl font-mono font-bold text-indigo-300 tracking-wide py-2">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Applied History Steps -->
+          <div class="space-y-2">
+            <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">化簡歷程 (Transformation Steps)</h4>
+            <div id="lab-history" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar p-1">
+              <!-- Steps logged here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Control Panel -->
+        <div class="bg-slate-800/60 p-6 rounded-2xl border border-slate-700/70 space-y-4">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-hand-pointer text-indigo-400"></i> 可套用的邏輯律
+          </h3>
+          <p class="text-xs text-slate-400">觀察當前算式，選擇最適用的邏輯律來推進化簡：</p>
+
+          <div id="lab-actions" class="grid grid-cols-1 gap-2.5">
+            <!-- Buttons dynamically populated -->
+          </div>
+
+          <button onclick="resetLabProblem()" class="w-full py-2.5 mt-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-arrow-rotate-left"></i> 重置此題
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const LOGIC_LAWS = [
+      {
+        id: "identity",
+        name: "同一律 (Identity Law)",
+        category: "基本律",
+        formula: "A ∧ 真 ≡ A<br>A ∨ 假 ≡ A",
+        evalFunc: (A) => ({
+          andTrue: A && true,
+          orFalse: A || false
+        }),
+        desc: "任何命題與「絕對真理」相且，結果取決於自己；與「假話」相或，依然取決於自己。",
+        analogy: "誠實鏡子：與真相在一起，你依然是你；跟空氣選一個，你還是你。",
+        icon: "fa-passport",
+        color: "from-blue-500 to-indigo-600"
+      },
+      {
+        id: "domination",
+        name: "支配律 (Domination Law)",
+        category: "基本律",
+        formula: "A ∧ 假 ≡ 假<br>A ∨ 真 ≡ 真",
+        evalFunc: (A) => ({
+          andFalse: A && false,
+          orTrue: A || true
+        }),
+        desc: "任何命題碰到「絕對的假」相且必為假；碰到「絕對的真」相或必為真。",
+        analogy: "黑洞與太陽：遇到絕對的假（黑洞）全部被拉黑；遇到絕對的真（光明）全部被照亮。",
+        icon: "fa-crown",
+        color: "from-amber-500 to-red-600"
+      },
+      {
+        id: "idempotent",
+        name: "冪等律 (Idempotent Law)",
+        category: "簡化律",
+        formula: "A ∧ A ≡ A<br>A ∨ A ≡ A",
+        evalFunc: (A) => ({
+          andSelf: A && A,
+          orSelf: A || A
+        }),
+        desc: "同一個條件重複講兩次（不管是「且」還是「或」），效果與講一次完全相同。",
+        analogy: "回音壁：「今天下雨且今天下雨」就等於「今天下雨」，重複廢話不改變真假。",
+        icon: "fa-clone",
+        color: "from-emerald-500 to-teal-600"
+      },
+      {
+        id: "double_negation",
+        name: "雙重否定律 (Double Negation)",
+        category: "運算律",
+        formula: "¬(¬A) ≡ A",
+        evalFunc: (A) => ({
+          notNot: !(!A)
+        }),
+        desc: "對一個命題進行兩次否定，會互相抵消恢復原狀。",
+        analogy: "負負得正：「我不是不喜歡你」＝「我喜歡你」。",
+        icon: "fa-rotate-left",
+        color: "from-purple-500 to-pink-600"
+      },
+      {
+        id: "commutative",
+        name: "交換律 (Commutative Law)",
+        category: "結構律",
+        formula: "A ∧ B ≡ B ∧ A<br>A ∨ B ≡ B ∨ A",
+        evalFunc: (A, B) => ({
+          andComm: (A && B) === (B && A),
+          orComm: (A || B) === (B || A)
+        }),
+        desc: "改變連結運算元的順序，不會改變整體命題的真偽結果。",
+        analogy: "買水果：「買蘋果和香蕉」與「買香蕉和蘋果」是同一件事。",
+        icon: "fa-right-left",
+        color: "from-cyan-500 to-blue-600"
+      },
+      {
+        id: "associative",
+        name: "結合律 (Associative Law)",
+        category: "結構律",
+        formula: "(A ∧ B) ∧ C ≡ A ∧ (B ∧ C)<br>(A ∨ B) ∨ C ≡ A ∨ (B ∨ C)",
+        evalFunc: (A, B, C = true) => ({
+          andAssoc: ((A && B) && C) === (A && (B && C)),
+          orAssoc: ((A || B) || C) === (A || (A || C))
+        }),
+        desc: "當同種類的運算子（全為且或全為或）連在一起時，括號先算哪一組都一樣。",
+        analogy: "自由組隊：三人結伴，AB先握手還是BC先握手，三人都聯繫在一起了。",
+        icon: "fa-layer-group",
+        color: "from-sky-500 to-indigo-600"
+      },
+      {
+        id: "distributive",
+        name: "分配律 (Distributive Law)",
+        category: "進階律",
+        formula: "A ∧ (B ∨ C) ≡ (A ∧ B) ∨ (A ∧ C)<br>A ∨ (B ∧ C) ≡ (A ∨ B) ∧ (A ∨ C)",
+        evalFunc: (A, B, C = false) => ({
+          lhs: A && (B || C),
+          rhs: (A && B) || (A && C)
+        }),
+        desc: "類似數學乘法分配律 $a \times (b+c) = ab + ac$。注意邏輯中「或」對「且」也能分配！",
+        analogy: "派發禮物：把括號外的條件拆開，個別發給括號內的每一個項目。",
+        icon: "fa-diagram-project",
+        color: "from-violet-500 to-purple-600"
+      },
+      {
+        id: "demorgan",
+        name: "德摩根定律 (De Morgan's Laws)",
+        category: "核心定律",
+        formula: "¬(A ∧ B) ≡ ¬A ∨ ¬B<br>¬(A ∨ B) ≡ ¬A ∧ ¬B",
+        evalFunc: (A, B) => ({
+          deMorgan1: ! (A && B) === (!A || !B),
+          deMorgan2: ! (A || B) === (!A && !B)
+        }),
+        desc: "否定括號時，將否定符號「¬」傳播進去，同時把「且 ∧」變成「或 ∨」，反之亦然。",
+        analogy: "魔術拆拆樂：「我沒有（既吃牛肉又吃豬肉）」＝「我沒吃牛肉，或者沒吃豬肉」。",
+        icon: "fa-wand-magic",
+        color: "from-rose-500 to-red-600"
+      },
+      {
+        id: "excluded_middle",
+        name: "排中律 (Law of Excluded Middle)",
+        category: "古典三大律",
+        formula: "A ∨ ¬A ≡ 真",
+        evalFunc: (A) => ({
+          res: A || !A
+        }),
+        desc: "任何命題與它自己的否定做「或」運算，必然為真！不允許第三種灰色地帶。",
+        analogy: "非黑即白：「現在下雨，或者現在不下雨」，這句話絕對是真理！",
+        icon: "fa-scale-balanced",
+        color: "from-amber-400 to-yellow-600"
+      },
+      {
+        id: "non_contradiction",
+        name: "矛盾律 (Law of Non-Contradiction)",
+        category: "古典三大律",
+        formula: "A ∧ ¬A ≡ 假",
+        evalFunc: (A) => ({
+          res: A && !A
+        }),
+        desc: "一個命題不可能「同時成立又同時不成立」，兩者相且必然為假。",
+        analogy: "自相矛盾：「這顆蘋果既是純紅色的又完全不是紅色的」，必然是不可能的謊言。",
+        icon: "fa-ban",
+        color: "from-fuchsia-500 to-pink-600"
+      },
+      {
+        id: "absorption",
+        name: "吸收律 (Absorption Law)",
+        category: "簡化高手律",
+        formula: "A ∧ (A ∨ B) ≡ A<br>A ∨ (A ∧ B) ≡ A",
+        evalFunc: (A, B) => ({
+          abs1: A && (A || B),
+          abs2: A || (A && B)
+        }),
+        desc: "當主條件 $A$ 外面與括號內重複出現，且符號為相反（一個 ∧ 一個 ∨）時，次要條件 $B$ 直接被吸收掉！",
+        analogy: "大魚吃小魚：「買了蘋果」且「買了蘋果或橘子」，第二個條件完全多餘，直接簡化為「買了蘋果」。",
+        icon: "fa-filter",
+        color: "from-teal-500 to-emerald-600"
+      }
+    ];
+
+    let gameState = {
+      stars: 0,
+      lawStates: {}, // Stores toggles for interactive cards
+      matching: {
+        selectedName: null,
+        matchesCount: 0,
+        timer: 0,
+        timerInterval: null
+      },
+      quiz: {
+        currentIndex: 0,
+        hp: 3,
+        score: 0
+      },
+      lab: {
+        currentProblemIdx: 0,
+        expr: "",
+        history: []
+      }
+    };
+
+    /* Initialize law toggle default values */
+    LOGIC_LAWS.forEach(law => {
+      gameState.lawStates[law.id] = { A: true, B: false };
+    });
+
+    function renderLawCards() {
+      const container = document.getElementById('laws-container');
+      container.innerHTML = LOGIC_LAWS.map(law => {
+        const state = gameState.lawStates[law.id];
+        const isClassical = law.category === "古典三大律";
+        
+        return `
+          <div class="glow-card bg-slate-800/80 rounded-2xl p-5 flex flex-col justify-between transition-all border border-slate-700/80 relative overflow-hidden group">
+            ${isClassical ? `<div class="absolute -right-7 -top-7 w-20 h-20 bg-amber-500/10 rounded-full blur-xl group-hover:bg-amber-500/20 transition"></div>` : ''}
+            
+            <div class="space-y-3">
+              <!-- Top Badge & Header -->
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-slate-900 border border-slate-700 ${isClassical ? 'text-amber-400 border-amber-500/30' : 'text-indigo-400'}">
+                  ${law.category}
+                </span>
+                <i class="fa-solid ${law.icon} text-slate-500 group-hover:text-indigo-400 transition"></i>
+              </div>
+
+              <h3 class="text-lg font-bold text-white tracking-tight">${law.name}</h3>
+
+              <!-- Formula Box -->
+              <div class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 text-center font-mono text-indigo-300 font-bold text-sm sm:text-base leading-relaxed">
+                ${law.formula}
+              </div>
+
+              <!-- Descriptions -->
+              <p class="text-xs text-slate-300 leading-relaxed">${law.desc}</p>
+              
+              <div class="bg-indigo-950/30 border border-indigo-500/20 p-2.5 rounded-xl text-xs text-indigo-200/90 flex items-start gap-2">
+                <i class="fa-solid fa-lightbulb text-amber-400 text-sm shrink-0 mt-0.5"></i>
+                <span>${law.analogy}</span>
+              </div>
+            </div>
+
+            <!-- Interactive Toggle Switcher & Simulator -->
+            <div class="mt-4 pt-4 border-t border-slate-700/60 space-y-3">
+              <div class="flex items-center justify-between text-xs font-semibold text-slate-400">
+                <span>即時真值測試 (Interactive Test):</span>
+                <div class="flex gap-2">
+                  <button onclick="toggleVariable('${law.id}', 'A')" class="px-2 py-1 rounded ${state.A ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-400'} font-mono transition">
+                    A = ${state.A ? '1 (真)' : '0 (假)'}
+                  </button>
+                  ${law.formula.includes('B') ? `
+                  <button onclick="toggleVariable('${law.id}', 'B')" class="px-2 py-1 rounded ${state.B ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-400'} font-mono transition">
+                    B = ${state.B ? '1 (真)' : '0 (假)'}
+                  </button>` : ''}
+                </div>
+              </div>
+
+              <!-- Live Verification Result -->
+              <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800 text-xs font-mono flex items-center justify-between text-emerald-400">
+                <span class="text-slate-400">邏輯運算結果:</span>
+                <span class="font-bold flex items-center gap-1.5">
+                  <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                  ${getLiveResultString(law, state)}
+                </span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleVariable(lawId, varName) {
+      gameState.lawStates[lawId][varName] = !gameState.lawStates[lawId][varName];
+      renderLawCards();
+      playBeep(440, 0.05);
+    }
+
+    function getLiveResultString(law, state) {
+      const { A, B } = state;
+      switch(law.id) {
+        case "identity":
+          return `(A ∧ 1 = ${A ? '1' : '0'}) 且 (A ∨ 0 = ${A ? '1' : '0'})`;
+        case "domination":
+          return `(A ∧ 0 = 0) 且 (A ∨ 1 = 1)`;
+        case "idempotent":
+          return `(A ∧ A = ${A ? '1' : '0'})`;
+        case "double_negation":
+          return `¬(¬${A ? '1' : '0'}) = ${A ? '1' : '0'}`;
+        case "commutative":
+          return `(${A ? '1' : '0'} ∧ ${B ? '1' : '0'}) ≡ (${B ? '1' : '0'} ∧ ${A ? '1' : '0'})`;
+        case "demorgan":
+          return `¬(${A ? '1' : '0'} ∧ ${B ? '1' : '0'}) ≡ ${!A ? '1' : '0'} ∨ ${!B ? '1' : '0'}`;
+        case "excluded_middle":
+          return `${A ? '1' : '0'} ∨ ${!A ? '1' : '0'} ≡ 1 (恆真)`;
+        case "non_contradiction":
+          return `${A ? '1' : '0'} ∧ ${!A ? '1' : '0'} ≡ 0 (恆假)`;
+        case "absorption":
+          return `${A ? '1' : '0'} ∧ (${A ? '1' : '0'} ∨ ${B ? '1' : '0'}) ≡ ${A ? '1' : '0'}`;
+        default:
+          return `等式成立 (True)`;
+      }
+    }
+
+    function switchTab(tabId) {
+      ['cards', 'matching', 'dungeon', 'lab'].forEach(t => {
+        document.getElementById(`sec-${t}`).classList.add('hidden');
+        document.getElementById(`tab-${t}`).classList.remove('bg-indigo-600', 'text-white', 'shadow');
+        document.getElementById(`tab-${t}`).classList.add('text-slate-400');
+      });
+
+      document.getElementById(`sec-${tabId}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tab-${tabId}`);
+      activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow');
+      activeBtn.classList.remove('text-slate-400');
+
+      if (tabId === 'matching' && gameState.matching.matchesCount === 0) {
+        initMatchingGame();
+      } else if (tabId === 'dungeon') {
+        renderQuizQuestion();
+      } else if (tabId === 'lab') {
+        initLab();
+      }
+    }
+
+    let currentMatchItems = [];
+
+    function initMatchingGame() {
+      clearInterval(gameState.matching.timerInterval);
+      gameState.matching.selectedName = null;
+      gameState.matching.matchesCount = 0;
+      gameState.matching.timer = 0;
+      document.getElementById('selected-name-label').innerText = '未選擇';
+
+      // Pick 5 random laws
+      const shuffled = [...LOGIC_LAWS].sort(() => 0.5 - Math.random()).slice(0, 5);
+      currentMatchItems = shuffled;
+
+      // Left Column (Names)
+      const namesContainer = document.getElementById('matching-names');
+      namesContainer.innerHTML = shuffled.map(item => `
+        <button id="match-btn-${item.id}" onclick="selectMatchName('${item.id}')" class="w-full text-left p-3.5 bg-slate-800 hover:bg-slate-700/80 border border-slate-700/80 rounded-xl transition font-semibold text-sm text-slate-200 flex items-center justify-between">
+          <span>${item.name.split(' ')[0]}</span>
+          <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+        </button>
+      `).join('');
+
+      // Right Column (Formulas / Analogies mixed)
+      const targetsContainer = document.getElementById('matching-targets');
+      const targetItems = shuffled.map(item => ({
+        id: item.id,
+        text: item.formula.replace('<br>', ' | '),
+        analogy: item.analogy
+      })).sort(() => 0.5 - Math.random());
+
+      targetsContainer.innerHTML = targetItems.map(target => `
+        <button id="target-btn-${target.id}" onclick="checkMatchTarget('${target.id}')" class="w-full text-left p-3.5 bg-slate-800 hover:bg-slate-700/80 border border-slate-700/80 rounded-xl transition space-y-1 group">
+          <div class="font-mono text-indigo-300 font-bold text-sm">${target.text}</div>
+          <div class="text-xs text-slate-400 group-hover:text-slate-300 transition">${target.analogy}</div>
+        </button>
+      `).join('');
+
+      // Start Timer
+      gameState.matching.timerInterval = setInterval(() => {
+        gameState.matching.timer++;
+        const mins = String(Math.floor(gameState.matching.timer / 60)).padStart(2, '0');
+        const secs = String(gameState.matching.timer % 60).padStart(2, '0');
+        document.getElementById('match-timer').innerText = `${mins}:${secs}`;
+      }, 1000);
+    }
+
+    function selectMatchName(id) {
+      gameState.matching.selectedName = id;
+      const item = LOGIC_LAWS.find(l => l.id === id);
+      document.getElementById('selected-name-label').innerText = item ? item.name.split(' ')[0] : '已選擇';
+
+      // Highlight button
+      LOGIC_LAWS.forEach(l => {
+        const btn = document.getElementById(`match-btn-${l.id}`);
+        if (btn) {
+          if (l.id === id) {
+            btn.classList.add('border-indigo-500', 'bg-indigo-950/60', 'ring-2', 'ring-indigo-500/50');
+          } else {
+            btn.classList.remove('border-indigo-500', 'bg-indigo-950/60', 'ring-2', 'ring-indigo-500/50');
+          }
+        }
+      });
+      playBeep(520, 0.05);
+    }
+
+    function checkMatchTarget(targetId) {
+      if (!gameState.matching.selectedName) {
+        showToast("請先在左側點選一個邏輯律！");
+        return;
+      }
+
+      const selectedId = gameState.matching.selectedName;
+      const nameBtn = document.getElementById(`match-btn-${selectedId}`);
+      const targetBtn = document.getElementById(`target-btn-${targetId}`);
+
+      if (selectedId === targetId) {
+        // Success Match
+        playBeep(880, 0.15);
+        nameBtn.className = "w-full text-left p-3.5 bg-emerald-950/40 border border-emerald-500/50 rounded-xl font-semibold text-sm text-emerald-300 cursor-not-allowed opacity-60 flex justify-between items-center";
+        nameBtn.innerHTML += `<i class="fa-solid fa-check text-emerald-400"></i>`;
+        nameBtn.onclick = null;
+
+        targetBtn.className = "w-full text-left p-3.5 bg-emerald-950/40 border border-emerald-500/50 rounded-xl font-semibold text-sm text-emerald-300 cursor-not-allowed opacity-60";
+        targetBtn.onclick = null;
+
+        gameState.matching.selectedName = null;
+        document.getElementById('selected-name-label').innerText = '未選擇';
+        gameState.matching.matchesCount++;
+
+        addStars(10);
+
+        if (gameState.matching.matchesCount === currentMatchItems.length) {
+          clearInterval(gameState.matching.timerInterval);
+          addStars(50); // Bonus
+          setTimeout(() => {
+            showToast(`🎉 恭喜！你成功完成了連連看！耗時 ${document.getElementById('match-timer').innerText}`);
+          }, 300);
+        }
+      } else {
+        // Fail Match
+        playBeep(220, 0.2);
+        targetBtn.classList.add('animate-bounce', 'border-rose-500');
+        setTimeout(() => {
+          targetBtn.classList.remove('animate-bounce', 'border-rose-500');
+        }, 500);
+      }
+    }
+
+    const QUIZ_QUESTIONS = [
+      {
+        q: "請問算式 「A ∨ ¬A」 恆等於「真 (True)」，這是根據什麼邏輯律？",
+        options: ["同一律", "排中律", "矛盾律", "德摩根定律"],
+        answer: 1,
+        explain: "排中律 (Law of Excluded Middle) 指出：任何命題非真即假，A 與 ¬A 必定有一個為真，因此相或必為真。"
+      },
+      {
+        q: "若要把邏輯表達式 「¬(P ∨ Q)」 進行括號拆解，結果會變成什麼？",
+        options: ["¬P ∨ ¬Q", "¬P ∧ ¬Q", "P ∧ Q", "¬P ∨ Q"],
+        answer: 1,
+        explain: "根據德摩根定律 (De Morgan's)，否定進入括號時，否定符號作用於各變數，且「或 ∨」必須轉換為「且 ∧」。"
+      },
+      {
+        q: "簡化邏輯式 「A ∧ (A ∨ B)」 的最終結果是什麼？",
+        options: ["A", "B", "A ∧ B", "真"],
+        answer: 0,
+        explain: "根據吸收律 (Absorption Law)，當 A 重複出現且運算符為相反（∧ 與 ∨）時，B 會被吸收，結果只剩下 A。"
+      },
+      {
+        q: "「這朵花既是紅色的，但同時又完全不是紅色的」這句話在邏輯上違反了什麼律？",
+        options: ["交換律", "矛盾律", "結合律", "支配律"],
+        answer: 1,
+        explain: "矛盾律 (Law of Non-Contradiction) 指出：A ∧ ¬A 恆為假，一件事不可能同時成立又同時不成立。"
+      },
+      {
+        q: "邏輯算式 「A ∧ 假 (False)」 的結果為？",
+        options: ["A", "真", "假", "¬A"],
+        answer: 2,
+        explain: "支配律 (Domination Law) 指出：任何條件跟「假」做「且 ∧」運算，結果必定被支配為假。"
+      },
+      {
+        q: "表達式 「¬(¬X)」 可以化簡為？",
+        options: ["¬X", "X", "真", "假"],
+        answer: 1,
+        explain: "雙重否定律 (Double Negation) 指出：兩個否定互相抵消，¬(¬X) ≡ X。"
+      },
+      {
+        q: "算式 「(A ∨ B) ∨ C」 與 「A ∨ (B ∨ C)」 等價，這是利用了什麼律？",
+        options: ["分配律", "結合律", "交換律", "冪等律"],
+        answer: 1,
+        explain: "結合律 (Associative Law) 指出：同種類運算子連續出現時，括號優先權不影響最終結果。"
+      },
+      {
+        q: "請問 「A ∨ (B ∧ C)」 透過分配律展開後會是什麼？",
+        options: ["(A ∨ B) ∧ (A ∨ C)", "(A ∧ B) ∨ (A ∧ C)", "(A ∨ B) ∨ C", "A ∧ B ∧ C"],
+        answer: 0,
+        explain: "邏輯中的「或 ∨」對「且 ∧」具備分配律：A ∨ (B ∧ C) ≡ (A ∨ B) ∧ (A ∨ C)。"
+      }
+    ];
+
+    function renderQuizQuestion() {
+      const container = document.getElementById('quiz-card-container');
+      const qIdx = gameState.quiz.currentIndex;
+
+      if (qIdx >= QUIZ_QUESTIONS.length) {
+        // Quiz Win
+        container.innerHTML = `
+          <div class="text-center py-8 space-y-4">
+            <div class="w-20 h-20 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center text-4xl mx-auto shadow-lg shadow-emerald-500/20">
+              <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-white">闖關成功！你已通關邏輯冒險島！</h3>
+            <p class="text-slate-300 text-sm">你對各大邏輯律的理解已經達到了大師水準！</p>
+            <div class="pt-4">
+              <button onclick="resetQuiz()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition">
+                再挑戰一次
+              </button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const currentQ = QUIZ_QUESTIONS[qIdx];
+      document.getElementById('quiz-level-num').innerText = `${qIdx + 1} / ${QUIZ_QUESTIONS.length}`;
+
+      container.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Question ${qIdx + 1}</span>
+            <span class="text-xs text-slate-400">單選題</span>
+          </div>
+
+          <h3 class="text-lg sm:text-xl font-bold text-white leading-relaxed">
+            ${currentQ.q}
+          </h3>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            ${currentQ.options.map((opt, idx) => `
+              <button onclick="submitQuizAnswer(${idx})" class="w-full text-left p-4 bg-slate-900/80 hover:bg-indigo-950/60 border border-slate-700 hover:border-indigo-500/50 rounded-xl transition font-medium text-slate-200 hover:text-white flex items-center gap-3 group">
+                <span class="w-7 h-7 rounded-lg bg-slate-800 group-hover:bg-indigo-600 text-slate-400 group-hover:text-white flex items-center justify-center text-xs font-bold transition">
+                  ${['A', 'B', 'C', 'D'][idx]}
+                </span>
+                <span>${opt}</span>
+              </button>
+            `).join('')}
+          </div>
+
+          <div id="quiz-explanation" class="hidden p-4 rounded-xl border text-sm leading-relaxed mt-4">
+            <!-- Rendered after answer -->
+          </div>
+        </div>
+      `;
+    }
+
+    function submitQuizAnswer(optIdx) {
+      const qIdx = gameState.quiz.currentIndex;
+      const currentQ = QUIZ_QUESTIONS[qIdx];
+      const expBox = document.getElementById('quiz-explanation');
+
+      expBox.classList.remove('hidden');
+
+      if (optIdx === currentQ.answer) {
+        // Correct
+        playBeep(880, 0.15);
+        expBox.className = "p-4 rounded-xl border bg-emerald-950/50 border-emerald-500/50 text-emerald-200 text-sm space-y-2";
+        expBox.innerHTML = `
+          <div class="font-bold flex items-center gap-2 text-emerald-400">
+            <i class="fa-solid fa-circle-check"></i> 回答正確！
+          </div>
+          <div>${currentQ.explain}</div>
+          <button onclick="nextQuizQuestion()" class="mt-2 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition">
+            下一題 <i class="fa-solid fa-arrow-right ml-1"></i>
+          </button>
+        `;
+        addStars(15);
+      } else {
+        // Wrong
+        playBeep(220, 0.2);
+        gameState.quiz.hp--;
+        updateHpUI();
+
+        expBox.className = "p-4 rounded-xl border bg-rose-950/50 border-rose-500/50 text-rose-200 text-sm space-y-2";
+        expBox.innerHTML = `
+          <div class="font-bold flex items-center gap-2 text-rose-400">
+            <i class="fa-solid fa-circle-xmark"></i> 回答錯誤！
+          </div>
+          <div>${currentQ.explain}</div>
+          ${gameState.quiz.hp > 0 ? `
+          <button onclick="nextQuizQuestion()" class="mt-2 px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg text-xs transition">
+            繼續挑戰 <i class="fa-solid fa-arrow-right ml-1"></i>
+          </button>` : `
+          <button onclick="resetQuiz()" class="mt-2 px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-xs transition">
+            生命值耗盡，重新開始
+          </button>`}
+        `;
+      }
+    }
+
+    function updateHpUI() {
+      const hpBox = document.getElementById('quiz-hp');
+      let hearts = '';
+      for (let i = 0; i < 3; i++) {
+        if (i < gameState.quiz.hp) {
+          hearts += `<i class="fa-solid fa-heart text-rose-500"></i>`;
+        } else {
+          hearts += `<i class="fa-regular fa-heart text-slate-600"></i>`;
+        }
+      }
+      hpBox.innerHTML = hearts;
+    }
+
+    function nextQuizQuestion() {
+      gameState.quiz.currentIndex++;
+      renderQuizQuestion();
+    }
+
+    function resetQuiz() {
+      gameState.quiz.currentIndex = 0;
+      gameState.quiz.hp = 3;
+      updateHpUI();
+      renderQuizQuestion();
+    }
+
+    const LAB_PROBLEMS = [
+      {
+        initial: "A ∧ (A ∨ B)",
+        target: "A",
+        steps: [
+          { name: "套用：吸收律 (Absorption)", next: "A", detail: "A ∧ (A ∨ B) 直接化簡為 A" }
+        ]
+      },
+      {
+        initial: "¬(¬A ∨ B)",
+        target: "A ∧ ¬B",
+        steps: [
+          { name: "套用：德摩根定律 (De Morgan)", next: "¬(¬A) ∧ ¬B", detail: "拆開否定，∨ 轉 ∧" },
+          { name: "套用：雙重否定律 (Double Negation)", next: "A ∧ ¬B", detail: "¬(¬A) 化簡為 A" }
+        ]
+      },
+      {
+        initial: "(A ∧ B) ∨ (A ∧ ¬B)",
+        target: "A",
+        steps: [
+          { name: "套用：分配律逆運用 (Distributive)", next: "A ∧ (B ∨ ¬B)", detail: "提出公因式 A ∧" },
+          { name: "套用：排中律 (Excluded Middle)", next: "A ∧ 真", detail: "(B ∨ ¬B) 恆為真" },
+          { name: "套用：同一律 (Identity)", next: "A", detail: "A ∧ 真 ≡ A" }
+        ]
+      }
+    ];
+
+    let currentLabStepIdx = 0;
+
+    function initLab() {
+      loadLabProblem(0);
+    }
+
+    function loadLabProblem(idx) {
+      gameState.lab.currentProblemIdx = idx;
+      currentLabStepIdx = 0;
+      const prob = LAB_PROBLEMS[idx];
+
+      document.getElementById('lab-current-expr').innerText = prob.initial;
+      document.getElementById('lab-history').innerHTML = `
+        <div class="text-xs text-slate-400 p-2 bg-slate-900 rounded-lg font-mono">
+          [初始算式]: ${prob.initial}
+        </div>
+      `;
+
+      renderLabActions();
+
+      // Update selector UI
+      const selectorBtns = document.getElementById('lab-problem-selector').children;
+      for (let i = 0; i < selectorBtns.length; i++) {
+        if (i === idx) {
+          selectorBtns[i].className = "px-3 py-1 rounded-lg text-xs bg-indigo-600 font-medium text-white";
+        } else {
+          selectorBtns[i].className = "px-3 py-1 rounded-lg text-xs bg-slate-700 hover:bg-slate-600 font-medium text-slate-300";
+        }
+      }
+    }
+
+    function renderLabActions() {
+      const prob = LAB_PROBLEMS[gameState.lab.currentProblemIdx];
+      const actionsBox = document.getElementById('lab-actions');
+
+      if (currentLabStepIdx >= prob.steps.length) {
+        actionsBox.innerHTML = `
+          <div class="p-4 bg-emerald-950/40 border border-emerald-500/40 rounded-xl text-center space-y-2">
+            <i class="fa-solid fa-circle-check text-2xl text-emerald-400"></i>
+            <div class="text-sm font-bold text-emerald-300">完美化簡！</div>
+            <p class="text-xs text-slate-400">算式已化簡至最簡型態：<span class="font-mono text-emerald-300 font-bold">${prob.target}</span></p>
+          </div>
+        `;
+        return;
+      }
+
+      const correctStep = prob.steps[currentLabStepIdx];
+
+      // Provide correct step + 2 random dummy laws
+      const dummyLaws = ["套用：交換律 (Commutative)", "套用：支配律 (Domination)", "套用：冪等律 (Idempotent)"]
+        .filter(l => l !== correctStep.name)
+        .slice(0, 2);
+
+      const options = [correctStep.name, ...dummyLaws].sort(() => 0.5 - Math.random());
+
+      actionsBox.innerHTML = options.map(opt => `
+        <button onclick="applyLabStep('${opt}')" class="w-full text-left p-3 bg-slate-900 hover:bg-indigo-950/80 border border-slate-700 hover:border-indigo-500/50 rounded-xl text-xs font-semibold text-slate-200 hover:text-white transition flex items-center justify-between">
+          <span>${opt}</span>
+          <i class="fa-solid fa-play text-slate-500 text-[10px]"></i>
+        </button>
+      `).join('');
+    }
+
+    function applyLabStep(optName) {
+      const prob = LAB_PROBLEMS[gameState.lab.currentProblemIdx];
+      const correctStep = prob.steps[currentLabStepIdx];
+
+      if (optName === correctStep.name) {
+        // Correct step
+        playBeep(880, 0.15);
+        currentLabStepIdx++;
+
+        document.getElementById('lab-current-expr').innerText = correctStep.next;
+        const historyBox = document.getElementById('lab-history');
+        historyBox.innerHTML += `
+          <div class="text-xs p-2.5 bg-indigo-950/40 border border-indigo-500/30 rounded-lg space-y-1">
+            <div class="text-indigo-300 font-bold flex justify-between">
+              <span>${correctStep.name}</span>
+              <span class="font-mono text-emerald-400">${correctStep.next}</span>
+            </div>
+            <div class="text-slate-400 text-[11px]">${correctStep.detail}</div>
+          </div>
+        `;
+        historyBox.scrollTop = historyBox.scrollHeight;
+
+        addStars(20);
+        renderLabActions();
+      } else {
+        // Wrong step
+        playBeep(220, 0.2);
+        showToast("此邏輯律無法應用於當前步驟，請再觀察看看！");
+      }
+    }
+
+    function resetLabProblem() {
+      loadLabProblem(gameState.lab.currentProblemIdx);
+    }
+
+    function addStars(num) {
+      gameState.stars += num;
+      document.getElementById('global-stars').innerText = gameState.stars;
+
+      // Update Mastery Title
+      const levelLabel = document.getElementById('mastery-level');
+      if (gameState.stars >= 150) levelLabel.innerText = "邏輯大師 🎓";
+      else if (gameState.stars >= 80) levelLabel.innerText = "邏輯學者 📜";
+      else if (gameState.stars >= 30) levelLabel.innerText = "邏輯學徒 🔍";
+      else levelLabel.innerText = "邏輯新手 🐣";
+    }
+
+    function showToast(msg) {
+      const toast = document.createElement('div');
+      toast.className = "fixed bottom-6 right-6 bg-slate-800 text-white border border-indigo-500/50 px-4 py-3 rounded-xl shadow-2xl text-xs font-bold z-50 animate-bounce flex items-center gap-2";
+      toast.innerHTML = `<i class="fa-solid fa-circle-info text-indigo-400"></i> ${msg}`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    /* Simple Web Audio API Synthesizer for Sound Effects */
+    function playBeep(freq = 440, duration = 0.1) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.05, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch (e) {
+        // AudioContext disabled or unsupported
+      }
+    }
+
+    window.onload = function() {
+      renderLawCards();
+    };
+  </script>
+</body>
+</html>
