@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>澳門家居 Wi-Fi 網絡搭建與設定互動教室</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .light-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+        }
+        .tab-btn {
+            color: #64748b;
+            background-color: #f1f5f9;
+        }
+        .tab-btn.active {
+            background-color: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+        }
+        .drop-zone {
+            transition: all 0.2s ease-in-out;
+        }
+        .drop-zone.drag-over {
+            border-color: #2563eb !important;
+            background-color: #eff6ff !important;
+            transform: scale(1.02);
+        }
+        .draggable-cable {
+            cursor: grab;
+            user-select: none;
+        }
+        .draggable-cable:active {
+            cursor: grabbing;
+        }
+        .draggable-device {
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+        }
+        .draggable-device:active {
+            cursor: grabbing;
+        }
+        /* Dynamic SVG Line Overlay */
+        #svg-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+        @keyframes pulse-wire {
+            0% { stroke-dashoffset: 20; }
+            100% { stroke-dashoffset: 0; }
+        }
+        .wire-animated {
+            stroke-dasharray: 6 6;
+            animation: pulse-wire 1.2s linear infinite;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-slate-50">
+
+    <!-- 頂部導航欄 (淺色版) -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 p-2.5 rounded-xl text-white shadow-md shadow-blue-500/20">
+                    <i class="fa-solid fa-wifi text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                        澳門家居 Wi-Fi 網絡搭建教室
+                        <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold border border-emerald-200">
+                            <i class="fa-solid fa-hand-pointer text-[10px]"></i> 可拖拽線路與連線
+                        </span>
+                    </h1>
+                    <p class="text-xs text-slate-500">動手拖動光纖、網線與設備，學習 CTM/MTel 接入與 2.4G/5G 路由器設定</p>
+                </div>
+            </div>
+
+            <!-- 澳門電訊商選擇器 (ISP) -->
+            <div class="flex items-center space-x-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                <span class="text-xs font-semibold text-slate-500 pl-2">澳門寬頻 (ISP):</span>
+                <button id="isp-ctm" onclick="switchISP('CTM')" class="px-3 py-1.5 text-xs rounded-lg font-bold transition bg-blue-600 text-white shadow-sm">
+                    CTM 澳門電訊
+                </button>
+                <button id="isp-mtel" onclick="switchISP('MTel')" class="px-3 py-1.5 text-xs rounded-lg font-bold transition text-slate-600 hover:bg-slate-200">
+                    MTel 電訊
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區域 -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+        <!-- 頁籤導航 -->
+        <div class="flex flex-wrap gap-2 mb-6 border-b border-slate-200 pb-3">
+            <button onclick="switchTab('topology')" id="tab-topology" class="tab-btn active px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2">
+                <i class="fa-solid fa-network-wired"></i> 1. 拖動網絡拓撲與線路連接
+            </button>
+            <button onclick="switchTab('router')" id="tab-router" class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm transition flex items-center gap-2">
+                <i class="fa-solid fa-sliders"></i> 2. 路由器管理後台 (192.168.1.1)
+            </button>
+            <button onclick="switchTab('devices')" id="tab-devices" class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm transition flex items-center gap-2">
+                <i class="fa-solid fa-laptop-house"></i> 3. 設備配對與網速測試
+            </button>
+            <button onclick="switchTab('quests')" id="tab-quests" class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm transition flex items-center gap-2">
+                <i class="fa-solid fa-list-check"></i> 4. 實務任務與知識測驗
+            </button>
+        </div>
+
+        <!-- TAB 1: 拖動拓撲與實體線路 (Topology with Drag & Drop) -->
+        <section id="sec-topology" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                
+                <!-- 左側：可拖拽纜線工具箱與狀態 -->
+                <div class="space-y-4">
+                    <div class="light-card rounded-2xl p-5 space-y-4">
+                        <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                            <i class="fa-solid fa-toolbox text-blue-600"></i> 線路工具箱 (請拖拽連線)
+                        </h2>
+                        
+                        <p class="text-xs text-slate-500">按住以下線路拖動至目標設備埠口以完成連接：</p>
+
+                        <!-- 拖動線路項 1: 光纖線 -->
+                        <div draggable="true" ondragstart="handleCableDragStart(event, 'fiber')" class="draggable-cable p-3 rounded-xl bg-amber-50 border border-amber-200 hover:border-amber-400 transition flex items-center justify-between shadow-sm">
+                            <div class="flex items-center space-x-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center text-xs font-bold">
+                                    <i class="fa-solid fa-bolt"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-amber-900">光纖纜線 (Fiber)</div>
+                                    <div class="text-[10px] text-amber-700">拖至: 光纖 Modem</div>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-grip-vertical text-amber-300"></i>
+                        </div>
+
+                        <!-- 拖動線路項 2: WAN 網線 -->
+                        <div draggable="true" ondragstart="handleCableDragStart(event, 'wan')" class="draggable-cable p-3 rounded-xl bg-emerald-50 border border-emerald-200 hover:border-emerald-400 transition flex items-center justify-between shadow-sm">
+                            <div class="flex items-center space-x-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs font-bold">
+                                    <i class="fa-solid fa-ethernet"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-emerald-900">黃色 WAN 網線 (RJ-45)</div>
+                                    <div class="text-[10px] text-emerald-700">拖至: 路由器 WAN 埠</div>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-grip-vertical text-emerald-300"></i>
+                        </div>
+
+                        <!-- 拖動線路項 3: LAN 網線 -->
+                        <div draggable="true" ondragstart="handleCableDragStart(event, 'lan')" class="draggable-cable p-3 rounded-xl bg-indigo-50 border border-indigo-200 hover:border-indigo-400 transition flex items-center justify-between shadow-sm">
+                            <div class="flex items-center space-x-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">
+                                    <i class="fa-solid fa-network-wired"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-indigo-900">藍色 LAN 網線</div>
+                                    <div class="text-[10px] text-indigo-700">拖至: 桌上型電腦 LAN</div>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-grip-vertical text-indigo-300"></i>
+                        </div>
+
+                        <div class="pt-2">
+                            <button onclick="resetAllConnections()" class="w-full py-2 px-3 rounded-xl font-semibold text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 transition flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-rotate-right"></i> 重置所有線路與連線
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 實體連接診斷 -->
+                    <div class="light-card rounded-2xl p-4 space-y-2.5 text-xs">
+                        <h3 class="font-bold text-slate-800 border-b border-slate-100 pb-2">連線診斷狀態</h3>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500">光纖到戶 (FTTH):</span>
+                            <span id="st-fiber-connected" class="font-bold text-rose-500">未接入</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500">Modem -> Router WAN:</span>
+                            <span id="st-wan-connected" class="font-bold text-rose-500">未接入</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500">外網 IP (WAN):</span>
+                            <span id="st-wan-ip" class="font-mono text-slate-400">---.---.---.---</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500">已連網設備:</span>
+                            <span id="st-dev-count" class="font-bold text-blue-600">0 / 6 台</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右側：可拖拽落點的 3 層拓撲圖視覺化 -->
+                <div class="lg:col-span-3 light-card rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[500px]">
+                    <!-- SVG 動態連線層 -->
+                    <svg id="svg-canvas"></svg>
+
+                    <div class="flex justify-between items-center z-10 mb-4">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">澳門家居網絡實體架構圖</span>
+                        <div class="text-xs text-blue-600 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full flex items-center gap-1">
+                            <i class="fa-solid fa-circle-info"></i> 可將線路拖至埠口，或將設備拖至 2.4G/5G 區域連線
+                        </div>
+                    </div>
+
+                    <!-- 拓撲架構第一層：澳門 ISP & 光纖 Modem -->
+                    <div class="grid grid-cols-2 gap-8 z-10 relative my-2 max-w-lg mx-auto w-full">
+                        <!-- 澳門 ISP 機房 -->
+                        <div class="text-center p-3 rounded-xl bg-slate-50 border border-slate-200">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center mx-auto text-xl text-white shadow-md">
+                                <i class="fa-solid fa-cloud"></i>
+                            </div>
+                            <span id="isp-title-display" class="text-xs font-bold block mt-2 text-slate-800">CTM 澳門電訊主網</span>
+                            <span class="text-[10px] text-slate-500">光纖寬頻出口</span>
+                        </div>
+
+                        <!-- 光纖 Modem (ONT) - Drop Zone for Fiber -->
+                        <div id="drop-port-modem" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDropOnPort(event, 'modem')" class="drop-zone p-3 rounded-xl bg-amber-50/50 border-2 border-dashed border-amber-300 text-center relative flex flex-col items-center justify-center">
+                            <div class="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center text-xl shadow-md">
+                                <i class="fa-solid fa-box"></i>
+                            </div>
+                            <span class="text-xs font-bold text-amber-900 mt-1">光纖 Modem (ONT)</span>
+                            <span id="tag-modem-port" class="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold border border-amber-300 mt-1">
+                                拖入光纖線
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 拓撲架構第二層：Wi-Fi 路由器 (Router Drop Zone) -->
+                    <div class="z-10 relative my-4 flex justify-center">
+                        <div id="drop-port-router" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDropOnPort(event, 'router')" class="drop-zone border-2 border-dashed border-blue-300 bg-blue-50/40 p-4 rounded-2xl w-80 text-center relative shadow-sm">
+                            <div class="flex justify-center items-center gap-3 text-blue-600 text-3xl mb-1">
+                                <i class="fa-solid fa-router"></i>
+                            </div>
+                            <h3 id="topology-router-title" class="font-bold text-sm text-slate-900">MyHome_Wi-Fi 路由器</h3>
+                            
+                            <!-- 路由器 WAN 埠 -->
+                            <div class="mt-2 inline-flex items-center gap-2">
+                                <span id="tag-router-wan" class="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-600 font-bold border border-slate-300">
+                                    <i class="fa-solid fa-plug text-[9px]"></i> WAN 埠 (拖入黃色網線)
+                                </span>
+                            </div>
+
+                            <!-- 雙頻廣播熱點 -->
+                            <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-blue-200/60">
+                                <!-- 2.4G Drop Zone -->
+                                <div id="zone-wifi-2g" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDropOnWiFiZone(event, '2G')" class="drop-zone p-2 rounded-xl bg-amber-100/60 border border-amber-300 text-center">
+                                    <span class="text-[10px] font-bold text-amber-900 block"><i class="fa-solid fa-wifi"></i> 2.4GHz 區域</span>
+                                    <span class="text-[9px] text-amber-700">可拖入智能手錶/家電</span>
+                                </div>
+                                <!-- 5G Drop Zone -->
+                                <div id="zone-wifi-5g" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDropOnWiFiZone(event, '5G')" class="drop-zone p-2 rounded-xl bg-indigo-100/60 border border-indigo-300 text-center">
+                                    <span class="text-[10px] font-bold text-indigo-900 block"><i class="fa-solid fa-bolt"></i> 5GHz 高速區</span>
+                                    <span class="text-[9px] text-indigo-700">可拖入手機/電腦/平板</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 拓撲架構第三層：家居終端設備 (可拖動配對) -->
+                    <div class="z-10 relative">
+                        <div class="text-xs text-slate-500 font-bold mb-2 flex items-center justify-between">
+                            <span>家居設備清單 (按住設備可拖至上方 2.4G/5G 區或點擊切換)：</span>
+                            <span class="text-[10px] text-slate-400">綠色表示已連線</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3" id="topology-device-grid">
+                            <!-- JS 動態繪製設備 -->
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: 路由器管理後台 (Router Web Admin Console - Light Theme) -->
+        <section id="sec-router" class="hidden space-y-6">
+            <div class="light-card rounded-2xl overflow-hidden">
+                <!-- 模擬路由器 Admin 頂部列 -->
+                <div class="bg-slate-900 px-6 py-4 text-white flex flex-wrap justify-between items-center gap-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-blue-600 text-white p-2 rounded-lg">
+                            <i class="fa-solid fa-sliders text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-bold text-white text-base">Wi-Fi 路由器控制台 (Web Admin)</h2>
+                            <p class="text-xs text-slate-300">網址：http://192.168.1.1 | 預設帳號：admin</p>
+                        </div>
+                    </div>
+                    <div>
+                        <button onclick="saveRouterSettings()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5">
+                            <i class="fa-solid fa-floppy-disk"></i> 儲存並套用設定
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 後台功能面板 -->
+                <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 bg-white">
+                    <!-- 左側主選單 -->
+                    <div class="space-y-2">
+                        <button onclick="showAdminTab('wan')" id="admin-tab-wan" class="w-full text-left p-3.5 rounded-xl bg-blue-600 text-white font-bold text-sm flex items-center justify-between shadow-sm">
+                            <span><i class="fa-solid fa-globe w-6"></i> 外網 WAN 接入 (ISP)</span>
+                            <i class="fa-solid fa-chevron-right text-xs"></i>
+                        </button>
+                        <button onclick="showAdminTab('wifi')" id="admin-tab-wifi" class="w-full text-left p-3.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold text-sm flex items-center justify-between">
+                            <span><i class="fa-solid fa-wifi w-6"></i> 無線網絡 (SSID / 密碼)</span>
+                            <i class="fa-solid fa-chevron-right text-xs"></i>
+                        </button>
+                        <button onclick="showAdminTab('dhcp')" id="admin-tab-dhcp" class="w-full text-left p-3.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold text-sm flex items-center justify-between">
+                            <span><i class="fa-solid fa-network-wired w-6"></i> 局域網 DHCP 伺服器</span>
+                            <i class="fa-solid fa-chevron-right text-xs"></i>
+                        </button>
+                    </div>
+
+                    <!-- 右側參數表單 -->
+                    <div class="md:col-span-2 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                        <!-- WAN 設定 -->
+                        <div id="admin-panel-wan" class="space-y-4">
+                            <h3 class="text-sm font-bold text-blue-700 border-b border-slate-200 pb-2 flex items-center gap-2">
+                                <i class="fa-solid fa-earth-asia"></i> 網際網路連接模式 (WAN Connection)
+                            </h3>
+                            <div class="space-y-3 text-sm">
+                                <div>
+                                    <label class="block text-slate-600 mb-1 text-xs font-semibold">連接類型 (WAN Type):</label>
+                                    <select id="wan-type-select" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-500 font-medium text-xs">
+                                        <option value="PPPoE">PPPoE 寬頻撥號 (澳門 CTM / MTel 光纖常見)</option>
+                                        <option value="DHCP">動態 IP (DHCP - 自動取得 IP)</option>
+                                        <option value="Static">靜態 IP (Static IP)</option>
+                                    </select>
+                                </div>
+                                <div id="pppoe-fields" class="space-y-3">
+                                    <div>
+                                        <label class="block text-slate-600 mb-1 text-xs font-semibold">PPPoE 寬頻帳號:</label>
+                                        <input type="text" id="pppoe-user" value="macau_student@ctm.net" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono text-xs focus:outline-none focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-slate-600 mb-1 text-xs font-semibold">PPPoE 寬頻密碼:</label>
+                                        <input type="password" id="pppoe-pass" value="macau123456" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono text-xs focus:outline-none focus:border-blue-500">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Wi-Fi 設定 -->
+                        <div id="admin-panel-wifi" class="hidden space-y-6">
+                            <!-- 2.4 GHz 設定 -->
+                            <div class="space-y-3">
+                                <h3 class="text-sm font-bold text-amber-700 border-b border-slate-200 pb-2 flex items-center justify-between">
+                                    <span><i class="fa-solid fa-wifi text-xs"></i> 2.4 GHz 頻段 (穿牆力強、覆蓋遠)</span>
+                                </h3>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                        <label class="block text-slate-600 mb-1 text-xs font-semibold">Wi-Fi 名稱 (SSID):</label>
+                                        <input type="text" id="wifi-2g-ssid" value="Macau_Home_2.4G" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono text-xs">
+                                    </div>
+                                    <div>
+                                        <label class="block text-slate-600 mb-1 text-xs font-semibold">密碼:</label>
+                                        <input type="text" id="wifi-2g-pass" value="macau8888" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono text-xs">
+                                    </div>
+                                    <div>
+                                        <label class="block text-slate-600 mb-1 text-xs font-semibold">安全加密模式:</label>
+                                        <select id="wifi-2g-sec" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 text-xs">
+                                            <option value="WPA2-PSK">WPA2-PSK (AES)</option>
+                                            <option value="WPA3-SAE">WPA3-SAE (更安全)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-slate-600 mb-1 text-xs font-semibold">信道 (Channel):</label>
+                                        <select id="wifi-2g-channel" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 text-xs">
+                                            <option value="1">信道 1</option>
+                                            <option value="6" selected>信道 6 (推薦避免干擾)</option>
+                                            <option value="11">信道 11</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 5 GHz 設定 -->
+                            <div class="space-y-3 pt-2">
+                                <h3 class="text-sm font-bold text-indigo-700 border-b border-slate-200 pb-2 flex items-center justify-between">
+                                    <span><i class="fa-solid fa-bolt text-xs"></i> 5 GHz 頻段 (高速率、低延遲)</span>
+                                </h3>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                        <label class="block text-slate-600 mb-1 text-xs font-semibold">Wi-Fi 名稱 (SSID):</label>
+                                        <input type="text" id="wifi-5g-ssid" value="Macau_Home_5G" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono text-xs">
+                                    </div>
+                                    <div>
+                                        <label class="block text-slate-600 mb-1 text-xs font-semibold">密碼:</label>
+                                        <input type="text" id="wifi-5g-pass" value="macau8888" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono text-xs">
+                                    </div>
+                                    <div>
+                                        <label class="block text-slate-600 mb-1 text-xs font-semibold">安全加密模式:</label>
+                                        <select id="wifi-5g-sec" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 text-xs">
+                                            <option value="WPA3-SAE">WPA3-SAE (建議)</option>
+                                            <option value="WPA2-PSK">WPA2-PSK</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-slate-600 mb-1 text-xs font-semibold">頻寬 (Bandwidth):</label>
+                                        <select class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 text-xs">
+                                            <option value="80MHz">80 MHz</option>
+                                            <option value="160MHz">160 MHz (極速超寬)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- DHCP 設定 -->
+                        <div id="admin-panel-dhcp" class="hidden space-y-4">
+                            <h3 class="text-sm font-bold text-emerald-700 border-b border-slate-200 pb-2 flex items-center gap-2">
+                                <i class="fa-solid fa-network-wired"></i> 局域網內網 IP 自動分配 (DHCP)
+                            </h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                <div>
+                                    <label class="block text-slate-600 mb-1 text-xs font-semibold">路由器 Gateway IP:</label>
+                                    <input type="text" value="192.168.1.1" disabled class="w-full bg-slate-200/60 border border-slate-300 rounded-xl px-3 py-2 text-slate-500 font-mono text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-600 mb-1 text-xs font-semibold">子網掩碼 (Subnet Mask):</label>
+                                    <input type="text" value="255.255.255.0" disabled class="w-full bg-slate-200/60 border border-slate-300 rounded-xl px-3 py-2 text-slate-500 font-mono text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-600 mb-1 text-xs font-semibold">起始 IP 地址:</label>
+                                    <input type="text" id="dhcp-start" value="192.168.1.100" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-600 mb-1 text-xs font-semibold">結束 IP 地址:</label>
+                                    <input type="text" id="dhcp-end" value="192.168.1.200" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono text-xs">
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: 設備連接與測速 (Device Pairing & Speedtest) -->
+        <section id="sec-devices" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 左側設備選擇面板 -->
+                <div class="light-card rounded-2xl p-5 space-y-4">
+                    <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-mobile-screen text-blue-600"></i> 選擇要配對的設備
+                    </h2>
+                    
+                    <div id="device-select-list" class="space-y-2">
+                        <!-- 由 JS 動態生成設備卡片 -->
+                    </div>
+                </div>
+
+                <!-- 右側設備 Wi-Fi 搜尋與 Speedtest -->
+                <div class="lg:col-span-2 light-card rounded-2xl p-6 space-y-6">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                        <div class="flex items-center space-x-3">
+                            <div id="selected-dev-icon" class="text-2xl text-blue-600 bg-blue-50 p-3 rounded-xl border border-blue-200">
+                                <i class="fa-solid fa-mobile-screen-button"></i>
+                            </div>
+                            <div>
+                                <h3 id="selected-dev-name" class="font-bold text-slate-900 text-base">iPhone 15 Pro</h3>
+                                <p id="selected-dev-spec" class="text-xs text-slate-500">支援頻段：5GHz / 2.4GHz</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <span id="selected-dev-status" class="text-xs px-3 py-1 rounded-full bg-rose-100 text-rose-700 font-bold border border-rose-200">未連線</span>
+                        </div>
+                    </div>
+
+                    <!-- Wi-Fi 搜尋結果列表 -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold text-slate-600">搜尋到的 Wi-Fi 廣播信號：</span>
+                            <button onclick="scanWiFi()" class="text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-rotate"></i> 重新搜尋
+                            </button>
+                        </div>
+
+                        <div id="wifi-scan-results" class="space-y-2">
+                            <!-- JS 動態生成 -->
+                        </div>
+                    </div>
+
+                    <!-- 模擬 Speedtest 模組 -->
+                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h4 class="text-xs font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-gauge-high text-amber-500"></i> 模擬網速與 Ping 測試 (Speedtest)
+                            </h4>
+                            <button id="run-speedtest-btn" onclick="runSpeedtest()" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-sm">
+                                開始測速
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-3 text-center">
+                            <div class="bg-white p-3 rounded-xl border border-slate-200">
+                                <span class="text-[10px] text-slate-500 font-bold block">下載速度 (Download)</span>
+                                <span id="speed-dl" class="text-lg font-bold text-emerald-600 font-mono">-- Mbps</span>
+                            </div>
+                            <div class="bg-white p-3 rounded-xl border border-slate-200">
+                                <span class="text-[10px] text-slate-500 font-bold block">上載速度 (Upload)</span>
+                                <span id="speed-ul" class="text-lg font-bold text-blue-600 font-mono">-- Mbps</span>
+                            </div>
+                            <div class="bg-white p-3 rounded-xl border border-slate-200">
+                                <span class="text-[10px] text-slate-500 font-bold block">網絡延遲 (Ping)</span>
+                                <span id="speed-ping" class="text-lg font-bold text-amber-600 font-mono">-- ms</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: 實務任務與測驗 (Quests & Quiz) -->
+        <section id="sec-quests" class="hidden space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 學習任務關卡 -->
+                <div class="light-card rounded-2xl p-5 space-y-4">
+                    <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-tasks text-emerald-600"></i> 動手實作關卡
+                    </h2>
+                    
+                    <div class="space-y-3 text-sm">
+                        <div id="quest-1" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+                            <i id="q1-icon" class="fa-regular fa-circle text-slate-400 text-lg mt-0.5"></i>
+                            <div>
+                                <h4 class="font-bold text-slate-900">關卡 1: 完成實體光纖與 WAN 網線連接</h4>
+                                <p class="text-xs text-slate-500">在拓撲圖中，將光纖線拖至 Modem，並將黃色 WAN 網線從 Modem 拖至路由器 WAN 埠。</p>
+                            </div>
+                        </div>
+
+                        <div id="quest-2" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+                            <i id="q2-icon" class="fa-regular fa-circle text-slate-400 text-lg mt-0.5"></i>
+                            <div>
+                                <h4 class="font-bold text-slate-900">關卡 2: 設定路由器無線 Wi-Fi 密碼</h4>
+                                <p class="text-xs text-slate-500">進入 192.168.1.1 控制台，將 2.4GHz 或 5GHz 的預設密碼改為新密碼並點擊儲存。</p>
+                            </div>
+                        </div>
+
+                        <div id="quest-3" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+                            <i id="q3-icon" class="fa-regular fa-circle text-slate-400 text-lg mt-0.5"></i>
+                            <div>
+                                <h4 class="font-bold text-slate-900">關卡 3: 連接 5GHz 高速 Wi-Fi 並進行測速</h4>
+                                <p class="text-xs text-slate-500">將 iPhone 或 MacBook 連上 5GHz Wi-Fi，並完成一次 Speedtest 網速測試。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 澳門網絡常識小測驗 -->
+                <div class="light-card rounded-2xl p-5 space-y-4">
+                    <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-graduation-cap text-indigo-600"></i> 家居 Wi-Fi 知識考驗
+                    </h2>
+
+                    <div id="quiz-container" class="space-y-4 text-sm">
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                            <p class="font-bold text-slate-900">問題 1: 為什麼智能手錶或舊型號智能家電通常只能連接 2.4GHz Wi-Fi？</p>
+                            <div class="space-y-1.5 text-xs">
+                                <button onclick="checkQuiz(1, 'A', this)" class="w-full text-left p-2.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition font-medium">
+                                    A) 2.4GHz 波長較長、穿牆覆蓋遠，且硬件晶片成本低、省電
+                                </button>
+                                <button onclick="checkQuiz(1, 'B', this)" class="w-full text-left p-2.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition font-medium">
+                                    B) 2.4GHz 網速比 5GHz 快 10 倍
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                            <p class="font-bold text-slate-900">問題 2: 澳門 CTM 或 MTel 光纖 Modem (ONT) 出來的網線，應插入路由器的哪一個埠？</p>
+                            <div class="space-y-1.5 text-xs">
+                                <button onclick="checkQuiz(2, 'A', this)" class="w-full text-left p-2.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition font-medium">
+                                    A) LAN 埠 (1-4 號局域網埠)
+                                </button>
+                                <button onclick="checkQuiz(2, 'B', this)" class="w-full text-left p-2.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition font-medium">
+                                    B) WAN 埠 (廣域網接入埠)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 頁尾 -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+        <p>澳門資訊科技教育 - 家居網絡建構互動模擬教學工具 | 支持 CTM & MTel 光纖架構動手拖動學習</p>
+    </footer>
+
+    <!-- JavaScript 邏輯引擎 -->
+    <script>
+        // 全局狀態管理
+        const appState = {
+            isp: 'CTM',
+            connections: {
+                fiber: false, // ISP -> Modem
+                wan: false,   // Modem -> Router WAN
+                lanPC: false  // Router LAN -> PC
+            },
+            router: {
+                wanType: 'PPPoE',
+                pppoeUser: 'macau_student@ctm.net',
+                pppoePass: 'macau123456',
+                wifi2g: {
+                    ssid: 'Macau_Home_2.4G',
+                    pass: 'macau8888',
+                    sec: 'WPA2-PSK',
+                    channel: '6'
+                },
+                wifi5g: {
+                    ssid: 'Macau_Home_5G',
+                    pass: 'macau8888',
+                    sec: 'WPA3-SAE'
+                },
+                dhcpStart: '192.168.1.100',
+                dhcpEnd: '192.168.1.200'
+            },
+            devices: [
+                { id: 'dev1', name: 'MacBook Pro', icon: 'fa-laptop', type: 'laptop', band: '5G', connectedSSID: '', ip: '', signal: '強', speedCap: 800 },
+                { id: 'dev2', name: 'iPhone 15 Pro', icon: 'fa-mobile-screen-button', type: 'phone', band: '5G', connectedSSID: '', ip: '', signal: '極強', speedCap: 900 },
+                { id: 'dev3', name: 'iPad Air', icon: 'fa-tablet-screen-button', type: 'tablet', band: '5G', connectedSSID: '', ip: '', signal: '中等', speedCap: 500 },
+                { id: 'dev4', name: 'Smart Watch 智能手錶', icon: 'fa-stopwatch', type: 'watch', band: '2.4G', connectedSSID: '', ip: '', signal: '強', speedCap: 72 },
+                { id: 'dev5', name: '客廳智能電視', icon: 'fa-tv', type: 'tv', band: '5G', connectedSSID: '', ip: '', signal: '中等', speedCap: 400 },
+                { id: 'dev6', name: '桌上型電腦 (有線LAN)', icon: 'fa-desktop', type: 'pc', band: 'LAN', connectedSSID: '', ip: '', signal: '100%', speedCap: 1000 }
+            ],
+            selectedDevId: 'dev2',
+            draggedCableType: null,
+            draggedDeviceId: null,
+            quests: { q1: false, q2: false, q3: false }
+        };
+
+        window.onload = function() {
+            renderTopologyDevices();
+            renderDeviceSelectionList();
+            updateTopologyStatus();
+            selectDevice('dev2');
+
+            window.addEventListener('resize', drawSVGConnections);
+            setTimeout(drawSVGConnections, 200);
+        };
+
+        // 頁籤切換
+        function switchTab(tabName) {
+            ['topology', 'router', 'devices', 'quests'].forEach(t => {
+                document.getElementById(`sec-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).classList.remove('active');
+            });
+
+            document.getElementById(`sec-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            if (tabName === 'topology') {
+                setTimeout(drawSVGConnections, 100);
+            }
+        }
+
+        // ISP 電訊商切換 (CTM / MTel)
+        function switchISP(ispName) {
+            appState.isp = ispName;
+            
+            const btnCtm = document.getElementById('isp-ctm');
+            const btnMtel = document.getElementById('isp-mtel');
+            const ispTitle = document.getElementById('isp-title-display');
+
+            if (ispName === 'CTM') {
+                btnCtm.className = "px-3 py-1.5 text-xs rounded-lg font-bold transition bg-blue-600 text-white shadow-sm";
+                btnMtel.className = "px-3 py-1.5 text-xs rounded-lg font-bold transition text-slate-600 hover:bg-slate-200";
+                ispTitle.innerText = "CTM 澳門電訊主網";
+                appState.router.pppoeUser = "macau_student@ctm.net";
+            } else {
+                btnMtel.className = "px-3 py-1.5 text-xs rounded-lg font-bold transition bg-red-600 text-white shadow-sm";
+                btnCtm.className = "px-3 py-1.5 text-xs rounded-lg font-bold transition text-slate-600 hover:bg-slate-200";
+                ispTitle.innerText = "MTel 電訊主網";
+                appState.router.pppoeUser = "macau_student@mtel.mo";
+            }
+
+            document.getElementById('pppoe-user').value = appState.router.pppoeUser;
+            updateTopologyStatus();
+        }
+
+        // --- 拖拽纜線邏輯 Drag & Drop Cables ---
+        function handleCableDragStart(e, cableType) {
+            appState.draggedCableType = cableType;
+            e.dataTransfer.setData('text/plain', cableType);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        // 當纜線拖拽放置到對應埠口
+        function handleDropOnPort(e, portTarget) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            const cableType = appState.draggedCableType || e.dataTransfer.getData('text/plain');
+
+            if (portTarget === 'modem' && cableType === 'fiber') {
+                appState.connections.fiber = true;
+                showToast('✅ 光纖纜線已成功插入 Modem 光纖口！');
+            } else if (portTarget === 'router' && cableType === 'wan') {
+                appState.connections.wan = true;
+                showToast('✅ 黃色 WAN 網線已成功連接 Modem 與路由器 WAN 埠！');
+            } else if (portTarget === 'pc' && cableType === 'lan') {
+                appState.connections.lanPC = true;
+                const pc = appState.devices.find(d => d.id === 'dev6');
+                pc.connectedSSID = 'LAN_Port_1';
+                pc.ip = '192.168.1.101';
+                showToast('✅ 藍色 LAN 網線已連接至桌上型電腦！');
+            } else {
+                showToast('❌ 線路插錯埠口囉！請確認線路類型與目標埠。');
+            }
+
+            updateTopologyStatus();
+            renderTopologyDevices();
+            drawSVGConnections();
+            checkQuests();
+        }
+
+        // 拖拽設備至 2.4G / 5G 區域直接配對
+        function handleDeviceDragStart(e, devId) {
+            appState.draggedDeviceId = devId;
+            e.dataTransfer.setData('devId', devId);
+        }
+
+        function handleDropOnWiFiZone(e, zoneBand) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            const devId = appState.draggedDeviceId || e.dataTransfer.getData('devId');
+
+            if (!devId) return;
+            const dev = appState.devices.find(d => d.id === devId);
+
+            if (dev.band === 'LAN') {
+                showToast('⚠️ 桌上型電腦使用有線 LAN 網線，請拖拽藍色 LAN 網線連接！');
+                return;
+            }
+
+            if (zoneBand === '5G' && dev.band === '2.4G') {
+                showToast('⚠️ 該設備（如智能手錶）僅支援 2.4GHz 頻段，無法連接 5GHz！');
+                return;
+            }
+
+            const targetSSID = (zoneBand === '2.4G') ? appState.router.wifi2g.ssid : appState.router.wifi5g.ssid;
+            promptConnectWiFi(targetSSID, zoneBand, dev);
+        }
+
+        function resetAllConnections() {
+            appState.connections.fiber = false;
+            appState.connections.wan = false;
+            appState.connections.lanPC = false;
+
+            appState.devices.forEach(d => {
+                d.connectedSSID = '';
+                d.ip = '';
+            });
+
+            updateTopologyStatus();
+            renderTopologyDevices();
+            drawSVGConnections();
+            showToast('🔄 已重置所有線路與設備連線！');
+        }
+
+        function updateTopologyStatus() {
+            const stFiber = document.getElementById('st-fiber-connected');
+            const stWan = document.getElementById('st-wan-connected');
+            const stWanIp = document.getElementById('st-wan-ip');
+            const tagModem = document.getElementById('tag-modem-port');
+            const tagWan = document.getElementById('tag-router-wan');
+
+            // 光纖狀態
+            if (appState.connections.fiber) {
+                stFiber.innerText = "已接入 (光訊號正常)";
+                stFiber.className = "font-bold text-emerald-600";
+                tagModem.innerText = "光纖已插好";
+                tagModem.className = "text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-300 mt-1";
+            } else {
+                stFiber.innerText = "未接入";
+                stFiber.className = "font-bold text-rose-500";
+                tagModem.innerText = "拖入光纖線";
+                tagModem.className = "text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold border border-amber-300 mt-1";
+            }
+
+            // WAN 網線狀態
+            if (appState.connections.wan) {
+                stWan.innerText = "已接入 WAN 埠";
+                stWan.className = "font-bold text-emerald-600";
+                tagWan.innerText = "WAN 埠已連線";
+                tagWan.className = "text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold border border-emerald-300";
+
+                if (appState.connections.fiber) {
+                    stWanIp.innerText = (appState.isp === 'CTM') ? '202.175.48.112' : '202.175.88.204';
+                    stWanIp.className = "font-mono font-bold text-blue-600";
+                } else {
+                    stWanIp.innerText = '無光訊號 (0.0.0.0)';
+                    stWanIp.className = "font-mono text-rose-500";
+                }
+            } else {
+                stWan.innerText = "未接入";
+                stWan.className = "font-bold text-rose-500";
+                stWanIp.innerText = '---.---.---.---';
+                stWanIp.className = "font-mono text-slate-400";
+                tagWan.innerText = "WAN 埠 (拖入黃色網線)";
+                tagWan.className = "text-[10px] px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-600 font-bold border border-slate-300";
+            }
+        }
+
+        // 動態繪製 SVG 纜線連接曲線
+        function drawSVGConnections() {
+            const svg = document.getElementById('svg-canvas');
+            if (!svg) return;
+            svg.innerHTML = '';
+
+            // 如果沒有連線，就不畫線
+            if (!appState.connections.fiber && !appState.connections.wan) return;
+
+            const ispEl = document.getElementById('isp-title-display');
+            const modemEl = document.getElementById('drop-port-modem');
+            const routerEl = document.getElementById('drop-port-router');
+
+            if (!ispEl || !modemEl || !routerEl) return;
+
+            const rectContainer = svg.getBoundingClientRect();
+
+            // 1. 光纖線 (ISP -> Modem)
+            if (appState.connections.fiber) {
+                const r1 = ispEl.getBoundingClientRect();
+                const r2 = modemEl.getBoundingClientRect();
+
+                const x1 = r1.right - rectContainer.left;
+                const y1 = r1.top + r1.height / 2 - rectContainer.top;
+                const x2 = r2.left - rectContainer.left;
+                const y2 = r2.top + r2.height / 2 - rectContainer.top;
+
+                drawCurvePath(svg, x1, y1, x2, y2, '#f59e0b', 3, true);
+            }
+
+            // 2. WAN 網線 (Modem -> Router)
+            if (appState.connections.wan) {
+                const r2 = modemEl.getBoundingClientRect();
+                const r3 = routerEl.getBoundingClientRect();
+
+                const x1 = r2.left + r2.width / 2 - rectContainer.left;
+                const y1 = r2.bottom - rectContainer.top;
+                const x2 = r3.left + r3.width / 2 - rectContainer.left;
+                const y2 = r3.top - rectContainer.top;
+
+                drawCurvePath(svg, x1, y1, x2, y2, '#10b981', 4, true);
+            }
+        }
+
+        function drawCurvePath(svg, x1, y1, x2, y2, color, width, animated) {
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const dx = Math.abs(x2 - x1) / 2;
+            const dy = Math.abs(y2 - y1) / 2;
+
+            const d = `M ${x1} ${y1} C ${x1 + dx} ${y1 + dy}, ${x2 - dx} ${y2 - dy}, ${x2} ${y2}`;
+            path.setAttribute('d', d);
+            path.setAttribute('stroke', color);
+            path.setAttribute('stroke-width', width);
+            path.setAttribute('fill', 'none');
+
+            if (animated) {
+                path.setAttribute('class', 'wire-animated');
+            }
+
+            svg.appendChild(path);
+        }
+
+        // 渲染拓撲圖終端設備 Grid
+        function renderTopologyDevices() {
+            const container = document.getElementById('topology-device-grid');
+            if (!container) return;
+            container.innerHTML = '';
+
+            let connectedCount = 0;
+
+            appState.devices.forEach(dev => {
+                const isConnected = dev.connectedSSID !== '';
+                if (isConnected) connectedCount++;
+
+                const isPC = dev.id === 'dev6';
+                const devCard = document.createElement('div');
+                devCard.draggable = true;
+                devCard.ondragstart = (e) => handleDeviceDragStart(e, dev.id);
+
+                if (isPC) {
+                    devCard.ondragover = (e) => handleDragOver(e);
+                    devCard.ondragleave = (e) => handleDragLeave(e);
+                    devCard.ondrop = (e) => handleDropOnPort(e, 'pc');
+                }
+
+                devCard.className = `draggable-device p-3 rounded-xl border transition shadow-sm text-center relative ${
+                    isConnected ? 'bg-emerald-50/80 border-emerald-300' : 'bg-white border-slate-200 hover:border-slate-300'
+                }`;
+
+                devCard.innerHTML = `
+                    <div class="text-xl ${isConnected ? 'text-emerald-600' : 'text-slate-400'} mb-1">
+                        <i class="fa-solid ${dev.icon}"></i>
+                    </div>
+                    <div class="text-xs font-bold text-slate-800 truncate">${dev.name}</div>
+                    <div class="text-[10px] text-slate-500 mt-1 font-mono">
+                        ${isConnected ? `<span class="text-emerald-700 font-bold">${dev.ip}</span>` : (isPC ? '可拖入LAN線' : '未連線')}
+                    </div>
+                `;
+
+                devCard.onclick = () => {
+                    switchTab('devices');
+                    selectDevice(dev.id);
+                };
+
+                container.appendChild(devCard);
+            });
+
+            document.getElementById('st-dev-count').innerText = `${connectedCount} / ${appState.devices.length} 台`;
+        }
+
+        // 路由器控制台頁籤切換
+        function showAdminTab(panelName) {
+            ['wan', 'wifi', 'dhcp'].forEach(p => {
+                document.getElementById(`admin-panel-${p}`).classList.add('hidden');
+                document.getElementById(`admin-tab-${p}`).className = "w-full text-left p-3.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold text-sm flex items-center justify-between";
+            });
+
+            document.getElementById(`admin-panel-${panelName}`).classList.remove('hidden');
+            document.getElementById(`admin-tab-${panelName}`).className = "w-full text-left p-3.5 rounded-xl bg-blue-600 text-white font-bold text-sm flex items-center justify-between shadow-sm";
+        }
+
+        // 儲存路由器設定
+        function saveRouterSettings() {
+            appState.router.wifi2g.ssid = document.getElementById('wifi-2g-ssid').value;
+            appState.router.wifi2g.pass = document.getElementById('wifi-2g-pass').value;
+            appState.router.wifi5g.ssid = document.getElementById('wifi-5g-ssid').value;
+            appState.router.wifi5g.pass = document.getElementById('wifi-5g-pass').value;
+
+            document.getElementById('topology-router-title').innerText = appState.router.wifi5g.ssid.split('_')[0] + ' 路由器';
+
+            showToast('✅ 路由器 Wi-Fi 設定已更新並成功生效！');
+            checkQuests();
+            scanWiFi();
+        }
+
+        // 渲染設備選擇清單 (Tab 3)
+        function renderDeviceSelectionList() {
+            const list = document.getElementById('device-select-list');
+            if (!list) return;
+            list.innerHTML = '';
+
+            appState.devices.forEach(dev => {
+                const isSelected = dev.id === appState.selectedDevId;
+                const item = document.createElement('div');
+
+                item.onclick = () => selectDevice(dev.id);
+                item.className = `p-3 rounded-xl cursor-pointer transition flex items-center justify-between ${
+                    isSelected ? 'bg-blue-50 border-2 border-blue-500 shadow-sm' : 'bg-white hover:bg-slate-50 border border-slate-200'
+                }`;
+
+                item.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid ${dev.icon} ${isSelected ? 'text-blue-600' : 'text-slate-400'}"></i>
+                        <div>
+                            <div class="text-xs font-bold text-slate-900">${dev.name}</div>
+                            <div class="text-[10px] text-slate-500">支援頻段: ${dev.band}</div>
+                        </div>
+                    </div>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                        dev.connectedSSID ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'
+                    }">
+                        ${dev.connectedSSID ? '已連線' : '未連線'}
+                    </span>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function selectDevice(devId) {
+            appState.selectedDevId = devId;
+            const dev = appState.devices.find(d => d.id === devId);
+
+            document.getElementById('selected-dev-icon').innerHTML = `<i class="fa-solid ${dev.icon}"></i>`;
+            document.getElementById('selected-dev-name').innerText = dev.name;
+            document.getElementById('selected-dev-spec').innerText = `支援頻段：${dev.band} | 訊號強度：${dev.signal}`;
+
+            const statusBadge = document.getElementById('selected-dev-status');
+            if (dev.connectedSSID) {
+                statusBadge.className = "text-xs px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-bold border border-emerald-200";
+                statusBadge.innerText = `已連接至 ${dev.connectedSSID}`;
+            } else {
+                statusBadge.className = "text-xs px-3 py-1 rounded-full bg-rose-100 text-rose-700 font-bold border border-rose-200";
+                statusBadge.innerText = "未連線";
+            }
+
+            renderDeviceSelectionList();
+            scanWiFi();
+            resetSpeedtestUI();
+        }
+
+        // 掃瞄 Wi-Fi 清單
+        function scanWiFi() {
+            const dev = appState.devices.find(d => d.id === appState.selectedDevId);
+            const container = document.getElementById('wifi-scan-results');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (dev.band === 'LAN') {
+                container.innerHTML = `<div class="p-4 bg-slate-100 rounded-xl text-center text-xs text-slate-500 font-medium">此設備使用局域網 LAN RJ-45 線路直連路由器，無需搜尋無線 Wi-Fi。</div>`;
+                return;
+            }
+
+            const availableWiFis = [];
+
+            if (dev.band === '2.4G' || dev.band === '5G') {
+                availableWiFis.push({
+                    ssid: appState.router.wifi2g.ssid,
+                    band: '2.4GHz',
+                    sec: appState.router.wifi2g.sec,
+                    signal: '極佳 (穿牆強)',
+                    type: '2G'
+                });
+            }
+
+            if (dev.band === '5G') {
+                availableWiFis.push({
+                    ssid: appState.router.wifi5g.ssid,
+                    band: '5GHz (高速)',
+                    sec: appState.router.wifi5g.sec,
+                    signal: '良好',
+                    type: '5G'
+                });
+            }
+
+            availableWiFis.push({ ssid: 'Neighbour_WiFi_Guest', band: '2.4GHz', sec: 'WPA2', signal: '較弱', type: 'other' });
+
+            availableWiFis.forEach(wifi => {
+                const isConnected = dev.connectedSSID === wifi.ssid;
+                const card = document.createElement('div');
+                card.className = "p-3 rounded-xl bg-white border border-slate-200 flex justify-between items-center shadow-sm";
+
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-wifi ${wifi.type === '5G' ? 'text-indigo-600' : 'text-amber-500'} text-sm"></i>
+                        <div>
+                            <div class="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                ${wifi.ssid}
+                                <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-semibold">${wifi.band}</span>
+                            </div>
+                            <div class="text-[10px] text-slate-400">加密: ${wifi.sec} | 訊號: ${wifi.signal}</div>
+                        </div>
+                    </div>
+                    <div>
+                        ${isConnected ? 
+                            `<button onclick="disconnectWiFi('${dev.id}')" class="px-3 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold hover:bg-rose-100 transition">斷開</button>` :
+                            `<button onclick="promptConnectWiFi('${wifi.ssid}', '${wifi.type}')" class="px-3 py-1 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition shadow-sm">連接</button>`
+                        }
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function promptConnectWiFi(ssid, type, targetDev = null) {
+            const dev = targetDev || appState.devices.find(d => d.id === appState.selectedDevId);
+            const inputPass = prompt(`請輸入 Wi-Fi [ ${ssid} ] 的連接密碼：`);
+
+            if (inputPass === null) return;
+
+            const targetPass = (type === '2G') ? appState.router.wifi2g.pass : appState.router.wifi5g.pass;
+
+            if (inputPass === targetPass) {
+                dev.connectedSSID = ssid;
+                dev.ip = `192.168.1.${Math.floor(Math.random() * 50) + 105}`;
+                showToast(`🎉 ${dev.name} 已成功連接至 ${ssid} (取得 IP: ${dev.ip})`);
+                selectDevice(dev.id);
+                renderTopologyDevices();
+                checkQuests();
+            } else {
+                showToast('❌ Wi-Fi 密碼錯誤，請重新確認路由器設定！');
+            }
+        }
+
+        function disconnectWiFi(devId) {
+            const dev = appState.devices.find(d => d.id === devId);
+            dev.connectedSSID = '';
+            dev.ip = '';
+            showToast(`已中斷 ${dev.name} 的 Wi-Fi 連接`);
+            selectDevice(devId);
+            renderTopologyDevices();
+        }
+
+        // 模擬 Speedtest 測速
+        function runSpeedtest() {
+            const dev = appState.devices.find(d => d.id === appState.selectedDevId);
+
+            if (!dev.connectedSSID) {
+                showToast('⚠️ 設備未連線，請先連接 Wi-Fi 或有線 LAN！');
+                return;
+            }
+
+            if (!appState.connections.fiber || !appState.connections.wan) {
+                showToast('⚠️ 實體線路（光纖或 WAN 線）未接通，外網速度為 0 Mbps！');
+                document.getElementById('speed-dl').innerText = '0 Mbps';
+                document.getElementById('speed-ul').innerText = '0 Mbps';
+                document.getElementById('speed-ping').innerText = 'Timeout';
+                return;
+            }
+
+            const btn = document.getElementById('run-speedtest-btn');
+            btn.disabled = true;
+            btn.innerText = '測速中...';
+
+            let step = 0;
+            const interval = setInterval(() => {
+                step++;
+                document.getElementById('speed-dl').innerText = `${Math.floor(Math.random() * (dev.speedCap * 0.8)) + 60} Mbps`;
+                document.getElementById('speed-ul').innerText = `${Math.floor(Math.random() * 200) + 50} Mbps`;
+                document.getElementById('speed-ping').innerText = `${Math.floor(Math.random() * 4) + 3} ms`;
+
+                if (step >= 8) {
+                    clearInterval(interval);
+                    btn.disabled = false;
+                    btn.innerText = '重新測速';
+                    
+                    const finalDl = dev.connectedSSID.includes('5G') || dev.band === 'LAN' ? Math.floor(dev.speedCap * 0.95) : Math.floor(dev.speedCap * 0.7);
+                    document.getElementById('speed-dl').innerText = `${finalDl} Mbps`;
+                    document.getElementById('speed-ul').innerText = `350 Mbps`;
+                    document.getElementById('speed-ping').innerText = `3 ms`;
+
+                    checkQuests();
+                }
+            }, 180);
+        }
+
+        function resetSpeedtestUI() {
+            document.getElementById('speed-dl').innerText = '-- Mbps';
+            document.getElementById('speed-ul').innerText = '-- Mbps';
+            document.getElementById('speed-ping').innerText = '-- ms';
+        }
+
+        // 檢驗任務完成進度
+        function checkQuests() {
+            // 任務 1: 線路接通
+            if (appState.connections.fiber && appState.connections.wan) {
+                appState.quests.q1 = true;
+                document.getElementById('q1-icon').className = "fa-solid fa-circle-check text-emerald-600 text-lg mt-0.5";
+            }
+
+            // 任務 2: Wi-Fi 密碼已更改
+            if (appState.router.wifi2g.pass !== 'macau8888' || appState.router.wifi5g.pass !== 'macau8888') {
+                appState.quests.q2 = true;
+                document.getElementById('q2-icon').className = "fa-solid fa-circle-check text-emerald-600 text-lg mt-0.5";
+            }
+
+            // 任務 3: iPhone 連上 5G 並完成測速
+            const iphone = appState.devices.find(d => d.id === 'dev2');
+            if (iphone.connectedSSID && iphone.connectedSSID.includes('5G') && document.getElementById('speed-dl').innerText !== '-- Mbps') {
+                appState.quests.q3 = true;
+                document.getElementById('q3-icon').className = "fa-solid fa-circle-check text-emerald-600 text-lg mt-0.5";
+            }
+        }
+
+        // 知識問答測驗
+        function checkQuiz(qNum, option, btnElement) {
+            if (qNum === 1 && option === 'A') {
+                btnElement.className = "w-full text-left p-2.5 rounded-lg bg-emerald-100 border border-emerald-300 text-emerald-900 transition font-bold text-xs";
+                showToast('🎯 答對了！2.4GHz 頻段覆蓋遠、穿牆強且晶片省電。');
+            } else if (qNum === 2 && option === 'B') {
+                btnElement.className = "w-full text-left p-2.5 rounded-lg bg-emerald-100 border border-emerald-300 text-emerald-900 transition font-bold text-xs";
+                showToast('🎯 答對了！Modem 的線路必須插入路由器的 WAN 埠接入廣域網。');
+            } else {
+                btnElement.className = "w-full text-left p-2.5 rounded-lg bg-rose-100 border border-rose-300 text-rose-900 transition font-bold text-xs";
+                showToast('❌ 答案不正確，請再思考看看！');
+            }
+        }
+
+        // 自訂浮動 Toast 提示
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = "fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl z-50 text-xs font-bold flex items-center gap-2 animate-bounce border border-slate-700";
+            toast.innerHTML = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌐 探索網絡世界的分割術：子網掩碼互動教室</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js for lightweight UI reactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f0f4f8;
+        }
+        .bit-box {
+            transition: all 0.2s ease-in-out;
+        }
+        .bit-box:hover {
+            transform: scale(1.05);
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col" x-data="subnetApp()">
+
+    <!-- Header Navigation -->
+    <header class="bg-white/90 backdrop-blur border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
+                    <i class="fa-solid fa-network-wired text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg md:text-xl text-slate-800 leading-tight">子網掩碼互動教室</h1>
+                    <p class="text-xs text-slate-500">Subnet Mask & Subnetting Interactive Guide</p>
+                </div>
+            </div>
+            <!-- Navigation Tabs -->
+            <nav class="flex items-center space-x-1 mt-2 sm:mt-0 bg-slate-100 p-1.5 rounded-xl text-sm font-medium">
+                <button @click="currentTab = 'analogy'" :class="currentTab === 'analogy' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-house font-normal"></i> 1. 生活比喻
+                </button>
+                <button @click="currentTab = 'binary'" :class="currentTab === 'binary' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-microchip"></i> 2. 二進制魔法
+                </button>
+                <button @click="currentTab = 'splitter'" :class="currentTab === 'splitter' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-scissors"></i> 3. 實時切網段
+                </button>
+                <button @click="currentTab = 'quiz'" :class="currentTab === 'quiz' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-gamepad"></i> 4. 挑戰小測驗
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-6xl mx-auto px-4 py-8 flex-1 w-full">
+
+        <!-- TAB 1: ANALOGY (生活比喻) -->
+        <section x-show="currentTab === 'analogy'" x-transition class="space-y-6">
+            <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200/80">
+                <div class="max-w-3xl">
+                    <span class="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">第一站：通俗理解</span>
+                    <h2 class="text-2xl md:text-3xl font-black mt-2 mb-4 gradient-text">IP 地址與子網掩碼，就像「地址與劃線」！</h2>
+                    <p class="text-slate-600 leading-relaxed text-base md:text-lg">
+                        你知道嗎？當你在網絡上發送訊息時，數據就像一封信件。電腦需要依靠 **IP 地址** 找到你是誰、你在哪。
+                    </p>
+                </div>
+
+                <!-- Interactive Analogy Graphic -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                    <!-- Address Card -->
+                    <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 relative overflow-hidden">
+                        <div class="absolute -right-4 -bottom-4 opacity-10 text-amber-900">
+                            <i class="fa-solid fa-envelope-open-text text-9xl"></i>
+                        </div>
+                        <h3 class="font-bold text-amber-900 text-lg mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-map-marker-alt text-amber-600"></i> 生活中的郵寄地址
+                        </h3>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-amber-100 space-y-3">
+                            <div class="text-center font-mono text-xl text-slate-800 font-bold tracking-wide">
+                                <span class="bg-amber-200 text-amber-900 px-2 py-1 rounded">陽光大道 (街道名)</span>
+                                <span class="text-slate-400"> + </span>
+                                <span class="bg-emerald-200 text-emerald-900 px-2 py-1 rounded">105 號 (門牌號)</span>
+                            </div>
+                            <p class="text-xs text-slate-500 text-center">
+                                郵差先找到 **陽光大道** (網路位置)，再找到 **105 號** (具體哪台電腦)。
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- IP Card -->
+                    <div class="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 relative overflow-hidden">
+                        <div class="absolute -right-4 -bottom-4 opacity-10 text-blue-900">
+                            <i class="fa-solid fa-laptop-code text-9xl"></i>
+                        </div>
+                        <h3 class="font-bold text-blue-900 text-lg mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-network-wired text-blue-600"></i> 電腦網絡中的 IP 地址
+                        </h3>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-blue-100 space-y-3">
+                            <div class="text-center font-mono text-xl text-slate-800 font-bold tracking-wide">
+                                <span class="bg-blue-200 text-blue-900 px-2 py-1 rounded">192.168.1</span>
+                                <span class="text-slate-400">.</span>
+                                <span class="bg-emerald-200 text-emerald-900 px-2 py-1 rounded">105</span>
+                            </div>
+                            <p class="text-xs text-slate-500 text-center">
+                                左邊代表 **網絡 ID (Network ID)**，右邊代表 **主機 ID (Host ID)**。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-scissors text-rose-500"></i> 那麼，子網掩碼 (Subnet Mask) 扮演什麼角色？
+                    </h3>
+                    <p class="text-slate-600 text-sm md:text-base leading-relaxed mb-4">
+                        IP 地址是一串 4 個數字（例如 <code class="bg-slate-200 px-1.5 py-0.5 rounded font-mono">192.168.1.105</code>），如果沒有規則，電腦怎麼知道「哪一部份是街道名稱（網絡 ID）」，「哪一部份是門牌號碼（主機 ID）」呢？
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                        <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-rose-500 font-bold text-lg mb-1">遮罩是 1 (255)</div>
+                            <div class="text-xs text-slate-500">代表「這一區塊是**網絡地址**」<br>(就像街道名稱，大家共有)</div>
+                        </div>
+                        <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-emerald-500 font-bold text-lg mb-1">遮罩是 0</div>
+                            <div class="text-xs text-slate-500">代表「這一區塊是**主機地址**」<br>(就像門牌號，每台電腦獨有)</div>
+                        </div>
+                        <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-indigo-500 font-bold text-lg mb-1">劃分邊界 (Subnetting)</div>
+                            <div class="text-xs text-slate-500">就像把一間巨大的學校，用隔板切成小班級，方便管理！</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button @click="currentTab = 'binary'" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2">
+                        下一頁：看看二進制的運算魔法 <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: BINARY & MASK (二進制與按位與運算) -->
+        <section x-show="currentTab === 'binary'" x-transition class="space-y-6">
+            <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200/80">
+                <span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">第二站：二進制與邏輯門</span>
+                <h2 class="text-2xl md:text-3xl font-black mt-2 mb-3 gradient-text">電腦如何計算？「按位與 (AND)」運算</h2>
+                <p class="text-slate-600 text-sm md:text-base mb-6">
+                    電腦不懂十進制，它只看懂 <code class="font-mono bg-slate-100 px-1 rounded">1</code> 和 <code class="font-mono bg-slate-100 px-1 rounded">0</code>。電腦利用 **AND 運算門**，把 IP 地址和子網掩碼疊在一起，得出「網絡地址」。
+                </p>
+
+                <!-- Rule Box -->
+                <div class="bg-indigo-50/60 border border-indigo-100 p-4 rounded-xl mb-6 flex flex-wrap gap-4 justify-around text-xs md:text-sm font-medium text-indigo-900">
+                    <div>💡 <strong>AND 運算規則：</strong></div>
+                    <div>1 AND 1 = <span class="bg-indigo-200 text-indigo-900 px-1.5 py-0.5 rounded font-bold">1</span> (門打開，通過)</div>
+                    <div>1 AND 0 = <span class="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-bold">0</span> (被擋住)</div>
+                    <div>0 AND 1 = <span class="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-bold">0</span> (被擋住)</div>
+                    <div>0 AND 0 = <span class="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-bold">0</span> (被擋住)</div>
+                </div>
+
+                <!-- Interactive Switcher Sandbox -->
+                <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-inner space-y-6">
+                    <h3 class="text-base font-bold text-indigo-300 flex items-center justify-between">
+                        <span><i class="fa-solid fa-sliders text-indigo-400"></i> 動態開關實驗室（試試點擊 Switch 開關！）</span>
+                        <span class="text-xs bg-indigo-900 text-indigo-200 px-2 py-1 rounded">單個字節 8-bits 示範</span>
+                    </h3>
+
+                    <!-- Bit Switches Grid -->
+                    <div class="space-y-4">
+                        <!-- IP Address Bits -->
+                        <div>
+                            <div class="text-xs text-slate-400 mb-1 flex justify-between">
+                                <span>IP 地址 (一組 8 Bit): </span>
+                                <span class="text-amber-400 font-mono">十進制值: <span x-text="ipByteVal"></span></span>
+                            </div>
+                            <div class="grid grid-cols-8 gap-2">
+                                <template x-for="(bit, idx) in ipBits" :key="'ip-'+idx">
+                                    <button @click="toggleIpBit(idx)" 
+                                            :class="bit ? 'bg-amber-500 text-slate-950 font-black shadow-lg shadow-amber-500/30' : 'bg-slate-800 text-slate-500 border border-slate-700'"
+                                            class="py-3 rounded-lg text-lg font-mono bit-box transition-all">
+                                        <span x-text="bit"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Subnet Mask Bits -->
+                        <div>
+                            <div class="text-xs text-slate-400 mb-1 flex justify-between">
+                                <span>子網掩碼 (Subnet Mask):</span>
+                                <span class="text-blue-400 font-mono">十進制值: <span x-text="maskByteVal"></span></span>
+                            </div>
+                            <div class="grid grid-cols-8 gap-2">
+                                <template x-for="(bit, idx) in maskBits" :key="'mask-'+idx">
+                                    <button @click="toggleMaskBit(idx)" 
+                                            :class="bit ? 'bg-blue-500 text-white font-black shadow-lg shadow-blue-500/30' : 'bg-slate-800 text-slate-500 border border-slate-700'"
+                                            class="py-3 rounded-lg text-lg font-mono bit-box transition-all">
+                                        <span x-text="bit"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Operation Divider -->
+                        <div class="border-t border-slate-700 my-2 flex justify-between items-center text-slate-400 text-xs font-mono">
+                            <span>AND 邏輯運算 (FILTER)</span>
+                            <i class="fa-solid fa-arrow-down text-indigo-400 animate-bounce"></i>
+                        </div>
+
+                        <!-- Result Network ID Bits -->
+                        <div>
+                            <div class="text-xs text-slate-400 mb-1 flex justify-between">
+                                <span>計算出的網絡位 (Network Result):</span>
+                                <span class="text-emerald-400 font-mono">十進制值: <span x-text="resultByteVal"></span></span>
+                            </div>
+                            <div class="grid grid-cols-8 gap-2">
+                                <template x-for="(bit, idx) in resultBits" :key="'res-'+idx">
+                                    <div :class="bit ? 'bg-emerald-500 text-slate-950 font-black shadow-lg shadow-emerald-500/20' : 'bg-slate-800/80 text-slate-600 border border-slate-800'"
+                                         class="py-3 rounded-lg text-lg font-mono text-center transition-all">
+                                        <span x-text="bit"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700 text-xs text-slate-300 flex items-start gap-2">
+                        <i class="fa-solid fa-circle-info text-amber-400 mt-0.5"></i>
+                        <div>
+                            <strong>觀察規律：</strong> 當掩碼 Bit 為 <code class="text-blue-400 font-bold">1</code> 時，IP 的 Bit 被完整保留了下來；當掩碼 Bit 為 <code class="text-slate-400 font-bold">0</code> 時，輸出強制變為 <code class="text-emerald-400 font-bold">0</code>（過濾掉主機位）。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-between">
+                    <button @click="currentTab = 'analogy'" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-5 py-2.5 rounded-xl transition-all">
+                        <i class="fa-solid fa-arrow-left"></i> 上一頁
+                    </button>
+                    <button @click="currentTab = 'splitter'" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2">
+                        下一頁：實時動態「切子網」工具 <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: SUBNET SPLITTER (實時分割子網) -->
+        <section x-show="currentTab === 'splitter'" x-transition class="space-y-6">
+            <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200/80">
+                <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">第三站：動態分割工具</span>
+                <h2 class="text-2xl md:text-3xl font-black mt-2 mb-3 gradient-text">動態切網段 (CIDR 劃分實驗)</h2>
+                <p class="text-slate-600 text-sm md:text-base mb-6">
+                    假設學校獲取了一個網段 <code class="bg-slate-100 text-slate-800 px-2 py-1 rounded font-mono font-bold">192.168.1.0</code>。我們可以使用 CIDR 前綴 (例如 <code class="text-blue-600 font-bold">/24</code>) 來決定借用多少個 Bit 作為子網！
+                </p>
+
+                <!-- Interactive Control Panel -->
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-6">
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="font-bold text-slate-800 text-base">拖動滑塊，改變子網掩碼前綴位數 (CIDR Prefix):</label>
+                            <span class="text-2xl font-black text-blue-600 font-mono bg-blue-100 px-3 py-0.5 rounded-xl" x-text="'/' + cidr"></span>
+                        </div>
+                        <input type="range" min="24" max="29" step="1" x-model.number="cidr" class="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                        <div class="flex justify-between text-xs text-slate-400 font-mono mt-1 px-1">
+                            <span>/24 (不切分)</span>
+                            <span>/25 (切 2 個)</span>
+                            <span>/26 (切 4 個)</span>
+                            <span>/27 (切 8 個)</span>
+                            <span>/28 (切 16 個)</span>
+                            <span>/29 (切 32 個)</span>
+                        </div>
+                    </div>
+
+                    <!-- Calculated Data Cards -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
+                            <div class="text-xs text-slate-400 mb-1">子網掩碼 (Subnet Mask)</div>
+                            <div class="text-sm sm:text-base font-bold font-mono text-slate-800" x-text="computedMask"></div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
+                            <div class="text-xs text-slate-400 mb-1">分割出的子網數量</div>
+                            <div class="text-xl font-black text-indigo-600" x-text="numSubnets + ' 個'"></div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
+                            <div class="text-xs text-slate-400 mb-1">每個子網總 IP 數</div>
+                            <div class="text-xl font-black text-blue-600" x-text="totalIpsPerSubnet + ' 個'"></div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
+                            <div class="text-xs text-slate-400 mb-1">可用主機 IP 數 (減去2)</div>
+                            <div class="text-xl font-black text-emerald-600" x-text="usableIpsPerSubnet + ' 個'"></div>
+                        </div>
+                    </div>
+
+                    <!-- Visual Blocks of Split Subnets -->
+                    <div>
+                        <h4 class="font-bold text-slate-800 mb-2 text-sm flex items-center justify-between">
+                            <span><i class="fa-solid fa-chart-pie text-emerald-500"></i> 子網視覺化地圖 (點擊任何一個查看詳情):</span>
+                            <span class="text-xs text-slate-500 font-normal">每個色塊代表一個獨立的子網</span>
+                        </h4>
+
+                        <div class="grid gap-2 transition-all max-h-60 overflow-y-auto p-1"
+                             :class="{
+                                'grid-cols-1': cidr === 24,
+                                'grid-cols-2': cidr === 25,
+                                'grid-cols-2 sm:grid-cols-4': cidr === 26,
+                                'grid-cols-4 sm:grid-cols-8': cidr >= 27
+                             }">
+                            <template x-for="(sub, index) in subnetsList" :key="index">
+                                <button @click="selectedSubnet = sub" 
+                                        :class="selectedSubnet?.network === sub.network ? 'ring-4 ring-blue-400 bg-blue-600 text-white' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'"
+                                        class="p-2.5 rounded-xl text-center text-xs font-mono transition-all flex flex-col justify-center items-center shadow-sm">
+                                    <span class="font-bold">子網 #<span x-text="index+1"></span></span>
+                                    <span class="text-[10px] opacity-80" x-text="sub.network"></span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Selected Subnet Detail Card -->
+                    <template x-if="selectedSubnet">
+                        <div class="bg-blue-900 text-white p-5 rounded-xl space-y-3">
+                            <div class="flex justify-between items-center border-b border-blue-800 pb-2">
+                                <span class="font-bold text-blue-200 flex items-center gap-2">
+                                    <i class="fa-solid fa-network-wired text-amber-400"></i> 子網詳細參數資訊
+                                </span>
+                                <span class="text-xs bg-blue-800 text-blue-200 px-2.5 py-1 rounded-full font-mono" x-text="'/ ' + cidr"></span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                                <div>
+                                    <span class="text-blue-300 block">網絡位地址 (Network):</span>
+                                    <code class="text-amber-300 font-bold font-mono text-sm" x-text="selectedSubnet.network"></code>
+                                </div>
+                                <div>
+                                    <span class="text-blue-300 block">可用 IP 範圍 (Usable Range):</span>
+                                    <code class="text-emerald-300 font-bold font-mono" x-text="selectedSubnet.firstUsable + ' ~ ' + selectedSubnet.lastUsable"></code>
+                                </div>
+                                <div>
+                                    <span class="text-blue-300 block">廣播地址 (Broadcast):</span>
+                                    <code class="text-rose-300 font-bold font-mono text-sm" x-text="selectedSubnet.broadcast"></code>
+                                </div>
+                                <div>
+                                    <span class="text-blue-300 block">為什麼減去 2 個 IP？</span>
+                                    <span class="text-slate-300">第一個代表網絡本身，最後一個用於廣播，因此不能給主機用！</span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="mt-6 flex justify-between">
+                    <button @click="currentTab = 'binary'" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-5 py-2.5 rounded-xl transition-all">
+                        <i class="fa-solid fa-arrow-left"></i> 上一頁
+                    </button>
+                    <button @click="currentTab = 'quiz'" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2">
+                        下一頁：考考你！挑戰小測驗 <i class="fa-solid fa-trophy"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: QUIZ (小測驗) -->
+        <section x-show="currentTab === 'quiz'" x-transition class="space-y-6">
+            <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200/80">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <span class="bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">第四站：鞏固練習</span>
+                        <h2 class="text-2xl md:text-3xl font-black mt-1 gradient-text">子網掩碼知識大挑戰！</h2>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs text-slate-400 block">當前得分</span>
+                        <span class="text-2xl font-black text-purple-600" x-text="score + ' / ' + questions.length * 10"></span>
+                    </div>
+                </div>
+
+                <!-- Question Cards Loop -->
+                <div class="space-y-6">
+                    <template x-for="(q, index) in questions" :key="index">
+                        <div class="p-5 border border-slate-200 rounded-2xl bg-slate-50/50 space-y-3">
+                            <h3 class="font-bold text-slate-800 text-base flex items-start gap-2">
+                                <span class="bg-purple-600 text-white text-xs px-2 py-1 rounded-md font-mono mt-0.5" x-text="'Q' + (index + 1)"></span>
+                                <span x-text="q.title"></span>
+                            </h3>
+
+                            <!-- Option Buttons -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                                <template x-for="(opt, oIdx) in q.options" :key="oIdx">
+                                    <button @click="selectAnswer(index, oIdx)" 
+                                            :disabled="q.userAnswer !== null"
+                                            :class="{
+                                                'bg-white text-slate-700 border-slate-200 hover:border-purple-300': q.userAnswer === null,
+                                                'bg-emerald-500 text-white border-emerald-500 font-bold': q.userAnswer !== null && oIdx === q.correct,
+                                                'bg-rose-500 text-white border-rose-500': q.userAnswer === oIdx && oIdx !== q.correct,
+                                                'opacity-50 bg-white border-slate-200': q.userAnswer !== null && oIdx !== q.correct && q.userAnswer !== oIdx
+                                            }"
+                                            class="p-3 text-left rounded-xl border text-sm transition-all flex justify-between items-center">
+                                        <span x-text="opt"></span>
+                                        <template x-if="q.userAnswer !== null && oIdx === q.correct">
+                                            <i class="fa-solid fa-circle-check text-white text-base"></i>
+                                        </template>
+                                        <template x-if="q.userAnswer === oIdx && oIdx !== q.correct">
+                                            <i class="fa-solid fa-circle-xmark text-white text-base"></i>
+                                        </template>
+                                    </button>
+                                </template>
+                            </div>
+
+                            <!-- Explanation Banner -->
+                            <template x-if="q.userAnswer !== null">
+                                <div :class="q.userAnswer === q.correct ? 'bg-emerald-50 text-emerald-900 border-emerald-200' : 'bg-rose-50 text-rose-900 border-rose-200'"
+                                     class="p-3.5 rounded-xl border text-xs leading-relaxed flex items-start gap-2 mt-2">
+                                    <i :class="q.userAnswer === q.correct ? 'fa-solid fa-lightbulb text-emerald-600' : 'fa-solid fa-triangle-exclamation text-rose-600'" class="mt-0.5 text-sm"></i>
+                                    <div>
+                                        <strong x-text="q.userAnswer === q.correct ? '答對了！' : '可惜答錯了！'"></strong>
+                                        <span x-text="q.explanation"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Reset Quiz Button -->
+                <div class="mt-8 text-center">
+                    <button @click="resetQuiz()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-md">
+                        <i class="fa-solid fa-rotate-right mr-1"></i> 重新挑戰測驗
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400">
+        <p>🌐 專為初中電腦科學課程設計的網絡基礎知識互動學習模組</p>
+    </footer>
+
+    <script>
+        function subnetApp() {
+            return {
+                currentTab: 'analogy', // analogy, binary, splitter, quiz
+
+                // Tab 2 Binary Logic
+                ipBits: [1, 1, 0, 0, 0, 0, 0, 0], // 192 in binary
+                maskBits: [1, 1, 1, 1, 1, 1, 1, 1], // 255 in binary
+
+                toggleIpBit(idx) {
+                    this.ipBits[idx] = this.ipBits[idx] === 1 ? 0 : 1;
+                },
+                toggleMaskBit(idx) {
+                    this.maskBits[idx] = this.maskBits[idx] === 1 ? 0 : 1;
+                },
+                get ipByteVal() {
+                    return this.bitsToDec(this.ipBits);
+                },
+                get maskByteVal() {
+                    return this.bitsToDec(this.maskBits);
+                },
+                get resultBits() {
+                    return this.ipBits.map((b, i) => b & this.maskBits[i]);
+                },
+                get resultByteVal() {
+                    return this.bitsToDec(this.resultBits);
+                },
+                bitsToDec(arr) {
+                    return arr.reduce((acc, bit, idx) => acc + (bit ? Math.pow(2, 7 - idx) : 0), 0);
+                },
+
+                // Tab 3 Subnet Splitter Logic
+                cidr: 26,
+                selectedSubnet: null,
+
+                get numSubnets() {
+                    return Math.pow(2, this.cidr - 24);
+                },
+                get totalIpsPerSubnet() {
+                    return Math.pow(2, 32 - this.cidr);
+                },
+                get usableIpsPerSubnet() {
+                    const total = this.totalIpsPerSubnet;
+                    return total > 2 ? total - 2 : 0;
+                },
+                get computedMask() {
+                    const hostBits = 32 - this.cidr;
+                    const maskNum = (0xFFFFFFFF << hostBits) >>> 0;
+                    return [
+                        255,
+                        255,
+                        255,
+                        (maskNum & 0xFF)
+                    ].join('.');
+                },
+                get subnetsList() {
+                    const count = this.numSubnets;
+                    const blockSize = this.totalIpsPerSubnet;
+                    const list = [];
+
+                    for (let i = 0; i < count; i++) {
+                        const start = i * blockSize;
+                        const end = start + blockSize - 1;
+                        list.push({
+                            network: `192.168.1.${start}`,
+                            firstUsable: `192.168.1.${start + 1}`,
+                            lastUsable: `192.168.1.${end - 1}`,
+                            broadcast: `192.168.1.${end}`
+                        });
+                    }
+                    if (list.length > 0 && !this.selectedSubnet) {
+                        this.selectedSubnet = list[0];
+                    }
+                    return list;
+                },
+
+                // Tab 4 Quiz Logic
+                score: 0,
+                questions: [
+                    {
+                        title: "子網掩碼 255.255.255.0 中，尾數 0 代表什麼意義？",
+                        options: [
+                            "代表該區域是「網絡 ID」，大家共用",
+                            "代表該區域是「主機 ID」，分配給個別電腦",
+                            "代表該網絡完全不能連線",
+                            "代表這個 IP 已經壞掉了"
+                        ],
+                        correct: 1,
+                        userAnswer: null,
+                        explanation: "掩碼中為 0 的部分會過濾出主機 ID (Host ID)，供同一個區域網內的不同設備自由分配門牌號碼。"
+                    },
+                    {
+                        title: "如果把網絡 CIDR 前綴從 /24 改為 /25，子網數量會發生什麼變化？",
+                        options: [
+                            "子網數量保持不變",
+                            "分割成 2 個獨立的子網",
+                            "分割成 4 個獨立的子網",
+                            "分割成 255 個子網"
+                        ],
+                        correct: 1,
+                        userAnswer: null,
+                        explanation: "從 /24 到 /25 借用了 1 個 bit (2¹ = 2)，因此原本的 1 個大網絡會被切分為 2 個小子網。"
+                    },
+                    {
+                        title: "在一個擁有 64 個總 IP 的子網中，最多可以連接多少台『可用主機』？",
+                        options: [
+                            "64 台",
+                            "63 台",
+                            "62 台",
+                            "60 台"
+                        ],
+                        correct: 2,
+                        userAnswer: null,
+                        explanation: "必須扣除 2 個特殊地址：第一個（網絡地址 Network ID）和最後一個（廣播地址 Broadcast），所以是 64 - 2 = 62 台。"
+                    },
+                    {
+                        title: "電腦計算網絡地址時，使用的是哪一種二進制邏輯運算？",
+                        options: [
+                            "加法 (Addition)",
+                            "按位與 (AND) 運算",
+                            "按位或 (OR) 運算",
+                            "減法 (Subtraction)"
+                        ],
+                        correct: 1,
+                        userAnswer: null,
+                        explanation: "電腦將 IP 地址與子網掩碼進行『按位與 (AND)』運算，只有兩者皆為 1 時結果才是 1，從而過濾出網絡地址。"
+                    }
+                ],
+
+                selectAnswer(qIndex, optionIndex) {
+                    const q = this.questions[qIndex];
+                    if (q.userAnswer !== null) return;
+                    q.userAnswer = optionIndex;
+                    if (optionIndex === q.correct) {
+                        this.score += 10;
+                    }
+                },
+
+                resetQuiz() {
+                    this.score = 0;
+                    this.questions.forEach(q => {
+                        q.userAnswer = null;
+                    });
+                },
+
+                init() {
+                    // Automatically watch cidr slider change to keep selection valid
+                    this.$watch('cidr', () => {
+                        this.selectedSubnet = this.subnetsList[0];
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+</html>

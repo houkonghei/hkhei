@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TCP/IP 四層結構 · 互動學習課件</title>
+<style>
+:root{
+  --l1:#7c5cff; --l1-bg:#f2eeff;
+  --l2:#2f7cf6; --l2-bg:#e9f1ff;
+  --l3:#0d9c9c; --l3-bg:#e2f7f7;
+  --l4:#ea8c0a; --l4-bg:#fff3e0;
+
+  --ink:#1b2130;
+  --ink-2:#4b5568;
+  --ink-3:#838da3;
+  --bg:#f5f7fb;
+  --card:#ffffff;
+  --line:#e6e9f2;
+  --ok:#159a52;
+  --ok-bg:#e7f7ee;
+  --bad:#dc2d4e;
+  --bad-bg:#fdeaee;
+
+  --radius:18px;
+  --shadow:0 1px 2px rgba(20,28,50,.04), 0 10px 28px rgba(20,28,50,.06);
+  --shadow-lg:0 2px 4px rgba(20,28,50,.05), 0 18px 44px rgba(20,28,50,.09);
+  --maxw:1120px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,-apple-system,"Segoe UI",sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{margin:0;line-height:1.35;font-weight:800;letter-spacing:.01em}
+p{margin:0}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+code,.mono{font-family:"JetBrains Mono",Consolas,"Courier New",monospace}
+
+/* ---------- layout ---------- */
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+section{padding:64px 0 8px}
+.sec-head{margin-bottom:28px}
+.sec-kicker{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--l2);background:var(--l2-bg);
+  padding:5px 12px;border-radius:999px;margin-bottom:12px;
+}
+.sec-title{font-size:clamp(24px,3.2vw,34px)}
+.sec-desc{color:var(--ink-2);margin-top:10px;max-width:760px;font-size:15.5px}
+
+/* ---------- hero ---------- */
+.hero{
+  background:
+    radial-gradient(1000px 420px at 12% -10%, rgba(124,92,255,.20), transparent 60%),
+    radial-gradient(900px 400px at 88% 0%, rgba(47,124,246,.18), transparent 60%),
+    linear-gradient(180deg,#ffffff 0%,#f7f9fd 100%);
+  border-bottom:1px solid var(--line);
+  padding:64px 0 56px;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:#fff;border:1px solid var(--line);border-radius:999px;
+  padding:6px 14px;font-size:13px;font-weight:600;color:var(--ink-2);
+  box-shadow:var(--shadow);
+}
+.hero-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.hero h1{font-size:clamp(30px,5vw,48px);margin:20px 0 0;letter-spacing:-.01em}
+.hero h1 .grad{
+  background:linear-gradient(96deg,var(--l1),var(--l2) 45%,var(--l3) 78%,var(--l4));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.hero p{margin-top:16px;font-size:17px;color:var(--ink-2);max-width:640px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.chip{
+  background:#fff;border:1px solid var(--line);border-radius:12px;
+  padding:8px 14px;font-size:13.5px;color:var(--ink-2);box-shadow:var(--shadow);
+}
+.chip b{color:var(--ink);font-weight:700}
+
+/* ---------- sticky nav ---------- */
+.nav{
+  position:sticky;top:0;z-index:50;
+  background:rgba(255,255,255,.86);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);
+}
+.nav-in{max-width:var(--maxw);margin:0 auto;padding:0 24px;display:flex;gap:4px;overflow-x:auto}
+.nav a{
+  flex:0 0 auto;padding:14px 14px;font-size:14.5px;font-weight:600;
+  color:var(--ink-3);text-decoration:none;border-bottom:2.5px solid transparent;white-space:nowrap;
+}
+.nav a:hover{color:var(--ink)}
+.nav a.on{color:var(--l2);border-bottom-color:var(--l2)}
+
+/* ---------- cards ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.grid{display:grid;gap:16px}
+
+/* ---------- 1. why ---------- */
+.why-grid{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.why-card{padding:22px}
+.why-card .num{
+  width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
+  font-weight:800;font-size:15px;color:#fff;margin-bottom:14px;
+}
+.why-card h4{font-size:16.5px;margin-bottom:8px}
+.why-card p{font-size:14.5px;color:var(--ink-2)}
+
+.analogy{margin-top:22px;padding:0;overflow:hidden}
+.analogy table{width:100%;border-collapse:collapse;font-size:14.5px}
+.analogy th,.analogy td{padding:13px 18px;text-align:left;border-bottom:1px solid var(--line)}
+.analogy th{background:#fafbfe;font-size:13px;color:var(--ink-3);font-weight:700;letter-spacing:.04em}
+.analogy tbody tr:last-child td{border-bottom:none}
+.analogy td:first-child{font-weight:700;white-space:nowrap}
+.analogy td:last-child{color:var(--ink-2)}
+
+/* ---------- 2. layers ---------- */
+.layers-wrap{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:20px;align-items:start}
+.layer-list{display:flex;flex-direction:column;gap:12px}
+.layer-btn{
+  display:flex;align-items:center;gap:14px;text-align:left;width:100%;
+  padding:16px 18px;border-radius:16px;border:1.5px solid var(--line);
+  background:var(--card);box-shadow:var(--shadow);
+  transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.layer-btn:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.layer-btn .lv{
+  flex:0 0 auto;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+  color:#fff;font-weight:800;font-size:16px;
+}
+.layer-btn .lt{font-size:16.5px;font-weight:800;display:block}
+.layer-btn .le{font-size:12.5px;color:var(--ink-3);display:block;margin-top:1px}
+.layer-btn.active{border-color:currentColor}
+.layer-btn .hint{margin-left:auto;font-size:12.5px;color:var(--ink-3);flex:0 0 auto}
+
+.detail{padding:26px 28px;min-height:360px}
+.detail-top{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.pill{
+  font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:999px;
+}
+.detail h3{font-size:23px;margin-top:14px}
+.detail .en{font-size:13.5px;color:var(--ink-3);font-weight:600;margin-top:2px}
+.detail .job{font-size:15.5px;color:var(--ink-2);margin-top:16px}
+.block{margin-top:22px}
+.block .lb{
+  font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:10px;display:block;
+}
+.proto-list{display:flex;flex-wrap:wrap;gap:8px}
+.proto{
+  font-size:13.5px;font-weight:600;padding:6px 12px;border-radius:10px;
+  border:1px solid var(--line);background:#fbfcfe;color:var(--ink);
+}
+.two-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:22px}
+.mini{padding:16px 18px;border-radius:14px;background:#fbfcfe;border:1px solid var(--line)}
+.mini .lb{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--ink-3);text-transform:uppercase;display:block;margin-bottom:7px}
+.mini p{font-size:14.5px;color:var(--ink-2)}
+.note{
+  margin-top:22px;padding:14px 18px;border-radius:14px;font-size:14.5px;color:var(--ink-2);
+  background:linear-gradient(180deg,#fffdf7,#fff8ea);border:1px solid #f6e6c4;
+}
+.note b{color:#8a5b00}
+
+/* ---------- 3. journey ---------- */
+.journey{padding:0;overflow:hidden}
+.j-head{padding:22px 26px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.j-title{font-size:17px;font-weight:800}
+.j-sub{font-size:13.5px;color:var(--ink-3)}
+.j-controls{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.btn{
+  padding:9px 16px;border-radius:11px;font-size:14px;font-weight:700;
+  border:1px solid var(--line);background:#fff;color:var(--ink);
+  transition:background .15s ease,border-color .15s ease,transform .12s ease;
+}
+.btn:hover{background:#f4f6fb}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.primary:hover{background:#2a3245}
+.btn:disabled{opacity:.42;cursor:not-allowed;transform:none}
+
+.j-body{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:0}
+.j-stack{padding:22px;border-right:1px solid var(--line);background:#fbfcfe}
+.j-step{
+  display:flex;align-items:flex-start;gap:12px;padding:11px 12px;border-radius:13px;
+  margin-bottom:6px;transition:background .2s ease,opacity .2s ease;opacity:.45;
+}
+.j-step .idx{
+  flex:0 0 auto;width:26px;height:26px;border-radius:9px;display:grid;place-items:center;
+  font-size:13px;font-weight:800;color:#fff;background:#c3cada;
+}
+.j-step .nm{font-size:14.5px;font-weight:700}
+.j-step .op{font-size:12.5px;color:var(--ink-3)}
+.j-step.active{opacity:1;background:#fff;box-shadow:var(--shadow)}
+.j-step.done{opacity:.9}
+
+.j-stage{padding:26px}
+.step-title{font-size:19px;font-weight:800;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.step-desc{font-size:15px;color:var(--ink-2);margin-top:10px;max-width:640px}
+
+.packet{
+  display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin-top:22px;
+  border:2px dashed var(--line);border-radius:16px;padding:14px;background:#fff;min-height:96px;
+}
+.part{
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  padding:12px 16px;color:#fff;font-size:13px;font-weight:700;
+  border-radius:0;min-width:96px;text-align:center;
+}
+.part:first-child{border-radius:11px 0 0 11px}
+.part:last-child{border-radius:0 11px 11px 0}
+.part .sub{font-size:11px;font-weight:600;opacity:.85;margin-top:2px}
+.part.data{background:linear-gradient(180deg,#5b6478,#454e61)}
+.part.tcp{background:linear-gradient(180deg,#4b92f8,#2f7cf6)}
+.part.ip{background:linear-gradient(180deg,#16b3b3,#0d9c9c)}
+.part.eth{background:linear-gradient(180deg,#f5a52c,#ea8c0a)}
+.part.trailer{background:linear-gradient(180deg,#c98f16,#b87c07)}
+.part.enter{animation:pop .38s cubic-bezier(.2,.9,.3,1.4)}
+@keyframes pop{
+  0%{transform:translateX(-14px) scale(.82);opacity:0}
+  60%{transform:translateX(2px) scale(1.03);opacity:1}
+  100%{transform:none;opacity:1}
+}
+.packet .empty{color:var(--ink-3);font-size:14px;display:grid;place-items:center;width:100%}
+
+.bits{margin-top:18px;font-size:13px;color:var(--ink-3);word-break:break-all;min-height:22px}
+.bits b{color:var(--l4)}
+
+.j-progress{height:5px;background:#eef1f7}
+.j-progress i{display:block;height:100%;background:linear-gradient(90deg,var(--l1),var(--l2),var(--l3),var(--l4));width:0;transition:width .35s ease}
+
+/* ---------- 4. game ---------- */
+.game-top{
+  display:flex;gap:14px;flex-wrap:wrap;align-items:center;
+  padding:18px 22px;border-bottom:1px solid var(--line);background:#fbfcfe;
+}
+.stat{display:flex;align-items:baseline;gap:6px}
+.stat .k{font-size:12.5px;color:var(--ink-3);font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.stat .v{font-size:19px;font-weight:800}
+.stat.ok .v{color:var(--ok)}
+.stat.bad .v{color:var(--bad)}
+.tip{margin-left:auto;font-size:13.5px;color:var(--ink-3)}
+.tip.good{color:var(--ok);font-weight:700}
+.tip.wrong{color:var(--bad);font-weight:700}
+
+.pool{padding:22px}
+.pool-label{font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+.pool-grid{display:flex;flex-wrap:wrap;gap:10px}
+.pcard{
+  padding:10px 16px;border-radius:12px;border:1.5px solid var(--line);background:#fff;
+  font-size:14.5px;font-weight:700;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease;
+}
+.pcard:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.pcard.sel{border-color:var(--ink);box-shadow:0 0 0 3px rgba(27,33,48,.10);transform:translateY(-2px)}
+.pcard .tag{font-size:11.5px;color:var(--ink-3);font-weight:600;margin-left:6px}
+.pcard.shake{animation:shake .4s}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-6px)}
+  40%{transform:translateX(6px)}
+  60%{transform:translateX(-4px)}
+  80%{transform:translateX(4px)}
+}
+
+.buckets{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;padding:0 22px 22px}
+.bucket{
+  border-radius:16px;border:1.5px dashed var(--line);background:#fff;padding:16px;
+  transition:border-color .15s ease,background .15s ease,transform .14s ease;
+  cursor:pointer;text-align:left;
+}
+.bucket:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.bucket .bh{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.bucket .bi{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px}
+.bucket .bn{font-size:15.5px;font-weight:800}
+.bucket .be{font-size:11.5px;color:var(--ink-3);display:block;font-weight:600}
+.bucket .slots{display:flex;flex-wrap:wrap;gap:7px;min-height:34px}
+.slot{
+  font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:9px;
+  background:#f4f6fb;color:var(--ink-2);border:1px solid var(--line);
+}
+.bucket .ph{font-size:13px;color:#b8c0d2}
+.bucket.flash-ok{animation:flashOk .5s}
+.bucket.flash-bad{animation:flashBad .5s}
+@keyframes flashOk{0%{background:var(--ok-bg)}100%{background:#fff}}
+@keyframes flashBad{0%{background:var(--bad-bg)}100%{background:#fff}}
+
+.done-banner{
+  margin:0 22px 22px;padding:18px 22px;border-radius:16px;
+  background:linear-gradient(180deg,#eafaf1,#e2f6ea);border:1px solid #bfe8d1;
+  display:none;
+}
+.done-banner.show{display:block}
+.done-banner h4{font-size:17px;color:#0d6b38}
+.done-banner p{font-size:14.5px;color:#1d7d49;margin-top:6px}
+
+/* ---------- 5. quiz ---------- */
+.quiz{padding:26px}
+.q-top{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.dots{display:flex;gap:6px}
+.dots i{width:26px;height:6px;border-radius:99px;background:#e7ebf3}
+.dots i.done{background:var(--l2)}
+.dots i.cur{background:var(--ink)}
+.q-count{margin-left:auto;font-size:13.5px;color:var(--ink-3);font-weight:600}
+.q-text{font-size:19px;font-weight:700;line-height:1.5}
+.opts{display:grid;gap:10px;margin-top:20px}
+.opt{
+  display:flex;align-items:center;gap:14px;text-align:left;width:100%;
+  padding:14px 18px;border-radius:14px;border:1.5px solid var(--line);background:#fff;
+  font-size:15.5px;transition:border-color .15s ease,background .15s ease,transform .12s ease;
+}
+.opt:hover:not(:disabled){border-color:#c2cbdd;transform:translateX(2px)}
+.opt:disabled{cursor:default}
+.opt .letter{
+  flex:0 0 auto;width:28px;height:28px;border-radius:9px;display:grid;place-items:center;
+  background:#f1f4fa;font-size:13.5px;font-weight:800;color:var(--ink-2);
+}
+.opt.correct{border-color:var(--ok);background:var(--ok-bg)}
+.opt.correct .letter{background:var(--ok);color:#fff}
+.opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.opt.wrong .letter{background:var(--bad);color:#fff}
+.opt.dim{opacity:.55}
+.explain{
+  margin-top:18px;padding:15px 18px;border-radius:14px;font-size:14.5px;
+  background:#f7f9fd;border:1px solid var(--line);color:var(--ink-2);display:none;
+}
+.explain.show{display:block}
+.explain b{color:var(--ink)}
+.q-nav{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+
+.result{padding:30px 26px;display:none;text-align:center}
+.result.show{display:block}
+.result .score{font-size:52px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.result .score small{font-size:20px;color:var(--ink-3);font-weight:700}
+.result .msg{font-size:17px;font-weight:700;margin-top:10px}
+.result .sub2{font-size:14.5px;color:var(--ink-2);margin-top:8px;max-width:520px;margin-inline:auto}
+
+/* ---------- footer ---------- */
+footer{margin-top:72px;border-top:1px solid var(--line);background:#fff;padding:32px 0}
+footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+footer p{font-size:13.5px;color:var(--ink-3)}
+.legend{display:flex;gap:14px;flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);font-weight:600}
+.legend i{width:11px;height:11px;border-radius:4px;display:inline-block}
+
+@media (max-width:900px){
+  .layers-wrap{grid-template-columns:1fr}
+  .j-body{grid-template-columns:1fr}
+  .j-stack{border-right:none;border-bottom:1px solid var(--line)}
+}
+@media (max-width:560px){
+  section{padding:44px 0 4px}
+  .hero{padding:44px 0 40px}
+  .detail{padding:20px}
+  .quiz{padding:20px}
+  .part{min-width:78px;padding:10px 10px;font-size:11.5px}
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="hero-badge"><span class="dot"></span>入門級 · 建議 20 分鐘</span>
+    <h1>搞懂 <span class="grad">TCP/IP 四層結構</span><br>從一封信開始</h1>
+    <p>網路上億台電腦是怎麼「講好規矩」把資料送到你面前的？這份課件用互動的方式，帶你從應用層一路走到網路存取層，親眼看一次資料被打包、送出、拆開的過程。</p>
+    <div class="hero-meta">
+      <span class="chip">📦 <b>4</b> 個分層</span>
+      <span class="chip">🎬 <b>1</b> 段封裝動畫</span>
+      <span class="chip">🎮 <b>12</b> 個協定配對</span>
+      <span class="chip">✅ <b>6</b> 題小測驗</span>
+    </div>
+  </div>
+</header>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a href="#why" class="on">為什麼要分層</a>
+    <a href="#layers">四層總覽</a>
+    <a href="#journey">封裝之旅</a>
+    <a href="#game">協定歸位</a>
+    <a href="#quiz">小測驗</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- ============ 1. WHY ============ -->
+  <section id="why">
+    <div class="sec-head">
+      <span class="sec-kicker">01 · 先建立直覺</span>
+      <h2 class="sec-title">為什麼網路要「分層」？</h2>
+      <p class="sec-desc">如果只寫一支超大的程式，從「使用者輸入網址」一路寫到「網卡送電訊號」，只要換一張網卡或換一種線路，整支程式就得重寫。分層的目的，就是讓每一層<b>只做好一件事</b>，而且可以獨立替換。</p>
+    </div>
+
+    <div class="grid why-grid">
+      <div class="card why-card">
+        <div class="num" style="background:var(--l1)">1</div>
+        <h4>各做各的，互不綁架</h4>
+        <p>應用層只管「內容長什麼樣」，不必知道底下走的是光纖、Wi-Fi 還是 4G。</p>
+      </div>
+      <div class="card why-card">
+        <div class="num" style="background:var(--l2)">2</div>
+        <h4>壞了容易抓</h4>
+        <p>網路不通時可以一層一層排查：先看網卡燈亮不亮，再看 IP，再看應用程式。</p>
+      </div>
+      <div class="card why-card">
+        <div class="num" style="background:var(--l3)">3</div>
+        <h4>升級可以只換一層</h4>
+        <p>從 IPv4 換到 IPv6，動的主要是網際網路層，你寫的網頁程式幾乎不用改。</p>
+      </div>
+      <div class="card why-card">
+        <div class="num" style="background:var(--l4)">4</div>
+        <h4>大家講同一種語言</h4>
+        <p>全世界都照這套模型分工，不同廠商做出來的設備才能互相溝通。</p>
+      </div>
+    </div>
+
+    <div class="card analogy">
+      <table>
+        <thead>
+          <tr><th>分層</th><th>它在做的事</th><th>用「寄信」來想</th></tr>
+        </thead>
+        <tbody>
+          <tr><td style="color:var(--l1)">應用層</td><td>產生使用者真正想要的內容</td><td>你親手寫好的那封信</td></tr>
+          <tr><td style="color:var(--l2)">傳輸層</td><td>決定要交給對方電腦裡的哪一支程式</td><td>信封上寫的「哪個部門／分機收」</td></tr>
+          <tr><td style="color:var(--l3)">網際網路層</td><td>在全世界找路，送到對的城市與地址</td><td>信封上的收件地址與郵遞區號</td></tr>
+          <tr><td style="color:var(--l4)">網路存取層</td><td>真的把信搬上車、開到下一站</td><td>郵車、馬路和司機</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 2. LAYERS ============ -->
+  <section id="layers">
+    <div class="sec-head">
+      <span class="sec-kicker">02 · 互動總覽</span>
+      <h2 class="sec-title">點開每一層，看看它在做什麼</h2>
+      <p class="sec-desc">TCP/IP 模型把複雜的網路工作切成四層。資料從你的電腦出發時是<b>由上往下</b>逐層打包；抵達對方電腦後則<b>由下往上</b>逐層拆開。</p>
+    </div>
+
+    <div class="layers-wrap">
+      <div class="layer-list" id="layerList"></div>
+      <div class="card detail" id="layerDetail"></div>
+    </div>
+  </section>
+
+  <!-- ============ 3. JOURNEY ============ -->
+  <section id="journey">
+    <div class="sec-head">
+      <span class="sec-kicker">03 · 動畫</span>
+      <h2 class="sec-title">一封資料的旅行：封裝與解封裝</h2>
+      <p class="sec-desc">每一層都會在資料前面加上自己的「標頭 Header」，就像一層層套上信封。對方收到後再一層層拆掉。按「下一步」親眼看一次。</p>
+    </div>
+
+    <div class="card journey">
+      <div class="j-head">
+        <div>
+          <div class="j-title" id="jTitle">資料封裝之旅</div>
+          <div class="j-sub" id="jSub">發送端：由上往下，逐層加標頭</div>
+        </div>
+        <div class="j-controls">
+          <button class="btn" id="btnMode">切到接收端 ↻</button>
+          <button class="btn" id="btnPrev">← 上一步</button>
+          <button class="btn primary" id="btnNext">下一步 →</button>
+          <button class="btn" id="btnAuto">▶ 自動播放</button>
+        </div>
+      </div>
+      <div class="j-progress"><i id="jBar"></i></div>
+      <div class="j-body">
+        <div class="j-stack" id="jStack"></div>
+        <div class="j-stage">
+          <div class="step-title" id="stepTitle"></div>
+          <p class="step-desc" id="stepDesc"></p>
+          <div class="packet" id="packet"></div>
+          <div class="bits" id="bits"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4. GAME ============ -->
+  <section id="game">
+    <div class="sec-head">
+      <span class="sec-kicker">04 · 動手練</span>
+      <h2 class="sec-title">協定歸位：把它們放回正確的層</h2>
+      <p class="sec-desc">先點一個協定，再點它應該屬於的那一層。放錯會立刻告訴你原因。全部歸位後可以再玩一次。</p>
+    </div>
+
+    <div class="card game">
+      <div class="game-top">
+        <div class="stat"><span class="k">已歸位</span><span class="v" id="gDone">0 / 12</span></div>
+        <div class="stat ok"><span class="k">正確</span><span class="v" id="gOk">0</span></div>
+        <div class="stat bad"><span class="k">錯誤</span><span class="v" id="gBad">0</span></div>
+        <div class="tip" id="gTip">步驟：點協定 → 點層級</div>
+        <button class="btn" id="gReset" style="margin-left:6px">重新開始</button>
+      </div>
+      <div class="pool">
+        <div class="pool-label">待分類的協定</div>
+        <div class="pool-grid" id="gPool"></div>
+      </div>
+      <div class="buckets" id="gBuckets"></div>
+      <div class="done-banner" id="gDone2">
+        <h4 id="gDoneTitle">全部歸位！</h4>
+        <p id="gDoneMsg"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5. QUIZ ============ -->
+  <section id="quiz">
+    <div class="sec-head">
+      <span class="sec-kicker">05 · 驗收</span>
+      <h2 class="sec-title">六題小測驗</h2>
+      <p class="sec-desc">選完立刻告訴你對不對，並補充一段說明。全部答完會給你總分，可以無限次重做。</p>
+    </div>
+
+    <div class="card quiz">
+      <div class="q-top">
+        <div class="dots" id="qDots"></div>
+        <div class="q-count" id="qCount"></div>
+      </div>
+
+      <div id="qBody">
+        <div class="q-text" id="qText"></div>
+        <div class="opts" id="qOpts"></div>
+        <div class="explain" id="qExplain"></div>
+        <div class="q-nav">
+          <button class="btn" id="qPrev" disabled>← 上一題</button>
+          <button class="btn primary" id="qNext" disabled>下一題 →</button>
+        </div>
+      </div>
+
+      <div class="result" id="qResult">
+        <div class="score" id="qScore"></div>
+        <div class="msg" id="qMsg"></div>
+        <p class="sub2" id="qSub"></p>
+        <div class="q-nav" style="justify-content:center">
+          <button class="btn primary" id="qRetry">再做一次</button>
+          <button class="btn" id="qReview">檢討錯題</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="legend">
+      <span><i style="background:var(--l1)"></i>應用層</span>
+      <span><i style="background:var(--l2)"></i>傳輸層</span>
+      <span><i style="background:var(--l3)"></i>網際網路層</span>
+      <span><i style="background:var(--l4)"></i>網路存取層</span>
+    </div>
+    <p>TCP/IP 四層結構互動課件 · 入門版 ｜ 可直接用瀏覽器打開，無需網路</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* =========================================================
+     資料：四層
+     ========================================================= */
+  var LAYERS = [
+    {
+      id: 1, name: "應用層", en: "Application Layer",
+      color: "var(--l1)", bg: "var(--l1-bg)", tag: "你每天都在用的一層",
+      job: "直接服務使用者與應用程式，規定「程式之間要怎麼講話」。瀏覽器、Email、通訊軟體、線上遊戲，都作用在這一層。",
+      units: ["訊息 Message", "資料 Data"],
+      protos: ["HTTP / HTTPS", "DNS", "SMTP", "POP3 / IMAP", "FTP", "SSH", "DHCP"],
+      concept: "這一層完全不關心資料怎麼送達，只關心「內容的格式與意義」。",
+      analogy: "你親手寫好的那封信——信的內容本身。",
+      note: "最容易搞混：瀏覽器不是應用層，<b>瀏覽器發出的 HTTP 請求</b>才是。應用層指的是協定與資料格式。"
+    },
+    {
+      id: 2, name: "傳輸層", en: "Transport Layer",
+      color: "var(--l2)", bg: "var(--l2-bg)", tag: "決定交給哪一支程式",
+      job: "負責「端對端」的傳輸：用「埠號 Port」標記資料要交給電腦裡的哪一支程式，並決定要不要保證送達、要不要重傳。",
+      units: ["區段 Segment（TCP）", "資料包 Datagram（UDP）"],
+      protos: ["TCP", "UDP"],
+      concept: "TCP＝可靠、會確認、會重傳，慢一點（像掛號信）。UDP＝不確認、不重傳，快（像直播、語音通話、遊戲）。",
+      analogy: "信封上寫的「收件部門／分機」——決定信進了大樓之後要交給誰。",
+      note: "常見埠號：<b>80</b>（HTTP）、<b>443</b>（HTTPS）、<b>53</b>（DNS）、<b>22</b>（SSH）。"
+    },
+    {
+      id: 3, name: "網際網路層", en: "Internet Layer",
+      color: "var(--l3)", bg: "var(--l3-bg)", tag: "在網路世界裡找路",
+      job: "負責邏輯定址與路由（Routing）：用 IP 位址標記網路上的裝置，並在一個又一個網路之間挑選路徑，把封包送到正確的目的地。",
+      units: ["封包 Packet"],
+      protos: ["IP（IPv4 / IPv6）", "ICMP", "ARP", "IGMP"],
+      concept: "路由器（Router）主要就工作在這一層。這一層只「盡力送」，不保證一定送達。",
+      analogy: "信封上的收件地址與郵遞區號——決定信要被送到哪個城市。",
+      note: "IP 是這一層的主角，所以這整套模型才叫 <b>TCP/IP</b>。"
+    },
+    {
+      id: 4, name: "網路存取層", en: "Network Access Layer",
+      color: "var(--l4)", bg: "var(--l4-bg)", tag: "真的把訊號送上線路",
+      job: "負責在同一個區域網路／同一條實體線路內，把資料真正傳出去：處理 MAC 位址、網卡、纜線與無線電波，把資料變成電訊號、光訊號或電磁波。",
+      units: ["訊框 Frame", "位元 Bit"],
+      protos: ["Ethernet 乙太網路", "Wi-Fi（802.11）", "PPP"],
+      concept: "交換器（Switch）主要工作在這一層。資料離開這一層，就真的「上路」了。",
+      analogy: "真正跑在路上載送郵件的郵車、馬路和司機。",
+      note: "這一層也常被稱為<b>連結層 Link Layer</b> 或<b>網路介面層</b>，不同課本叫法不同，指的是同一層。"
+    }
+  ];
+
+  /* =========================================================
+     02 · 四層總覽
+     ========================================================= */
+  var listEl = document.getElementById("layerList");
+  var detailEl = document.getElementById("layerDetail");
+  var currentLayer = 1;
+
+  LAYERS.forEach(function (L) {
+    var b = document.createElement("button");
+    b.className = "layer-btn";
+    b.type = "button";
+    b.dataset.id = String(L.id);
+    b.style.color = L.color;
+    b.innerHTML =
+      '<span class="lv" style="background:' + L.color + '">' + L.id + '</span>' +
+      '<span><span class="lt" style="color:var(--ink)">' + L.name + '</span>' +
+      '<span class="le">' + L.en + '</span></span>' +
+      '<span class="hint">' + L.tag + '</span>';
+    b.addEventListener("click", function () { renderLayer(L.id); });
+    listEl.appendChild(b);
+  });
+
+  function renderLayer(id) {
+    currentLayer = id;
+    var L = LAYERS.filter(function (x) { return x.id === id; })[0];
+
+    Array.prototype.forEach.call(listEl.children, function (btn) {
+      var on = Number(btn.dataset.id) === id;
+      btn.classList.toggle("active", on);
+      btn.style.background = on ? L.bg : "#fff";
+    });
+
+    detailEl.innerHTML =
+      '<div class="detail-top">' +
+        '<span class="pill" style="background:' + L.bg + ';color:' + L.color + '">第 ' + L.id + ' 層</span>' +
+        '<span class="pill" style="background:#f1f4fa;color:var(--ink-3)">' + L.tag + '</span>' +
+      '</div>' +
+      '<h3>' + L.name + '</h3>' +
+      '<div class="en">' + L.en + '</div>' +
+      '<p class="job">' + L.job + '</p>' +
+
+      '<div class="two-col">' +
+        '<div class="mini"><span class="lb">資料單位</span><p>' +
+          L.units.map(function (u) { return "• " + u; }).join("<br>") +
+        '</p></div>' +
+        '<div class="mini"><span class="lb">生活比喻</span><p>' + L.analogy + '</p></div>' +
+      '</div>' +
+
+      '<div class="block"><span class="lb">常見協定</span><div class="proto-list">' +
+        L.protos.map(function (p) { return '<span class="proto">' + p + '</span>'; }).join("") +
+      '</div></div>' +
+
+      '<div class="block"><span class="lb">關鍵觀念</span>' +
+        '<p class="job" style="margin-top:0">' + L.concept + '</p></div>' +
+
+      '<div class="note">💡 <b>補充：</b>' + L.note + '</div>';
+  }
+  renderLayer(1);
+
+  /* =========================================================
+     03 · 封裝之旅
+     ========================================================= */
+  var PARTS = {
+    eth:     { cls: "eth",     label: "Ethernet 標頭", sub: "MAC 位址" },
+    ip:      { cls: "ip",      label: "IP 標頭",       sub: "IP 位址" },
+    tcp:     { cls: "tcp",     label: "TCP 標頭",      sub: "埠號 Port" },
+    data:    { cls: "data",    label: "應用層資料",     sub: "HTTP 訊息" },
+    trailer: { cls: "trailer", label: "Ethernet 尾端", sub: "檢查碼 FCS" }
+  };
+
+  var ENC = [
+    { n: "應用層", op: "產生資料",
+      t: "① 應用層：先有內容",
+      d: "你在瀏覽器輸入網址按下 Enter，瀏覽器產生一個 HTTP 請求。這時候還只是「純資料」，沒有任何傳輸用的資訊。",
+      parts: ["data"] },
+    { n: "傳輸層", op: "加 TCP 標頭",
+      t: "② 傳輸層：決定交給哪支程式",
+      d: "加上 TCP 標頭，寫上來源埠號與目的埠號（HTTPS 用 443）。這一層切好的單位叫做「區段 Segment」。",
+      parts: ["tcp", "data"] },
+    { n: "網際網路層", op: "加 IP 標頭",
+      t: "③ 網際網路層：決定送到哪台電腦",
+      d: "加上 IP 標頭，寫上來源 IP 與目的 IP。有了它，路由器才知道該往哪個方向轉送。這一層的單位叫做「封包 Packet」。",
+      parts: ["ip", "tcp", "data"] },
+    { n: "網路存取層", op: "加 Ethernet 頭尾",
+      t: "④ 網路存取層：準備上路",
+      d: "在最前面加上 Ethernet 標頭（寫下 MAC 位址），最後面加上尾端（檢查碼 FCS，用來驗證資料有沒有壞掉）。這一層的單位叫做「訊框 Frame」。",
+      parts: ["eth", "ip", "tcp", "data", "trailer"] },
+    { n: "上路", op: "轉成 0 與 1",
+      t: "⑤ 送出：變成訊號",
+      d: "完整的訊框被轉成一串 0 與 1，由網卡變成電訊號（網路線）、光訊號（光纖）或電磁波（Wi-Fi），開始在網路上旅行。",
+      parts: ["eth", "ip", "tcp", "data", "trailer"], sent: true }
+  ];
+
+  var DEC = [
+    { n: "網路存取層", op: "拆 Ethernet 頭尾",
+      t: "① 收到訊號，先還原成訊框",
+      d: "伺服器的網卡收到訊號，還原成一串 0 與 1，組回「訊框 Frame」，並用尾端的檢查碼確認資料沒有損壞。",
+      parts: ["eth", "ip", "tcp", "data", "trailer"] },
+    { n: "網際網路層", op: "拆 IP 標頭",
+      t: "② 網際網路層：確認是送給我的",
+      d: "拆掉 Ethernet 頭尾，看 IP 標頭上的目的 IP 是不是自己。是就留下，不是就轉送到別的地方去。剩下的是「封包 Packet」。",
+      parts: ["ip", "tcp", "data"] },
+    { n: "傳輸層", op: "拆 TCP 標頭",
+      t: "③ 傳輸層：確認要交給哪支程式",
+      d: "拆掉 IP 標頭，看 TCP 標頭上的目的埠號（例如 443），決定要把資料交給伺服器上的哪一支程式，同時處理重傳與排序。",
+      parts: ["tcp", "data"] },
+    { n: "應用層", op: "只剩資料",
+      t: "④ 應用層：拿到真正的內容",
+      d: "拆掉 TCP 標頭，剩下的就是原本的 HTTP 請求。伺服器讀懂它，然後把網頁內容用同樣的流程回傳給你。",
+      parts: ["data"] },
+    { n: "完成", op: "處理並回應",
+      t: "⑤ 完成：一來一回",
+      d: "伺服器處理完請求後，會把網頁內容再封裝一次送回你的電腦。你看到的每一個網頁，都是這樣一來一回換來的。",
+      parts: ["data"], done: true }
+  ];
+
+  var jMode = "enc";
+  var jStep = 0;
+  var autoTimer = null;
+
+  var stackEl = document.getElementById("jStack");
+  var packetEl = document.getElementById("packet");
+  var bitsEl = document.getElementById("bits");
+
+  function steps() { return jMode === "enc" ? ENC : DEC; }
+
+  function renderStack() {
+    var S = steps();
+    stackEl.innerHTML = "";
+    S.forEach(function (s, i) {
+      var row = document.createElement("div");
+      var state = i === jStep ? " active" : (i < jStep ? " done" : "");
+      var color = i === jStep
+        ? (LAYERS[Math.min(i, 3)].color)
+        : "#c3cada";
+      row.className = "j-step" + state;
+      row.innerHTML =
+        '<span class="idx" style="background:' + color + '">' + (i + 1) + '</span>' +
+        '<span><span class="nm">' + s.n + '</span><br><span class="op">' + s.op + '</span></span>';
+      stackEl.appendChild(row);
+    });
+  }
+
+  function renderJourney() {
+    var S = steps();
+    var s = S[jStep];
+
+    document.getElementById("jTitle").textContent = jMode === "enc" ? "資料封裝之旅" : "資料解封裝之旅";
+    document.getElementById("jSub").textContent = jMode === "enc"
+      ? "發送端：由上往下，逐層加標頭"
+      : "接收端：由下往上，逐層拆標頭";
+
+    document.getElementById("stepTitle").innerHTML =
+      '<span style="font-size:13px;font-weight:700;color:' + LAYERS[Math.min(jStep, 3)].color + '">' +
+      (jMode === "enc" ? "發送端" : "接收端") + '</span>' + s.t;
+    document.getElementById("stepDesc").textContent = s.d;
+
+    packetEl.innerHTML = "";
+    if (!s.parts.length) {
+      packetEl.innerHTML = '<div class="empty">還沒有資料</div>';
+    } else {
+      s.parts.forEach(function (key) {
+        var p = PARTS[key];
+        var el = document.createElement("div");
+        el.className = "part " + p.cls;
+        el.innerHTML = p.label + '<span class="sub">' + p.sub + "</span>";
+        packetEl.appendChild(el);
+      });
+      var last = packetEl.lastChild;
+      if (last) { last.classList.add("enter"); }
+    }
+
+    if (s.sent || s.done) {
+      bitsEl.innerHTML = "網線上真正跑的是： <b>01001000 01010100 01010100 01010000 ...</b>（一長串 0 與 1）";
+    } else {
+      bitsEl.innerHTML = "";
+    }
+
+    document.getElementById("jBar").style.width =
+      ((jStep + 1) / S.length * 100) + "%";
+
+    document.getElementById("btnPrev").disabled = jStep === 0;
+    document.getElementById("btnNext").disabled = jStep === S.length - 1;
+
+    renderStack();
+  }
+
+  function setMode(m) {
+    stopAuto();
+    jMode = m;
+    jStep = 0;
+    document.getElementById("btnMode").textContent =
+      m === "enc" ? "切到接收端 ↻" : "切到發送端 ↻";
+    renderJourney();
+  }
+
+  function stopAuto() {
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+    document.getElementById("btnAuto").textContent = "▶ 自動播放";
+  }
+
+  document.getElementById("btnNext").addEventListener("click", function () {
+    var S = steps();
+    if (jStep < S.length - 1) { jStep++; renderJourney(); }
+  });
+  document.getElementById("btnPrev").addEventListener("click", function () {
+    if (jStep > 0) { jStep--; renderJourney(); }
+  });
+  document.getElementById("btnMode").addEventListener("click", function () {
+    setMode(jMode === "enc" ? "dec" : "enc");
+  });
+  document.getElementById("btnAuto").addEventListener("click", function () {
+    if (autoTimer) { stopAuto(); return; }
+    var S = steps();
+    if (jStep >= S.length - 1) { jStep = 0; }
+    document.getElementById("btnAuto").textContent = "⏸ 暫停";
+    renderJourney();
+    autoTimer = setInterval(function () {
+      var list = steps();
+      if (jStep < list.length - 1) { jStep++; renderJourney(); }
+      else { stopAuto(); }
+    }, 2100);
+  });
+
+  renderJourney();
+
+  /* =========================================================
+     04 · 協定歸位遊戲
+     ========================================================= */
+  var PROTOS = [
+    { name: "HTTP",  layer: 1, why: "網頁瀏覽用的協定，定義瀏覽器與伺服器怎麼交換內容。" },
+    { name: "DNS",   layer: 1, why: "把網域名稱翻成 IP 位址，算是網路的電話簿。" },
+    { name: "SMTP",  layer: 1, why: "寄送 Email 用的協定。" },
+    { name: "FTP",   layer: 1, why: "檔案傳輸協定，用來上傳下載檔案。" },
+    { name: "TCP",   layer: 2, why: "提供可靠、會重傳的連線導向傳輸。" },
+    { name: "UDP",   layer: 2, why: "不保證送達但速度快，常用於直播與遊戲。" },
+    { name: "IP",    layer: 3, why: "負責定址與路由，是網際網路層的主角。" },
+    { name: "ICMP",  layer: 3, why: "用來回報網路錯誤與測試連線（ping 就是用它）。" },
+    { name: "ARP",   layer: 3, why: "把 IP 位址對應成 MAC 位址。" },
+    { name: "Ethernet", layer: 4, why: "有線區域網路最常見的技術。" },
+    { name: "Wi-Fi", layer: 4, why: "無線區域網路（IEEE 802.11）。" },
+    { name: "PPP",   layer: 4, why: "點對點連線協定，早期撥接上網就在用。" }
+  ];
+
+  var poolEl = document.getElementById("gPool");
+  var bucketsEl = document.getElementById("gBuckets");
+  var gTip = document.getElementById("gTip");
+  var gState = null;
+
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function initGame() {
+    gState = { placed: {}, selected: null, ok: 0, bad: 0, order: shuffle(PROTOS) };
+    PROTOS.forEach(function (p) { gState.placed[p.name] = 0; });
+    gTip.className = "tip";
+    gTip.textContent = "步驟：點協定 → 點層級";
+    document.getElementById("gDone2").classList.remove("show");
+    renderGame();
+  }
+
+  function renderGame() {
+    var placedCount = 0;
+    Object.keys(gState.placed).forEach(function (k) {
+      if (gState.placed[k]) { placedCount++; }
+    });
+
+    document.getElementById("gDone").textContent = placedCount + " / " + PROTOS.length;
+    document.getElementById("gOk").textContent = gState.ok;
+    document.getElementById("gBad").textContent = gState.bad;
+
+    // pool
+    poolEl.innerHTML = "";
+    gState.order.forEach(function (p) {
+      if (gState.placed[p.name]) { return; }
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "pcard" + (gState.selected === p.name ? " sel" : "");
+      b.dataset.name = p.name;
+      b.textContent = p.name;
+      b.addEventListener("click", function () {
+        gState.selected = p.name;
+        gTip.className = "tip";
+        gTip.textContent = "已選「" + p.name + "」，現在點它屬於的那一層";
+        renderGame();
+      });
+      poolEl.appendChild(b);
+    });
+    if (!poolEl.children.length) {
+      var em = document.createElement("span");
+      em.className = "ph";
+      em.style.cssText = "font-size:14px;color:var(--ink-3)";
+      em.textContent = "全部歸位了 🎉";
+      poolEl.appendChild(em);
+    }
+
+    // buckets
+    bucketsEl.innerHTML = "";
+    LAYERS.forEach(function (L) {
+      var inLayer = PROTOS.filter(function (p) {
+        return p.layer === L.id && gState.placed[p.name];
+      });
+
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "bucket";
+      b.dataset.layer = String(L.id);
+      b.innerHTML =
+        '<div class="bh">' +
+          '<span class="bi" style="background:' + L.color + '">' + L.id + '</span>' +
+          '<span><span class="bn">' + L.name + '</span><span class="be">' + L.en + '</span></span>' +
+        '</div>' +
+        '<div class="slots">' +
+          (inLayer.length
+            ? inLayer.map(function (p) { return '<span class="slot">' + p.name + "</span>"; }).join("")
+            : '<span class="ph">點這裡放入協定</span>') +
+        "</div>";
+      b.addEventListener("click", function () { tryPlace(L.id, b); });
+      bucketsEl.appendChild(b);
+    });
+
+    if (placedCount === PROTOS.length) { showGameDone(); }
+  }
+
+  function tryPlace(layerId, bucketEl) {
+    if (!gState.selected) {
+      gTip.className = "tip wrong";
+      gTip.textContent = "請先點一個協定，再點層級";
+      return;
+    }
+    var p = PROTOS.filter(function (x) { return x.name === gState.selected; })[0];
+    if (!p) { return; }
+
+    if (p.layer === layerId) {
+      gState.placed[p.name] = 1;
+      gState.ok++;
+      gState.selected = null;
+      gTip.className = "tip good";
+      gTip.textContent = "✓ " + p.name + " 在「" + LAYERS[layerId - 1].name + "」——" + p.why;
+      renderGame();
+      var el = bucketsEl.children[layerId - 1];
+      if (el) { el.classList.add("flash-ok"); setTimeout(function () { el.classList.remove("flash-ok"); }, 520); }
+    } else {
+      gState.bad++;
+      gTip.className = "tip wrong";
+      gTip.textContent = "✗ " + p.name + " 不在「" + LAYERS[layerId - 1].name + "」，再想想它在做什麼事？";
+      var card = poolEl.querySelector('.pcard[data-name="' + p.name + '"]');
+      if (card) { card.classList.add("shake"); setTimeout(function () { card.classList.remove("shake"); }, 420); }
+      document.getElementById("gBad").textContent = gState.bad;
+    }
+  }
+
+  function showGameDone() {
+    var box = document.getElementById("gDone2");
+    var total = PROTOS.length;
+    var title = document.getElementById("gDoneTitle");
+    var msg = document.getElementById("gDoneMsg");
+    if (gState.bad === 0) {
+      title.textContent = "全對！一次到位 🎉";
+      msg.textContent = "12 個協定全部一次放對，你已經掌握四層的分工了。可以往下去做小測驗。";
+    } else if (gState.bad <= 3) {
+      title.textContent = "全部歸位！";
+      msg.textContent = "正確 " + gState.ok + " 次、錯誤 " + gState.bad + " 次（共 " + total + " 個協定）。表現不錯，記得回頭看一下剛剛放錯的那幾個。";
+    } else {
+      title.textContent = "全部歸位！";
+      msg.textContent = "正確 " + gState.ok + " 次、錯誤 " + gState.bad + " 次。建議回到「四層總覽」再看一次每層在做什麼，然後重玩一次。";
+    }
+    box.classList.add("show");
+  }
+
+  document.getElementById("gReset").addEventListener("click", initGame);
+  initGame();
+
+  /* =========================================================
+     05 · 小測驗
+     ========================================================= */
+  var QUIZ = [
+    {
+      q: "在 TCP/IP 四層中，負責「在網路之間找路、把資料送到正確的電腦」的是哪一層？",
+      opts: ["應用層", "傳輸層", "網際網路層", "網路存取層"],
+      a: 2,
+      e: "這是<b>網際網路層</b>的工作：用 IP 位址定址，再由路由器一站一站轉送。傳輸層只管「端到端」，不管中途怎麼走。"
+    },
+    {
+      q: "你用瀏覽器看一個網頁，主要用到的是哪一個協定？",
+      opts: ["FTP", "HTTP / HTTPS", "ARP", "ICMP"],
+      a: 1,
+      e: "網頁內容是用 <b>HTTP</b>（加密版是 HTTPS）傳的，屬於應用層。DNS 負責查 IP，但「網頁內容本身」走 HTTP。"
+    },
+    {
+      q: "「IP 位址」是在哪一層被使用的？",
+      opts: ["應用層", "傳輸層", "網際網路層", "網路存取層"],
+      a: 2,
+      e: "IP 位址用在<b>網際網路層</b>。同一層的 MAC 位址則屬於網路存取層（第四層）——這題最容易錯。"
+    },
+    {
+      q: "關於 TCP 與 UDP，下列哪一項正確？",
+      opts: [
+        "TCP 比較快，但不保證送達",
+        "UDP 保證送達，所以比較慢",
+        "TCP 保證送達與順序，UDP 較快但不保證",
+        "兩者完全相同，只是名字不同"
+      ],
+      a: 2,
+      e: "<b>TCP</b> 會建立連線、確認、重傳、排序，可靠但開銷大；<b>UDP</b> 直接丟出去，快但不保證。看影片、打遊戲常用 UDP。"
+    },
+    {
+      q: "資料一路往下傳，在「網路存取層」會被包裝成什麼？",
+      opts: ["區段 Segment", "封包 Packet", "訊框 Frame", "位元 Bit"],
+      a: 2,
+      e: "第四層加的是 Ethernet 頭尾，單位叫<b>訊框 Frame</b>。往上回推：傳輸層是 Segment，網際網路層是 Packet。"
+    },
+    {
+      q: "「埠號 Port（例如 80、443）」的用途是什麼？",
+      opts: [
+        "標記資料要交給哪一個應用程式／服務",
+        "標記電腦在哪個國家",
+        "決定網路線的長度",
+        "用來加密資料內容"
+      ],
+      a: 0,
+      e: "埠號是<b>傳輸層</b>的概念：一台電腦同時跑很多服務，靠埠號才知道這份資料該交給網頁伺服器、還是郵件伺服器。"
+    }
+  ];
+
+  var qIndex = 0;
+  var qAnswers = [];
+  var qLocked = [];
+  var lastWrong = [];
+
+  var qBody = document.getElementById("qBody");
+  var qResult = document.getElementById("qResult");
+  var qDots = document.getElementById("qDots");
+
+  function initQuiz() {
+    qIndex = 0;
+    qAnswers = QUIZ.map(function () { return null; });
+    qLocked = QUIZ.map(function () { return false; });
+    qResult.classList.remove("show");
+    qBody.style.display = "block";
+    renderDots();
+    renderQuestion();
+  }
+
+  function renderDots() {
+    qDots.innerHTML = "";
+    QUIZ.forEach(function (_, i) {
+      var d = document.createElement("i");
+      if (i === qIndex) { d.className = "cur"; }
+      else if (qAnswers[i] !== null) { d.className = "done"; }
+      qDots.appendChild(d);
+    });
+    document.getElementById("qCount").textContent = "第 " + (qIndex + 1) + " / " + QUIZ.length + " 題";
+  }
+
+  function renderQuestion() {
+    var q = QUIZ[qIndex];
+    document.getElementById("qText").textContent = (qIndex + 1) + ". " + q.q;
+
+    var box = document.getElementById("qOpts");
+    box.innerHTML = "";
+    var letters = ["A", "B", "C", "D"];
+
+    q.opts.forEach(function (text, i) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "opt";
+      b.innerHTML = '<span class="letter">' + letters[i] + "</span><span>" + text + "</span>";
+
+      if (qLocked[qIndex]) {
+        b.disabled = true;
+        if (i === q.a) { b.classList.add("correct"); }
+        else if (i === qAnswers[qIndex]) { b.classList.add("wrong"); }
+        else { b.classList.add("dim"); }
+      }
+
+      b.addEventListener("click", function () {
+        if (qLocked[qIndex]) { return; }
+        qLocked[qIndex] = true;
+        qAnswers[qIndex] = i;
+        showExplain();
+        renderQuestion();
+      });
+      box.appendChild(b);
+    });
+
+    document.getElementById("qPrev").disabled = qIndex === 0;
+    var nextBtn = document.getElementById("qNext");
+    nextBtn.textContent = qIndex === QUIZ.length - 1 ? "看結果 ✓" : "下一題 →";
+    nextBtn.disabled = !qLocked[qIndex];
+
+    renderDots();
+  }
+
+  function showExplain() {
+    var q = QUIZ[qIndex];
+    var el = document.getElementById("qExplain");
+    var right = qAnswers[qIndex] === q.a;
+    el.innerHTML = (right ? "✅ <b>答對了！</b> " : "❌ <b>再想一下。</b> ") + q.e;
+    el.classList.add("show");
+  }
+
+  document.getElementById("qPrev").addEventListener("click", function () {
+    if (qIndex > 0) { qIndex--; renderQuestion(); syncExplain(); }
+  });
+  document.getElementById("qNext").addEventListener("click", function () {
+    if (qIndex < QUIZ.length - 1) { qIndex++; renderQuestion(); syncExplain(); }
+    else { showResult(); }
+  });
+
+  function syncExplain() {
+    var el = document.getElementById("qExplain");
+    if (qLocked[qIndex]) { showExplain(); } else { el.classList.remove("show"); }
+  }
+
+  function showResult() {
+    var score = QUIZ.reduce(function (acc, q, i) {
+      return acc + (qAnswers[i] === q.a ? 1 : 0);
+    }, 0);
+    lastWrong = [];
+    QUIZ.forEach(function (q, i) {
+      if (qAnswers[i] !== q.a) { lastWrong.push(i); }
+    });
+    qBody.style.display = "none";
+    qResult.classList.add("show");
+    document.getElementById("qScore").innerHTML = score + ' <small>/ ' + QUIZ.length + "</small>";
+    var msg = document.getElementById("qMsg");
+    var sub = document.getElementById("qSub");
+    if (score === QUIZ.length) {
+      msg.textContent = "完美！你已經掌握 TCP/IP 四層的分工了 🎉";
+      sub.textContent = "下一步可以試著觀察真實網路：打開瀏覽器開發者工具的 Network 分頁，看看每一個請求走了哪些協定。";
+    } else if (score >= 4) {
+      msg.textContent = "很不錯，觀念大致清楚了";
+      sub.textContent = "建議回到「四層總覽」重看錯題對應的那一層，特別是「哪一層用哪一種位址」這組觀念。";
+    } else {
+      msg.textContent = "還差一點，我們再走一次";
+      sub.textContent = "建議順序：先看「封裝之旅」的動畫建立直覺 → 玩一次協定歸位 → 回來重做測驗。";
+    }
+  }
+
+  document.getElementById("qRetry").addEventListener("click", initQuiz);
+  document.getElementById("qReview").addEventListener("click", function () {
+    var target = lastWrong.length ? lastWrong[0] : 0;
+    initQuiz();
+    qIndex = target;
+    renderQuestion();
+    syncExplain();
+  });
+
+  initQuiz();
+
+  /* =========================================================
+     nav 高亮
+     ========================================================= */
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll(".nav a"));
+  var sections = navLinks.map(function (a) {
+    return document.querySelector(a.getAttribute("href"));
+  });
+
+  function syncNav() {
+    var pos = window.scrollY + 120;
+    var active = 0;
+    sections.forEach(function (s, i) {
+      if (s && s.offsetTop <= pos) { active = i; }
+    });
+    navLinks.forEach(function (a, i) { a.classList.toggle("on", i === active); });
+  }
+  window.addEventListener("scroll", syncNav, { passive: true });
+  syncNav();
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>網絡拓撲結構互動學習教室 (Network Topology Lab)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .light-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+        }
+        .tab-btn {
+            color: #64748b;
+            background-color: #f1f5f9;
+        }
+        .tab-btn.active {
+            background-color: #0284c7;
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.25);
+        }
+        .topo-btn {
+            transition: all 0.2s ease;
+        }
+        .topo-btn.active {
+            background-color: #0369a1;
+            color: #ffffff;
+            border-color: #0284c7;
+        }
+        /* Canvas & Node styles */
+        #topology-canvas-container {
+            position: relative;
+            user-select: none;
+            touch-action: none;
+        }
+        #svg-network-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .net-node {
+            position: absolute;
+            cursor: grab;
+            z-index: 20;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .net-node:active {
+            cursor: grabbing;
+            transform: scale(1.08);
+            z-index: 30;
+        }
+        .net-node.disabled {
+            opacity: 0.4;
+            filter: grayscale(100%);
+        }
+        .net-node.selected {
+            ring: 3px solid #0284c7;
+        }
+        /* SVG Cable Animations */
+        @keyframes cablePulse {
+            0% { stroke-dashoffset: 20; }
+            100% { stroke-dashoffset: 0; }
+        }
+        .wire-active {
+            stroke-dasharray: 6 6;
+            animation: cablePulse 1s linear infinite;
+        }
+        .wire-broken {
+            stroke-dasharray: 4 4;
+            stroke: #ef4444 !important;
+            opacity: 0.6;
+        }
+        /* Dynamic Packet Dot Animation */
+        .ping-packet {
+            position: absolute;
+            width: 14 h-14;
+            z-index: 25;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            transition: all 0.05s linear;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-slate-50 text-slate-800">
+
+    <!-- 頂部導航列 (淺色主題) -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-sky-600 p-2.5 rounded-xl text-white shadow-md shadow-sky-500/20">
+                    <i class="fa-solid fa-diagram-project text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                        網絡拓撲結構互動學習教室
+                        <span class="text-xs px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 font-semibold border border-sky-200">
+                            <i class="fa-solid fa-graduation-cap"></i> 網絡基礎與拓撲模擬
+                        </span>
+                    </h1>
+                    <p class="text-xs text-slate-500">動手切換星型、總線型、環型、網狀及樹型拓撲，拖動設備、斷線測試與發送 Ping 數據包</p>
+                </div>
+            </div>
+
+            <!-- 控制快捷鈕 -->
+            <div class="flex items-center space-x-2">
+                <button onclick="resetCurrentTopology()" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-rotate-right"></i> 重置佈局
+                </button>
+                <button onclick="clearAllBrokenLinks()" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-wrench"></i> 修復所有故障線路
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區 -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+        <!-- 頁籤導航 -->
+        <div class="flex flex-wrap gap-2 mb-6 border-b border-slate-200 pb-3">
+            <button onclick="switchTab('lab')" id="tab-lab" class="tab-btn active px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2">
+                <i class="fa-solid fa-network-wired"></i> 1. 拓撲動態實驗室與數據包模擬
+            </button>
+            <button onclick="switchTab('compare')" id="tab-compare" class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm transition flex items-center gap-2">
+                <i class="fa-solid fa-scale-balanced"></i> 2. 五大拓撲結構對比與特性
+            </button>
+            <button onclick="switchTab('config')" id="tab-config" class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm transition flex items-center gap-2">
+                <i class="fa-solid fa-terminal"></i> 3. 設備配置與網絡診斷 (Ping / Routing)
+            </button>
+            <button onclick="switchTab('quests')" id="tab-quests" class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm transition flex items-center gap-2">
+                <i class="fa-solid fa-list-check"></i> 4. 實務闖關與知識測驗
+            </button>
+        </div>
+
+        <!-- TAB 1: 拓撲動態實驗室與數據包模擬 -->
+        <section id="sec-lab" class="space-y-6">
+            <!-- 拓撲模式選擇器列 -->
+            <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs font-extrabold text-slate-500 uppercase tracking-wider pl-1">選擇拓撲結構模式:</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button id="topo-btn-star" onclick="loadTopologyPreset('star')" class="topo-btn active px-3.5 py-1.5 rounded-xl font-bold text-xs border border-slate-300 text-slate-700 bg-slate-50 hover:bg-slate-100 flex items-center gap-1.5">
+                        <i class="fa-solid fa-star text-amber-500"></i> 星型拓撲 (Star)
+                    </button>
+                    <button id="topo-btn-bus" onclick="loadTopologyPreset('bus')" class="topo-btn px-3.5 py-1.5 rounded-xl font-bold text-xs border border-slate-300 text-slate-700 bg-slate-50 hover:bg-slate-100 flex items-center gap-1.5">
+                        <i class="fa-solid fa-grip-lines text-sky-500"></i> 總線型拓撲 (Bus)
+                    </button>
+                    <button id="topo-btn-ring" onclick="loadTopologyPreset('ring')" class="topo-btn px-3.5 py-1.5 rounded-xl font-bold text-xs border border-slate-300 text-slate-700 bg-slate-50 hover:bg-slate-100 flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-notch text-emerald-500"></i> 環型拓撲 (Ring)
+                    </button>
+                    <button id="topo-btn-mesh" onclick="loadTopologyPreset('mesh')" class="topo-btn px-3.5 py-1.5 rounded-xl font-bold text-xs border border-slate-300 text-slate-700 bg-slate-50 hover:bg-slate-100 flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-nodes text-indigo-500"></i> 網狀拓撲 (Mesh)
+                    </button>
+                    <button id="topo-btn-tree" onclick="loadTopologyPreset('tree')" class="topo-btn px-3.5 py-1.5 rounded-xl font-bold text-xs border border-slate-300 text-slate-700 bg-slate-50 hover:bg-slate-100 flex items-center gap-1.5">
+                        <i class="fa-solid fa-sitemap text-purple-500"></i> 樹型拓撲 (Tree)
+                    </button>
+                </div>
+            </div>
+
+            <!-- 主實驗室區域: 工具控制欄 + Canvas 畫布 -->
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                
+                <!-- 左側控制與 Ping 測試面板 -->
+                <div class="space-y-4">
+                    <!-- 拓撲資訊卡 -->
+                    <div class="light-card rounded-2xl p-5 space-y-3">
+                        <h2 id="topo-info-title" class="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-circle-info text-sky-600"></i> 星型拓撲 (Star Topology)
+                        </h2>
+                        <p id="topo-info-desc" class="text-xs text-slate-600 leading-relaxed">
+                            所有終端設備均連接至一台中央集線設備 (如 Switch 或 Hub)。中央節點負責數據的接收與轉發。
+                        </p>
+                        <div class="pt-2 text-[11px] space-y-1.5 border-t border-slate-100">
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">單點故障隱患 (SPOF):</span>
+                                <span id="topo-info-spof" class="font-bold text-amber-600">中央 Switch 節點</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">擴充難易度:</span>
+                                <span id="topo-info-expand" class="font-bold text-emerald-600">極容易 (插拔方便)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ping 動態數據包模擬發射器 -->
+                    <div class="light-card rounded-2xl p-5 space-y-4">
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center gap-1.5">
+                            <i class="fa-solid fa-paper-plane text-sky-600"></i> 動態 Ping 數據包發送器
+                        </h3>
+                        
+                        <div class="space-y-3 text-xs">
+                            <div>
+                                <label class="block text-slate-600 font-semibold mb-1">來源設備 (Source):</label>
+                                <select id="ping-source-select" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 font-bold focus:outline-none focus:border-sky-500">
+                                    <!-- JS 動態生成 -->
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-slate-600 font-semibold mb-1">目的設備 (Destination):</label>
+                                <select id="ping-target-select" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 font-bold focus:outline-none focus:border-sky-500">
+                                    <!-- JS 動態生成 -->
+                                </select>
+                            </div>
+
+                            <button onclick="startPingSimulation()" class="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-sky-600 hover:bg-sky-700 text-white transition shadow-md shadow-sky-600/20 flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-play"></i> 發送數據包並模擬傳輸
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 操作說明提示 -->
+                    <div class="light-card rounded-2xl p-4 text-xs space-y-2 bg-sky-50/50 border-sky-200">
+                        <h4 class="font-bold text-sky-900 flex items-center gap-1.5">
+                            <i class="fa-solid fa-lightbulb text-amber-500"></i> 互動操作小貼士
+                        </h4>
+                        <ul class="space-y-1 text-slate-600 list-disc list-inside text-[11px]">
+                            <li><strong>拖動設備：</strong> 在右側畫布中按住任意設備圖標可調整位置。</li>
+                            <li><strong>切斷線路：</strong> 點擊畫布上的線路可模擬「纜線斷裂」狀況。</li>
+                            <li><strong>開關設備：</strong> 雙擊設備可模擬該設備「宕機關機」。</li>
+                            <li><strong>觀察傳輸：</strong> 在 Mesh 拓撲切斷主線路，可觀察是否能<strong>自動尋找備用路徑</strong>！</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 右側 Topology Canvas 畫布區 -->
+                <div class="lg:col-span-3 light-card rounded-2xl p-4 relative overflow-hidden flex flex-col justify-between min-h-[560px] bg-white">
+                    
+                    <!-- 畫布頂部控制與狀態條 -->
+                    <div class="flex justify-between items-center z-10 mb-2 border-b border-slate-100 pb-2">
+                        <div class="flex items-center space-x-2">
+                            <span id="canvas-status-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> 拓撲網絡連線正常
+                            </span>
+                        </div>
+                        <div class="text-xs text-slate-500 flex items-center gap-3">
+                            <span class="flex items-center gap-1"><span class="w-3 h-1 bg-sky-500 inline-block rounded"></span> 正常纜線</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-1 bg-red-500 inline-block rounded"></span> 斷裂線路 (點擊修復)</span>
+                        </div>
+                    </div>
+
+                    <!-- 核心畫布區域 (動態 DOM + SVG Overlay) -->
+                    <div id="topology-canvas-container" class="w-full flex-grow relative bg-slate-50/60 rounded-xl border border-slate-200 overflow-hidden min-h-[460px]">
+                        <!-- SVG 纜線渲染層 -->
+                        <svg id="svg-network-layer"></svg>
+
+                        <!-- 設備節點將由 JS 動態注入此處 -->
+                        <div id="nodes-layer"></div>
+
+                        <!-- 傳輸封包動畫層 -->
+                        <div id="packets-layer"></div>
+                    </div>
+
+                    <!-- 畫布底部狀態回報列 -->
+                    <div class="mt-3 pt-2 border-t border-slate-100 flex flex-wrap justify-between items-center text-xs text-slate-500">
+                        <span id="console-log-msg" class="code-font text-slate-700 font-medium">系統就緒。請選擇設備並發送 Ping 封包測試。</span>
+                        <span id="topology-node-count" class="font-bold text-slate-600">設備總數: 5 | 作用中線路: 4</span>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: 五大拓撲結構對比與特性 -->
+        <section id="sec-compare" class="hidden space-y-6">
+            <div class="light-card rounded-2xl p-6">
+                <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-table text-sky-600"></i> 五大常見網絡拓撲 (Network Topologies) 綜合比對
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mt-5">
+                    
+                    <!-- 星型拓撲卡片 -->
+                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3 hover:border-sky-300 transition">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-star text-amber-500 text-lg"></i> 星型拓撲 (Star)
+                            </h3>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 font-bold">現代 LAN 主流</span>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            所有節點獨立連接至中央交換機 (Switch)。若單一終端網線斷裂，其餘設備不受影響。
+                        </p>
+                        <div class="text-xs space-y-1.5 pt-2 border-t border-slate-200/80">
+                            <div class="flex justify-between"><span class="text-slate-500">建置成本:</span><span class="font-bold text-slate-700">中等 (需要較多網線與 Switch)</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">容錯能力:</span><span class="font-bold text-emerald-600">高 (單一節點故障不影響全網)</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">致命弱點:</span><span class="font-bold text-rose-600">中央 Switch 故障全網癱瘓</span></div>
+                        </div>
+                    </div>
+
+                    <!-- 總線型拓撲卡片 -->
+                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3 hover:border-sky-300 transition">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-grip-lines text-sky-500 text-lg"></i> 總線型拓撲 (Bus)
+                            </h3>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold">早期同軸電纜網絡</span>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            所有設備共享一根主要幹線 (Trunk Cable)，兩端需裝設終端電阻 (Terminator) 防止信號反射回流。
+                        </p>
+                        <div class="text-xs space-y-1.5 pt-2 border-t border-slate-200/80">
+                            <div class="flex justify-between"><span class="text-slate-500">建置成本:</span><span class="font-bold text-emerald-600">極低 (省線材與設備)</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">容錯能力:</span><span class="font-bold text-rose-600">極低 (主幹線中斷即全網中斷)</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">數據碰撞:</span><span class="font-bold text-amber-600">高 (廣播網絡易衝突)</span></div>
+                        </div>
+                    </div>
+
+                    <!-- 環型拓撲卡片 -->
+                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3 hover:border-sky-300 transition">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-circle-notch text-emerald-500 text-lg"></i> 環型拓撲 (Ring)
+                            </h3>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold">令牌環 (Token Ring)</span>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            設備排成封閉環形，數據沿單一方向 (或雙環雙向) 順序傳遞，採用「令牌 (Token)」控制傳送權。
+                        </p>
+                        <div class="text-xs space-y-1.5 pt-2 border-t border-slate-200/80">
+                            <div class="flex justify-between"><span class="text-slate-500">數據碰撞:</span><span class="font-bold text-emerald-600">無碰撞 (令牌傳輸機制)</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">容錯能力:</span><span class="font-bold text-rose-600">較低 (單環任一點斷裂即中斷)</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">傳輸延遲:</span><span class="font-bold text-amber-600">隨節點增加而遞增</span></div>
+                        </div>
+                    </div>
+
+                    <!-- 網狀拓撲卡片 -->
+                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3 hover:border-sky-300 transition">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-circle-nodes text-indigo-500 text-lg"></i> 網狀拓撲 (Mesh)
+                            </h3>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold">機房/Internet 骨幹</span>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            每個節點與多個節點直接相連 (Full Mesh 或 Partial Mesh)。具備冗餘路徑 (Redundant Paths) 與自動重路由。
+                        </p>
+                        <div class="text-xs space-y-1.5 pt-2 border-t border-slate-200/80">
+                            <div class="flex justify-between"><span class="text-slate-500">可靠性/容錯:</span><span class="font-bold text-emerald-600">極高 (具備多重備用路徑)</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">建置成本:</span><span class="font-bold text-rose-600">昂貴 (線路公式 n(n-1)/2)</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">典型應用:</span><span class="font-bold text-slate-700">電訊商機房、數據中心</span></div>
+                        </div>
+                    </div>
+
+                    <!-- 樹型拓撲卡片 -->
+                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3 hover:border-sky-300 transition">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-sitemap text-purple-500 text-lg"></i> 樹型拓撲 (Tree)
+                            </h3>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold">大型校園/企業網絡</span>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            結合星型與總線型的層次化結構（核心層 Core -> 匯聚層 Distribution -> 接入層 Access）。
+                        </p>
+                        <div class="text-xs space-y-1.5 pt-2 border-t border-slate-200/80">
+                            <div class="flex justify-between"><span class="text-slate-500">層次管理:</span><span class="font-bold text-emerald-600">極佳 (便於分區排錯與擴充)</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">擴展性:</span><span class="font-bold text-emerald-600">極高 (模組化新增子網)</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">核心依賴:</span><span class="font-bold text-amber-600">核心路由器故障影響全校</span></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: 設備配置與網絡診斷 -->
+        <section id="sec-config" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 左側設備選擇與 IP 配置面板 -->
+                <div class="light-card rounded-2xl p-5 space-y-4">
+                    <h2 class="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-sky-600"></i> 選擇網絡設備參數
+                    </h2>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">目標設備：</label>
+                        <select id="config-device-select" onchange="loadDeviceConfigToPanel()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-sky-500">
+                            <!-- JS 動態生成 -->
+                        </select>
+                    </div>
+
+                    <div class="space-y-3 pt-2 text-xs">
+                        <div>
+                            <label class="block text-slate-600 font-semibold mb-1">設備名稱 (Host Name):</label>
+                            <input type="text" id="cfg-hostname" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 code-font text-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-slate-600 font-semibold mb-1">IP 地址 (IPv4 Address):</label>
+                            <input type="text" id="cfg-ip" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 code-font text-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-slate-600 font-semibold mb-1">子網掩碼 (Subnet Mask):</label>
+                            <input type="text" id="cfg-mask" value="255.255.255.0" class="w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 code-font text-slate-500">
+                        </div>
+                        <div>
+                            <label class="block text-slate-600 font-semibold mb-1">MAC 地址 (Physical Address):</label>
+                            <input type="text" id="cfg-mac" disabled class="w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 code-font text-slate-400">
+                        </div>
+
+                        <button onclick="saveDeviceConfig()" class="w-full py-2 px-4 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-sm flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-floppy-disk"></i> 儲存設備網絡設定
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 右側模擬 Terminal 命令行診斷視窗 -->
+                <div class="lg:col-span-2 light-card rounded-2xl overflow-hidden flex flex-col bg-slate-900 text-slate-100 min-h-[400px]">
+                    <div class="bg-slate-800 px-4 py-3 flex justify-between items-center border-b border-slate-700">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                            <span id="terminal-title" class="code-font text-xs text-slate-300 font-bold ml-2">Terminal - PC-A (192.168.1.10)</span>
+                        </div>
+                        <button onclick="clearTerminal()" class="text-[11px] text-slate-400 hover:text-white">清除螢幕</button>
+                    </div>
+
+                    <div id="terminal-body" class="p-4 code-font text-xs space-y-2 flex-grow overflow-y-auto text-emerald-400">
+                        <div>Microsoft Windows [Version 10.0.19045.3803]</div>
+                        <div>(c) Network Topology Interactive Lab. All rights reserved.</div>
+                        <br>
+                        <div>輸入 <span class="text-white">ping &lt;目的IP&gt;</span> 或點擊下方的快捷診斷命令：</div>
+                    </div>
+
+                    <!-- 命令行快捷按鈕列 -->
+                    <div class="p-3 bg-slate-800 border-t border-slate-700 flex flex-wrap gap-2 text-xs">
+                        <button onclick="runTerminalCmd('ipconfig')" class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white code-font">ipconfig /all</button>
+                        <button onclick="runTerminalCmd('arp')" class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white code-font">arp -a</button>
+                        <button onclick="runTerminalCmd('ping_target')" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold code-font">ping 192.168.1.20</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: 實務闖關與知識測驗 -->
+        <section id="sec-quests" class="hidden space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 動手闖關關卡 -->
+                <div class="light-card rounded-2xl p-5 space-y-4">
+                    <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-trophy text-amber-500"></i> 網絡拓撲排錯與實驗闖關
+                    </h2>
+
+                    <div class="space-y-3 text-xs">
+                        <div id="quest-1" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+                            <i id="q1-icon" class="fa-regular fa-circle text-slate-400 text-base mt-0.5"></i>
+                            <div>
+                                <h4 class="font-bold text-slate-900 text-xs">關卡 1: 完成一次星型拓撲數據包傳輸</h4>
+                                <p class="text-[11px] text-slate-500 mt-0.5">在「星型拓撲」模式下，成功發送一次從 PC-A 至 PC-B 的 Ping 數據包。</p>
+                            </div>
+                        </div>
+
+                        <div id="quest-2" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+                            <i id="q2-icon" class="fa-regular fa-circle text-slate-400 text-base mt-0.5"></i>
+                            <div>
+                                <h4 class="font-bold text-slate-900 text-xs">關卡 2: 驗證 Mesh 拓撲的自動重路由 (Redundancy)</h4>
+                                <p class="text-[11px] text-slate-500 mt-0.5">切換至「網狀拓撲」，點擊切斷 Router-1 與 Router-2 之間的直接纜線，然後重新發送 Ping 封包，觀察數據包如何經由第三方路由器繞道傳輸。</p>
+                            </div>
+                        </div>
+
+                        <div id="quest-3" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+                            <i id="q3-icon" class="fa-regular fa-circle text-slate-400 text-base mt-0.5"></i>
+                            <div>
+                                <h4 class="font-bold text-slate-900 text-xs">關卡 3: 模擬並體驗星型拓撲單點故障 (SPOF)</h4>
+                                <p class="text-[11px] text-slate-500 mt-0.5">在星型拓撲中雙擊中央 Switch 模擬其故障宕機，此時嘗試發送 Ping，觀察傳輸失敗。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 拓撲常識測驗 -->
+                <div class="light-card rounded-2xl p-5 space-y-4">
+                    <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-graduation-cap text-indigo-600"></i> 拓撲理論知識隨堂考
+                    </h2>
+
+                    <div class="space-y-4 text-xs">
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                            <p class="font-bold text-slate-900">1. 為什麼總線型拓撲 (Bus Topology) 的主要幹線兩端必須安裝「終端電阻 (Terminator)」？</p>
+                            <div class="space-y-1.5 text-[11px]">
+                                <button onclick="checkQuiz(1, 'A', this)" class="w-full text-left p-2.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition font-medium">
+                                    A) 防止電磁訊號到達端點時發生反射回流，造成網絡碰撞干擾
+                                </button>
+                                <button onclick="checkQuiz(1, 'B', this)" class="w-full text-left p-2.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition font-medium">
+                                    B) 用來增加網絡的傳輸速度至 1Gbps
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                            <p class="font-bold text-slate-900">2. 若全網狀拓撲 (Full Mesh) 中有 5 台路由器，請問總共需要幾條物理連接纜線？</p>
+                            <div class="space-y-1.5 text-[11px]">
+                                <button onclick="checkQuiz(2, 'A', this)" class="w-full text-left p-2.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition font-medium">
+                                    A) 5 條 (每台 1 條)
+                                </button>
+                                <button onclick="checkQuiz(2, 'B', this)" class="w-full text-left p-2.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition font-medium">
+                                    B) 10 條 [公式: n(n-1)/2 = 5×4/2 = 10]
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 頁尾 -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+        <p>網絡拓撲結構互動教學平台 | 支持星型、總線型、環型、網狀與樹型拓撲結構動手實驗模擬</p>
+    </footer>
+
+    <!-- JavaScript 邏輯引擎 -->
+    <script>
+        // 全局應用狀態 (Global State)
+        const appState = {
+            currentTopo: 'star', // star, bus, ring, mesh, tree
+            nodes: [],
+            links: [],
+            selectedSourceId: null,
+            selectedTargetId: null,
+            isPingAnimating: false,
+            quests: { q1: false, q2: false, q3: false }
+        };
+
+        // 預設拓撲資料庫 (Presets)
+        const topologyPresets = {
+            star: {
+                title: "星型拓撲 (Star Topology)",
+                desc: "所有終端設備均獨立連接至中央交換機 (Switch)。中央節點負責數據接收與轉發。",
+                spof: "中央 Switch 交換機",
+                expand: "極容易 (直接插線至 Switch)",
+                nodes: [
+                    { id: 'n_sw', name: 'Central Switch', type: 'switch', icon: 'fa-network-wired', x: 50, y: 45, ip: '192.168.1.1', mac: '00:1A:2B:3C:4D:01', active: true },
+                    { id: 'n_pca', name: 'PC-A', type: 'pc', icon: 'fa-desktop', x: 20, y: 20, ip: '192.168.1.10', mac: '00:1A:2B:3C:4D:10', active: true },
+                    { id: 'n_pcb', name: 'PC-B', type: 'pc', icon: 'fa-desktop', x: 80, y: 20, ip: '192.168.1.20', mac: '00:1A:2B:3C:4D:20', active: true },
+                    { id: 'n_srv', name: 'Server-1', type: 'server', icon: 'fa-server', x: 20, y: 75, ip: '192.168.1.100', mac: '00:1A:2B:3C:4D:FE', active: true },
+                    { id: 'n_pcc', name: 'PC-C', type: 'pc', icon: 'fa-laptop', x: 80, y: 75, ip: '192.168.1.30', mac: '00:1A:2B:3C:4D:30', active: true }
+                ],
+                links: [
+                    { id: 'l1', from: 'n_pca', to: 'n_sw', broken: false },
+                    { id: 'l2', from: 'n_pcb', to: 'n_sw', broken: false },
+                    { id: 'l3', from: 'n_srv', to: 'n_sw', broken: false },
+                    { id: 'l4', from: 'n_pcc', to: 'n_sw', broken: false }
+                ]
+            },
+            bus: {
+                title: "總線型拓撲 (Bus Topology)",
+                desc: "所有設備共享一根同軸主幹線。兩端必須接有終端抵抗器 (Terminator) 防止訊號反射。",
+                spof: "同軸電纜主幹線 (Trunk Cable)",
+                expand: "較難 (擴充需切斷主幹線插入 T型頭)",
+                nodes: [
+                    { id: 'n_t1', name: 'Terminator 1', type: 'terminator', icon: 'fa-circle-stop', x: 10, y: 45, ip: 'N/A', mac: 'Terminator-Left', active: true },
+                    { id: 'n_pca', name: 'PC-A', type: 'pc', icon: 'fa-desktop', x: 28, y: 20, ip: '192.168.1.10', mac: '00:1A:2B:3C:4D:10', active: true },
+                    { id: 'n_pcb', name: 'PC-B', type: 'pc', icon: 'fa-desktop', x: 50, y: 20, ip: '192.168.1.20', mac: '00:1A:2B:3C:4D:20', active: true },
+                    { id: 'n_pcc', name: 'PC-C', type: 'pc', icon: 'fa-desktop', x: 72, y: 20, ip: '192.168.1.30', mac: '00:1A:2B:3C:4D:30', active: true },
+                    { id: 'n_srv', name: 'Server-1', type: 'server', icon: 'fa-server', x: 50, y: 75, ip: '192.168.1.100', mac: '00:1A:2B:3C:4D:FE', active: true },
+                    { id: 'n_t2', name: 'Terminator 2', type: 'terminator', icon: 'fa-circle-stop', x: 90, y: 45, ip: 'N/A', mac: 'Terminator-Right', active: true }
+                ],
+                links: [
+                    { id: 'l_b1', from: 'n_t1', to: 'n_pca', broken: false },
+                    { id: 'l_b2', from: 'n_pca', to: 'n_pcb', broken: false },
+                    { id: 'l_b3', from: 'n_pcb', to: 'n_pcc', broken: false },
+                    { id: 'l_b4', from: 'n_pcc', to: 'n_t2', broken: false },
+                    { id: 'l_b5', from: 'n_srv', to: 'n_pcb', broken: false }
+                ]
+            },
+            ring: {
+                title: "環型拓撲 (Ring Topology)",
+                desc: "設備排成封閉環形，數據（或令牌 Token）沿著順時針方向點對點依次傳輸。",
+                spof: "任一設備或環型線路斷裂",
+                expand: "困難 (新增節點需中斷全環)",
+                nodes: [
+                    { id: 'n_pca', name: 'Node-1 (PC-A)', type: 'pc', icon: 'fa-desktop', x: 50, y: 15, ip: '192.168.1.10', mac: '00:1A:2B:3C:4D:10', active: true },
+                    { id: 'n_pcb', name: 'Node-2 (PC-B)', type: 'pc', icon: 'fa-desktop', x: 82, y: 40, ip: '192.168.1.20', mac: '00:1A:2B:3C:4D:20', active: true },
+                    { id: 'n_pcc', name: 'Node-3 (PC-C)', type: 'pc', icon: 'fa-laptop', x: 70, y: 78, ip: '192.168.1.30', mac: '00:1A:2B:3C:4D:30', active: true },
+                    { id: 'n_pcd', name: 'Node-4 (PC-D)', type: 'pc', icon: 'fa-laptop', x: 30, y: 78, ip: '192.168.1.40', mac: '00:1A:2B:3C:4D:40', active: true },
+                    { id: 'n_pce', name: 'Node-5 (PC-E)', type: 'pc', icon: 'fa-desktop', x: 18, y: 40, ip: '192.168.1.50', mac: '00:1A:2B:3C:4D:50', active: true }
+                ],
+                links: [
+                    { id: 'l_r1', from: 'n_pca', to: 'n_pcb', broken: false },
+                    { id: 'l_r2', from: 'n_pcb', to: 'n_pcc', broken: false },
+                    { id: 'l_r3', from: 'n_pcc', to: 'n_pcd', broken: false },
+                    { id: 'l_r4', from: 'n_pcd', to: 'n_pce', broken: false },
+                    { id: 'l_r5', from: 'n_pce', to: 'n_pca', broken: false }
+                ]
+            },
+            mesh: {
+                title: "網狀拓撲 (Mesh Topology)",
+                desc: "節點之間存在多重備用連結 (Partial/Full Mesh)。具備自動備援路徑 (Redundant Pathing)。",
+                spof: "無 (高冗餘備援，極度穩定)",
+                expand: "複雜 (每增加 1 節點需連多條線)",
+                nodes: [
+                    { id: 'n_r1', name: 'Router-1 (Macau)', type: 'router', icon: 'fa-router', x: 25, y: 25, ip: '10.0.0.1', mac: '00:11:22:33:44:01', active: true },
+                    { id: 'n_r2', name: 'Router-2 (HK)', type: 'router', icon: 'fa-router', x: 75, y: 25, ip: '10.0.0.2', mac: '00:11:22:33:44:02', active: true },
+                    { id: 'n_r3', name: 'Router-3 (Guangzhou)', type: 'router', icon: 'fa-router', x: 80, y: 75, ip: '10.0.0.3', mac: '00:11:22:33:44:03', active: true },
+                    { id: 'n_r4', name: 'Router-4 (Shenzhen)', type: 'router', icon: 'fa-router', x: 20, y: 75, ip: '10.0.0.4', mac: '00:11:22:33:44:04', active: true }
+                ],
+                links: [
+                    { id: 'l_m1', from: 'n_r1', to: 'n_r2', broken: false },
+                    { id: 'l_m2', from: 'n_r2', to: 'n_r3', broken: false },
+                    { id: 'l_m3', from: 'n_r3', to: 'n_r4', broken: false },
+                    { id: 'l_m4', from: 'n_r4', to: 'n_r1', broken: false },
+                    { id: 'l_m5', from: 'n_r1', to: 'n_r3', broken: false },
+                    { id: 'l_m6', from: 'n_r2', to: 'n_r4', broken: false }
+                ]
+            },
+            tree: {
+                title: "樹型拓撲 (Tree Topology)",
+                desc: "層次化階層結構 (核心層 -> 匯聚層 -> 接入層)。常見於大型校園網或企業網絡。",
+                spof: "核心層 Core Router",
+                expand: "極佳 (可分層模組化擴展)",
+                nodes: [
+                    { id: 'n_core', name: 'Core Router', type: 'router', icon: 'fa-router', x: 50, y: 15, ip: '192.168.0.1', mac: '00:AA:BB:CC:DD:00', active: true },
+                    { id: 'n_sw1', name: 'Floor-1 Switch', type: 'switch', icon: 'fa-network-wired', x: 25, y: 45, ip: '192.168.1.1', mac: '00:AA:BB:CC:DD:01', active: true },
+                    { id: 'n_sw2', name: 'Floor-2 Switch', type: 'switch', icon: 'fa-network-wired', x: 75, y: 45, ip: '192.168.2.1', mac: '00:AA:BB:CC:DD:02', active: true },
+                    { id: 'n_pc1', name: 'Lab-PC-1', type: 'pc', icon: 'fa-desktop', x: 12, y: 80, ip: '192.168.1.10', mac: '00:AA:BB:CC:DD:10', active: true },
+                    { id: 'n_pc2', name: 'Lab-PC-2', type: 'pc', icon: 'fa-desktop', x: 38, y: 80, ip: '192.168.1.20', mac: '00:AA:BB:CC:DD:20', active: true },
+                    { id: 'n_pc3', name: 'Office-PC-1', type: 'pc', icon: 'fa-laptop', x: 62, y: 80, ip: '192.168.2.10', mac: '00:AA:BB:CC:DD:30', active: true },
+                    { id: 'n_pc4', name: 'Office-PC-2', type: 'pc', icon: 'fa-laptop', x: 88, y: 80, ip: '192.168.2.20', mac: '00:AA:BB:CC:DD:40', active: true }
+                ],
+                links: [
+                    { id: 'l_t1', from: 'n_core', to: 'n_sw1', broken: false },
+                    { id: 'l_t2', from: 'n_core', to: 'n_sw2', broken: false },
+                    { id: 'l_t3', from: 'n_sw1', to: 'n_pc1', broken: false },
+                    { id: 'l_t4', from: 'n_sw1', to: 'n_pc2', broken: false },
+                    { id: 'l_t5', from: 'n_sw2', to: 'n_pc3', broken: false },
+                    { id: 'l_t6', from: 'n_sw2', to: 'n_pc4', broken: false }
+                ]
+            }
+        };
+
+        window.onload = function() {
+            loadTopologyPreset('star');
+            window.addEventListener('resize', drawSVGCables);
+        };
+
+        // 頁籤切換
+        function switchTab(tabName) {
+            ['lab', 'compare', 'config', 'quests'].forEach(t => {
+                document.getElementById(`sec-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).classList.remove('active');
+            });
+
+            document.getElementById(`sec-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            if (tabName === 'lab') {
+                setTimeout(drawSVGCables, 100);
+            } else if (tabName === 'config') {
+                populateConfigSelectOptions();
+            }
+        }
+
+        // 載入預設拓撲 Presets
+        function loadTopologyPreset(type) {
+            appState.currentTopo = type;
+            const data = topologyPresets[type];
+
+            // 更新選單按鈕高亮
+            document.querySelectorAll('.topo-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById(`topo-btn-${type}`);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            // 深拷貝節點與纜線
+            appState.nodes = JSON.parse(JSON.stringify(data.nodes));
+            appState.links = JSON.parse(JSON.stringify(data.links));
+
+            // 更新左側資訊卡
+            document.getElementById('topo-info-title').innerText = data.title;
+            document.getElementById('topo-info-desc').innerText = data.desc;
+            document.getElementById('topo-info-spof').innerText = data.spof;
+            document.getElementById('topo-info-expand').innerText = data.expand;
+
+            // 繪製畫布 DOM 節點
+            renderNodesOnCanvas();
+            updatePingSelectOptions();
+            setTimeout(drawSVGCables, 50);
+
+            logConsole(`已切換至「${data.title}」模式。`);
+        }
+
+        function resetCurrentTopology() {
+            loadTopologyPreset(appState.currentTopo);
+            showToast('🔄 已重置拓撲佈局與線路狀態');
+        }
+
+        function clearAllBrokenLinks() {
+            appState.links.forEach(l => l.broken = false);
+            appState.nodes.forEach(n => n.active = true);
+            renderNodesOnCanvas();
+            drawSVGCables();
+            updateCanvasBadge(true);
+            showToast('🔧 已修復所有故障纜線與重啟設備！');
+        }
+
+        // 繪製畫布節點
+        function renderNodesOnCanvas() {
+            const container = document.getElementById('nodes-layer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            appState.nodes.forEach(node => {
+                const nodeEl = document.createElement('div');
+                nodeEl.id = `node-el-${node.id}`;
+                nodeEl.className = `net-node p-3 rounded-2xl light-card flex flex-col items-center justify-center text-center shadow-md ${node.active ? '' : 'disabled'}`;
+                nodeEl.style.left = `${node.x}%`;
+                nodeEl.style.top = `${node.y}%`;
+                nodeEl.style.transform = 'translate(-50%, -50%)';
+
+                let colorClass = 'text-sky-600';
+                if (node.type === 'switch') colorClass = 'text-amber-500';
+                if (node.type === 'router') colorClass = 'text-indigo-600';
+                if (node.type === 'server') colorClass = 'text-emerald-600';
+                if (node.type === 'terminator') colorClass = 'text-rose-500';
+
+                nodeEl.innerHTML = `
+                    <div class="text-2xl ${colorClass} mb-1">
+                        <i class="fa-solid ${node.icon}"></i>
+                    </div>
+                    <div class="text-[11px] font-extrabold text-slate-800 leading-tight">${node.name}</div>
+                    <div class="text-[9px] text-slate-400 code-font mt-0.5">${node.ip}</div>
+                `;
+
+                // 註冊拖拽邏輯 (Drag Node)
+                makeNodeDraggable(nodeEl, node);
+
+                // 雙擊開關設備 (Toggle Node Active/Shutdown)
+                nodeEl.ondblclick = (e) => {
+                    e.stopPropagation();
+                    node.active = !node.active;
+                    renderNodesOnCanvas();
+                    drawSVGCables();
+                    
+                    if (!node.active) {
+                        logConsole(`⚠️ 設備 ${node.name} 已模擬宕機關機！`);
+                        checkQuests();
+                    } else {
+                        logConsole(`✅ 設備 ${node.name} 已重新啟動！`);
+                    }
+                };
+
+                container.appendChild(nodeEl);
+            });
+
+            document.getElementById('topology-node-count').innerText = `設備總數: ${appState.nodes.length} | 作用中線路: ${appState.links.filter(l => !l.broken).length}`;
+        }
+
+        // 節點拖拽核心引擎
+        function makeNodeDraggable(element, nodeObj) {
+            let isDragging = false;
+            let startX, startY;
+            const container = document.getElementById('topology-canvas-container');
+
+            element.onmousedown = (e) => {
+                e.preventDefault();
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+
+                document.onmousemove = (eMove) => {
+                    if (!isDragging) return;
+                    const rect = container.getBoundingClientRect();
+                    const dx = eMove.clientX - startX;
+                    const dy = eMove.clientY - startY;
+
+                    startX = eMove.clientX;
+                    startY = eMove.clientY;
+
+                    // 計算百分比座標
+                    let newX = nodeObj.x + (dx / rect.width) * 100;
+                    let newY = nodeObj.y + (dy / rect.height) * 100;
+
+                    // 畫布邊界限制
+                    nodeObj.x = Math.max(5, Math.min(95, newX));
+                    nodeObj.y = Math.max(5, Math.min(95, newY));
+
+                    element.style.left = `${nodeObj.x}%`;
+                    element.style.top = `${nodeObj.y}%`;
+
+                    drawSVGCables();
+                };
+
+                document.onmouseup = () => {
+                    isDragging = false;
+                    document.onmousemove = null;
+                    document.onmouseup = null;
+                };
+            };
+        }
+
+        // 動態繪製 SVG 纜線層
+        function drawSVGCables() {
+            const svg = document.getElementById('svg-network-layer');
+            const container = document.getElementById('topology-canvas-container');
+            if (!svg || !container) return;
+
+            svg.innerHTML = '';
+            const containerRect = container.getBoundingClientRect();
+
+            let hasBroken = false;
+
+            appState.links.forEach(link => {
+                const nodeA = appState.nodes.find(n => n.id === link.from);
+                const nodeB = appState.nodes.find(n => n.id === link.to);
+
+                if (!nodeA || !nodeB) return;
+
+                const x1 = (nodeA.x / 100) * containerRect.width;
+                const y1 = (nodeA.y / 100) * containerRect.height;
+                const x2 = (nodeB.x / 100) * containerRect.width;
+                const y2 = (nodeB.y / 100) * containerRect.height;
+
+                // 創建 SVG Line
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+
+                if (link.broken || !nodeA.active || !nodeB.active) {
+                    line.setAttribute('class', 'wire-broken');
+                    line.setAttribute('stroke', '#ef4444');
+                    line.setAttribute('stroke-width', '3');
+                    hasBroken = true;
+                } else {
+                    line.setAttribute('class', 'wire-active');
+                    line.setAttribute('stroke', '#0284c7');
+                    line.setAttribute('stroke-width', '3');
+                }
+
+                line.style.pointerEvents = 'stroke';
+                line.style.cursor = 'pointer';
+
+                // 點擊纜線切斷 / 修復 (Toggle Cable Link)
+                line.onclick = (e) => {
+                    e.stopPropagation();
+                    link.broken = !link.broken;
+                    drawSVGCables();
+                    
+                    if (link.broken) {
+                        logConsole(`⚡ 纜線 [${nodeA.name} <-> ${nodeB.name}] 已切斷！`);
+                        checkQuests();
+                    } else {
+                        logConsole(`🔧 纜線 [${nodeA.name} <-> ${nodeB.name}] 已修復！`);
+                    }
+                };
+
+                svg.appendChild(line);
+            });
+
+            updateCanvasBadge(!hasBroken);
+        }
+
+        function updateCanvasBadge(isHealthy) {
+            const badge = document.getElementById('canvas-status-badge');
+            if (!badge) return;
+
+            if (isHealthy) {
+                badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center gap-1.5";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> 拓撲網絡連線正常`;
+            } else {
+                badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-1.5";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> 偵測到網絡線路或節點中斷`;
+            }
+        }
+
+        // 更新 Ping 選擇選單
+        function updatePingSelectOptions() {
+            const srcSel = document.getElementById('ping-source-select');
+            const tgtSel = document.getElementById('ping-target-select');
+            if (!srcSel || !tgtSel) return;
+
+            srcSel.innerHTML = '';
+            tgtSel.innerHTML = '';
+
+            const validNodes = appState.nodes.filter(n => n.type !== 'terminator');
+
+            validNodes.forEach((node, index) => {
+                const optA = document.createElement('option');
+                optA.value = node.id;
+                optA.innerText = `${node.name} (${node.ip})`;
+
+                const optB = document.createElement('option');
+                optB.value = node.id;
+                optB.innerText = `${node.name} (${node.ip})`;
+
+                srcSel.appendChild(optA);
+                tgtSel.appendChild(optB);
+            });
+
+            if (validNodes.length >= 2) {
+                tgtSel.selectedIndex = 1;
+            }
+        }
+
+        // 發送 Ping 封包模擬
+        function startPingSimulation() {
+            if (appState.isPingAnimating) return;
+
+            const srcId = document.getElementById('ping-source-select').value;
+            const tgtId = document.getElementById('ping-target-select').value;
+
+            if (srcId === tgtId) {
+                showToast('⚠️ 來源設備與目的設備不能相同！');
+                return;
+            }
+
+            const srcNode = appState.nodes.find(n => n.id === srcId);
+            const tgtNode = appState.nodes.find(n => n.id === tgtId);
+
+            if (!srcNode.active || !tgtNode.active) {
+                logConsole(`❌ Ping 失敗: 來源或目標設備處於關機狀態！`);
+                showToast('❌ Ping 失敗: 設備已宕機');
+                return;
+            }
+
+            // 使用廣度優先搜尋 (BFS) 尋找當前可通行的最短路徑
+            const path = findShortestPath(srcId, tgtId);
+
+            if (!path || path.length < 2) {
+                logConsole(`❌ Ping 傳輸失敗！由 [${srcNode.name}] 至 [${tgtNode.name}] 無可用網絡路徑 (Network Unreachable)。`);
+                showToast('❌ 傳輸失敗：線路斷裂或無路由可達');
+                return;
+            }
+
+            // 執行光點動畫傳輸
+            animatePacketAlongPath(path, srcNode, tgtNode);
+            checkQuests();
+        }
+
+        // BFS 尋找網絡中的可用最短路徑 (Pathfinder)
+        function findShortestPath(startId, endId) {
+            const queue = [[startId]];
+            const visited = new Set([startId]);
+
+            while (queue.length > 0) {
+                const path = queue.shift();
+                const current = path[path.length - 1];
+
+                if (current === endId) return path;
+
+                // 找尋所有連接且未斷裂的相鄰節點
+                const neighbors = getActiveNeighbors(current);
+
+                for (const neighbor of neighbors) {
+                    if (!visited.has(neighbor)) {
+                        visited.add(neighbor);
+                        queue.push([...path, neighbor]);
+                    }
+                }
+            }
+            return null; // 無通暢路徑
+        }
+
+        function getActiveNeighbors(nodeId) {
+            const neighbors = [];
+            const currentNode = appState.nodes.find(n => n.id === nodeId);
+            if (!currentNode || !currentNode.active) return [];
+
+            appState.links.forEach(link => {
+                if (link.broken) return;
+
+                let neighborId = null;
+                if (link.from === nodeId) neighborId = link.to;
+                if (link.to === nodeId) neighborId = link.from;
+
+                if (neighborId) {
+                    const targetNode = appState.nodes.find(n => n.id === neighborId);
+                    if (targetNode && targetNode.active) {
+                        neighbors.push(neighborId);
+                    }
+                }
+            });
+
+            return neighbors;
+        }
+
+        // 動畫封包沿路徑移動
+        function animatePacketAlongPath(path, srcNode, tgtNode) {
+            appState.isPingAnimating = true;
+            const container = document.getElementById('packets-layer');
+            container.innerHTML = '';
+
+            const packetEl = document.createElement('div');
+            packetEl.className = 'ping-packet w-5 h-5 rounded-full bg-amber-400 border-2 border-white shadow-lg flex items-center justify-center text-[10px] text-amber-900 font-bold animate-bounce';
+            packetEl.innerHTML = '<i class="fa-solid fa-envelope text-[9px]"></i>';
+            container.appendChild(packetEl);
+
+            const containerRect = document.getElementById('topology-canvas-container').getBoundingClientRect();
+
+            let currentStep = 0;
+
+            function moveNextSegment() {
+                if (currentStep >= path.length - 1) {
+                    // 到達目的地
+                    setTimeout(() => {
+                        packetEl.remove();
+                        appState.isPingAnimating = false;
+                        logConsole(`🎉 Ping 成功！[${srcNode.name}] 成功傳送 ICMP 封包至 [${tgtNode.name}] (路徑節點數: ${path.length})`);
+                        showToast(`🎉 Ping 傳輸成功！往返延遲: ${Math.floor(Math.random() * 5) + 2}ms`);
+                    }, 200);
+                    return;
+                }
+
+                const fromNode = appState.nodes.find(n => n.id === path[currentStep]);
+                const toNode = appState.nodes.find(n => n.id === path[currentStep + 1]);
+
+                const startX = (fromNode.x / 100) * containerRect.width;
+                const startY = (fromNode.y / 100) * containerRect.height;
+                const endX = (toNode.x / 100) * containerRect.width;
+                const endY = (toNode.y / 100) * containerRect.height;
+
+                let startTime = null;
+                const duration = 500; // ms per link
+
+                function animateStep(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    const elapsed = timestamp - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+
+                    const curX = startX + (endX - startX) * progress;
+                    const curY = startY + (endY - startY) * progress;
+
+                    packetEl.style.left = `${curX}px`;
+                    packetEl.style.top = `${curY}px`;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animateStep);
+                    } else {
+                        currentStep++;
+                        moveNextSegment();
+                    }
+                }
+
+                requestAnimationFrame(animateStep);
+            }
+
+            moveNextSegment();
+        }
+
+        // 載入設備配置選單 (Tab 3)
+        function populateConfigSelectOptions() {
+            const sel = document.getElementById('config-device-select');
+            if (!sel) return;
+            sel.innerHTML = '';
+
+            appState.nodes.filter(n => n.type !== 'terminator').forEach(node => {
+                const opt = document.createElement('option');
+                opt.value = node.id;
+                opt.innerText = `${node.name} (${node.ip})`;
+                sel.appendChild(opt);
+            });
+
+            loadDeviceConfigToPanel();
+        }
+
+        function loadDeviceConfigToPanel() {
+            const devId = document.getElementById('config-device-select').value;
+            const node = appState.nodes.find(n => n.id === devId);
+            if (!node) return;
+
+            document.getElementById('cfg-hostname').value = node.name;
+            document.getElementById('cfg-ip').value = node.ip;
+            document.getElementById('cfg-mac').value = node.mac;
+
+            document.getElementById('terminal-title').innerText = `Terminal - ${node.name} (${node.ip})`;
+        }
+
+        function saveDeviceConfig() {
+            const devId = document.getElementById('config-device-select').value;
+            const node = appState.nodes.find(n => n.id === devId);
+            if (!node) return;
+
+            node.name = document.getElementById('cfg-hostname').value;
+            node.ip = document.getElementById('cfg-ip').value;
+
+            renderNodesOnCanvas();
+            updatePingSelectOptions();
+            showToast(`✅ 已更新設備 ${node.name} 的網絡參數！`);
+        }
+
+        function runTerminalCmd(type) {
+            const devId = document.getElementById('config-device-select').value;
+            const node = appState.nodes.find(n => n.id === devId);
+            const term = document.getElementById('terminal-body');
+            if (!term || !node) return;
+
+            if (type === 'ipconfig') {
+                term.innerHTML += `
+                    <div class="text-white mt-2">&gt; ipconfig /all</div>
+                    <div>Host Name . . . . . . . . . . . . : ${node.name}</div>
+                    <div>Physical Address. . . . . . . . . : ${node.mac}</div>
+                    <div>IPv4 Address. . . . . . . . . . . : ${node.ip}</div>
+                    <div>Subnet Mask . . . . . . . . . . . : 255.255.255.0</div>
+                    <div>Default Gateway . . . . . . . . . : 192.168.1.1</div>
+                `;
+            } else if (type === 'arp') {
+                term.innerHTML += `
+                    <div class="text-white mt-2">&gt; arp -a</div>
+                    <div>Interface: ${node.ip} --- 0x3</div>
+                    <div>  Internet Address      Physical Address      Type</div>
+                    <div>  192.168.1.1           00-1A-2B-3C-4D-01     dynamic</div>
+                    <div>  192.168.1.20          00-1A-2B-3C-4D-20     dynamic</div>
+                `;
+            } else if (type === 'ping_target') {
+                term.innerHTML += `
+                    <div class="text-white mt-2">&gt; ping 192.168.1.20</div>
+                    <div>Pinging 192.168.1.20 with 32 bytes of data:</div>
+                    <div>Reply from 192.168.1.20: bytes=32 time=2ms TTL=128</div>
+                    <div>Reply from 192.168.1.20: bytes=32 time=3ms TTL=128</div>
+                    <div>Ping statistics for 192.168.1.20:</div>
+                    <div>    Packets: Sent = 2, Received = 2, Lost = 0 (0% loss)</div>
+                `;
+            }
+
+            term.scrollTop = term.scrollHeight;
+        }
+
+        function clearTerminal() {
+            document.getElementById('terminal-body').innerHTML = '<div>Console Log Cleared.</div>';
+        }
+
+        // 任務過關判定
+        function checkQuests() {
+            // 任務 1: 星型拓撲完成 Ping
+            if (appState.currentTopo === 'star' && appState.isPingAnimating) {
+                appState.quests.q1 = true;
+                document.getElementById('q1-icon').className = "fa-solid fa-circle-check text-emerald-600 text-base mt-0.5";
+            }
+
+            // 任務 2: Mesh 拓撲切斷線路後成功重路由
+            if (appState.currentTopo === 'mesh' && appState.links.some(l => l.broken) && appState.isPingAnimating) {
+                appState.quests.q2 = true;
+                document.getElementById('q2-icon').className = "fa-solid fa-circle-check text-emerald-600 text-base mt-0.5";
+            }
+
+            // 任務 3: 星型 Central Switch 模擬故障
+            if (appState.currentTopo === 'star') {
+                const sw = appState.nodes.find(n => n.id === 'n_sw');
+                if (sw && !sw.active) {
+                    appState.quests.q3 = true;
+                    document.getElementById('q3-icon').className = "fa-solid fa-circle-check text-emerald-600 text-base mt-0.5";
+                }
+            }
+        }
+
+        function checkQuiz(qNum, option, btn) {
+            if ((qNum === 1 && option === 'A') || (qNum === 2 && option === 'B')) {
+                btn.className = "w-full text-left p-2.5 rounded-lg bg-emerald-100 border border-emerald-300 text-emerald-900 transition font-bold text-xs";
+                showToast('🎯 答對了！非常正確的概念！');
+            } else {
+                btn.className = "w-full text-left p-2.5 rounded-lg bg-rose-100 border border-rose-300 text-rose-900 transition font-bold text-xs";
+                showToast('❌ 答案不正確，請再思考看看！');
+            }
+        }
+
+        function logConsole(msg) {
+            const el = document.getElementById('console-log-msg');
+            if (el) el.innerText = msg;
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = "fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl z-50 text-xs font-bold flex items-center gap-2 border border-slate-700 animate-bounce";
+            toast.innerHTML = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 3200);
+        }
+    </script>
+</body>
+</html>

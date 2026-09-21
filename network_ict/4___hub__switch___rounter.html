@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>網絡設備互動學習平台 | Hub vs Switch vs Router</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        /* Animated connection lines glow */
+        .line-active {
+            stroke-dasharray: 8;
+            animation: dash 1s linear infinite;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -16;
+            }
+        }
+
+        /* Packet Animation Element */
+        .packet-node {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.8);
+            z-index: 40;
+            transition: all 0.05s linear;
+            pointer-events: none;
+        }
+
+        /* Node Pulse Effect */
+        .node-pulse {
+            animation: pulse-border 2s infinite;
+        }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
+            70% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+
+        .subnet-box {
+            border: 2px dashed #334155;
+            background: rgba(30, 41, 59, 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <!-- Navbar Header -->
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/30">
+                    <i class="fa-solid fa-network-wired text-xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400">
+                        網絡設備互動實驗室 Network Interactive Lab
+                    </h1>
+                    <p class="text-xs text-slate-400">親身體驗與理解 Hub、Switch、Router 的運作原理及核心差異</p>
+                </div>
+            </div>
+            
+            <!-- Device Mode Tabs -->
+            <div class="flex bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+                <button id="tab-hub" onclick="switchMode('hub')" class="mode-tab px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-boxes-packing text-amber-400"></i> 集線器 (Hub)
+                </button>
+                <button id="tab-switch" onclick="switchMode('switch')" class="mode-tab px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-microchip text-emerald-400"></i> 交換機 (Switch)
+                </button>
+                <button id="tab-router" onclick="switchMode('router')" class="mode-tab px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-route text-indigo-400"></i> 路由器 (Router)
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="max-w-7xl mx-auto px-4 py-6 w-full flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Interactive Visual Topology Canvas (7 Cols) -->
+        <section class="lg:col-span-7 flex flex-col gap-4">
+            
+            <!-- Mode Intro Card -->
+            <div id="mode-badge-card" class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex items-center justify-between shadow-lg">
+                <div class="flex items-center gap-3">
+                    <span id="mode-icon-badge" class="p-3 rounded-xl bg-amber-500/20 text-amber-400 text-2xl">
+                        <i class="fa-solid fa-boxes-packing"></i>
+                    </span>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 id="mode-title" class="text-lg font-bold text-white">Hub (集線器) 模式</h2>
+                            <span id="layer-badge" class="px-2 py-0.5 text-xs rounded-full font-mono font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                OSI 第 1 層 (物理層)
+                            </span>
+                        </div>
+                        <p id="mode-desc" class="text-xs text-slate-300 mt-1">
+                            Hub 採用「傻瓜式廣播」。收到任何訊息時，都會不加篩選地複製並傳送給所有連接的設備。
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Topology Canvas Box -->
+            <div class="relative bg-slate-900 border border-slate-800 rounded-2xl p-4 h-[440px] flex flex-col justify-between overflow-hidden shadow-inner" id="canvas-container">
+                
+                <!-- SVG Connection Lines Layer -->
+                <svg id="svg-connections" class="absolute inset-0 w-full h-full pointer-events-none z-10"></svg>
+
+                <!-- Subnet Boundary Markers (Only for Router Mode) -->
+                <div id="subnet-a-boundary" class="hidden absolute top-3 left-3 bottom-3 w-[46%] rounded-xl subnet-box p-2 pointer-events-none">
+                    <span class="text-[11px] font-mono text-cyan-400/80 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/50">
+                        子網絡 A: 192.168.1.0/24
+                    </span>
+                </div>
+                <div id="subnet-b-boundary" class="hidden absolute top-3 right-3 bottom-3 w-[46%] rounded-xl subnet-box p-2 pointer-events-none">
+                    <span class="text-[11px] font-mono text-purple-400/80 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-800/50">
+                        子網絡 B: 192.168.2.0/24
+                    </span>
+                </div>
+
+                <!-- Central Network Devices Container -->
+                <div id="central-devices-layer" class="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                    <!-- Central Device Node will be dynamically updated -->
+                    <div id="central-node" class="pointer-events-auto bg-slate-800 border-2 border-amber-500 text-amber-400 px-6 py-4 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-2xl transition-all duration-300">
+                        <i id="central-icon" class="fa-solid fa-boxes-packing text-3xl"></i>
+                        <span id="central-name" class="font-bold text-sm text-white">Hub (集線器)</span>
+                        <span id="central-subtext" class="text-[10px] text-slate-400">廣播所有訊號</span>
+                    </div>
+                </div>
+
+                <!-- Peripheral PC Nodes Layer (Positioned absolute via JS or HTML layout) -->
+                <div id="pc-nodes-layer" class="relative w-full h-full z-30">
+                    <!-- Devices rendered via JavaScript -->
+                </div>
+
+                <!-- Floating Animation Layer for Packets -->
+                <div id="packet-container" class="absolute inset-0 pointer-events-none z-40"></div>
+
+                <!-- Real-time Status Overlay Alert -->
+                <div id="status-banner" class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-800/90 border border-slate-700 px-4 py-1.5 rounded-full text-xs text-slate-200 flex items-center gap-2 backdrop-blur z-30 shadow-lg">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="status-text">請選擇發送端與接收端，點擊「發送測試封包」</span>
+                </div>
+            </div>
+
+            <!-- Interactive Control Panel Bar -->
+            <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-md">
+                <!-- Source Select -->
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-semibold text-slate-400">來源 (Sender):</label>
+                    <select id="select-source" class="bg-slate-900 border border-slate-700 text-sm rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:border-blue-500">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <!-- Arrow Icon -->
+                <i class="fa-solid fa-arrow-right text-slate-500 hidden sm:block"></i>
+
+                <!-- Target Select -->
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-semibold text-slate-400">目的地 (Target):</label>
+                    <select id="select-target" class="bg-slate-900 border border-slate-700 text-sm rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:border-blue-500">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <!-- Animation Speed Control Slider -->
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-semibold text-slate-400">速度:</label>
+                    <input type="range" id="speed-slider" min="1" max="3" value="2" class="w-20 accent-blue-500">
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center gap-2">
+                    <button id="btn-send" onclick="triggerSimulation()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center gap-2">
+                        <i class="fa-solid fa-paper-plane"></i> 發送封包
+                    </button>
+                    <button onclick="resetSimulation()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm px-3 py-2 rounded-xl transition-all" title="重設對話與狀態">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Column: Device Tables & Real-time Inspector (5 Cols) -->
+        <section class="lg:col-span-5 flex flex-col gap-4">
+            
+            <!-- Dynamic Address Table (MAC Table / Routing Table) -->
+            <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 flex flex-col gap-3 shadow-md">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-2">
+                    <h3 id="table-title" class="font-bold text-sm text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-table-list text-blue-400"></i> MAC 位址轉發表 (MAC Address Table)
+                    </h3>
+                    <button id="btn-clear-table" onclick="clearTables()" class="text-[11px] text-slate-400 hover:text-slate-200 bg-slate-700/50 px-2 py-0.5 rounded border border-slate-600 hidden">
+                        清空表格
+                    </button>
+                </div>
+
+                <!-- Table Container -->
+                <div class="overflow-x-auto max-h-[160px] min-h-[120px]">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="text-[11px] uppercase bg-slate-900/60 text-slate-400 sticky top-0">
+                            <tr id="table-header-row">
+                                <!-- Dynamic Headers -->
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="divide-y divide-slate-700/50 font-mono">
+                            <!-- Dynamic Content Rows -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="table-hint" class="text-[11px] text-slate-400 italic">
+                    <!-- Dynamic Info Note -->
+                </div>
+            </div>
+
+            <!-- Live Packet Inspector Details -->
+            <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 flex flex-col gap-3 shadow-md">
+                <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2 border-b border-slate-700 pb-2">
+                    <i class="fa-solid fa-magnifying-glass font-mono text-purple-400"></i> 封包標頭解析器 (Packet Inspector)
+                </h3>
+                
+                <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+                    <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-700/50">
+                        <span class="text-[10px] text-slate-500 block uppercase">OSI 物理層 / 數據鏈路層</span>
+                        <div class="text-slate-300 font-semibold mt-0.5">來源 MAC: <span id="inspect-src-mac" class="text-cyan-400">--</span></div>
+                        <div class="text-slate-300 font-semibold">目標 MAC: <span id="inspect-dst-mac" class="text-purple-400">--</span></div>
+                    </div>
+
+                    <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-700/50">
+                        <span class="text-[10px] text-slate-500 block uppercase">OSI 網絡層 (IP Protocol)</span>
+                        <div class="text-slate-300 font-semibold mt-0.5">來源 IP: <span id="inspect-src-ip" class="text-cyan-300">--</span></div>
+                        <div class="text-slate-300 font-semibold">目標 IP: <span id="inspect-dst-ip" class="text-purple-300">--</span></div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-700 text-xs font-mono">
+                    <span class="text-[10px] text-slate-500 block">傳送數據內容 (Payload):</span>
+                    <span id="inspect-payload" class="text-emerald-400 italic">等待點擊發送...</span>
+                </div>
+            </div>
+
+            <!-- Step Step Event Logs -->
+            <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 flex flex-col gap-2 shadow-md flex-grow">
+                <h3 class="font-bold text-sm text-slate-200 flex items-center justify-between border-b border-slate-700 pb-2">
+                    <span class="flex items-center gap-2"><i class="fa-solid fa-terminal text-emerald-400"></i> 運作歷程日誌 (Event Log)</span>
+                    <button onclick="clearLogs()" class="text-[10px] text-slate-400 hover:text-slate-200">清空日誌</button>
+                </h3>
+                <div id="log-box" class="h-32 overflow-y-auto font-mono text-xs text-slate-300 flex flex-col gap-1.5 pr-2">
+                    <div class="text-slate-500 italic">實驗室就緒，請啟動封包測試...</div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Bottom Educational Knowledge Matrix -->
+    <footer class="bg-slate-900 border-t border-slate-800 px-6 py-6 mt-6">
+        <div class="max-w-7xl mx-auto">
+            <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-graduation-cap text-yellow-400"></i> 三大網絡設備核心差異對比總結 (Cheat Sheet)
+            </h3>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs text-left text-slate-300 border-collapse">
+                    <thead>
+                        <tr class="bg-slate-800 text-slate-200 uppercase font-semibold border-b border-slate-700">
+                            <th class="p-3">比較項目</th>
+                            <th class="p-3 text-amber-400">Hub (集線器)</th>
+                            <th class="p-3 text-emerald-400">Switch (交換機)</th>
+                            <th class="p-3 text-indigo-400">Router (路由器)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800 font-normal">
+                        <tr class="hover:bg-slate-800/40">
+                            <td class="p-3 font-semibold text-slate-200">OSI 工作層級</td>
+                            <td class="p-3">第 1 層 (物理層 Physical)</td>
+                            <td class="p-3">第 2 層 (數據鏈路層 Data Link)</td>
+                            <td class="p-3">第 3 層 (網絡層 Network)</td>
+                        </tr>
+                        <tr class="hover:bg-slate-800/40">
+                            <td class="p-3 font-semibold text-slate-200">數據轉發依據</td>
+                            <td class="p-3">無 (單純複製電子訊號)</td>
+                            <td class="p-3">MAC 地址 (MAC Address)</td>
+                            <td class="p-3">IP 地址 (IP Address)</td>
+                        </tr>
+                        <tr class="hover:bg-slate-800/40">
+                            <td class="p-3 font-semibold text-slate-200">轉發方式</td>
+                            <td class="p-3 text-amber-300">盲目廣播 (Broadcast to All)</td>
+                            <td class="p-3 text-emerald-300">精準單播 (Unicast) / 必要時學習廣播</td>
+                            <td class="p-3 text-indigo-300">路由定址 (Routing across Subnets)</td>
+                        </tr>
+                        <tr class="hover:bg-slate-800/40">
+                            <td class="p-3 font-semibold text-slate-200">衝突域 (Collision)</td>
+                            <td class="p-3 text-rose-400 font-semibold">所有連接埠共用 1 個衝突域 (容易碰撞)</td>
+                            <td class="p-3 text-emerald-400 font-semibold">每個連接埠獨立 1 個衝突域</td>
+                            <td class="p-3 text-indigo-400 font-semibold">每個連接埠獨立 1 個衝突域</td>
+                        </tr>
+                        <tr class="hover:bg-slate-800/40">
+                            <td class="p-3 font-semibold text-slate-200">廣播域 (Broadcast)</td>
+                            <td class="p-3">無法分割廣播域 (1 個廣播域)</td>
+                            <td class="p-3">無法分割廣播域 (需靠 VLAN)</td>
+                            <td class="p-3 text-emerald-400 font-semibold">能隔絕廣播域 (劃分不同子網)</td>
+                        </tr>
+                        <tr class="hover:bg-slate-800/40">
+                            <td class="p-3 font-semibold text-slate-200">網絡安全性與效率</td>
+                            <td class="p-3 text-rose-400">低 (數據容易被竊聽、浪費頻寬)</td>
+                            <td class="p-3 text-emerald-400">高 (僅目標收到數據、專屬頻寬)</td>
+                            <td class="p-3 text-indigo-400">極高 (具備防火牆/網絡地址轉換 NAT 能力)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="text-center text-xs text-slate-500 mt-6">
+                互動教學軟件 &copy; 2026 網絡基礎教學團隊製作 — 專為電腦網絡與 STEM 課程設計
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        /**
+         * Global Application State
+         */
+        const state = {
+            currentMode: 'hub', // 'hub' | 'switch' | 'router'
+            isAnimating: false,
+            speedMultiplier: 1, // 1 = normal, 2 = fast, 0.5 = slow
+            macTable: {}, // Switch MAC Table: { mac: { port: 'Port 1', pcId: 'pc1' } }
+            routingTable: [
+                { network: '192.168.1.0/24', interface: 'Gateway A (eth0)', nextHop: 'Direct' },
+                { network: '192.168.2.0/24', interface: 'Gateway B (eth1)', nextHop: 'Direct' }
+            ],
+            // Devices Definition according to modes
+            devices: []
+        };
+
+        // Device Topology Presets
+        const topologyPresets = {
+            lanSingle: [
+                { id: 'pc1', name: 'PC A', ip: '192.168.1.10', mac: 'AA:BB:CC:00:01', port: 'Port 1', x: 15, y: 20 },
+                { id: 'pc2', name: 'PC B', ip: '192.168.1.20', mac: 'AA:BB:CC:00:02', port: 'Port 2', x: 15, y: 80 },
+                { id: 'pc3', name: 'PC C', ip: '192.168.1.30', mac: 'AA:BB:CC:00:03', port: 'Port 3', x: 85, y: 20 },
+                { id: 'pc4', name: 'PC D', ip: '192.168.1.40', mac: 'AA:BB:CC:00:04', port: 'Port 4', x: 85, y: 80 }
+            ],
+            lanSubnets: [
+                // Subnet A
+                { id: 'pc1', name: 'PC A1', ip: '192.168.1.10', mac: 'AA:11:11:00:01', port: 'Subnet A', subnet: 'A', x: 15, y: 20 },
+                { id: 'pc2', name: 'PC A2', ip: '192.168.1.20', mac: 'AA:11:11:00:02', port: 'Subnet A', subnet: 'A', x: 15, y: 80 },
+                // Subnet B
+                { id: 'pc3', name: 'PC B1', ip: '192.168.2.10', mac: 'BB:22:22:00:01', port: 'Subnet B', subnet: 'B', x: 85, y: 20 },
+                { id: 'pc4', name: 'PC B2', ip: '192.168.2.20', mac: 'BB:22:22:00:02', port: 'Subnet B', subnet: 'B', x: 85, y: 80 }
+            ]
+        };
+
+        // Initialize on DOM load
+        window.addEventListener('load', () => {
+            switchMode('hub');
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('speed-slider').addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                state.speedMultiplier = val === 1 ? 0.6 : (val === 2 ? 1 : 1.8);
+            });
+            window.addEventListener('resize', () => {
+                drawConnections();
+            });
+        }
+
+        /**
+         * Switch between Hub, Switch, and Router modes
+         */
+        function switchMode(mode) {
+            if (state.isAnimating) return;
+            state.currentMode = mode;
+
+            // Reset active tab button styles
+            ['hub', 'switch', 'router'].forEach(m => {
+                const tab = document.getElementById(`tab-${m}`);
+                if (m === mode) {
+                    tab.className = 'mode-tab px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 bg-slate-700 text-white shadow';
+                } else {
+                    tab.className = 'mode-tab px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 text-slate-400 hover:text-white';
+                }
+            });
+
+            // Update Header Description Card & Central Central Icon
+            const titleEl = document.getElementById('mode-title');
+            const descEl = document.getElementById('mode-desc');
+            const layerBadge = document.getElementById('layer-badge');
+            const badgeIcon = document.getElementById('mode-icon-badge');
+            const centralNode = document.getElementById('central-node');
+            const centralIcon = document.getElementById('central-icon');
+            const centralName = document.getElementById('central-name');
+            const centralSub = document.getElementById('central-subtext');
+            const clearTableBtn = document.getElementById('btn-clear-table');
+
+            const subnetA = document.getElementById('subnet-a-boundary');
+            const subnetB = document.getElementById('subnet-b-boundary');
+
+            if (mode === 'hub') {
+                titleEl.textContent = 'Hub (集線器) 模式';
+                descEl.textContent = 'Hub 運作於 Layer 1。收到任何封包時都不檢查 MAC/IP 位址，而是盲目地將訊號複製廣播給所有連接埠。';
+                layerBadge.textContent = 'OSI 第 1 層 (物理層)';
+                layerBadge.className = 'px-2 py-0.5 text-xs rounded-full font-mono font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                badgeIcon.className = 'p-3 rounded-xl bg-amber-500/20 text-amber-400 text-2xl';
+                badgeIcon.innerHTML = '<i class="fa-solid fa-boxes-packing"></i>';
+
+                centralNode.className = 'pointer-events-auto bg-slate-800 border-2 border-amber-500 text-amber-400 px-6 py-4 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-2xl transition-all duration-300';
+                centralIcon.className = 'fa-solid fa-boxes-packing text-3xl';
+                centralName.textContent = 'Hub (集線器)';
+                centralSub.textContent = '盲目廣播所有封包';
+
+                subnetA.classList.add('hidden');
+                subnetB.classList.add('hidden');
+                clearTableBtn.classList.add('hidden');
+
+                state.devices = JSON.parse(JSON.stringify(topologyPresets.lanSingle));
+
+            } else if (mode === 'switch') {
+                titleEl.textContent = 'Switch (交換機) 模式';
+                descEl.textContent = 'Switch 運作於 Layer 2。具備「MAC 地址學習」功能，能根據 MAC Table 實現精準的單播傳輸，大幅提升效率與安全性。';
+                layerBadge.textContent = 'OSI 第 2 層 (數據鏈路層)';
+                layerBadge.className = 'px-2 py-0.5 text-xs rounded-full font-mono font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                badgeIcon.className = 'p-3 rounded-xl bg-emerald-500/20 text-emerald-400 text-2xl';
+                badgeIcon.innerHTML = '<i class="fa-solid fa-microchip"></i>';
+
+                centralNode.className = 'pointer-events-auto bg-slate-800 border-2 border-emerald-500 text-emerald-400 px-6 py-4 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-2xl transition-all duration-300';
+                centralIcon.className = 'fa-solid fa-microchip text-3xl';
+                centralName.textContent = 'Switch (交換機)';
+                centralSub.textContent = '學習並精準單播';
+
+                subnetA.classList.add('hidden');
+                subnetB.classList.add('hidden');
+                clearTableBtn.classList.remove('hidden');
+
+                state.devices = JSON.parse(JSON.stringify(topologyPresets.lanSingle));
+
+            } else if (mode === 'router') {
+                titleEl.textContent = 'Router (路由器) 模式';
+                descEl.textContent = 'Router 運作於 Layer 3。負責連接兩個不同的 IP 子網絡 (Subnet)，並根據 IP 路由表在網絡之間進行數據包的最佳轉發。';
+                layerBadge.textContent = 'OSI 第 3 層 (網絡層)';
+                layerBadge.className = 'px-2 py-0.5 text-xs rounded-full font-mono font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30';
+                badgeIcon.className = 'p-3 rounded-xl bg-indigo-500/20 text-indigo-400 text-2xl';
+                badgeIcon.innerHTML = '<i class="fa-solid fa-route"></i>';
+
+                centralNode.className = 'pointer-events-auto bg-slate-800 border-2 border-indigo-500 text-indigo-400 px-6 py-4 rounded-2xl flex flex-col items-center justify-center gap-1 shadow-2xl transition-all duration-300';
+                centralIcon.className = 'fa-solid fa-route text-3xl';
+                centralName.textContent = 'Router (路由器)';
+                centralSub.textContent = '跨子網路由定址';
+
+                subnetA.classList.remove('hidden');
+                subnetB.classList.remove('hidden');
+                clearTableBtn.classList.add('hidden');
+
+                state.devices = JSON.parse(JSON.stringify(topologyPresets.lanSubnets));
+            }
+
+            renderPCNodes();
+            populateSelectOptions();
+            updateTables();
+            logEvent(`切換至 <b>${titleEl.textContent}</b>`);
+            setStatusText(`模式已更新。請選擇發送端與目標 PC，然後點擊「發送封包」`);
+        }
+
+        /**
+         * Render PC Elements onto Canvas
+         */
+        function renderPCNodes() {
+            const container = document.getElementById('pc-nodes-layer');
+            container.innerHTML = '';
+
+            state.devices.forEach(pc => {
+                const div = document.createElement('div');
+                div.id = `node-${pc.id}`;
+                div.className = 'absolute -translate-x-1/2 -translate-y-1/2 bg-slate-800/95 border-2 border-slate-600 rounded-xl p-2.5 flex flex-col items-center gap-1 shadow-lg transition-transform hover:scale-105 cursor-pointer z-30';
+                div.style.left = `${pc.x}%`;
+                div.style.top = `${pc.y}%`;
+
+                // Subnet indicator dot for router mode
+                const subnetTag = pc.subnet ? `<span class="text-[9px] px-1.5 rounded font-mono ${pc.subnet === 'A' ? 'bg-cyan-950 text-cyan-300 border border-cyan-800' : 'bg-purple-950 text-purple-300 border border-purple-800'}">${pc.ip}</span>` : `<span class="text-[9px] text-slate-400 font-mono">${pc.ip}</span>`;
+
+                div.innerHTML = `
+                    <div class="text-blue-400 text-2xl"><i class="fa-solid fa-desktop"></i></div>
+                    <span class="font-bold text-xs text-white">${pc.name}</span>
+                    ${subnetTag}
+                    <span class="text-[9px] text-slate-500 font-mono">${pc.mac}</span>
+                `;
+
+                container.appendChild(div);
+            });
+
+            // Re-draw connection lines after nodes exist
+            setTimeout(drawConnections, 50);
+        }
+
+        /**
+         * Draw SVG Connection Lines from devices to Central Node
+         */
+        function drawConnections() {
+            const svg = document.getElementById('svg-connections');
+            svg.innerHTML = '';
+
+            const centralNode = document.getElementById('central-node');
+            const centralRect = centralNode.getBoundingClientRect();
+            const containerRect = document.getElementById('canvas-container').getBoundingClientRect();
+
+            const centralX = (centralRect.left + centralRect.width / 2) - containerRect.left;
+            const centralY = (centralRect.top + centralRect.height / 2) - containerRect.top;
+
+            state.devices.forEach(pc => {
+                const pcEl = document.getElementById(`node-${pc.id}`);
+                if (!pcEl) return;
+                const pcRect = pcEl.getBoundingClientRect();
+                const pcX = (pcRect.left + pcRect.width / 2) - containerRect.left;
+                const pcY = (pcRect.top + pcRect.height / 2) - containerRect.top;
+
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('id', `line-${pc.id}`);
+                line.setAttribute('x1', pcX);
+                line.setAttribute('y1', pcY);
+                line.setAttribute('x2', centralX);
+                line.setAttribute('y2', centralY);
+                line.setAttribute('stroke', '#475569');
+                line.setAttribute('stroke-width', '2');
+                svg.appendChild(line);
+            });
+        }
+
+        /**
+         * Populate Options in Source and Target Select Elements
+         */
+        function populateSelectOptions() {
+            const srcSelect = document.getElementById('select-source');
+            const dstSelect = document.getElementById('select-target');
+
+            srcSelect.innerHTML = '';
+            dstSelect.innerHTML = '';
+
+            state.devices.forEach((pc, idx) => {
+                const opt1 = document.createElement('option');
+                opt1.value = pc.id;
+                opt1.textContent = `${pc.name} (${pc.ip})`;
+                srcSelect.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = pc.id;
+                opt2.textContent = `${pc.name} (${pc.ip})`;
+                dstSelect.appendChild(opt2);
+            });
+
+            // Default select PC 1 -> PC 3
+            if (state.devices.length >= 3) {
+                srcSelect.selectedIndex = 0;
+                dstSelect.selectedIndex = 2;
+            }
+        }
+
+        /**
+         * Update Dynamic MAC Table or Routing Table UI
+         */
+        function updateTables() {
+            const title = document.getElementById('table-title');
+            const headerRow = document.getElementById('table-header-row');
+            const tbody = document.getElementById('table-body');
+            const hint = document.getElementById('table-hint');
+
+            tbody.innerHTML = '';
+
+            if (state.currentMode === 'hub') {
+                title.innerHTML = `<i class="fa-solid fa-ban text-amber-400"></i> 無轉發快取表 (No Table)`;
+                headerRow.innerHTML = `<th class="p-2">狀態</th><th class="p-2">說明</th>`;
+                tbody.innerHTML = `<tr><td class="p-2 text-amber-400 font-semibold" colspan="2">Hub 不具備任何記憶或轉發表，無法儲存位址。</td></tr>`;
+                hint.textContent = '💡 提示: 因為 Hub 沒有快取表，每次有數據時都必須發送給所有人。';
+
+            } else if (state.currentMode === 'switch') {
+                title.innerHTML = `<i class="fa-solid fa-table-list text-emerald-400"></i> MAC 位址記憶表 (MAC Address Table)`;
+                headerRow.innerHTML = `<th class="p-2">連接埠 (Port)</th><th class="p-2">綁定 MAC 位址</th><th class="p-2">對應電腦</th>`;
+
+                const keys = Object.keys(state.macTable);
+                if (keys.length === 0) {
+                    tbody.innerHTML = `<tr><td class="p-2 text-slate-500 italic" colspan="3">（目前表為空，Switch 尚未學習任何 MAC 位址）</td></tr>`;
+                } else {
+                    keys.forEach(mac => {
+                        const entry = state.macTable[mac];
+                        const tr = document.createElement('tr');
+                        tr.className = 'border-b border-slate-700/30 hover:bg-slate-700/30';
+                        tr.innerHTML = `
+                            <td class="p-2 text-emerald-400 font-semibold">${entry.port}</td>
+                            <td class="p-2 text-slate-200">${mac}</td>
+                            <td class="p-2 text-slate-300">${entry.pcName}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+                hint.textContent = '💡 提示: 當 Switch 收到傳輸，會自動學習「來源 MAC」並記在表中。';
+
+            } else if (state.currentMode === 'router') {
+                title.innerHTML = `<i class="fa-solid fa-network-wired text-indigo-400"></i> IP 路由表 (IP Routing Table)`;
+                headerRow.innerHTML = `<th class="p-2">目標子網絡</th><th class="p-2">出口介面</th><th class="p-2">下一跳 (Next Hop)</th>`;
+
+                state.routingTable.forEach(route => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b border-slate-700/30';
+                    tr.innerHTML = `
+                        <td class="p-2 text-indigo-300 font-semibold">${route.network}</td>
+                        <td class="p-2 text-slate-300">${route.interface}</td>
+                        <td class="p-2 text-slate-400">${route.nextHop}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                hint.textContent = '💡 提示: 路由器檢查「目標 IP」，根據路由表決定封包應轉發至哪個網絡。';
+            }
+        }
+
+        function clearTables() {
+            state.macTable = {};
+            updateTables();
+            logEvent('🧹 已手動清空 Switch MAC 地址快取表');
+        }
+
+        /**
+         * Update Inspector Panel
+         */
+        function updateInspector(srcPc, dstPc, payloadText) {
+            document.getElementById('inspect-src-mac').textContent = srcPc ? srcPc.mac : '--';
+            document.getElementById('inspect-dst-mac').textContent = dstPc ? dstPc.mac : '--';
+            document.getElementById('inspect-src-ip').textContent = srcPc ? srcPc.ip : '--';
+            document.getElementById('inspect-dst-ip').textContent = dstPc ? dstPc.ip : '--';
+            document.getElementById('inspect-payload').textContent = payloadText || '無數據';
+        }
+
+        function logEvent(msg) {
+            const logBox = document.getElementById('log-box');
+            const time = new Date().toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const item = document.createElement('div');
+            item.className = 'leading-relaxed border-l-2 border-blue-500/50 pl-2 py-0.5';
+            item.innerHTML = `<span class="text-slate-500">[${time}]</span> ${msg}`;
+            logBox.appendChild(item);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('log-box').innerHTML = '<div class="text-slate-500 italic">日誌已清空...</div>';
+        }
+
+        function setStatusText(msg) {
+            document.getElementById('status-text').innerHTML = msg;
+        }
+
+        /**
+         * Main Simulation Trigger Handler
+         */
+        async function triggerSimulation() {
+            if (state.isAnimating) return;
+
+            const srcId = document.getElementById('select-source').value;
+            const dstId = document.getElementById('select-target').value;
+
+            if (srcId === dstId) {
+                alert('請選擇不同的電腦作為「來源」與「目的地」！');
+                return;
+            }
+
+            const srcPc = state.devices.find(d => d.id === srcId);
+            const dstPc = state.devices.find(d => d.id === dstId);
+
+            state.isAnimating = true;
+            document.getElementById('btn-send').disabled = true;
+            document.getElementById('btn-send').classList.add('opacity-50');
+
+            updateInspector(srcPc, dstPc, `Hello from ${srcPc.name} to ${dstPc.name}!`);
+            logEvent(`🚀 啟動傳輸：<b>${srcPc.name}</b> 嘗試發送封包給 <b>${dstPc.name}</b>`);
+
+            if (state.currentMode === 'hub') {
+                await runHubSimulation(srcPc, dstPc);
+            } else if (state.currentMode === 'switch') {
+                await runSwitchSimulation(srcPc, dstPc);
+            } else if (state.currentMode === 'router') {
+                await runRouterSimulation(srcPc, dstPc);
+            }
+
+            state.isAnimating = false;
+            document.getElementById('btn-send').disabled = false;
+            document.getElementById('btn-send').classList.remove('opacity-50');
+        }
+
+        /**
+         * HUB SIMULATION: Broadcasts to ALL connected devices
+         */
+        async function runHubSimulation(srcPc, dstPc) {
+            setStatusText(`Hub 收到來自 ${srcPc.name} 的訊號，正準備複製廣播至所有連接埠...`);
+            
+            // Step 1: Send packet from Source PC to Central Hub
+            logEvent(`📦 [第 1 步] ${srcPc.name} 發送數據電訊號至 Hub`);
+            await animatePacketPath(srcPc, 'central', 'bg-amber-500', '⚡');
+
+            // Step 2: Hub broadcasts packet to ALL OTHER PCs simultaneously!
+            const otherPcs = state.devices.filter(pc => pc.id !== srcPc.id);
+            logEvent(`📢 [第 2 步] <b>Hub 盲目廣播：</b>複製訊號並同時傳送給：${otherPcs.map(p=>p.name).join(', ')}`);
+            setStatusText(`⚡ Hub 不檢查標頭，將訊號盲目廣播給全網設備！`);
+
+            const broadcastPromises = otherPcs.map(pc => {
+                const isTarget = pc.id === dstPc.id;
+                return animatePacketPath('central', pc, isTarget ? 'bg-emerald-500' : 'bg-rose-500', isTarget ? '✓' : '✗');
+            });
+
+            await Promise.all(broadcastPromises);
+
+            // Step 3: Explanation Log
+            otherPcs.forEach(pc => {
+                if (pc.id === dstPc.id) {
+                    logEvent(`✅ <b>${pc.name}</b> 檢查目標 MAC，確認符合！接受此封包。`);
+                } else {
+                    logEvent(`❌ <b>${pc.name}</b> 收到非給自己的封包，將其<b>丟棄 (Discard)</b>。 (浪費網絡頻寬)`);
+                }
+            });
+
+            setStatusText(`🎉 傳輸完成！觀察結論：Hub 無法保護隱私且會造成全網不必要的流量。`);
+        }
+
+        /**
+         * SWITCH SIMULATION: Learns MAC addresses + Unicast or Flood
+         */
+        async function runSwitchSimulation(srcPc, dstPc) {
+            setStatusText(`Switch 收到封包，正在讀取 Layer 2 MAC 標頭...`);
+
+            // 1. Send packet to Switch
+            logEvent(`📦 [第 1 步] ${srcPc.name} 將訊號發送至 Switch 連接埠 [${srcPc.port}]`);
+            await animatePacketPath(srcPc, 'central', 'bg-emerald-500', 'MAC');
+
+            // 2. Switch MAC Learning Mechanism
+            if (!state.macTable[srcPc.mac]) {
+                state.macTable[srcPc.mac] = { port: srcPc.port, pcName: srcPc.name };
+                logEvent(`🧠 <b>[Switch 學習]</b> 記錄來源 MAC <code>${srcPc.mac}</code> 對應於端口 <b>${srcPc.port}</b>`);
+                updateTables();
+            } else {
+                logEvent(`🔍 [Switch 查表] 已知來源 <code>${srcPc.mac}</code> 位於 ${srcPc.port}`);
+            }
+
+            // 3. Check if Destination MAC is known in Table
+            const knownTarget = state.macTable[dstPc.mac];
+
+            if (!knownTarget) {
+                // Unknown Unicast Flood!
+                logEvent(`⚠️ [Switch 查表失敗] 未在表中找到目標 <code>${dstPc.mac}</code>，觸發<b>「未知單播泛洪 (Unknown Unicast Flood)」</b>`);
+                setStatusText(` Switch 未知目的地 MAC，暫時像 Hub 一樣泛洪廣播以尋找目標！`);
+
+                const otherPcs = state.devices.filter(pc => pc.id !== srcPc.id);
+                const floodPromises = otherPcs.map(pc => {
+                    const isTarget = pc.id === dstPc.id;
+                    return animatePacketPath('central', pc, isTarget ? 'bg-emerald-500' : 'bg-amber-500', isTarget ? '✓' : '?');
+                });
+
+                await Promise.all(floodPromises);
+
+                // Now target replies so switch learns target MAC!
+                logEvent(`✅ <b>${dstPc.name}</b> 回應 Switch，Switch 成功記錄 <b>${dstPc.name}</b> 的 MAC 表位址！`);
+                state.macTable[dstPc.mac] = { port: dstPc.port, pcName: dstPc.name };
+                updateTables();
+
+            } else {
+                // Known Unicast! 精準單播！
+                logEvent(`🎯 <b>[Switch 精準單播]</b> 在 MAC 表中找到目標 <code>${dstPc.mac}</code> 位於端口 <b>${dstPc.port}</b>！`);
+                setStatusText(` Switch 根據 MAC 表直接實施「精準單播」，其他電腦完全不會收到干擾！`);
+
+                await animatePacketPath('central', dstPc, 'bg-emerald-500', '✓');
+                logEvent(`✅ <b>${dstPc.name}</b> 順利通過獨佔連接埠接收封包！`);
+            }
+
+            setStatusText(`🎉 傳輸完成！現在 MAC 表已建立完畢，再次發送將享受極速單播！`);
+        }
+
+        /**
+         * ROUTER SIMULATION: Routes between two subnets
+         */
+        async function runRouterSimulation(srcPc, dstPc) {
+            const isSameSubnet = srcPc.subnet === dstPc.subnet;
+
+            if (isSameSubnet) {
+                setStatusText(`路由器檢測到 ${srcPc.name} 與 ${dstPc.name} 處於「同一網段 (${srcPc.subnet})」，直接在內部網絡交換！`);
+                logEvent(`🔗 [同網段通訊] ${srcPc.ip} 與 ${dstPc.ip} 屬於同一子網絡，直接封包轉發。`);
+
+                await animatePacketPath(srcPc, 'central', 'bg-cyan-500', 'IP');
+                await animatePacketPath('central', dstPc, 'bg-cyan-500', '✓');
+                logEvent(`✅ 同一網段內部傳輸完成！`);
+            } else {
+                setStatusText(`路由器檢測到跨網段傳輸 (${srcPc.subnet} 區塊 ➔ ${dstPc.subnet} 區塊)，啟動 Layer 3 路由決策...`);
+                
+                logEvent(`🌐 <b>[跨子網絡傳輸]</b> 目的地 IP (${dstPc.ip}) 不在本地子網！${srcPc.name} 將封包發往<b>預設網關 (Default Gateway)</b>`);
+                
+                // Step 1: Send from Source to Router Gateway
+                await animatePacketPath(srcPc, 'central', 'bg-cyan-500', 'GW');
+
+                // Step 2: Router Lookup Routing Table & Unpack/Repack
+                logEvent(`🔍 <b>[Router 路由決策]</b> 查閱路由表... 目標網段 <code>192.168.2.0/24</code> 對應於出口介面 <b>Gateway B (eth1)</b>`);
+                setStatusText(` Router 解包 IP 標頭，更換 Layer 2 數據幀的 MAC 位址後，轉發往子網絡 B...`);
+
+                // Pause slightly for dramatic educational effect
+                await new Promise(r => setTimeout(r, 600 / state.speedMultiplier));
+
+                // Step 3: Send from Router Gateway B to Destination PC in Subnet B
+                await animatePacketPath('central', dstPc, 'bg-purple-500', 'IP');
+                
+                logEvent(`✅ 封包成功穿過路由器，送達子網絡 B 的 <b>${dstPc.name} (${dstPc.ip})</b>！`);
+                setStatusText(`🎉 跨網段路由通訊成功！Router 隔絕了兩邊的廣播風暴。`);
+            }
+        }
+
+        /**
+         * Helper Function: Animate a Packet Moving along nodes
+         */
+        function animatePacketPath(fromNodeOrKey, toNodeOrKey, colorClass, labelText) {
+            return new Promise(resolve => {
+                const container = document.getElementById('packet-container');
+                const containerRect = document.getElementById('canvas-container').getBoundingClientRect();
+
+                // Get coordinates
+                let startPos, endPos;
+
+                if (fromNodeOrKey === 'central') {
+                    const el = document.getElementById('central-node');
+                    const r = el.getBoundingClientRect();
+                    startPos = { x: (r.left + r.width / 2) - containerRect.left, y: (r.top + r.height / 2) - containerRect.top };
+                } else {
+                    const el = document.getElementById(`node-${fromNodeOrKey.id}`);
+                    const r = el.getBoundingClientRect();
+                    startPos = { x: (r.left + r.width / 2) - containerRect.left, y: (r.top + r.height / 2) - containerRect.top };
+                }
+
+                if (toNodeOrKey === 'central') {
+                    const el = document.getElementById('central-node');
+                    const r = el.getBoundingClientRect();
+                    endPos = { x: (r.left + r.width / 2) - containerRect.left, y: (r.top + r.height / 2) - containerRect.top };
+                } else {
+                    const el = document.getElementById(`node-${toNodeOrKey.id}`);
+                    const r = el.getBoundingClientRect();
+                    endPos = { x: (r.left + r.width / 2) - containerRect.left, y: (r.top + r.height / 2) - containerRect.top };
+                }
+
+                // Create Packet DOM Element
+                const packet = document.createElement('div');
+                packet.className = `packet-node ${colorClass}`;
+                packet.innerHTML = labelText;
+                packet.style.left = `${startPos.x - 12}px`;
+                packet.style.top = `${startPos.y - 12}px`;
+                container.appendChild(packet);
+
+                const duration = 1000 / state.speedMultiplier;
+                const startTime = performance.now();
+
+                function step(now) {
+                    const elapsed = now - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+
+                    const currentX = startPos.x + (endPos.x - startPos.x) * progress;
+                    const currentY = startPos.y + (endPos.y - startPos.y) * progress;
+
+                    packet.style.left = `${currentX - 12}px`;
+                    packet.style.top = `${currentY - 12}px`;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(step);
+                    } else {
+                        setTimeout(() => {
+                            if (container.contains(packet)) {
+                                container.removeChild(packet);
+                            }
+                            resolve();
+                        }, 100);
+                    }
+                }
+
+                requestAnimationFrame(step);
+            });
+        }
+
+        /**
+         * Reset Entire Interactive Session
+         */
+        function resetSimulation() {
+            if (state.isAnimating) return;
+            state.macTable = {};
+            clearLogs();
+            updateTables();
+            updateInspector(null, null, '已重設對話與快取數據。');
+            setStatusText(`實驗室已恢復初始狀態，請挑選模式進行操作。`);
+            logEvent('🔄 實驗室狀態與暫存位址表已重置。');
+        }
+    </script>
+</body>
+</html>
