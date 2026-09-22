@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>二叉樹遍歷實驗室 · 互動課件</title>
+<style>
+:root{
+  --bg:#F6F1E6; --card:#FFFFFF; --stage:#FFF8E9; --line:#EDE2CC; --line2:#E3D6BC;
+  --ink:#2C2620; --ink2:#6E6353; --ink3:#9A8E7A;
+  --pre:#FF7A3D; --in:#2F86E8; --post:#17B27A;
+  --bad:#E8534B; --gold:#EFA32A;
+  --c:var(--pre);
+  --r:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:"Noto Sans TC","Noto Sans HK","PingFang TC","Microsoft JhengHei","Heiti TC",system-ui,sans-serif;
+  background:var(--bg); color:var(--ink); min-height:100vh; -webkit-font-smoothing:antialiased;
+}
+/* ---------- header ---------- */
+header{
+  background:var(--card); border-bottom:1px solid var(--line);
+  display:flex; align-items:center; gap:14px; padding:14px 22px; flex-wrap:wrap;
+}
+.logo{width:38px;height:38px;border-radius:12px;background:var(--pre);display:grid;place-items:center;flex:none}
+.logo svg{width:38px;height:38px}
+.brand h1{font-size:16px;font-weight:800;letter-spacing:.2px}
+.brand p{font-size:11px;color:var(--ink3);margin-top:2px}
+.tabs{display:flex;gap:4px;background:#FBF5E9;border-radius:14px;padding:4px;margin-left:auto}
+.tabs button{
+  border:0;background:transparent;color:var(--ink3);font:600 13px/1 inherit;
+  padding:10px 18px;border-radius:10px;cursor:pointer;font-family:inherit;transition:.15s;
+}
+.tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(44,38,32,.12)}
+.hud{display:flex;gap:8px;align-items:center}
+.pill{height:34px;padding:0 13px;border-radius:17px;display:flex;align-items:center;gap:6px;font:700 13px/1 inherit}
+.pill.star{background:#FFF6E2;color:#A9761A}
+.pill.lv{background:#E9F2FC;color:var(--in)}
+/* ---------- layout ---------- */
+main{display:grid;grid-template-columns:262px 1fr 348px;gap:20px;padding:20px;align-items:start}
+@media(max-width:1080px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r)}
+.col{display:flex;flex-direction:column;gap:14px;padding:18px}
+.lbl{font:600 11px/1 inherit;color:#A2967F;letter-spacing:.3px}
+h2{font-size:15px;font-weight:800}
+.sub{font-size:11.5px;color:var(--ink3);margin-top:3px}
+/* ---------- left ---------- */
+.opt{display:flex;flex-wrap:wrap;gap:8px}
+.opt button{
+  flex:1 1 calc(50% - 4px);min-width:104px;height:38px;border-radius:10px;border:1px solid var(--line);
+  background:#FBF5E9;color:var(--ink2);font:500 12.5px/1 inherit;cursor:pointer;font-family:inherit;transition:.15s;
+}
+.opt button:hover{border-color:#D8C9A8}
+.opt button.on{background:#FFF3EB;border-color:var(--pre);color:var(--pre);font-weight:600}
+.acts{display:flex;flex-direction:column;gap:8px}
+.acts button{
+  display:flex;align-items:center;gap:10px;height:44px;border-radius:12px;border:0;
+  background:#FBF5E9;color:#4A4238;font:500 13.5px/1 inherit;cursor:pointer;font-family:inherit;padding:0 12px;transition:.15s;
+}
+.acts button:hover{background:#F5EDDC}
+.acts button:disabled{opacity:.4;cursor:not-allowed}
+.acts svg{width:18px;height:18px;flex:none}
+.note{background:#FFF8E9;border-radius:12px;padding:13px}
+.note b{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#B08A2E;margin-bottom:7px}
+.note p{font-size:11.5px;line-height:18px;color:#7A6F5E}
+.legend{border:1px solid var(--line);border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:9px}
+.legend div{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink2)}
+.dot{width:12px;height:12px;border-radius:50%;flex:none}
+.stats{display:flex;gap:8px}
+.stats div{flex:1;background:#FBF5E9;border-radius:10px;height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.stats b{font-size:17px}
+.stats span{font-size:10.5px;color:var(--ink3)}
+.ghost{height:42px;border-radius:12px;border:1.5px solid #DFD0B2;background:#fff;color:var(--ink2);font:600 13px/1 inherit;cursor:pointer;font-family:inherit}
+.ghost:hover{background:#FBF5E9}
+/* ---------- center ---------- */
+.stageHead{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.chipStep{height:30px;padding:0 14px;border-radius:15px;background:#FFF3EB;color:var(--pre);font:600 12px/1 inherit;display:flex;align-items:center}
+.treeWrap{background:var(--stage);border:1px solid var(--line2);border-radius:14px;padding:6px;overflow:hidden}
+.treeWrap svg{display:block;width:100%;height:auto}
+.node{cursor:pointer}
+.node circle{transition:fill .25s,stroke .25s,r .2s}
+.node text{font-family:inherit;font-weight:800;pointer-events:none}
+.node.pending circle{fill:#fff;stroke:var(--line2);stroke-width:2.5}
+.node.pending text{fill:#8A7F6C}
+.node.done circle{fill:var(--c);stroke:var(--c)}
+.node.done text{fill:#fff}
+.node.cur circle{fill:var(--c);stroke:#FFD2B8;stroke-width:8}
+.node.cur text{fill:#fff}
+.node.cur.glow{filter:drop-shadow(0 0 14px var(--c))}
+.node.sel circle{stroke:var(--ink);stroke-width:3;stroke-dasharray:5 4}
+.node.good circle{fill:var(--post);stroke:var(--post)}
+.node.good text{fill:#fff}
+.node.err circle{fill:var(--bad);stroke:var(--bad)}
+.node.err text{fill:#fff}
+.edge{stroke:var(--line2);stroke-width:2.5;stroke-linecap:round;transition:stroke .3s}
+.edge.on{stroke:var(--c);stroke-width:3.5}
+.badge{fill:var(--c)}
+.badgeT{fill:#fff;font-size:11px;font-weight:700}
+.ctrl{display:flex;align-items:center;gap:14px}
+.bar{flex:1;display:flex;gap:5px;height:8px}
+.bar i{flex:1;border-radius:4px;background:#EFE6D4;transition:.25s}
+.bar i.done{background:var(--c)} .bar i.now{background:var(--c);opacity:.55}
+.btns{display:flex;gap:8px;align-items:center}
+.ic{width:46px;height:46px;border-radius:14px;border:0;background:#FBF5E9;cursor:pointer;display:grid;place-items:center;transition:.15s}
+.ic:hover{background:#F5EDDC}
+.ic svg{width:20px;height:20px}
+.go{height:46px;padding:0 22px;border-radius:23px;border:0;background:var(--pre);color:#fff;
+  font:600 14.5px/1 inherit;cursor:pointer;display:flex;align-items:center;gap:9px;font-family:inherit;
+  box-shadow:0 6px 16px -3px rgba(255,122,61,.55);transition:.15s}
+.go:hover{filter:brightness(1.05)}
+.spd{display:flex;gap:4px;background:#FBF5E9;border-radius:11px;padding:4px}
+.spd button{border:0;background:transparent;color:var(--ink3);font:600 11.5px/1 inherit;padding:7px 9px;border-radius:8px;cursor:pointer;font-family:inherit}
+.spd button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+/* ---------- right ---------- */
+.tsel{display:flex;flex-direction:column;gap:8px}
+.tsel button{
+  display:flex;align-items:center;gap:11px;width:100%;height:62px;padding:0 12px;border-radius:14px;
+  border:1px solid var(--line);background:#FBF5E9;cursor:pointer;font-family:inherit;text-align:left;transition:.15s;
+}
+.tsel button .mid{flex:1;min-width:0}
+.tsel button .n{font-size:13px;color:var(--ink2);font-weight:500}
+.tsel button .r{font-size:11.5px;color:#A2967F;margin-top:2px}
+.tsel button .res{font-size:10.5px;color:#A2967F;font-weight:500;letter-spacing:.3px}
+.tsel button.on{background:#FFF8F3;border-color:var(--c)}
+.tsel button.on .n{color:var(--ink);font-weight:700}
+.tsel button.on .r{color:var(--c)} .tsel button.on .res{color:var(--c);font-weight:700}
+.now{background:#FFF8E9;border-radius:14px;padding:14px}
+.now p{font-size:12.5px;line-height:19px;color:#4A4238;margin-top:8px}
+.out{display:flex;gap:6px}
+.out i{
+  flex:1;height:40px;border-radius:12px;display:grid;place-items:center;font:700 15px/1 inherit;
+  background:#FBF5E9;color:#C9BCA3;border:1px solid var(--line);transition:.2s;
+}
+.out i.fill{background:var(--c);color:#fff;border-color:var(--c)}
+.out i.bad{background:var(--bad);color:#fff;border-color:var(--bad)}
+.hint{font-size:11px;color:var(--ink3)}
+.stackBox{display:flex;flex-direction:column;gap:5px}
+.frame{
+  display:flex;align-items:center;justify-content:space-between;height:34px;padding:0 12px;
+  border-radius:10px;background:#FBF5E9;border:1px solid var(--line);
+  font:500 12px/1 "SFMono-Regular",Consolas,"Noto Sans TC",monospace;color:var(--ink2);
+}
+.frame small{font:400 10.5px/1 inherit;color:var(--ink3);font-family:inherit}
+.frame.top{background:#FFF3EB;border-color:var(--c);color:var(--c)}
+.frame.top small{color:var(--c);font-weight:500}
+.empty{font-size:11.5px;color:#C9BCA3;text-align:center;padding:8px 0}
+.mantra{background:#E9F2FC;border-radius:14px;padding:14px}
+.mantra b{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--in);margin-bottom:7px}
+.mantra p{font-size:11.5px;line-height:18px;color:#4A6B8A}
+/* ---------- misc ---------- */
+.hidden{display:none!important}
+.toast{
+  position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:#fff;padding:12px 20px;border-radius:12px;font-size:13.5px;
+  opacity:0;pointer-events:none;transition:.25s;z-index:50;box-shadow:0 10px 30px rgba(0,0,0,.2);
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.win{
+  position:fixed;inset:0;background:rgba(44,38,32,.45);display:grid;place-items:center;z-index:60;backdrop-filter:blur(3px);
+}
+.win .box{background:#fff;border-radius:22px;padding:34px 40px;text-align:center;max-width:340px}
+.win .box h3{font-size:22px;margin-bottom:8px}
+.win .box p{font-size:13.5px;color:var(--ink2);line-height:20px}
+.win .stars{font-size:34px;margin-bottom:12px;letter-spacing:4px}
+.win button{margin-top:18px;width:100%;height:46px;border-radius:14px;border:0;background:var(--pre);color:#fff;font:600 14.5px/1 inherit;cursor:pointer;font-family:inherit}
+.tpl{display:flex;flex-direction:column;gap:10px;margin:16px 0}
+.tpl button{height:44px;border-radius:12px;border:1px solid var(--line);background:#FBF5E9;font:600 13px/1 inherit;color:var(--ink2);cursor:pointer;font-family:inherit}
+.tpl button:hover{border-color:var(--pre);color:var(--pre)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><svg viewBox="0 0 38 38" fill="none"><path d="M16.2 13.4L10.6 22.6M21.8 13.4L27.4 22.6" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="19" cy="9" r="4.4" fill="#fff"/><circle cx="10" cy="26" r="4.4" fill="#FFD6BC"/><circle cx="28" cy="26" r="4.4" fill="#FFD6BC"/></svg></div>
+  <div class="brand"><h1>二叉樹遍歷實驗室</h1><p id="subTitle">互動課件 · 探索模式</p></div>
+  <div class="tabs">
+    <button id="tabExplore" class="on">探索模式</button>
+    <button id="tabQuiz">闖關挑戰</button>
+    <button disabled>對戰模式</button>
+  </div>
+  <div class="hud">
+    <div class="pill star"><svg width="15" height="15" viewBox="0 0 16 16"><path d="M8 1.5l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.2l-3.8 2.1.7-4.3-3.1-3 4.3-.6L8 1.5z" fill="#EFA32A"/></svg><span id="stars">0</span></div>
+    <div class="pill lv">第 <span id="lvl">1</span> 關</div>
+  </div>
+</header>
+
+<main>
+  <!-- ============ 左欄 ============ -->
+  <section class="card col">
+    <div><h2>樹的積木</h2><div class="sub">先搭一棵樹，再來看它怎麼走</div></div>
+    <div class="lbl">選擇樹形</div>
+    <div class="opt" id="presets">
+      <button data-p="full" class="on">完全二元樹</button>
+      <button data-p="left">左歪斜樹</button>
+      <button data-p="right">右歪斜樹</button>
+      <button data-p="rand">隨機長一棵</button>
+    </div>
+    <div class="lbl">節點操作（先點選一個節點）</div>
+    <div class="acts">
+      <button id="addL"><svg viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="#7A6F5E" stroke-width="1.6"/><path d="M9 5.8v6.4M5.8 9h6.4" stroke="#7A6F5E" stroke-width="1.6" stroke-linecap="round"/></svg>加左小孩</button>
+      <button id="addR"><svg viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="#7A6F5E" stroke-width="1.6"/><path d="M5.8 9h6.4" stroke="#7A6F5E" stroke-width="1.6" stroke-linecap="round"/><path d="M9 5.8v6.4" stroke="#FF9A6B" stroke-width="1.6" stroke-linecap="round"/></svg>加右小孩</button>
+      <button id="rename"><svg viewBox="0 0 18 18" fill="none"><path d="M12.2 2.8l3 3-8.4 8.4-3.6.6.6-3.6 8.4-8.4z" stroke="#7A6F5E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>重新命名</button>
+      <button id="del"><svg viewBox="0 0 18 18" fill="none"><path d="M4 5.5h10M7 5.5V4a1 1 0 011-1h2a1 1 0 011 1v1.5M5.5 5.5l.6 8.2a1 1 0 001 .8h3.8a1 1 0 001-.8l.6-8.2" stroke="#7A6F5E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>刪除節點</button>
+    </div>
+    <div class="note"><b><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.8a3.6 3.6 0 00-2.1 6.5c.4.3.6.7.6 1.2v.4h3v-.4c0-.5.2-.9.6-1.2A3.6 3.6 0 007 1.8zM5.4 11.3h3.2M5.9 12.7h2.2" stroke="#B08A2E" stroke-width="1.3" stroke-linecap="round"/></svg>小提示</b><p>改完樹之後按「回到起點」，就會用新的樹重新產生步驟。最多 15 個節點。</p></div>
+    <div class="legend">
+      <div class="lbl">圖例</div>
+      <div><i class="dot" style="background:var(--c)"></i>已經記錄到輸出</div>
+      <div><i class="dot" style="background:#fff;border:1.5px solid var(--line2)"></i>還沒走到</div>
+      <div><i class="dot" style="background:var(--c);box-shadow:0 0 0 3px #FFD2B8"></i>現在正在拜訪</div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="stats">
+      <div><b id="stN">7</b><span>節點</span></div>
+      <div><b id="stD">3</b><span>層數</span></div>
+      <div><b id="stL">4</b><span>葉子</span></div>
+    </div>
+    <button class="ghost" id="resetTree">重置整棵樹</button>
+  </section>
+
+  <!-- ============ 中欄 ============ -->
+  <section class="card col">
+    <div class="stageHead">
+      <div><h2 id="stageTitle">遍歷舞台</h2><div class="sub" id="stageSub">按「播放」看電腦一步步拜訪節點，或按「下一步」自己控制。</div></div>
+      <div class="chipStep" id="stepChip">步驟 0 / 0</div>
+    </div>
+    <div class="treeWrap" id="treeWrap"></div>
+    <div class="ctrl">
+      <div class="bar" id="bar"></div>
+      <div class="spd" id="spd">
+        <button data-s="1.8">慢</button><button data-s="1" class="on">正常</button><button data-s="0.45">快</button>
+      </div>
+      <div class="btns">
+        <button class="ic" id="bPrev" title="上一步"><svg viewBox="0 0 20 20" fill="none"><path d="M15.5 4.5v11L8 10l7.5-5.5zM6 4.5v11" stroke="#7A6F5E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="go" id="bPlay"><svg id="playIco" width="16" height="16" viewBox="0 0 18 18"><path d="M5.5 3.2l9 5.8-9 5.8V3.2z" fill="#fff"/></svg><span id="playTxt">播放</span></button>
+        <button class="ic" id="bNext" title="下一步"><svg viewBox="0 0 20 20" fill="none"><path d="M4.5 4.5v11L12 10 4.5 4.5zM14 4.5v11" stroke="#7A6F5E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="ic" id="bReset" title="回到起點"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 106-6 6 6 0 00-4.2 1.7M4 3.5V7h3.5" stroke="#7A6F5E" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 右欄 ============ -->
+  <section class="card col">
+    <div><h2>遍歷控制台</h2><div class="sub" id="consoleSub">點一張卡，看它用哪個順序拜訪節點</div></div>
+    <div class="tsel" id="tsel">
+      <button data-o="pre" class="on" style="--c:var(--pre)">
+        <i class="dot" style="background:var(--pre)"></i>
+        <span class="mid"><span class="n">前序遍歷 Preorder</span><br><span class="r">根 → 左 → 右</span></span>
+        <span class="res" id="res-pre"></span>
+      </button>
+      <button data-o="in" style="--c:var(--in)">
+        <i class="dot" style="background:var(--in)"></i>
+        <span class="mid"><span class="n">中序遍歷 Inorder</span><br><span class="r">左 → 根 → 右</span></span>
+        <span class="res" id="res-in"></span>
+      </button>
+      <button data-o="post" style="--c:var(--post)">
+        <i class="dot" style="background:var(--post)"></i>
+        <span class="mid"><span class="n">後序遍歷 Postorder</span><br><span class="r">左 → 右 → 根</span></span>
+        <span class="res" id="res-post"></span>
+      </button>
+    </div>
+    <div class="now"><div class="lbl">現在在做什麼</div><p id="narr">按「播放」開始吧。</p></div>
+    <div><div class="lbl" style="margin-bottom:8px" id="outLbl">輸出序列</div><div class="out" id="out"></div><div class="hint" style="margin-top:7px" id="outHint"></div></div>
+    <div><div class="lbl" style="margin-bottom:8px">遞迴呼叫堆疊</div><div class="stackBox" id="stack"></div></div>
+    <div style="flex:1"></div>
+    <div class="mantra"><b><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.8a3.6 3.6 0 00-2.1 6.5c.4.3.6.7.6 1.2v.4h3v-.4c0-.5.2-.9.6-1.2A3.6 3.6 0 007 1.8zM5.4 11.3h3.2M5.9 12.7h2.2" stroke="#2F86E8" stroke-width="1.3" stroke-linecap="round"/></svg>口訣</b><p id="mantra">前序 = 根最先出場。一走到節點就先喊出來，再往左邊走。</p></div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   二叉樹遍歷實驗室 — 互動課件
+   探索模式：逐步動畫 + 遞迴堆疊 + 即時解說
+   闖關模式：學生自己點出正確的拜訪順序
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const MANTRA = {
+  pre :"前序 = 根最先出場。一走到節點就先喊出來，再往左邊走。",
+  in  :"中序 = 根排在中間。左邊全部做完才輪到它，再換右邊。",
+  post:"後序 = 根最後才出場。先把左右小孩都處理完，才輪到自己。",
+  quiz:"闖關規則：看左上角的題目，按照指定順序「點擊」節點。點錯會扣一顆星。"
+};
+const NAME  = {pre:"前序", in:"中序", post:"後序"};
+const RULE  = {pre:"根 → 左 → 右", in:"左 → 根 → 右", post:"左 → 右 → 根"};
+
+/* ---------------- 資料結構 ---------------- */
+let root=null, seq=0;
+const N=(name)=>({id:'n'+(++seq), name, left:null, right:null});
+function clone(n){ if(!n) return null; const c=N(n.name); c.left=clone(n.left); c.right=clone(n.right); return c; }
+function count(n){ return n?1+count(n.left)+count(n.right):0 }
+function depth(n){ return n?1+Math.max(depth(n.left),depth(n.right)):0 }
+function leaves(n){ return n?(!n.left&&!n.right?1:leaves(n.left)+leaves(n.right)):0 }
+function nodes(n,a=[]){ if(!n)return a; a.push(n); nodes(n.left,a); nodes(n.right,a); return a }
+function find(n,id){ if(!n)return null; if(n.id===id)return n; return find(n.left,id)||find(n.right,id) }
+function parentOf(n,id){ if(!n)return null; if((n.left&&n.left.id===id)||(n.right&&n.right.id===id))return n; return parentOf(n.left,id)||parentOf(n.right,id) }
+function usedNames(n,s=new Set()){ if(!n)return s; s.add(n.name); usedNames(n.left,s); usedNames(n.right,s); return s }
+function nextName(){ const s=usedNames(root); for(const ch of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") if(!s.has(ch)) return ch; return "?" }
+
+function buildFull(){ // 完全二元樹 A..G
+  const a=N('A'),b=N('B'),c=N('C'),d=N('D'),e=N('E'),f=N('F'),g=N('G');
+  a.left=b; a.right=c; b.left=d; b.right=e; c.left=f; c.right=g; return a;
+}
+function buildSkew(side){
+  let r=N('A'), cur=r;
+  for(const nm of ['B','C','D']){ const k=N(nm); if(side==='l') cur.left=k; else cur.right=k; cur=k; }
+  return r;
+}
+function buildRandom(){
+  const vals=["A","B","C","D","E","F","G","H","I"].sort(()=>Math.random()-.5).slice(0,5+Math.floor(Math.random()*4));
+  const r=N(vals[0]);
+  for(let i=1;i<vals.length;i++){
+    let cur=r;
+    while(true){
+      const goLeft = Math.random()<.5;
+      const t = goLeft?cur.left:cur.right;
+      if(!t){ if(goLeft)cur.left=N(vals[i]); else cur.right=N(vals[i]); break }
+      cur=t;
+    }
+  }
+  return r;
+}
+
+/* ---------------- 版面計算 ---------------- */
+function layout(){
+  const list=nodes(root), total=count(root);
+  let i=0;
+  (function ino(n){ if(!n)return; ino(n.left); n._col=i++; ino(n.right) })(root);
+  const W=700, H=470, pad=44;
+  const colW = total>1 ? (W-pad*2)/(total-1) : 0;
+  list.forEach(n=>{ n._x = total>1 ? pad+n._col*colW : W/2; n._y = 54+(depth(root)-1? (depth(n)-1)*((H-110)/Math.max(depth(root)-1,1)) : 0); });
+  return {W,H};
+}
+
+/* ---------------- 步驟產生器 ---------------- */
+function makeSteps(order){
+  const steps=[], out=[], stack=[];
+  const say = {
+    push :n=>`呼叫 ${order}order(${n.name})：走進 ${n.name} 這個子樹。`,
+    visit:n=>order==='pre' ?`拜訪 ${n.name}：前序「根」最先 → 把 ${n.name} 記到輸出。`
+          : order==='in'  ?`拜訪 ${n.name}：左邊做完了，中序「根」排中間 → 記下 ${n.name}。`
+          :                `拜訪 ${n.name}：左右都做完了，後序「根」最後 → 記下 ${n.name}。`,
+    left :n=>n.left?`${n.name} 的左小孩是 ${n.left.name}，先去處理左邊。`:`${n.name} 沒有左小孩，直接跳過。`,
+    right:n=>n.right?`左邊回來了，${n.name} 的右小孩是 ${n.right.name}，再去右邊。`:`${n.name} 沒有右小孩，直接跳過。`,
+    pop  :n=>`${order}order(${n.name}) 做完了，退出一層，回到呼叫它的地方。`,
+    null :()=>`這一邊是空的（null），什麼都不用做，回頭。`
+  };
+  const snap=(node,phase,msg)=>steps.push({
+    node:node?node.id:null, phase, msg,
+    stack:stack.map(x=>x.id), out:out.map(x=>x.id), stackNames:stack.map(x=>x.name)
+  });
+  function walk(n){
+    if(!n){ snap(null,'null',say.null()); return }
+    stack.push(n); snap(n,'push',say.push(n));
+    if(order==='pre'){ out.push(n); snap(n,'visit',say.visit(n)) }
+    snap(n,'left',say.left(n));  walk(n.left);
+    if(order==='in'){ out.push(n); snap(n,'visit',say.visit(n)) }
+    snap(n,'right',say.right(n)); walk(n.right);
+    if(order==='post'){ out.push(n); snap(n,'visit',say.visit(n)) }
+    stack.pop(); snap(n,'pop',say.pop(n));
+  }
+  walk(root);
+  return steps;
+}
+
+/* ---------------- 狀態 ---------------- */
+const S={
+  mode:'explore', order:'pre', steps:[], i:0, playing:false, speed:1, timer:null,
+  sel:null, quiz:null, stars:0, lvl:1
+};
+
+/* ---------------- 繪圖 ---------------- */
+function render(){
+  const {W,H}=layout();
+  const col = getComputedStyle(document.documentElement).getPropertyValue('--c').trim()||'#FF7A3D';
+  const cur = S.mode==='explore' ? S.steps[S.i] : null;
+  const visitedIds = cur? new Set(cur.out) : new Set();
+  const curId = cur? cur.node : null;
+  const stackIds = cur? new Set(cur.stack) : new Set();
+  const inStack = new Set((cur?cur.stack:[]));
+
+  let e='';
+  (function edges(n){
+    if(!n)return;
+    for(const k of ['left','right']) if(n[k]){
+      const on = inStack.has(n[k].id);
+      e+=`<line class="edge${on?' on':''}" x1="${n._x}" y1="${n._y}" x2="${n[k]._x}" y2="${n[k]._y}"/>`;
+      edges(n[k]);
+    }
+  })(root);
+
+  let g='';
+  for(const n of nodes(root)){
+    const isCur = S.mode==='explore' && n.id===curId;
+    const isDone= S.mode==='explore' ? visitedIds.has(n.id) : (S.quiz&&S.quiz.good.has(n.id));
+    const isErr = S.mode==='quiz' && S.quiz && S.quiz.err===n.id;
+    const isSel = S.sel && S.sel.id===n.id;
+    const cls = S.mode==='quiz'
+      ? (isErr?'err':(isDone?'good':'pending')) + (isSel?' sel':'')
+      : (isCur?'cur done':(isDone?'done':'pending')) + (isSel?' sel':'');
+    const r = isCur?30:26;
+    let extra='';
+    if(isCur && S.mode==='explore'){
+      const tx=Math.min(Math.max(n._x,W/2-46),W-96);
+      extra=`<rect class="badge" x="${tx}" y="${n._y-58}" width="96" height="26" rx="13"/><text class="badgeT" x="${tx+48}" y="${n._y-40}" text-anchor="middle">現在走到 ${n.name}</text>`;
+    }
+    g+=`<g class="node ${cls}" data-id="${n.id}" transform="translate(${n._x},${n._y})">
+          <circle r="${r}"/><text text-anchor="middle" dy="8" font-size="20">${n.name}</text>${extra}</g>`;
+  }
+  $('#treeWrap').innerHTML=`<svg viewBox="0 0 ${W} ${H}">${e}${g}</svg>`;
+  document.querySelectorAll('.node').forEach(el=>el.onclick=()=>pick(el.dataset.id));
+
+  /* 統計 */
+  $('#stN').textContent=count(root); $('#stD').textContent=depth(root); $('#stL').textContent=leaves(root);
+  ['pre','in','post'].forEach(o=>{ $('#res-'+o).textContent = S.mode==='explore' ? makeSteps(o).filter(s=>s.out.length).at(-1).out.map(id=>find(root,id).name).join(' ') : '—' });
+
+  if(S.mode==='explore') renderExplore(); else renderQuiz();
+}
+
+function renderExplore(){
+  const st=S.steps[S.i]||{stack:[],out:[],msg:'按「播放」開始吧。',node:null};
+  $('#narr').textContent=st.msg;
+  $('#stepChip').textContent=`步驟 ${S.i} / ${S.steps.length}`;
+  const bar=$('#bar'); bar.innerHTML='';
+  S.steps.forEach((_,k)=>{const i=document.createElement('i'); if(k<S.i)i.className='done'; else if(k===S.i&&S.i>0)i.className='now'; bar.appendChild(i)});
+  const out=$('#out'); out.innerHTML='';
+  const curOut = S.steps[S.i] ? S.steps[S.i].out : [];
+  const total = count(root);
+  for(let k=0;k<total;k++){
+    const i=document.createElement('i');
+    if(k<curOut.length){ i.textContent=find(root,curOut[k]).name; i.className='fill' }
+    else i.textContent='?';
+    out.appendChild(i);
+  }
+  $('#outHint').textContent=`已記錄 ${ (S.steps[S.i]?.out.length)||0 } 個節點，還有 ${count(root)-((S.steps[S.i]?.out.length)||0)} 個。`;
+  const sk=$('#stack'); sk.innerHTML='';
+  const arr=[...(S.steps[S.i]?.stack||[])];
+  if(!arr.length) sk.innerHTML='<div class="empty">堆疊是空的</div>';
+  arr.slice().reverse().forEach((id,idx)=>{
+    const nm=find(root,id).name;
+    const d=document.createElement('div'); d.className='frame'+(idx===0?' top':'');
+    d.innerHTML=`<span>${S.order}order(${nm})</span><small>${idx===0?'停在這裡':'等 '+nm+' 的子樹回來'}</small>`;
+    sk.appendChild(d);
+  });
+  $('#playTxt').textContent = S.playing?'暫停':(S.i>=S.steps.length?'重新播放':(S.i>0?'繼續播放':'播放'));
+}
+
+/* ---------------- 闖關模式 ---------------- */
+function startQuiz(){
+  S.mode='quiz'; S.playing=false; stopTimer();
+  const orders=['pre','in','post'];
+  const order=orders[Math.floor(Math.random()*3)];
+  const expected=makeSteps(order).filter(s=>s.phase==='visit').map(s=>s.node);
+  S.quiz={order, expected, p:0, good:new Set(), err:null, tries:0};
+  S.sel=null;
+  $('#subTitle').textContent='互動課件 · 闖關挑戰';
+  $('#stageTitle').textContent='挑戰：請照順序點擊節點';
+  $('#stageSub').textContent=`題目：請用「${NAME[order]}遍歷（${RULE[order]}）」的順序，依序點擊節點。`;
+  $('#consoleSub').textContent='點對會變綠，點錯會扣星';
+  $('#mantra').textContent=MANTRA.quiz;
+  $('#outLbl').textContent='你的作答';
+  $('#narr').textContent=`第一個要點的是誰？提示：${RULE[order]}。`;
+  renderQuiz();
+}
+function renderQuiz(){
+  const q=S.quiz; $('#stepChip').textContent=`進度 ${q.p} / ${q.expected.length}`;
+  const bar=$('#bar'); bar.innerHTML='';
+  q.expected.forEach((_,k)=>{const i=document.createElement('i'); if(k<q.p)i.className='done'; bar.appendChild(i)});
+  const out=$('#out'); out.innerHTML='';
+  q.expected.forEach((id,k)=>{const i=document.createElement('i'); i.textContent = k<q.p?find(root,id).name:'?'; if(k<q.p)i.className='fill'; out.appendChild(i)});
+  $('#outHint').textContent = q.err!=null ? '剛剛點錯了，再看一次口訣！' : `已經答對 ${q.p} 個。`;
+  const sk=$('#stack'); sk.innerHTML='<div class="empty">闖關模式沒有堆疊提示，靠自己！</div>';
+  $('#playTxt').textContent='播放'; 
+}
+
+/* ---------------- 互動 ---------------- */
+function pick(id){
+  const n=find(root,id);
+  if(S.mode==='quiz'){
+    const q=S.quiz;
+    if(q.p>=q.expected.length) return;
+    if(id===q.expected[q.p]){ q.good.add(id); q.p++; q.err=null; S.stars++; $('#stars').textContent=S.stars;
+      $('#narr').textContent = q.p<q.expected.length ? `答對了！下一個是誰？` : '';
+      if(q.p>=q.expected.length) winQuiz();
+    } else {
+      q.err=id; S.stars=Math.max(0,S.stars-1); $('#stars').textContent=S.stars;
+      $('#narr').textContent=`${n.name} 不是這一格。再想想「${RULE[q.order]}」。`;
+      toast('再想想看！');
+    }
+    render(); return;
+  }
+  S.sel = (S.sel&&S.sel.id===id)?null:n;
+  $('#narr').textContent = S.sel?`已選取節點 ${n.name}，可以在左邊加小孩、改名或刪除。`:'已取消選取。';
+  render();
+}
+function winQuiz(){
+  S.lvl++; $('#lvl').textContent=S.lvl;
+  const w=document.createElement('div'); w.className='win';
+  w.innerHTML=`<div class="box"><div class="stars">⭐⭐⭐</div><h3>通過第 ${S.lvl-1} 關！</h3>
+    <p>你用「${NAME[S.quiz.order]}遍歷」正確走完整棵樹。<br>要不要再來一關？</p>
+    <div class="tpl"><button id="again">再來一關（換一棵樹）</button><button id="same">同一棵樹再練一次</button></div></div>`;
+  document.body.appendChild(w);
+  w.querySelector('#again').onclick=()=>{ w.remove(); randomize(); startQuiz(); };
+  w.querySelector('#same').onclick=()=>{ w.remove(); startQuiz(); };
+}
+function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),1600) }
+
+/* 播放控制 */
+function stopTimer(){ if(S.timer){clearInterval(S.timer); S.timer=null} }
+function setPlaying(v){
+  S.playing=v; stopTimer();
+  if(v){
+    if(S.i>=S.steps.length) S.i=0;
+    S.timer=setInterval(()=>{ if(S.i>=S.steps.length){ setPlaying(false); return } S.i++; render(); }, 900*S.speed);
+  }
+  render();
+}
+function applyOrder(o){
+  S.order=o;
+  document.querySelectorAll('#tsel button').forEach(b=>b.classList.toggle('on',b.dataset.o===o));
+  document.documentElement.style.setProperty('--c', getComputedStyle(document.documentElement).getPropertyValue(o==='pre'?'--pre':o==='in'?'--in':'--post').trim());
+  $('#mantra').textContent=MANTRA[o];
+  rebuild();
+}
+function rebuild(){
+  if(S.mode!=='explore') return;
+  S.steps=makeSteps(S.order); S.i=0; S.playing=false; stopTimer(); render();
+}
+
+/* 樹編輯 */
+function ensureExplore(){ if(S.mode!=='explore'){ switchMode('explore') } }
+function addNode(side){
+  ensureExplore();
+  if(!S.sel){ toast('先點選一個節點'); return }
+  if(count(root)>=15){ toast('最多 15 個節點'); return }
+  if(S.sel[side]){ toast(side==='left'?'左邊已經有小孩了':'右邊已經有小孩了'); return }
+  S.sel[side]=N(nextName()); S.sel=null; rebuild(); toast('已新增');
+}
+$('#addL').onclick=()=>addNode('left');
+$('#addR').onclick=()=>addNode('right');
+$('#rename').onclick=()=>{ ensureExplore(); if(!S.sel){toast('先點選一個節點');return}
+  const v=prompt('節點名稱（一個英文字母）',S.sel.name); if(!v)return;
+  S.sel.name=v.toUpperCase().slice(0,1); S.sel=null; rebuild(); };
+$('#del').onclick=()=>{ ensureExplore(); if(!S.sel){toast('先點選一個節點');return}
+  if(S.sel.id===root.id){ toast('根節點不能刪，請選別的'); return }
+  const p=parentOf(root,S.sel.id);
+  if(p.left&&p.left.id===S.sel.id)p.left=null; else p.right=null;
+  S.sel=null; rebuild(); toast('已刪除'); };
+$('#resetTree').onclick=()=>{ ensureExplore(); loadTree(buildFull()); toast('已重置') };
+
+function loadTree(r){ root=r; S.sel=null; rebuild() }
+function randomize(){ loadTree(buildRandom()) }
+
+/* 預設 */
+$('#presets').onclick=e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  document.querySelectorAll('#presets button').forEach(x=>x.classList.toggle('on',x===b));
+  ensureExplore();
+  loadTree(b.dataset.p==='full'?buildFull():b.dataset.p==='left'?buildSkew('l'):b.dataset.p==='right'?buildSkew('r'):buildRandom());
+};
+
+/* 控制 */
+$('#tsel').onclick=e=>{ const b=e.target.closest('button'); if(!b)return; ensureExplore(); applyOrder(b.dataset.o) };
+$('#bPlay').onclick=()=>{ ensureExplore(); setPlaying(!S.playing) };
+$('#bNext').onclick=()=>{ ensureExplore(); stopTimer(); S.playing=false; if(S.i<S.steps.length){S.i++; render()} };
+$('#bPrev').onclick=()=>{ ensureExplore(); stopTimer(); S.playing=false; if(S.i>0){S.i--; render()} };
+$('#bReset').onclick=()=>{ ensureExplore(); stopTimer(); S.playing=false; S.i=0; rebuild() };
+$('#spd').onclick=e=>{ const b=e.target.closest('button'); if(!b)return;
+  document.querySelectorAll('#spd button').forEach(x=>x.classList.toggle('on',x===b));
+  S.speed=parseFloat(b.dataset.s);
+  if(S.playing){ setPlaying(true) } };
+
+/* 模式切換 */
+function switchMode(m){
+  S.mode=m; stopTimer(); S.playing=false; S.sel=null;
+  $('#tabExplore').classList.toggle('on',m==='explore');
+  $('#tabQuiz').classList.toggle('on',m==='quiz');
+  if(m==='explore'){
+    $('#subTitle').textContent='互動課件 · 探索模式';
+    $('#stageTitle').textContent='遍歷舞台';
+    $('#stageSub').textContent='按「播放」看電腦一步步拜訪節點，或按「下一步」自己控制。';
+    $('#consoleSub').textContent='點一張卡，看它用哪個順序拜訪節點';
+    $('#outLbl').textContent='輸出序列';
+    document.querySelectorAll('#tsel button').forEach(b=>b.style.display='');
+    applyOrder(S.order);
+  } else startQuiz();
+}
+$('#tabExplore').onclick=()=>switchMode('explore');
+$('#tabQuiz').onclick=()=>switchMode('quiz');
+
+/* 鍵盤 */
+document.addEventListener('keydown',e=>{
+  if(e.key===' '){e.preventDefault(); ensureExplore(); setPlaying(!S.playing)}
+  if(e.key==='ArrowRight'){ensureExplore(); stopTimer(); S.playing=false; if(S.i<S.steps.length){S.i++; render()}}
+  if(e.key==='ArrowLeft'){ensureExplore(); stopTimer(); S.playing=false; if(S.i>0){S.i--; render()}}
+});
+
+/* ---------------- 啟動 ---------------- */
+root=buildFull();
+applyOrder('pre');
+</script>
+</body>
+</html>
