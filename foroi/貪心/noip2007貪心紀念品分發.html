@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ 演算法教學：NOIP2007 紀念品分組 (雙指針貪心法)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter & Fira Code -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        .code-line {
+            transition: background-color 0.2s ease;
+        }
+        .code-line.active {
+            background-color: rgba(234, 179, 8, 0.25);
+            border-left: 4px solid #eab308;
+        }
+        .item-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .item-card.pointer-left {
+            ring: 3px solid #10b981;
+            transform: translateY(-6px);
+        }
+        .item-card.pointer-right {
+            ring: 3px solid #8b5cf6;
+            transform: translateY(-6px);
+        }
+        .item-card.grouped {
+            opacity: 0.35;
+            transform: scale(0.92);
+            filter: grayscale(80%);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Navbar Header -->
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-2">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 p-2 rounded-lg text-white">
+                    <i class="fa-solid fa-graduation-cap text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">NOIP2007 紀念品分組</h1>
+                    <p class="text-xs text-slate-400">C++ 演算法互動教學課件・雙指針與貪心策略 (Greedy)</p>
+                </div>
+            </div>
+            
+            <!-- Navigation Tabs -->
+            <nav class="flex bg-slate-800 p-1 rounded-xl text-xs md:text-sm font-medium">
+                <button id="tab-btn-sim" onclick="switchTab('sim')" class="tab-btn px-4 py-2 rounded-lg transition text-white bg-indigo-600 shadow">
+                    <i class="fa-solid fa-play mr-1"></i> 動態模擬器
+                </button>
+                <button id="tab-btn-theory" onclick="switchTab('theory')" class="tab-btn px-4 py-2 rounded-lg transition text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-book-open mr-1"></i> 題目與解題思路
+                </button>
+                <button id="tab-btn-challenge" onclick="switchTab('challenge')" class="tab-btn px-4 py-2 rounded-lg transition text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-gamepad mr-1"></i> 學生互動挑戰
+                </button>
+                <button id="tab-btn-quiz" onclick="switchTab('quiz')" class="tab-btn px-4 py-2 rounded-lg transition text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-circle-question mr-1"></i> 觀念小測驗
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
+
+        <!-- TAB 1: SIMULATOR SECTION (Default) -->
+        <section id="tab-sim" class="tab-content flex flex-col gap-6">
+            
+            <!-- Top Controls & Custom Input -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <!-- Preset Data Controls -->
+                    <div class="flex flex-wrap items-center gap-3">
+                        <span class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-sliders text-indigo-600 mr-1"></i> 數據預設：</span>
+                        <button onclick="loadPreset(1)" class="px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg border border-slate-200 transition">例題 1 (典型配對)</button>
+                        <button onclick="loadPreset(2)" class="px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg border border-slate-200 transition">例題 2 (多數單獨成組)</button>
+                        <button onclick="loadPreset(3)" class="px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg border border-slate-200 transition">例題 3 (全部剛好配對)</button>
+                    </div>
+
+                    <!-- Custom Input Modal / Inline Form -->
+                    <div class="flex flex-wrap items-center gap-3 text-sm">
+                        <label class="flex items-center gap-1 font-medium text-slate-600">
+                            上限上限 $w$:
+                            <input type="number" id="input-w" value="100" min="50" max="200" class="w-16 px-2 py-1 border border-slate-300 rounded-lg text-center font-mono focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </label>
+                        <label class="flex items-center gap-1 font-medium text-slate-600">
+                            價格列表:
+                            <input type="text" id="input-items" value="20, 30, 20, 70, 60, 90, 40, 50" class="w-64 px-2 py-1 border border-slate-300 rounded-lg font-mono text-xs focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="逗號分隔數字">
+                        </label>
+                        <button onclick="applyCustomData()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-medium transition">
+                            套用資料
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Interactive Display: Split Left (Visualizer) & Right (C++ Code) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Left Column: Visual Pointer Animation & Grouping Board -->
+                <div class="lg:col-span-7 flex flex-col gap-5">
+                    
+                    <!-- Player Action Controller -->
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-2">
+                            <button id="btn-reset" onclick="resetSim()" class="p-2.5 w-10 h-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition" title="重置">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </button>
+                            <button id="btn-prev" onclick="stepPrev()" class="p-2.5 w-10 h-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition" title="上一步">
+                                <i class="fa-solid fa-backward-step"></i>
+                            </button>
+                            <button id="btn-play" onclick="togglePlay()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition flex items-center gap-2 shadow-sm">
+                                <i id="play-icon" class="fa-solid fa-play"></i>
+                                <span id="play-text">自動播放</span>
+                            </button>
+                            <button id="btn-next" onclick="stepNext()" class="p-2.5 w-10 h-10 flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl transition" title="下一步">
+                                <i class="fa-solid fa-forward-step"></i>
+                            </button>
+                        </div>
+
+                        <!-- Speed Controller -->
+                        <div class="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                            <span>速度:</span>
+                            <input type="range" id="speed-range" min="300" max="2000" step="100" value="1000" class="w-24 accent-indigo-600">
+                        </div>
+
+                        <!-- Step Counter -->
+                        <div class="text-xs font-mono bg-slate-100 px-3 py-1.5 rounded-lg text-slate-600">
+                            步驟: <span id="current-step-num" class="font-bold text-indigo-600">0</span> / <span id="total-steps-num">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Visual Array Board -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-6">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-layer-group text-indigo-500"></i>
+                                紀念品價格數組 (已升序排序)
+                            </h3>
+                            <span class="text-xs text-slate-500">上限上限 $w = $ <span id="disp-w-val" class="font-bold text-slate-800">100</span></span>
+                        </div>
+
+                        <!-- Array Container -->
+                        <div id="array-container" class="flex flex-wrap items-center justify-center gap-3 min-h-[120px] p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                            <!-- Dynamically generated items -->
+                        </div>
+
+                        <!-- Pointer Legend -->
+                        <div class="flex justify-center items-center gap-6 text-xs font-medium pt-2 border-t border-slate-100">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                                <span>Left 指針 (最便宜 $p[left]$)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-purple-500 inline-block"></span>
+                                <span>Right 指針 (最昂貴 $p[right]$)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-slate-300 inline-block"></span>
+                                <span>已完成分組</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step Rationale & Explanation Card -->
+                    <div class="bg-indigo-50/70 border border-indigo-100 p-5 rounded-2xl flex items-start gap-4">
+                        <div class="bg-indigo-600 text-white p-3 rounded-xl mt-0.5">
+                            <i class="fa-solid fa-lightbulb text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-indigo-950 text-sm mb-1">當前步驟推導解析</h4>
+                            <p id="explanation-text" class="text-sm text-indigo-900 leading-relaxed font-sans">
+                                點擊「下一步」或「自動播放」開始進行貪心雙指針分組模擬。
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Output Result Groups Display -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-boxes-packing text-emerald-500"></i>
+                                已形成的紀念品分組
+                            </h3>
+                            <div class="text-sm font-semibold">
+                                目前組數: <span id="group-count-badge" class="text-indigo-600 text-lg font-bold">0</span> 組
+                            </div>
+                        </div>
+
+                        <!-- Groups Grid -->
+                        <div id="groups-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 min-h-[80px]">
+                            <div class="col-span-full text-center py-6 text-slate-400 text-sm border-2 border-dashed border-slate-100 rounded-xl">
+                                暫無分組資料
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column: Interactive C++ Code Viewer -->
+                <div class="lg:col-span-5 flex flex-col gap-4">
+                    <div class="bg-slate-900 text-slate-200 p-5 rounded-2xl shadow-md border border-slate-800 flex flex-col h-full">
+                        <div class="flex justify-between items-center pb-3 border-b border-slate-800 mb-3">
+                            <div class="flex items-center gap-2 font-mono text-xs text-slate-400">
+                                <i class="fa-solid fa-code text-indigo-400"></i>
+                                <span>solution.cpp</span>
+                            </div>
+                            <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">C++11</span>
+                        </div>
+
+                        <!-- Code Display -->
+                        <div class="font-mono text-xs leading-relaxed overflow-x-auto flex-1 select-none" id="code-container">
+                            <div id="code-line-1" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">1</span><span><span class="text-purple-400">#include</span> <span class="text-emerald-300">&lt;iostream&gt;</span></span></div>
+                            <div id="code-line-2" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">2</span><span><span class="text-purple-400">#include</span> <span class="text-emerald-300">&lt;vector&gt;</span></span></div>
+                            <div id="code-line-3" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">3</span><span><span class="text-purple-400">#include</span> <span class="text-emerald-300">&lt;algorithm&gt;</span></span></div>
+                            <div id="code-line-4" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">4</span><span><span class="text-slate-500">using namespace std;</span></span></div>
+                            <div id="code-line-5" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">5</span><span></span></div>
+                            <div id="code-line-6" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">6</span><span><span class="text-blue-400">int</span> <span class="text-yellow-300">main</span>() {</span></div>
+                            <div id="code-line-7" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">7</span><span>    <span class="text-blue-400">int</span> w, n;</span></div>
+                            <div id="code-line-8" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">8</span><span>    cin &gt;&gt; w &gt;&gt; n;</span></div>
+                            <div id="code-line-9" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">9</span><span>    vector&lt;<span class="text-blue-400">int</span>&gt; p(n);</span></div>
+                            <div id="code-line-10" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">10</span><span>    <span class="text-purple-400">for</span>(<span class="text-blue-400">int</span> i = <span class="text-orange-300">0</span>; i &lt; n; i++) cin &gt;&gt; p[i];</span></div>
+                            <div id="code-line-11" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">11</span><span></span></div>
+                            <div id="code-line-12" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">12</span><span>    <span class="text-slate-500">// 1. 先將價格從小到大排序</span></span></div>
+                            <div id="code-line-13" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">13</span><span>    <span class="text-yellow-300">sort</span>(p.<span class="text-yellow-300">begin</span>(), p.<span class="text-yellow-300">end</span>());</span></div>
+                            <div id="code-line-14" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">14</span><span></span></div>
+                            <div id="code-line-15" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">15</span><span>    <span class="text-blue-400">int</span> left = <span class="text-orange-300">0</span>, right = n - <span class="text-orange-300">1</span>;</span></div>
+                            <div id="code-line-16" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">16</span><span>    <span class="text-blue-400">int</span> groupCount = <span class="text-orange-300">0</span>;</span></div>
+                            <div id="code-line-17" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">17</span><span></span></div>
+                            <div id="code-line-18" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">18</span><span>    <span class="text-purple-400">while</span> (left &lt;= right) {</span></div>
+                            <div id="code-line-19" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">19</span><span>        <span class="text-purple-400">if</span> (left == right) {</span></div>
+                            <div id="code-line-20" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">20</span><span>            groupCount++; <span class="text-slate-500">// 只剩最後一件</span></span></div>
+                            <div id="code-line-21" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">21</span><span>            left++;</span></div>
+                            <div id="code-line-22" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">22</span><span>        } <span class="text-purple-400">else if</span> (p[left] + p[right] &lt;= w) {</span></div>
+                            <div id="code-line-23" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">23</span><span>            groupCount++; <span class="text-slate-500">// 最便宜+最貴 &lt;= w，合組</span></span></div>
+                            <div id="code-line-24" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">24</span><span>            left++;</span></div>
+                            <div id="code-line-25" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">25</span><span>            right--;</span></div>
+                            <div id="code-line-26" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">26</span><span>        } <span class="text-purple-400">else</span> {</span></div>
+                            <div id="code-line-27" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">27</span><span>            groupCount++; <span class="text-slate-500">// 超出上限，最貴的單獨成組</span></span></div>
+                            <div id="code-line-28" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">28</span><span>            right--;</span></div>
+                            <div id="code-line-29" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">29</span><span>        }</span></div>
+                            <div id="code-line-30" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">30</span><span>    }</span></div>
+                            <div id="code-line-31" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">31</span><span>    cout &lt;&lt; groupCount &lt;&lt; endl;</span></div>
+                            <div id="code-line-32" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">32</span><span>    <span class="text-purple-400">return</span> <span class="text-orange-300">0</span>;</span></div>
+                            <div id="code-line-33" class="code-line px-2 py-1 rounded flex"><span class="w-8 text-slate-600 shrink-0">33</span><span>}</span></div>
+                        </div>
+
+                        <!-- Variables Monitor Widget -->
+                        <div class="mt-4 pt-3 border-t border-slate-800 bg-slate-950/60 p-3 rounded-xl font-mono text-xs grid grid-cols-2 gap-2 text-slate-300">
+                            <div><span class="text-slate-500">left:</span> <span id="var-left" class="text-emerald-400 font-bold">0</span></div>
+                            <div><span class="text-slate-500">right:</span> <span id="var-right" class="text-purple-400 font-bold">0</span></div>
+                            <div><span class="text-slate-500">p[left] + p[right]:</span> <span id="var-sum" class="text-yellow-400 font-bold">0</span></div>
+                            <div><span class="text-slate-500">groupCount:</span> <span id="var-groups" class="text-indigo-400 font-bold">0</span></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- TAB 2: PROBLEM THEORY & EXPLANATION -->
+        <section id="tab-theory" class="tab-content hidden flex-col gap-6">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-6">
+                <!-- Title & Constraints -->
+                <div>
+                    <div class="flex items-center gap-2 text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-1">
+                        NOIP 2007 普及組 經典題
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-900">紀念品分組 (Souvenir Grouping)</h2>
+                </div>
+
+                <!-- Problem Statement Card -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-200">
+                        <h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-file-lines text-indigo-500"></i> 題目描述
+                        </h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            元旦快到了，學生會需要將買來的 $n$ 件紀念品根據價格進行分組發放。<br>
+                            為了保證分組儘可能公平且高效，規定：
+                        </p>
+                        <ul class="list-disc list-inside text-sm text-slate-600 mt-2 space-y-1 font-medium">
+                            <li>每組<strong class="text-indigo-600">最多只能包含兩件</strong>紀念品。</li>
+                            <li>每組紀念品的價格之和<strong class="text-indigo-600">不能超過</strong>給定的上限 $w$。</li>
+                        </ul>
+                        <p class="text-sm text-slate-600 mt-3">
+                            請寫一個程式，找出能將所有紀念品分完的<strong class="text-slate-900">最少組數</strong>。
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                                <i class="fa-solid fa-database text-emerald-500"></i> 輸入與輸出規格
+                            </h3>
+                            <div class="text-xs text-slate-600 space-y-2">
+                                <p><strong>輸入格式：</strong></p>
+                                <p class="bg-white p-2 rounded border border-slate-200 font-mono">第 1 行：整數 w (上限)<br>第 2 行：整數 n (件數)<br>第 3~n+2 行：每行一個整數 p_i (價格)</p>
+                                <p><strong>數據規模：</strong> $1 \le n \le 30000$, $80 \le w \le 200$, $5 \le p_i \le w$</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Strategy Explanation -->
+                <div class="border-t border-slate-100 pt-6">
+                    <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-brain text-purple-600"></i> 為什麼使用「雙指針貪心法」？(Greedy Proof)
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
+                            <div class="font-bold text-emerald-900 mb-1">第一步：排序 (Sort)</div>
+                            <p class="text-xs text-emerald-800 leading-relaxed">
+                                先將價格按從小到大排序，讓我們能立刻鎖定當前「最便宜 $p[left]$」與「最昂貴 $p[right]$」的紀念品。
+                            </p>
+                        </div>
+                        <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
+                            <div class="font-bold text-indigo-900 mb-1">第二步：嘗試配對 (Try Pair)</div>
+                            <p class="text-xs text-indigo-800 leading-relaxed">
+                                如果 $p[left] + p[right] \le w$，最貴的這件如果連最便宜的都帶得動，就該讓牠們合組，這是最不浪費空間的最佳選擇。
+                            </p>
+                        </div>
+                        <div class="bg-purple-50 border border-purple-100 p-4 rounded-xl">
+                            <div class="font-bold text-purple-900 mb-1">第三步：單獨成組 (Solo)</div>
+                            <p class="text-xs text-purple-800 leading-relaxed">
+                                如果 $p[left] + p[right] > w$，最貴的這件連最便宜的都配不上，那牠絕對無法與任何其他物品合組，只能單獨一組！
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Complexity Summary -->
+                    <div class="mt-6 bg-slate-900 text-white p-4 rounded-xl flex flex-wrap justify-around text-center text-xs">
+                        <div>
+                            <span class="text-slate-400 block mb-1">時間複雜度</span>
+                            <span class="font-mono text-base text-yellow-400 font-bold">$O(N \log N)$</span>
+                            <span class="text-slate-400 block text-[10px] mt-0.5">(主要是排序開銷)</span>
+                        </div>
+                        <div class="border-r border-slate-700 h-8 self-center"></div>
+                        <div>
+                            <span class="text-slate-400 block mb-1">空間複雜度</span>
+                            <span class="font-mono text-base text-emerald-400 font-bold">$O(N)$ 或 $O(1)$</span>
+                            <span class="text-slate-400 block text-[10px] mt-0.5">(儲存陣列空間)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: STUDENT INTERACTIVE CHALLENGE -->
+        <section id="tab-challenge" class="tab-content hidden flex-col gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">🎮 學生動手做：挑戰最小分組數</h2>
+                        <p class="text-xs text-slate-500 mt-1">點擊 1 個或 2 個紀念品放入同一個小組，看看你能不能達到最適組數！</p>
+                    </div>
+                    <button onclick="initChallenge()" class="px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-xs font-semibold transition">
+                        <i class="fa-solid fa-dice mr-1"></i> 換一題
+                    </button>
+                </div>
+
+                <!-- Challenge Board -->
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 flex flex-col gap-6">
+                    <div class="flex flex-wrap justify-between items-center bg-white p-4 rounded-xl shadow-sm">
+                        <div class="text-sm font-semibold">
+                            每組上限 $w = $ <span id="ch-w" class="text-indigo-600 font-bold text-lg">100</span>
+                        </div>
+                        <div class="flex gap-4 text-xs font-medium">
+                            <div>已使用組數: <span id="ch-user-groups" class="text-purple-600 font-bold text-base">0</span></div>
+                            <div>剩餘未分組物品: <span id="ch-remaining" class="text-emerald-600 font-bold text-base">0</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Selected Items Dock -->
+                    <div class="bg-white p-4 rounded-xl border border-indigo-100 flex items-center justify-between min-h-[72px]">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs font-semibold text-slate-500">當前欲打包組:</span>
+                            <div id="ch-selected-container" class="flex gap-2">
+                                <span class="text-xs text-slate-400 italic">請點擊下方紀念品...</span>
+                            </div>
+                        </div>
+                        <button id="btn-pack-group" onclick="packSelectedGroup()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            打包成一組
+                        </button>
+                    </div>
+
+                    <!-- Available Items Pool -->
+                    <div>
+                        <div class="text-xs font-semibold text-slate-600 mb-2">點擊選取紀念品：</div>
+                        <div id="ch-items-pool" class="flex flex-wrap gap-3">
+                            <!-- Dynamic items -->
+                        </div>
+                    </div>
+
+                    <!-- Target Answer Check Area -->
+                    <div id="ch-result-box" class="hidden p-4 rounded-xl border text-sm font-medium">
+                        <!-- Output when finished -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: CONCEPT QUIZ -->
+        <section id="tab-quiz" class="tab-content hidden flex-col gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-6">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">❓ 雙指針與貪心策略觀念測驗</h2>
+                    <p class="text-xs text-slate-500 mt-1">透過以下觀念題，鞏固你的 C++ 演算法思維。</p>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Q1 -->
+                    <div class="p-5 rounded-xl border border-slate-200 bg-slate-50 flex flex-col gap-3">
+                        <div class="font-semibold text-sm text-slate-800">
+                            1. 在本題的雙指針貪心算法中，為什麼一開始必須對陣列進行「排序」？
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                            <button onclick="checkQuiz(1, 'A', false)" class="quiz-btn-1-A p-3 bg-white hover:bg-indigo-50 border border-slate-200 rounded-lg text-left transition">A. 為了讓二分搜尋法 (Binary Search) 可以運作</button>
+                            <button onclick="checkQuiz(1, 'B', true)" class="quiz-btn-1-B p-3 bg-white hover:bg-indigo-50 border border-slate-200 rounded-lg text-left transition">B. 為了能以 O(1) 時間快速取得當前「最便宜」與「最昂貴」物品</button>
+                            <button onclick="checkQuiz(1, 'C', false)" class="quiz-btn-1-C p-3 bg-white hover:bg-indigo-50 border border-slate-200 rounded-lg text-left transition">C. 為了直接去除價格重複的紀念品</button>
+                            <button onclick="checkQuiz(1, 'D', false)" class="quiz-btn-1-D p-3 bg-white hover:bg-indigo-50 border border-slate-200 rounded-lg text-left transition">D. 排序是 C++ vector 的規定，否則不能使用 size()</button>
+                        </div>
+                        <div id="quiz-ans-1" class="hidden text-xs p-3 rounded-lg font-medium mt-1"></div>
+                    </div>
+
+                    <!-- Q2 -->
+                    <div class="p-5 rounded-xl border border-slate-200 bg-slate-50 flex flex-col gap-3">
+                        <div class="font-semibold text-sm text-slate-800">
+                            2. 當最便宜物品 $p[left]$ 與最昂貴物品 $p[right]$ 之和超過上限 $w$ 時，算法為什麼將 $p[right]$ 單獨成組並移動 right 指針？
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                            <button onclick="checkQuiz(2, 'A', false)" class="quiz-btn-2-A p-3 bg-white hover:bg-indigo-50 border border-slate-200 rounded-lg text-left transition">A. 因為最便宜的物品 $p[left]$ 價值太低不能發放</button>
+                            <button onclick="checkQuiz(2, 'B', true)" class="quiz-btn-2-B p-3 bg-white hover:bg-indigo-50 border border-slate-200 rounded-lg text-left transition">B. 因為 $p[right]$ 連跟目前最便宜的物品都無法配對，更不可能與其他更貴物品配對</button>
+                            <button onclick="checkQuiz(2, 'C', false)" class="quiz-btn-2-C p-3 bg-white hover:bg-indigo-50 border border-slate-200 rounded-lg text-left transition">C. 這只是隨機選擇，將 left 單獨成組效果也是一樣的</button>
+                            <button onclick="checkQuiz(2, 'D', false)" class="quiz-btn-2-D p-3 bg-white hover:bg-indigo-50 border border-slate-200 rounded-lg text-left transition">D. 因為每組最多必須剛好裝滿 2 件物品</button>
+                        </div>
+                        <div id="quiz-ans-2" class="hidden text-xs p-3 rounded-lg font-medium mt-1"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // Global State Variables for Simulation
+        let rawItems = [20, 30, 20, 70, 60, 90, 40, 50];
+        let W = 100;
+        let sortedItems = [];
+        let simSteps = [];
+        let currentStepIndex = 0;
+        let isPlaying = false;
+        let playTimer = null;
+
+        // Challenge Mode State
+        let chItems = [];
+        let chW = 100;
+        let chSelected = [];
+        let chUserGroups = [];
+
+        // Tab Switching Logic
+        function switchTab(tabKey) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-indigo-600', 'text-white', 'shadow');
+                el.classList.add('text-slate-300');
+            });
+
+            document.getElementById(`tab-${tabKey}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-btn-${tabKey}`);
+            activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow');
+            activeBtn.classList.remove('text-slate-300');
+
+            if (tabKey === 'challenge' && chItems.length === 0) {
+                initChallenge();
+            }
+        }
+
+        // Initialize Simulator Logic
+        function buildSimulationSteps() {
+            sortedItems = [...rawItems].sort((a, b) => a - b);
+            simSteps = [];
+
+            let left = 0;
+            let right = sortedItems.length - 1;
+            let currentGroups = [];
+
+            // Step 0: Initial State
+            simSteps.push({
+                left,
+                right,
+                groups: JSON.parse(JSON.stringify(currentGroups)),
+                codeLine: 15,
+                actionText: `初始化雙指針：Left 指向索引 0 ($p[0]=${sortedItems[0]}$)，Right 指向索引 ${right} ($p[${right}]=${sortedItems[right]}$)。`,
+                sum: sortedItems[left] + sortedItems[right]
+            });
+
+            while (left <= right) {
+                if (left === right) {
+                    currentGroups.push([sortedItems[left]]);
+                    simSteps.push({
+                        left,
+                        right,
+                        groups: JSON.parse(JSON.stringify(currentGroups)),
+                        codeLine: 20,
+                        actionText: `只剩下最後一件紀念品 $p[${left}] = ${sortedItems[left]}$，單獨打包為第 ${currentGroups.length} 組。`,
+                        sum: sortedItems[left],
+                        doneLeft: left,
+                        doneRight: right
+                    });
+                    left++;
+                } else {
+                    let sum = sortedItems[left] + sortedItems[right];
+                    if (sum <= W) {
+                        currentGroups.push([sortedItems[left], sortedItems[right]]);
+                        simSteps.push({
+                            left,
+                            right,
+                            groups: JSON.parse(JSON.stringify(currentGroups)),
+                            codeLine: 23,
+                            actionText: `嘗試組合：$p[${left}] = ${sortedItems[left]}$ 與 $p[${right}] = ${sortedItems[right]}$，總和 = ${sum} $\\le$ ${W}。成功合組為第 ${currentGroups.length} 組！`,
+                            sum: sum,
+                            doneLeft: left,
+                            doneRight: right
+                        });
+                        left++;
+                        right--;
+                    } else {
+                        currentGroups.push([sortedItems[right]]);
+                        simSteps.push({
+                            left,
+                            right,
+                            groups: JSON.parse(JSON.stringify(currentGroups)),
+                            codeLine: 27,
+                            actionText: `嘗試組合：$p[${left}] = ${sortedItems[left]}$ 與 $p[${right}] = ${sortedItems[right]}$，總和 = ${sum} > ${W} (超出上限)。昂貴物品 $p[${right}] = ${sortedItems[right]}$ 只能單獨一組！`,
+                            sum: sum,
+                            doneRight: right
+                        });
+                        right--;
+                    }
+                }
+            }
+
+            // Final Finished Step
+            simSteps.push({
+                left,
+                right,
+                groups: JSON.parse(JSON.stringify(currentGroups)),
+                codeLine: 31,
+                actionText: `🎉 演算法執行完畢！所有紀念品已順利發放，最少需要 **${currentGroups.length}** 組。`,
+                sum: 0
+            });
+
+            document.getElementById('total-steps-num').textContent = simSteps.length - 1;
+        }
+
+        // Render current simulator step
+        function renderStep(stepIndex) {
+            const step = simSteps[stepIndex];
+            document.getElementById('current-step-num').textContent = stepIndex;
+            document.getElementById('disp-w-val').textContent = W;
+            document.getElementById('explanation-text').innerHTML = step.actionText;
+
+            // Highlight C++ Code Line
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+            if (step.codeLine) {
+                const codeEl = document.getElementById(`code-line-${step.codeLine}`);
+                if (codeEl) codeEl.classList.add('active');
+            }
+
+            // Variables monitor
+            document.getElementById('var-left').textContent = step.left;
+            document.getElementById('var-right').textContent = step.right;
+            document.getElementById('var-sum').textContent = (step.left <= step.right) ? (sortedItems[step.left] + sortedItems[step.right]) : '-';
+            document.getElementById('var-groups').textContent = step.groups.length;
+
+            // Render Array Cards
+            const arrayBox = document.getElementById('array-container');
+            arrayBox.innerHTML = '';
+
+            sortedItems.forEach((val, idx) => {
+                const card = document.createElement('div');
+                card.className = `item-card flex flex-col items-center justify-center w-14 h-16 bg-white rounded-xl shadow-sm border border-slate-200 font-mono relative`;
+
+                // Check pointer status
+                let isLeft = (idx === step.left && step.left <= step.right);
+                let isRight = (idx === step.right && step.left <= step.right);
+                let isGrouped = false;
+
+                // Determine if item was already grouped
+                // Item is grouped if it is left of current step.left or right of current step.right
+                if (idx < step.left || idx > step.right) {
+                    isGrouped = true;
+                }
+
+                if (isGrouped) {
+                    card.classList.add('grouped', 'bg-slate-100');
+                } else if (isLeft) {
+                    card.classList.add('pointer-left', 'border-emerald-500');
+                } else if (isRight) {
+                    card.classList.add('pointer-right', 'border-purple-500');
+                }
+
+                card.innerHTML = `
+                    <span class="text-xs text-slate-400">idx ${idx}</span>
+                    <span class="text-base font-bold ${isLeft ? 'text-emerald-600' : isRight ? 'text-purple-600' : 'text-slate-800'}">${val}</span>
+                `;
+
+                if (isLeft) {
+                    const tag = document.createElement('span');
+                    tag.className = 'absolute -top-3 bg-emerald-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow';
+                    tag.textContent = 'L';
+                    card.appendChild(tag);
+                }
+                if (isRight) {
+                    const tag = document.createElement('span');
+                    tag.className = 'absolute -top-3 bg-purple-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow';
+                    tag.textContent = 'R';
+                    card.appendChild(tag);
+                }
+
+                arrayBox.appendChild(card);
+            });
+
+            // Render Output Groups Grid
+            const groupsGrid = document.getElementById('groups-grid');
+            document.getElementById('group-count-badge').textContent = step.groups.length;
+
+            if (step.groups.length === 0) {
+                groupsGrid.innerHTML = `
+                    <div class="col-span-full text-center py-6 text-slate-400 text-sm border-2 border-dashed border-slate-100 rounded-xl">
+                        暫無分組資料
+                    </div>
+                `;
+            } else {
+                groupsGrid.innerHTML = '';
+                step.groups.forEach((grp, gIdx) => {
+                    const grpSum = grp.reduce((a, b) => a + b, 0);
+                    const grpCard = document.createElement('div');
+                    grpCard.className = 'bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col gap-1';
+                    
+                    let itemsHtml = grp.map(v => `<span class="px-2 py-1 bg-white border border-slate-200 font-mono text-xs font-bold rounded">${v}</span>`).join('<span class="text-slate-400 text-xs">+</span>');
+
+                    grpCard.innerHTML = `
+                        <div class="flex justify-between items-center text-[11px] text-slate-500">
+                            <span>第 ${gIdx + 1} 組</span>
+                            <span class="font-bold ${grpSum > W ? 'text-red-500' : 'text-slate-700'}">和: ${grpSum}/${W}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 mt-1">
+                            ${itemsHtml}
+                        </div>
+                    `;
+                    groupsGrid.appendChild(grpCard);
+                });
+            }
+        }
+
+        // Stepper Controls
+        function stepNext() {
+            if (currentStepIndex < simSteps.length - 1) {
+                currentStepIndex++;
+                renderStep(currentStepIndex);
+            } else {
+                pausePlay();
+            }
+        }
+
+        function stepPrev() {
+            if (currentStepIndex > 0) {
+                currentStepIndex--;
+                renderStep(currentStepIndex);
+            }
+        }
+
+        function resetSim() {
+            pausePlay();
+            currentStepIndex = 0;
+            renderStep(0);
+        }
+
+        function togglePlay() {
+            if (isPlaying) {
+                pausePlay();
+            } else {
+                startPlay();
+            }
+        }
+
+        function startPlay() {
+            if (currentStepIndex >= simSteps.length - 1) {
+                currentStepIndex = 0;
+            }
+            isPlaying = true;
+            document.getElementById('play-icon').className = 'fa-solid fa-pause';
+            document.getElementById('play-text').textContent = '暫停';
+
+            const speed = parseInt(document.getElementById('speed-range').value);
+            playTimer = setInterval(() => {
+                if (currentStepIndex < simSteps.length - 1) {
+                    stepNext();
+                } else {
+                    pausePlay();
+                }
+            }, speed);
+        }
+
+        function pausePlay() {
+            isPlaying = false;
+            if (playTimer) clearInterval(playTimer);
+            document.getElementById('play-icon').className = 'fa-solid fa-play';
+            document.getElementById('play-text').textContent = '自動播放';
+        }
+
+        // Custom Inputs
+        function applyCustomData() {
+            const wVal = parseInt(document.getElementById('input-w').value);
+            const itemsStr = document.getElementById('input-items').value;
+            const parsed = itemsStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n > 0);
+
+            if (parsed.length === 0) {
+                alert('請輸入有效的數字列表！');
+                return;
+            }
+
+            W = wVal;
+            rawItems = parsed;
+            resetSim();
+            buildSimulationSteps();
+            renderStep(0);
+        }
+
+        function loadPreset(id) {
+            if (id === 1) {
+                W = 100;
+                rawItems = [20, 30, 20, 70, 60, 90, 40, 50];
+            } else if (id === 2) {
+                W = 80;
+                rawItems = [70, 60, 50, 45, 55, 65];
+            } else if (id === 3) {
+                W = 100;
+                rawItems = [50, 50, 40, 60, 30, 70, 20, 80];
+            }
+            document.getElementById('input-w').value = W;
+            document.getElementById('input-items').value = rawItems.join(', ');
+            applyCustomData();
+        }
+
+        // Student Challenge Logic
+        function initChallenge() {
+            chW = 100;
+            const samplePools = [
+                [25, 35, 15, 80, 55, 65, 45, 30],
+                [40, 70, 60, 30, 90, 20, 50, 80],
+                [30, 30, 40, 50, 60, 70, 20]
+            ];
+            chItems = samplePools[Math.floor(Math.random() * samplePools.length)].map((val, id) => ({ id, val, grouped: false }));
+            chSelected = [];
+            chUserGroups = [];
+
+            document.getElementById('ch-w').textContent = chW;
+            document.getElementById('ch-result-box').classList.add('hidden');
+            renderChallenge();
+        }
+
+        function renderChallenge() {
+            document.getElementById('ch-user-groups').textContent = chUserGroups.length;
+            const remaining = chItems.filter(i => !i.grouped).length;
+            document.getElementById('ch-remaining').textContent = remaining;
+
+            // Render Available Pool
+            const poolBox = document.getElementById('ch-items-pool');
+            poolBox.innerHTML = '';
+
+            chItems.forEach(item => {
+                if (item.grouped) return;
+
+                const isSel = chSelected.some(s => s.id === item.id);
+                const btn = document.createElement('button');
+                btn.className = `w-14 h-16 rounded-xl font-mono text-base font-bold flex flex-col items-center justify-center transition ${isSel ? 'bg-indigo-600 text-white ring-4 ring-indigo-200' : 'bg-white border border-slate-200 text-slate-800 hover:border-indigo-400'}`;
+                btn.onclick = () => toggleSelectChallengeItem(item);
+                btn.innerHTML = `
+                    <span class="text-[10px] ${isSel ? 'text-indigo-200' : 'text-slate-400'}">NT$</span>
+                    <span>${item.val}</span>
+                `;
+                poolBox.appendChild(btn);
+            });
+
+            // Render Selected Dock
+            const selBox = document.getElementById('ch-selected-container');
+            if (chSelected.length === 0) {
+                selBox.innerHTML = `<span class="text-xs text-slate-400 italic">點擊上方紀念品...</span>`;
+                document.getElementById('btn-pack-group').disabled = true;
+            } else {
+                selBox.innerHTML = '';
+                let selSum = 0;
+                chSelected.forEach(s => {
+                    selSum += s.val;
+                    const b = document.createElement('span');
+                    b.className = 'px-3 py-1 bg-indigo-50 border border-indigo-200 font-mono text-xs font-bold text-indigo-700 rounded-lg';
+                    b.textContent = s.val;
+                    selBox.appendChild(b);
+                });
+
+                const sumBadge = document.createElement('span');
+                sumBadge.className = `text-xs font-bold ml-2 ${selSum > chW ? 'text-red-500' : 'text-slate-600'}`;
+                sumBadge.textContent = `(合計: ${selSum}/${chW})`;
+                selBox.appendChild(sumBadge);
+
+                document.getElementById('btn-pack-group').disabled = (selSum > chW || chSelected.length > 2);
+            }
+
+            // Check if all finished
+            if (remaining === 0) {
+                checkChallengeResult();
+            }
+        }
+
+        function toggleSelectChallengeItem(item) {
+            const idx = chSelected.findIndex(s => s.id === item.id);
+            if (idx >= 0) {
+                chSelected.splice(idx, 1);
+            } else {
+                if (chSelected.length >= 2) {
+                    alert('每組最多只能包含 2 件紀念品！');
+                    return;
+                }
+                chSelected.push(item);
+            }
+            renderChallenge();
+        }
+
+        function packSelectedGroup() {
+            if (chSelected.length === 0) return;
+            chSelected.forEach(s => {
+                const target = chItems.find(i => i.id === s.id);
+                if (target) target.grouped = true;
+            });
+            chUserGroups.push([...chSelected]);
+            chSelected = [];
+            renderChallenge();
+        }
+
+        function checkChallengeResult() {
+            // Solve optimal greedy count
+            const sortedVals = chItems.map(i => i.val).sort((a, b) => a - b);
+            let l = 0, r = sortedVals.length - 1;
+            let optGroups = 0;
+            while (l <= r) {
+                if (l === r) { optGroups++; l++; }
+                else if (sortedVals[l] + sortedVals[r] <= chW) { optGroups++; l++; r--; }
+                else { optGroups++; r--; }
+            }
+
+            const resBox = document.getElementById('ch-result-box');
+            resBox.classList.remove('hidden');
+
+            if (chUserGroups.length === optGroups) {
+                resBox.className = 'p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center gap-3';
+                resBox.innerHTML = `
+                    <i class="fa-solid fa-circle-check text-2xl text-emerald-600"></i>
+                    <div>
+                        <div class="font-bold">太棒了！完全正確！</div>
+                        <div class="text-xs text-emerald-700 mt-0.5">你的分組數為 ${chUserGroups.length} 組，達到了演算法的最佳解答 (最少 ${optGroups} 組)。</div>
+                    </div>
+                `;
+            } else {
+                resBox.className = 'p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center gap-3';
+                resBox.innerHTML = `
+                    <i class="fa-solid fa-triangle-exclamation text-2xl text-amber-600"></i>
+                    <div>
+                        <div class="font-bold">還有優化空間！</div>
+                        <div class="text-xs text-amber-800 mt-0.5">你的分組數為 ${chUserGroups.length} 組，但最少只需要 ${optGroups} 組。試試看「最大值配最小值」的貪心策略！</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Quiz System
+        function checkQuiz(qNum, option, isCorrect) {
+            const ansBox = document.getElementById(`quiz-ans-${qNum}`);
+            ansBox.classList.remove('hidden');
+
+            if (isCorrect) {
+                ansBox.className = 'text-xs p-3 rounded-lg font-medium bg-emerald-100 text-emerald-800 border border-emerald-200';
+                ansBox.innerHTML = `<i class="fa-solid fa-check mr-1"></i> 答對了！雙指針法依賴有序數組才能以 $O(1)$ 快速獲取極值與進行推導。`;
+            } else {
+                ansBox.className = 'text-xs p-3 rounded-lg font-medium bg-red-100 text-red-800 border border-red-200';
+                ansBox.innerHTML = `<i class="fa-solid fa-xmark mr-1"></i> 再思考一下！提示：觀看「雙指針如何選擇最便宜與最昂貴物品」。`;
+            }
+        }
+
+        // On Page Load Initialization
+        window.onload = function() {
+            buildSimulationSteps();
+            renderStep(0);
+
+            document.getElementById('speed-range').addEventListener('input', function() {
+                if (isPlaying) {
+                    pausePlay();
+                    startPlay();
+                }
+            });
+        };
+    </script>
+</body>
+</html>
