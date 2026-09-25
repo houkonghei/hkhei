@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高精度加法 (BigInt Addition) 與 C++98 實作互動課件</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        },
+                        slate: {
+                            850: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+                        mono: ['Fira Code', 'Consolas', 'Monaco', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Custom Animations & Styles */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .active-digit {
+            animation: pulse-glow 1.5s infinite alternate;
+        }
+        @keyframes pulse-glow {
+            0% { transform: scale(1); box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
+            100% { transform: scale(1.08); box-shadow: 0 0 20px rgba(59, 130, 246, 0.9); }
+        }
+        .code-highlight {
+            background-color: rgba(59, 130, 246, 0.2) !important;
+            border-left: 4px solid #3b82f6;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-50 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-emerald-400 flex items-center justify-center text-slate-950 font-bold text-xl shadow-lg shadow-indigo-500/20">
+                        <i class="fa-solid fa-calculator"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
+                            高精度加法 (BigInt Addition)
+                        </h1>
+                        <p class="text-xs text-slate-400">演算法與 C++98 實作互動課件</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="hidden md:flex space-x-1 bg-slate-950/60 p-1.5 rounded-xl border border-slate-800/80">
+                    <button onclick="switchTab('concept')" id="tab-btn-concept" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-indigo-400 bg-slate-800 shadow">
+                        <i class="fa-solid fa-lightbulb mr-1.5"></i> 概念圖解
+                    </button>
+                    <button onclick="switchTab('simulator')" id="tab-btn-simulator" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-200">
+                        <i class="fa-solid fa-play mr-1.5"></i> 動態模擬器
+                    </button>
+                    <button onclick="switchTab('code')" id="tab-btn-code" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-200">
+                        <i class="fa-solid fa-code mr-1.5"></i> C++98 代碼
+                    </button>
+                    <button onclick="switchTab('pitfalls')" id="tab-btn-pitfalls" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-200">
+                        <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> 陷阱與細節
+                    </button>
+                    <button onclick="switchTab('quiz')" id="tab-btn-quiz" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-200">
+                        <i class="fa-solid fa-square-check mr-1.5"></i> 隨堂測驗
+                    </button>
+                </nav>
+
+                <!-- Mobile Menu Toggle Button -->
+                <button onclick="toggleMobileMenu()" class="md:hidden p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Navigation Drawer -->
+        <div id="mobile-menu" class="hidden md:hidden border-b border-slate-800 bg-slate-900 px-4 pt-2 pb-4 space-y-2">
+            <button onclick="switchTab('concept')" class="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800">💡 概念圖解</button>
+            <button onclick="switchTab('simulator')" class="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800">⚡ 動態模擬器</button>
+            <button onclick="switchTab('code')" class="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800">💻 C++98 代碼解析</button>
+            <button onclick="switchTab('pitfalls')" class="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800">⚠️ 陷阱與細節</button>
+            <button onclick="switchTab('quiz')" class="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800">📝 隨堂測驗</button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- ================= TAB 1: 核心概念 (CONCEPT) ================= -->
+        <section id="tab-concept" class="tab-content space-y-8">
+            <!-- Motivation Banner -->
+            <div class="glass-panel rounded-2xl p-6 sm:p-8 border border-indigo-500/20 bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950/40 relative overflow-hidden">
+                <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="max-w-3xl space-y-4">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                        <i class="fa-solid fa-circle-info"></i> 為何需要高精度加法？
+                    </span>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                        超越 C++ 原生型態的極限限制
+                    </h2>
+                    <p class="text-slate-300 leading-relaxed">
+                        在 C++ 標準中，極限最大的整數型態為 <code class="px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 font-mono text-sm">unsigned long long</code> (64 位元)，其上限約為 <span class="text-indigo-300 font-semibold">$1.8 \times 10^{19}$</span> (約 19 位數)。
+                        當我們需要處理幾百位甚至幾千位的超大整數（例如：密碼學 RSA 2048 位元、高精度天文計算、Pi 的萬位計算）時，原生型態會發生<span class="text-rose-400 font-semibold">整數溢位 (Integer Overflow)</span>。
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                        <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800">
+                            <p class="text-xs text-slate-400">int (32-bit)</p>
+                            <p class="text-sm font-mono text-slate-200 mt-1">~2.14 × 10⁹ <span class="text-xs text-slate-500">(10位)</span></p>
+                        </div>
+                        <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800">
+                            <p class="text-xs text-slate-400">long long (64-bit)</p>
+                            <p class="text-sm font-mono text-slate-200 mt-1">~9.22 × 10¹⁸ <span class="text-xs text-slate-500">(19位)</span></p>
+                        </div>
+                        <div class="bg-indigo-950/50 p-3.5 rounded-xl border border-indigo-500/30">
+                            <p class="text-xs text-indigo-300 font-semibold">高精度數組 (BigInt)</p>
+                            <p class="text-sm font-mono text-emerald-400 mt-1">無上限 <span class="text-xs text-slate-400">(受記憶體限制)</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3 Core Steps Diagram -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold text-slate-100 flex items-center gap-2">
+                    <i class="fa-solid fa-cubes text-indigo-400"></i> 高精度加法三大核心步驟
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Step 1 Card -->
+                    <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-slate-700 transition">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-lg mb-4">
+                            1
+                        </div>
+                        <h4 class="text-lg font-bold text-white mb-2">字串輸入與倒序儲存</h4>
+                        <p class="text-slate-400 text-sm leading-relaxed mb-4">
+                            超大整數以 <code class="text-indigo-300">std::string</code> 讀入，並將數字**倒序存入** <code class="text-indigo-300">std::vector&lt;int&gt;</code> 中。
+                        </p>
+                        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-xs space-y-2">
+                            <div class="flex justify-between text-slate-400"><span>字串 "1234":</span><span class="text-amber-400">索引 0 是 '1' (高位)</span></div>
+                            <div class="text-center text-indigo-400"><i class="fa-solid fa-arrow-down"></i> 倒序 (Reverse)</div>
+                            <div class="flex justify-between text-slate-300"><span>Vector [4, 3, 2, 1]:</span><span class="text-emerald-400">索引 0 是 4 (個位)</span></div>
+                        </div>
+                        <div class="mt-3 text-xs text-slate-400 bg-slate-900/60 p-2 rounded border border-slate-800">
+                            💡 <span class="text-slate-300">為什麼要倒序？</span> 因為直式加法從個位 (最低位) 開始計算。倒序存入後，個位對齊在索引 0，若進位向高位擴展時只需 <code class="text-indigo-300">push_back()</code>，不需移動整個數組！
+                        </div>
+                    </div>
+
+                    <!-- Step 2 Card -->
+                    <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-slate-700 transition">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg mb-4">
+                            2
+                        </div>
+                        <h4 class="text-lg font-bold text-white mb-2">逐位加法與進位處理</h4>
+                        <p class="text-slate-400 text-sm leading-relaxed mb-4">
+                            模擬小學筆算直式加法，從索引 <code class="text-emerald-300">i = 0</code> 開始相加，維持一個進位變數 <code class="text-emerald-300">carry</code>。
+                        </p>
+                        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-xs space-y-1 text-slate-300">
+                            <p class="text-emerald-400">sum = A[i] + B[i] + carry;</p>
+                            <p>result[i] = sum % 10; <span class="text-slate-500">// 當前位數字</span></p>
+                            <p>carry = sum / 10; <span class="text-slate-500">// 傳給下一位的進位</span></p>
+                        </div>
+                        <div class="mt-3 text-xs text-slate-400 bg-slate-900/60 p-2 rounded border border-slate-800">
+                            ⚙️ <span class="text-slate-300">邊界處理：</span> 若 $A$ 或 $B$ 的長度較短，超越範圍的位數補 <code class="text-emerald-300">0</code> 參與計算即可。
+                        </div>
+                    </div>
+
+                    <!-- Step 3 Card -->
+                    <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-slate-700 transition">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-lg mb-4">
+                            3
+                        </div>
+                        <h4 class="text-lg font-bold text-white mb-2">最高位進位與清除前導零</h4>
+                        <p class="text-slate-400 text-sm leading-relaxed mb-4">
+                            循環結束後，若 <code class="text-amber-300">carry &gt; 0</code>，需額外將進位放入最高位。最後清除多餘前導零並逆序輸出。
+                        </p>
+                        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-xs space-y-1">
+                            <p class="text-amber-400">if (carry &gt; 0) C.push_back(carry);</p>
+                            <p class="text-slate-400">// 去除多餘前導零 (避免 000 結果)</p>
+                            <p class="text-slate-400">while(C.size() &gt; 1 &amp;&amp; C.back() == 0)</p>
+                            <p class="text-slate-400">&nbsp;&nbsp;&nbsp;&nbsp;C.pop_back();</p>
+                        </div>
+                        <div class="mt-3 text-xs text-slate-400 bg-slate-900/60 p-2 rounded border border-slate-800">
+                            🔄 <span class="text-slate-300">轉回字串：</span> 將答案 Vector <code class="text-amber-300">C</code> 再次**反轉**回來，即可拼出最終漂亮的加法結果！
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: 動態模擬器 (SIMULATOR) ================= -->
+        <section id="tab-simulator" class="tab-content hidden space-y-6">
+            <!-- Top Controls Panel -->
+            <div class="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-indigo-400"></i> 設定自訂數字 A 與 B
+                    </h3>
+                    
+                    <!-- Presets buttons -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs text-slate-400">快速範例：</span>
+                        <button onclick="loadPreset('99999', '1')" class="px-2.5 py-1 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+                            99999 + 1 (連續進位)
+                        </button>
+                        <button onclick="loadPreset('9876543210987654321', '1234567890123456789')" class="px-2.5 py-1 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+                            19位超大整數
+                        </button>
+                        <button onclick="loadPreset('999', '88')" class="px-2.5 py-1 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+                            長度不等 (999 + 88)
+                        </button>
+                        <button onclick="loadPreset('00', '0')" class="px-2.5 py-1 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+                            前導零特例 (00 + 0)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Input fields -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">被加數 A (加數 1)</label>
+                        <div class="relative">
+                            <input type="text" id="input-num-a" value="99999" oninput="onInputsChanged()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-indigo-300 font-mono text-base tracking-wider focus:outline-none focus:border-indigo-500 transition">
+                            <span id="len-badge-a" class="absolute right-3 top-2.5 text-xs text-slate-500 font-mono">5位</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">加數 B (加數 2)</label>
+                        <div class="relative">
+                            <input type="text" id="input-num-b" value="1" oninput="onInputsChanged()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-emerald-300 font-mono text-base tracking-wider focus:outline-none focus:border-emerald-500 transition">
+                            <span id="len-badge-b" class="absolute right-3 top-2.5 text-xs text-slate-500 font-mono">1位</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Playback Controls Bar -->
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <button onclick="firstStep()" title="第一步" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+                            <i class="fa-solid fa-backward-step"></i>
+                        </button>
+                        <button onclick="prevStep()" title="上一步" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+                            <i class="fa-solid fa-caret-left text-lg"></i>
+                        </button>
+                        <button id="btn-play-pause" onclick="togglePlay()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition flex items-center gap-2 shadow-lg shadow-indigo-600/30">
+                            <i id="play-icon" class="fa-solid fa-play"></i> <span id="play-text">開始播放</span>
+                        </button>
+                        <button onclick="nextStep()" title="下一步" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+                            <i class="fa-solid fa-caret-right text-lg"></i>
+                        </button>
+                        <button onclick="lastStep()" title="最後一步" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+                            <i class="fa-solid fa-forward-step"></i>
+                        </button>
+                        <button onclick="resetSimulator()" title="重置" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-400 transition ml-2">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-4 w-full sm:w-auto">
+                        <div class="flex items-center gap-2 text-xs text-slate-400">
+                            <i class="fa-solid fa-gauge-high"></i>
+                            <span>速度：</span>
+                            <select id="speed-select" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 font-mono">
+                                <option value="1500">慢 (1.5s)</option>
+                                <option value="800" selected>正常 (0.8s)</option>
+                                <option value="300">快 (0.3s)</option>
+                            </select>
+                        </div>
+                        <div class="text-xs text-slate-400 font-mono">
+                            步驟：<span id="step-counter" class="text-indigo-400 font-bold">0</span> / <span id="step-total">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step Progress Bar -->
+                <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                    <div id="sim-progress-bar" class="bg-gradient-to-r from-indigo-500 to-emerald-400 h-full w-0 transition-all duration-300"></div>
+                </div>
+            </div>
+
+            <!-- Main Interactive Display Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                <!-- Left Panel: Vertical Column Arithmetic View (直式計算對照) -->
+                <div class="lg:col-span-5 glass-panel rounded-2xl p-6 border border-slate-800 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-base font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-solid fa-align-right text-indigo-400"></i> 直式筆算同步對照
+                            </h4>
+                            <span class="text-xs px-2 py-1 rounded bg-slate-800 text-slate-400">傳統筆算視覺化</span>
+                        </div>
+
+                        <!-- Vertical Addition Box -->
+                        <div class="bg-slate-950 rounded-xl p-6 border border-slate-800 flex flex-col items-center justify-center min-h-[220px]">
+                            <div id="vertical-math-container" class="font-mono text-xl sm:text-2xl tracking-widest text-right space-y-1 overflow-x-auto max-w-full p-2">
+                                <!-- Dynamically generated vertical math alignment -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formula breakdown tag -->
+                    <div id="digit-formula-box" class="mt-4 p-3.5 bg-indigo-950/40 border border-indigo-500/20 rounded-xl font-mono text-xs text-indigo-300 space-y-1">
+                        <div>當前算式：等待模擬開始...</div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Dynamic Explanations & Vector Memory State -->
+                <div class="lg:col-span-7 space-y-6">
+                    
+                    <!-- Dynamic Step Explanation Bubble -->
+                    <div class="glass-panel rounded-2xl p-6 border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-850">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span id="step-badge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                準備就緒
+                            </span>
+                            <h4 id="step-title" class="text-base font-bold text-white">點擊「開始播放」或「下一步」觀察過程</h4>
+                        </div>
+                        <p id="step-desc" class="text-slate-300 text-sm leading-relaxed min-h-[48px]">
+                            系統將把數字 $A$ 與 $B$ 轉為字串並倒序存入記憶體 Vector 中，模擬 CPU 逐位處理加法與進位的整個過程。
+                        </p>
+                    </div>
+
+                    <!-- Array/Vector Memory Visualization -->
+                    <div class="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4">
+                        <h4 class="text-base font-bold text-slate-200 flex items-center justify-between">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-memory text-emerald-400"></i> 記憶體內部 Array / Vector 狀態</span>
+                            <span class="text-xs text-slate-400 font-mono">索引 0 = 個位</span>
+                        </h4>
+
+                        <!-- Vector Tables Container -->
+                        <div class="space-y-3 font-mono text-sm overflow-x-auto pb-2">
+                            <!-- Array A -->
+                            <div class="flex items-center gap-3 min-w-[360px]">
+                                <span class="w-20 text-xs font-bold text-indigo-400 text-right">Vector A:</span>
+                                <div id="vec-a-container" class="flex gap-1.5">
+                                    <!-- Dynamic elements -->
+                                </div>
+                            </div>
+
+                            <!-- Array B -->
+                            <div class="flex items-center gap-3 min-w-[360px]">
+                                <span class="w-20 text-xs font-bold text-emerald-400 text-right">Vector B:</span>
+                                <div id="vec-b-container" class="flex gap-1.5">
+                                    <!-- Dynamic elements -->
+                                </div>
+                            </div>
+
+                            <!-- Carry state -->
+                            <div class="flex items-center gap-3 min-w-[360px] pt-1 border-t border-slate-800/80">
+                                <span class="w-20 text-xs font-bold text-amber-400 text-right">Carry (進位):</span>
+                                <div id="vec-carry-container" class="flex gap-1.5">
+                                    <!-- Dynamic elements -->
+                                </div>
+                            </div>
+
+                            <!-- Result Vector C -->
+                            <div class="flex items-center gap-3 min-w-[360px] pt-1 border-t border-slate-800">
+                                <span class="w-20 text-xs font-bold text-cyan-400 text-right">Vector C:</span>
+                                <div id="vec-c-container" class="flex gap-1.5">
+                                    <!-- Dynamic elements -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Result output string -->
+                        <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
+                            <span class="text-xs text-slate-400 font-sans">當前轉回字串結果：</span>
+                            <span id="current-result-str" class="text-lg font-mono font-bold text-emerald-400 tracking-wider">
+                                -
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: C++98 代碼 (CODE) ================= -->
+        <section id="tab-code" class="tab-content hidden space-y-6">
+            <div class="glass-panel rounded-2xl p-6 sm:p-8 border border-slate-800 space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <i class="fa-solid fa-shield-halved"></i> 嚴格 C++98 標準相容
+                        </span>
+                        <h2 class="text-2xl font-bold text-white mt-2">C++98 完整高精度加法實作代碼</h2>
+                        <p class="text-slate-400 text-sm mt-1">點擊下方代碼中的高亮區塊，可查看詳細語法解析與歷史設計考量。</p>
+                    </div>
+
+                    <button onclick="copyCode()" class="self-start sm:self-auto px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition flex items-center gap-2 shadow-lg shadow-indigo-600/20">
+                        <i class="fa-regular fa-copy"></i> 一鍵複製完整代碼
+                    </button>
+                </div>
+
+                <!-- Code Container with interactive highlighting -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Code block -->
+                    <div class="lg:col-span-8 bg-slate-950 rounded-xl border border-slate-800 p-4 font-mono text-xs sm:text-sm overflow-x-auto leading-relaxed">
+<pre class="text-slate-300"><code><span class="text-slate-500">// 高精度加法 C++98 標準實作</span>
+<span class="text-indigo-400">#include</span> <span class="text-amber-300">&lt;iostream&gt;</span>
+<span class="text-indigo-400">#include</span> <span class="text-amber-300">&lt;string&gt;</span>
+<span class="text-indigo-400">#include</span> <span class="text-amber-300">&lt;vector&gt;</span>
+<span class="text-indigo-400">#include</span> <span class="text-amber-300">&lt;algorithm&gt;</span>
+
+<span class="text-slate-500">// 核心高精度加法函數</span>
+<span class="text-emerald-400">std::string</span> addBigInt(<span class="text-indigo-300">const</span> <span class="text-emerald-400">std::string</span>&amp; a, <span class="text-indigo-300">const</span> <span class="text-emerald-400">std::string</span>&amp; b) {
+    <span class="text-emerald-400">std::vector</span>&lt;<span class="text-indigo-300">int</span>&gt; A, B;
+
+<div id="code-sec-1" onclick="highlightCodeSec(1)" class="p-2 my-1 rounded hover:bg-slate-900 cursor-pointer transition border border-transparent hover:border-indigo-500/40">    <span class="text-slate-500">// 1. 倒序存入 Vector (將字元 '0'-'9' 轉為整數 0-9)</span>
+    <span class="text-indigo-300">for</span> (<span class="text-indigo-300">int</span> i = (<span class="text-indigo-300">int</span>)a.length() - <span class="text-amber-300">1</span>; i &gt;= <span class="text-amber-300">0</span>; --i) {
+        A.push_back(a[i] - <span class="text-amber-300">'0'</span>);
+    }
+    <span class="text-indigo-300">for</span> (<span class="text-indigo-300">int</span> i = (<span class="text-indigo-300">int</span>)b.length() - <span class="text-amber-300">1</span>; i &gt;= <span class="text-amber-300">0</span>; --i) {
+        B.push_back(b[i] - <span class="text-amber-300">'0'</span>);
+    }</div>
+<div id="code-sec-2" onclick="highlightCodeSec(2)" class="p-2 my-1 rounded hover:bg-slate-900 cursor-pointer transition border border-transparent hover:border-indigo-500/40">    <span class="text-emerald-400">std::vector</span>&lt;<span class="text-indigo-300">int</span>&gt; C;
+    <span class="text-indigo-300">int</span> carry = <span class="text-amber-300">0</span>;
+    <span class="text-emerald-400">size_t</span> max_len = A.size() &gt; B.size() ? A.size() : B.size();
+
+    <span class="text-slate-500">// 2. 逐位相加</span>
+    <span class="text-indigo-300">for</span> (<span class="text-emerald-400">size_t</span> i = <span class="text-amber-300">0</span>; i &lt; max_len; ++i) {
+        <span class="text-indigo-300">int</span> sum = carry;
+        <span class="text-indigo-300">if</span> (i &lt; A.size()) sum += A[i];
+        <span class="text-indigo-300">if</span> (i &lt; B.size()) sum += B[i];
+
+        C.push_back(sum % <span class="text-amber-300">10</span>);
+        carry = sum / <span class="text-amber-300">10</span>;
+    }</div>
+<div id="code-sec-3" onclick="highlightCodeSec(3)" class="p-2 my-1 rounded hover:bg-slate-900 cursor-pointer transition border border-transparent hover:border-indigo-500/40">    <span class="text-slate-500">// 3. 處理最高位進位</span>
+    <span class="text-indigo-300">if</span> (carry &gt; <span class="text-amber-300">0</span>) {
+        C.push_back(carry);
+    }</div>
+<div id="code-sec-4" onclick="highlightCodeSec(4)" class="p-2 my-1 rounded hover:bg-slate-900 cursor-pointer transition border border-transparent hover:border-indigo-500/40">    <span class="text-slate-500">// 4. 清除前導零 (保留至少 1 個位數以應對 "0"+"0")</span>
+    <span class="text-indigo-300">while</span> (C.size() &gt; <span class="text-amber-300">1</span> &amp;&amp; C.back() == <span class="text-amber-300">0</span>) {
+        C.pop_back();
+    }</div>
+<div id="code-sec-5" onclick="highlightCodeSec(5)" class="p-2 my-1 rounded hover:bg-slate-900 cursor-pointer transition border border-transparent hover:border-indigo-500/40">    <span class="text-slate-500">// 5. 倒序轉回 std::string 輸出</span>
+    <span class="text-emerald-400">std::string</span> result = <span class="text-amber-300">""</span>;
+    <span class="text-indigo-300">for</span> (<span class="text-indigo-300">int</span> i = (<span class="text-indigo-300">int</span>)C.size() - <span class="text-amber-300">1</span>; i &gt;= <span class="text-amber-300">0</span>; --i) {
+        result.push_back((<span class="text-indigo-300">char</span>)(C[i] + <span class="text-amber-300">'0'</span>));
+    }
+    <span class="text-indigo-300">return</span> result;
+}</div>
+<span class="text-indigo-300">int</span> main() {
+    <span class="text-emerald-400">std::string</span> num1 = <span class="text-amber-300">"9876543210987654321"</span>;
+    <span class="text-emerald-400">std::string</span> num2 = <span class="text-amber-300">"1234567890123456789"</span>;
+    <span class="text-emerald-400">std::cout</span> &lt;&lt; num1 &lt;&lt; <span class="text-amber-300">" + "</span> &lt;&lt; num2 &lt;&lt; <span class="text-amber-300">" = "</span> 
+              &lt;&lt; addBigInt(num1, num2) &lt;&lt; <span class="text-emerald-400">std::endl</span>;
+    <span class="text-indigo-300">return</span> <span class="text-amber-300">0</span>;
+}</code></pre>
+                    </div>
+
+                    <!-- Right explanation side card -->
+                    <div class="lg:col-span-4 space-y-4">
+                        <div id="code-explanation-card" class="glass-panel p-5 rounded-xl border border-indigo-500/30 bg-slate-900/90">
+                            <h4 id="code-expl-title" class="text-base font-bold text-indigo-300 mb-2">
+                                💡 點擊左側代碼區塊
+                            </h4>
+                            <p id="code-expl-body" class="text-slate-300 text-sm leading-relaxed">
+                                點擊程式碼中亮起的區塊，即可在此處了解該段代碼在 C++98 中的具體邏輯、記憶體結構與特性說明。
+                            </p>
+                        </div>
+
+                        <div class="glass-panel p-5 rounded-xl border border-slate-800 space-y-3">
+                            <h4 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-solid fa-code-compare text-amber-400"></i> C++98 vs C++11+ 語法差異
+                            </h4>
+                            <ul class="text-xs text-slate-400 space-y-2 leading-relaxed">
+                                <li class="flex items-start gap-1.5">
+                                    <span class="text-rose-400 font-bold">×</span>
+                                    <span>無 <code class="text-slate-200">auto</code> 關鍵字：必須明確宣告 <code class="text-slate-200">size_t</code> 或 <code class="text-slate-200">int</code>。</span>
+                                </li>
+                                <li class="flex items-start gap-1.5">
+                                    <span class="text-rose-400 font-bold">×</span>
+                                    <span>無 <code class="text-slate-200">range-based for</code> (如 <code class="text-slate-200">for(char c: s)</code>)：需使用傳統索引循環。</span>
+                                </li>
+                                <li class="flex items-start gap-1.5">
+                                    <span class="text-rose-400 font-bold">×</span>
+                                    <span>無 <code class="text-slate-200">std::to_string()</code>：字元轉數字使用經典 ASCII 偏移 <code class="text-slate-200">c - '0'</code>。</span>
+                                </li>
+                                <li class="flex items-start gap-1.5">
+                                    <span class="text-emerald-400 font-bold">✓</span>
+                                    <span>使用 <code class="text-slate-200">std::vector::push_back()</code> 與 <code class="text-slate-200">pop_back()</code> 保證 C++98 完全相容。</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 4: 陷阱與細節 (PITFALLS) ================= -->
+        <section id="tab-pitfalls" class="tab-content hidden space-y-6">
+            <div class="space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">高精度加法常見陷阱與邊界極限</h2>
+                    <p class="text-slate-400 text-sm mt-1">在競賽或面試中，高精度演算法最容易出錯的細節彙整。</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Pitfall 1 -->
+                    <div class="glass-panel p-6 rounded-2xl border border-rose-500/20 bg-rose-950/10 hover:border-rose-500/40 transition">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold">
+                                1
+                            </div>
+                            <h3 class="text-lg font-bold text-white">最高位進位漏處理 (Final Carry Expansion)</h3>
+                        </div>
+                        <p class="text-slate-300 text-sm leading-relaxed mb-3">
+                            例如計算 <code class="text-amber-300">999 + 1 = 1000</code>。當主循環 <code class="text-indigo-300">for</code> 結束時，長度為 3 的循環處理完畢，但進位 <code class="text-emerald-400">carry = 1</code> 依然存在。
+                        </p>
+                        <div class="bg-slate-950 p-3 rounded-lg font-mono text-xs text-rose-300 border border-slate-800">
+                            ❌ 忘記處理：輸出 "000"<br>
+                            ✅ 正確做法：if (carry &gt; 0) C.push_back(carry);
+                        </div>
+                    </div>
+
+                    <!-- Pitfall 2 -->
+                    <div class="glass-panel p-6 rounded-2xl border border-amber-500/20 bg-amber-950/10 hover:border-amber-500/40 transition">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+                                2
+                            </div>
+                            <h3 class="text-lg font-bold text-white">字串與數字 ASCII 偏移量忘記轉換</h3>
+                        </div>
+                        <p class="text-slate-300 text-sm leading-relaxed mb-3">
+                            字元 <code class="text-amber-300">'0'</code> 的 ASCII 碼是 48，<code class="text-amber-300">'5'</code> 是 53。若直接將 <code class="text-amber-300">s[i]</code> 存入數組，存入的是 53 而非整數 5。
+                        </p>
+                        <div class="bg-slate-950 p-3 rounded-lg font-mono text-xs text-amber-300 border border-slate-800">
+                            ❌ 錯誤：A.push_back(s[i]);<br>
+                            ✅ 正確：A.push_back(s[i] - '0');
+                        </div>
+                    </div>
+
+                    <!-- Pitfall 3 -->
+                    <div class="glass-panel p-6 rounded-2xl border border-indigo-500/20 bg-indigo-950/10 hover:border-indigo-500/40 transition">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
+                                3
+                            </div>
+                            <h3 class="text-lg font-bold text-white">長度不相等時的陣列越界 (Out of Bounds)</h3>
+                        </div>
+                        <p class="text-slate-300 text-sm leading-relaxed mb-3">
+                            當相加數字長度不一時（如 100 位數 + 2 位數），長度較短的 Vector 索引會超過範圍。
+                        </p>
+                        <div class="bg-slate-950 p-3 rounded-lg font-mono text-xs text-indigo-300 border border-slate-800">
+                            ✅ 邊界安全寫法：<br>
+                            if (i &lt; A.size()) sum += A[i];<br>
+                            if (i &lt; B.size()) sum += B[i];
+                        </div>
+                    </div>
+
+                    <!-- Pitfall 4 -->
+                    <div class="glass-panel p-6 rounded-2xl border border-emerald-500/20 bg-emerald-950/10 hover:border-emerald-500/40 transition">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                                4
+                            </div>
+                            <h3 class="text-lg font-bold text-white">過度清除前導零導致 "0" + "0" 輸出空字串</h3>
+                        </div>
+                        <p class="text-slate-300 text-sm leading-relaxed mb-3">
+                            若輸入為 <code class="text-amber-300">"00" + "0"</code>，結果數組會是 <code class="text-indigo-300">[0, 0]</code>。若清除前導零時寫成 <code class="text-rose-400">while(!C.empty() &amp;&amp; C.back()==0) C.pop_back();</code>，會把所有 0 全部清空，導致輸出空字串。
+                        </p>
+                        <div class="bg-slate-950 p-3 rounded-lg font-mono text-xs text-emerald-300 border border-slate-800">
+                            ✅ 正確做法：保留至少 1 個位數<br>
+                            while (C.size() &gt; 1 &amp;&amp; C.back() == 0) C.pop_back();
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Complexity Summary Card -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div class="space-y-1">
+                        <h4 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-indigo-400"></i> 時間與空間複雜度分析
+                        </h4>
+                        <p class="text-xs text-slate-400">設 $N = \max(|A|, |B|)$ 為較長數字之位數。</p>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="text-center px-4 py-2 bg-slate-950 rounded-xl border border-slate-800">
+                            <p class="text-xs text-slate-400">時間複雜度</p>
+                            <p class="text-lg font-mono font-bold text-emerald-400">O(N)</p>
+                        </div>
+                        <div class="text-center px-4 py-2 bg-slate-950 rounded-xl border border-slate-800">
+                            <p class="text-xs text-slate-400">空間複雜度</p>
+                            <p class="text-lg font-mono font-bold text-indigo-400">O(N)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 5: 隨堂測驗 (QUIZ) ================= -->
+        <section id="tab-quiz" class="tab-content hidden space-y-6">
+            <div class="glass-panel rounded-2xl p-6 sm:p-8 border border-slate-800 space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            <i class="fa-solid fa-graduation-cap"></i> 概念即時測驗
+                        </span>
+                        <h2 class="text-2xl font-bold text-white mt-2">高精度加法隨堂互動測驗</h2>
+                        <p class="text-slate-400 text-sm mt-1">測試你對高精度加法邏輯與 C++98 實作細節的理解程度。</p>
+                    </div>
+
+                    <div class="flex items-center gap-4 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800">
+                        <span class="text-xs text-slate-400">目前得分：</span>
+                        <span id="quiz-score" class="text-xl font-mono font-bold text-amber-400">0 / 5</span>
+                    </div>
+                </div>
+
+                <!-- Quiz Questions List -->
+                <div id="quiz-container" class="space-y-6">
+                    <!-- Dynamically generated quiz questions -->
+                </div>
+
+                <div class="pt-4 border-t border-slate-800 flex justify-end">
+                    <button onclick="resetQuiz()" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition flex items-center gap-2">
+                        <i class="fa-solid fa-rotate-left"></i> 重新作答
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 bg-slate-950 py-6 text-center text-xs text-slate-500">
+        <p>高精度加法 (BigInt Addition) 演算法與 C++98 實作互動課件</p>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Global State Variables
+        let currentTab = 'concept';
+        let numA = "99999";
+        let numB = "1";
+        let simulationSteps = [];
+        let currentStepIdx = 0;
+        let isPlaying = false;
+        let playInterval = null;
+
+        // Quiz Questions Data
+        const quizData = [
+            {
+                id: 1,
+                question: "1. 為什麼高精度加法通常將數字字串「倒序 (Reverse)」存入 Vector 或數組中？",
+                options: [
+                    "為了節省電腦記憶體空間",
+                    "因為直式加法從個位 (最低位) 開始算，倒序後個位對齊在索引 0，方便進位向高位擴展",
+                    "因為 C++98 的 vector 只能倒序讀取",
+                    "這樣可以直接使用 std::sort 進行排序"
+                ],
+                answer: 1,
+                explanation: "直式加法是由右至左（從個位到高位）計算。將字串倒序後，個位對齊在索引 0；若相加後產生最高位進位，只需直接在末尾 push_back() 即可，不需搬移整個數組。"
+            },
+            {
+                id: 2,
+                question: "2. 在 C++98 中，若字元變數 char c = '7'，如何正確將其轉為整數 int 7？",
+                options: [
+                    "(int)c",
+                    "std::to_string(c)",
+                    "c - '0'",
+                    "c - 48.0"
+                ],
+                answer: 2,
+                explanation: "在 ASCII 碼中，字元 '0' 到 '9' 是連續排列的。因此字元 '7' 的 ASCII 碼減去 '0' 的 ASCII 碼（55 - 48），即精確得到整數 7。"
+            },
+            {
+                id: 3,
+                question: "3. 執行 999 + 1 時，當主循環 for 結束後，陣列計算完畢，為什麼答案依然會是 1000？",
+                options: [
+                    "因為 vector 自動增加了 1000",
+                    "因為循環結束後，依然存在進位 carry = 1，需額外執行 if(carry > 0) C.push_back(carry);",
+                    "因為前導零處理會自動補 1",
+                    "因為 C++98 會自動處理最高位"
+                ],
+                answer: 1,
+                explanation: "999 與 1 在長度為 3 的循環處理完後，結果陣列為 [0, 0, 0]，此時 carry 依然為 1。必須在循環外部將 carry 壓入陣列末尾，否則會漏掉最高位的 1。"
+            },
+            {
+                id: 4,
+                question: "4. 若輸入兩個數字為 \"000\" 與 \"0\"，前導零清除邏輯撰寫為 while(C.size() > 1 && C.back() == 0) C.pop_back(); 的目的是什麼？",
+                options: [
+                    "防止清除掉最後一個零，確保輸出為 \"0\" 而非空字串",
+                    "讓速度加快",
+                    "防止數組越界溢位",
+                    "將所有 0 轉為 1"
+                ],
+                answer: 0,
+                explanation: "如果將條件寫成 while(!C.empty() && C.back() == 0)，會把所有的 0 彈出，導致最終輸出為空字串。保留 C.size() > 1 確保至少留下一個 0。"
+            },
+            {
+                id: 5,
+                question: "5. 假設數字 A 與 B 的最大長度為 N，高精度加法演算法的時間複雜度與空間複雜度分別是多少？",
+                options: [
+                    "時間 O(N²), 空間 O(1)",
+                    "時間 O(N), 空間 O(N)",
+                    "時間 O(log N), 空間 O(N)",
+                    "時間 O(N), 空間 O(1)"
+                ],
+                answer: 1,
+                explanation: "演算法只需對長度為 N 的數組進行單次循環逐位相加，因此時間複雜度為 O(N)；同時需要長度為 N (+1) 的 vector 儲存答案，空間複雜度亦為 O(N)。"
+            }
+        ];
+
+        let quizUserAnswers = {};
+
+        // Page Initialization
+        window.onload = function() {
+            onInputsChanged();
+            renderQuiz();
+        };
+
+        // Navigation Tab Switcher
+        function switchTab(tabId) {
+            currentTab = tabId;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('text-indigo-400', 'bg-slate-800', 'shadow');
+                btn.classList.add('text-slate-400');
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-400');
+                activeBtn.classList.add('text-indigo-400', 'bg-slate-800', 'shadow');
+            }
+
+            // Close mobile menu if open
+            document.getElementById('mobile-menu').classList.add('hidden');
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Simulator Input Logic
+        function onInputsChanged() {
+            let a = document.getElementById('input-num-a').value.trim().replace(/[^0-9]/g, '');
+            let b = document.getElementById('input-num-b').value.trim().replace(/[^0-9]/g, '');
+
+            if (a === "") a = "0";
+            if (b === "") b = "0";
+
+            numA = a;
+            numB = b;
+
+            document.getElementById('len-badge-a').innerText = `${numA.length}位`;
+            document.getElementById('len-badge-b').innerText = `${numB.length}位`;
+
+            generateSimulationSteps();
+            currentStepIdx = 0;
+            updateSimulatorUI();
+        }
+
+        function loadPreset(a, b) {
+            document.getElementById('input-num-a').value = a;
+            document.getElementById('input-num-b').value = b;
+            onInputsChanged();
+        }
+
+        // Generate Step-by-Step Execution Sequence
+        function generateSimulationSteps() {
+            simulationSteps = [];
+
+            // Step 0: Initialization
+            const vecA = numA.split('').reverse().map(Number);
+            const vecB = numB.split('').reverse().map(Number);
+
+            simulationSteps.push({
+                type: 'INIT',
+                title: '步驟 0：初始化與倒序存入 Vector',
+                desc: `將被加數 A ("${numA}") 與加數 B ("${numB}") 轉為數字陣列並倒序存入記憶體中。索引 0 對齊個位。`,
+                i: -1,
+                vecA: [...vecA],
+                vecB: [...vecB],
+                carry: 0,
+                vecC: [],
+                sum: 0,
+                formula: '準備開始計算...'
+            });
+
+            const maxLen = Math.max(vecA.length, vecB.length);
+            let carry = 0;
+            let vecC = [];
+
+            for (let i = 0; i < maxLen; i++) {
+                const digitA = i < vecA.length ? vecA[i] : 0;
+                const digitB = i < vecB.length ? vecB[i] : 0;
+                const sum = digitA + digitB + carry;
+                const newDigit = sum % 10;
+                const nextCarry = Math.floor(sum / 10);
+
+                const positionName = getDigitPositionName(i);
+
+                simulationSteps.push({
+                    type: 'CALC',
+                    title: `步驟 ${i + 1}：計算索引 i = ${i} (${positionName})`,
+                    desc: `計算 A[${i}] (${digitA}) + B[${i}] (${digitB}) + 進位 (${carry}) = sum (${sum})。當前位留 ${newDigit} (sum % 10)，產生新進位 ${nextCarry} (sum / 10)。`,
+                    i: i,
+                    digitA: digitA,
+                    digitB: digitB,
+                    prevCarry: carry,
+                    sum: sum,
+                    newDigit: newDigit,
+                    nextCarry: nextCarry,
+                    vecA: [...vecA],
+                    vecB: [...vecB],
+                    carry: carry,
+                    vecC: [...vecC],
+                    formula: `A[${i}](${digitA}) + B[${i}](${digitB}) + carry(${carry}) = ${sum} ➔ 位數: ${newDigit}, 新進位: ${nextCarry}`
+                });
+
+                vecC.push(newDigit);
+                carry = nextCarry;
+            }
+
+            // Handle Final Carry
+            if (carry > 0) {
+                simulationSteps.push({
+                    type: 'FINAL_CARRY',
+                    title: `步驟 ${simulationSteps.length}：處理最高位最後進位`,
+                    desc: `主循環結束後，進位 carry = ${carry} > 0，將最後進位推入 Vector C 最高位。`,
+                    i: maxLen,
+                    vecA: [...vecA],
+                    vecB: [...vecB],
+                    carry: carry,
+                    vecC: [...vecC],
+                    sum: carry,
+                    formula: `Final Carry: C.push_back(${carry})`
+                });
+                vecC.push(carry);
+            }
+
+            // Trim leading zeros
+            let trimmedVec = [...vecC];
+            let zeroTrimmedCount = 0;
+            while (trimmedVec.length > 1 && trimmedVec[trimmedVec.length - 1] === 0) {
+                trimmedVec.pop();
+                zeroTrimmedCount++;
+            }
+
+            if (zeroTrimmedCount > 0) {
+                simulationSteps.push({
+                    type: 'TRIM_ZERO',
+                    title: `步驟 ${simulationSteps.length}：清除多餘前導零`,
+                    desc: `檢測到最高位存在多餘前導零，彈出 ${zeroTrimmedCount} 個零，保留長度為 ${trimmedVec.length}。`,
+                    i: -1,
+                    vecA: [...vecA],
+                    vecB: [...vecB],
+                    carry: 0,
+                    vecC: [...trimmedVec],
+                    formula: `while(C.size() > 1 && C.back() == 0) C.pop_back()`
+                });
+            }
+
+            // Final Result Step
+            const finalStr = [...trimmedVec].reverse().join('');
+            simulationSteps.push({
+                type: 'COMPLETE',
+                title: '計算完成：反轉 Vector C 轉回字串',
+                desc: `將 Vector C [${trimmedVec.join(', ')}] 反轉，得到最終高精度加法結果："${finalStr}"。`,
+                i: -1,
+                vecA: [...vecA],
+                vecB: [...vecB],
+                carry: 0,
+                vecC: [...trimmedVec],
+                finalStr: finalStr,
+                formula: `Ans: "${finalStr}"`
+            });
+        }
+
+        function getDigitPositionName(idx) {
+            const names = ['個位', '十位', '百位', '千位', '萬位', '十萬位', '百萬位', '千萬位', '億位'];
+            return idx < names.length ? names[idx] : `10^${idx}位`;
+        }
+
+        // Update Simulator Visual State
+        function updateSimulatorUI() {
+            if (simulationSteps.length === 0) return;
+
+            const step = simulationSteps[currentStepIdx];
+
+            // Progress text
+            document.getElementById('step-counter').innerText = currentStepIdx;
+            document.getElementById('step-total').innerText = simulationSteps.length - 1;
+            
+            const pct = (currentStepIdx / (simulationSteps.length - 1)) * 100;
+            document.getElementById('sim-progress-bar').style.width = `${pct}%`;
+
+            // Text Info
+            document.getElementById('step-title').innerText = step.title;
+            document.getElementById('step-desc').innerText = step.desc;
+            document.getElementById('digit-formula-box').innerText = step.formula;
+
+            // Render Vertical Math View
+            renderVerticalMath(step);
+
+            // Render Vector Memory View
+            renderVectorMemory(step);
+
+            // Current result string preview
+            if (step.finalStr) {
+                document.getElementById('current-result-str').innerText = step.finalStr;
+            } else if (step.vecC && step.vecC.length > 0) {
+                document.getElementById('current-result-str').innerText = [...step.vecC].reverse().join('');
+            } else {
+                document.getElementById('current-result-str').innerText = "0";
+            }
+        }
+
+        function renderVerticalMath(step) {
+            const container = document.getElementById('vertical-math-container');
+            const maxLen = Math.max(numA.length, numB.length) + 1;
+
+            const padA = numA.padStart(maxLen, ' ');
+            const padB = numB.padStart(maxLen, ' ');
+
+            // Calculate active index from right (0-indexed from right)
+            const activeRightIdx = step.i;
+
+            let html = '';
+
+            // Carry row
+            html += `<div class="text-amber-400 text-sm h-6 flex justify-end tracking-widest">`;
+            for (let k = maxLen - 1; k >= 0; k--) {
+                const carryVal = (step.type === 'CALC' && k === activeRightIdx + 1) ? step.nextCarry : ' ';
+                const isActive = (step.type === 'CALC' && k === activeRightIdx);
+                html += `<span class="w-6 text-center ${isActive ? 'text-amber-300 font-bold' : ''}">${carryVal || ' '}</span>`;
+            }
+            html += `</div>`;
+
+            // Row A
+            html += `<div class="flex justify-end border-b border-transparent">`;
+            for (let k = 0; k < maxLen; k++) {
+                const charIdxFromRight = maxLen - 1 - k;
+                const isActive = (step.type === 'CALC' && charIdxFromRight === activeRightIdx);
+                const char = padA[k] === ' ' ? '&nbsp;' : padA[k];
+                html += `<span class="w-6 text-center ${isActive ? 'bg-indigo-600 text-white rounded active-digit' : 'text-slate-200'}">${char}</span>`;
+            }
+            html += `</div>`;
+
+            // Row B
+            html += `<div class="flex justify-end border-b-2 border-slate-700 pb-1 relative">`;
+            html += `<span class="absolute left-0 text-slate-500">+</span>`;
+            for (let k = 0; k < maxLen; k++) {
+                const charIdxFromRight = maxLen - 1 - k;
+                const isActive = (step.type === 'CALC' && charIdxFromRight === activeRightIdx);
+                const char = padB[k] === ' ' ? '&nbsp;' : padB[k];
+                html += `<span class="w-6 text-center ${isActive ? 'bg-emerald-600 text-white rounded active-digit' : 'text-slate-200'}">${char}</span>`;
+            }
+            html += `</div>`;
+
+            // Result Row
+            const currentResultStr = (step.vecC && step.vecC.length > 0) ? [...step.vecC].reverse().join('') : '';
+            const padRes = currentResultStr.padStart(maxLen, ' ');
+
+            html += `<div class="flex justify-end pt-1">`;
+            for (let k = 0; k < maxLen; k++) {
+                const charIdxFromRight = maxLen - 1 - k;
+                const isActive = (step.type === 'CALC' && charIdxFromRight === activeRightIdx);
+                const char = padRes[k] === ' ' ? '&nbsp;' : padRes[k];
+                html += `<span class="w-6 text-center font-bold ${isActive ? 'text-cyan-400 scale-125' : 'text-emerald-400'}">${char}</span>`;
+            }
+            html += `</div>`;
+
+            container.innerHTML = html;
+        }
+
+        function renderVectorMemory(step) {
+            const vecAContainer = document.getElementById('vec-a-container');
+            const vecBContainer = document.getElementById('vec-b-container');
+            const vecCarryContainer = document.getElementById('vec-carry-container');
+            const vecCContainer = document.getElementById('vec-c-container');
+
+            const maxLen = Math.max(step.vecA.length, step.vecB.length);
+
+            // Helper to build array boxes
+            function buildCells(arr, activeIdx, colorClass, borderClass) {
+                let html = '';
+                for (let i = 0; i < arr.length; i++) {
+                    const isActive = (i === activeIdx);
+                    html += `
+                        <div class="flex flex-col items-center">
+                            <span class="text-[10px] text-slate-500 font-mono mb-0.5">[${i}]</span>
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold font-mono text-sm ${isActive ? colorClass + ' ring-2 ring-indigo-400 scale-110 shadow-lg' : 'bg-slate-900 text-slate-300 ' + borderClass}">
+                                ${arr[i]}
+                            </div>
+                        </div>
+                    `;
+                }
+                return html;
+            }
+
+            vecAContainer.innerHTML = buildCells(step.vecA, step.i, 'bg-indigo-600 text-white', 'border border-slate-800');
+            vecBContainer.innerHTML = buildCells(step.vecB, step.i, 'bg-emerald-600 text-white', 'border border-slate-800');
+
+            // Carry cell
+            const carryVal = step.type === 'CALC' ? step.prevCarry : (step.carry || 0);
+            vecCarryContainer.innerHTML = `
+                <div class="flex flex-col items-center">
+                    <span class="text-[10px] text-slate-500 font-mono mb-0.5">當前</span>
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold font-mono text-sm bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                        ${carryVal}
+                    </div>
+                </div>
+            `;
+
+            // Vector C
+            let htmlC = '';
+            for (let i = 0; i < step.vecC.length; i++) {
+                const isNewest = (step.type === 'CALC' && i === step.i) || (step.type === 'FINAL_CARRY' && i === step.vecC.length - 1);
+                htmlC += `
+                    <div class="flex flex-col items-center">
+                        <span class="text-[10px] text-slate-500 font-mono mb-0.5">[${i}]</span>
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold font-mono text-sm ${isNewest ? 'bg-cyan-500 text-slate-950 font-extrabold ring-2 ring-cyan-300 scale-110' : 'bg-slate-900 text-cyan-300 border border-slate-800'}">
+                            ${step.vecC[i]}
+                        </div>
+                    </div>
+                `;
+            }
+            vecCContainer.innerHTML = htmlC || '<span class="text-xs text-slate-600 self-center">[] (空)</span>';
+        }
+
+        // Playback Controls
+        function nextStep() {
+            if (currentStepIdx < simulationSteps.length - 1) {
+                currentStepIdx++;
+                updateSimulatorUI();
+            } else {
+                pausePlay();
+            }
+        }
+
+        function prevStep() {
+            if (currentStepIdx > 0) {
+                currentStepIdx--;
+                updateSimulatorUI();
+            }
+        }
+
+        function firstStep() {
+            currentStepIdx = 0;
+            updateSimulatorUI();
+        }
+
+        function lastStep() {
+            currentStepIdx = simulationSteps.length - 1;
+            updateSimulatorUI();
+        }
+
+        function resetSimulator() {
+            pausePlay();
+            onInputsChanged();
+        }
+
+        function togglePlay() {
+            if (isPlaying) {
+                pausePlay();
+            } else {
+                startPlay();
+            }
+        }
+
+        function startPlay() {
+            if (currentStepIdx >= simulationSteps.length - 1) {
+                currentStepIdx = 0;
+            }
+            isPlaying = true;
+            document.getElementById('play-text').innerText = "暫停播放";
+            document.getElementById('play-icon').className = "fa-solid fa-pause";
+
+            const speed = parseInt(document.getElementById('speed-select').value) || 800;
+            playInterval = setInterval(() => {
+                if (currentStepIdx < simulationSteps.length - 1) {
+                    nextStep();
+                } else {
+                    pausePlay();
+                }
+            }, speed);
+        }
+
+        function pausePlay() {
+            isPlaying = false;
+            document.getElementById('play-text').innerText = "開始播放";
+            document.getElementById('play-icon').className = "fa-solid fa-play";
+            if (playInterval) clearInterval(playInterval);
+        }
+
+        // Interactive Code Breakdown
+        const codeExplanations = {
+            1: {
+                title: "1. 倒序存入 Vector (ASCII 轉換)",
+                body: "從字串末尾 (a.length()-1) 向前循環讀取。將字元轉為整數使用經典 ASCII 算術 `a[i] - '0'`。由於 '0' 的 ASCII 碼為 48，'5' 為 53，兩者相減即可得到整數 5。倒序存入可確保 Vector 的 index 0 剛好是數字的個位。"
+            },
+            2: {
+                title: "2. 主循環逐位相加與進位",
+                body: "循環次數為兩個數字的最大位數 `max_len`。每次循環取 `A[i]` 與 `B[i]` (若超越範圍則為 0) 與前一位傳來的 `carry` 相加。`sum % 10` 得出當前位的保留數字，`sum / 10` 算出給下一位的進位。"
+            },
+            3: {
+                title: "3. 最高位進位處理",
+                body: "當兩數最高位相加後（例如 99 + 1），主循環結束但依然可能留下 `carry = 1`。必須手動將其 push_back() 放入 Vector 最高位，否則結果會少一位數。"
+            },
+            4: {
+                title: "4. 去除多餘前導零",
+                body: "應對特例如 \"00\" + \"0\"，計算結果 Vector 可能包含多個 0 (如 [0, 0])。使用 `while(C.size() > 1 && C.back() == 0)` 彈出末尾零，保留 `C.size() > 1` 可防止把單個合法數字 \"0\" 彈成空陣列。"
+            },
+            5: {
+                title: "5. 轉回 std::string 輸出",
+                body: "Vector C 中的結果是倒序儲存的（index 0 為個位）。最終從 `C.size()-1` 倒序將數字加上 `'0'` 轉回字元拼入字符串中返回。"
+            }
+        };
+
+        function highlightCodeSec(secId) {
+            for (let i = 1; i <= 5; i++) {
+                const el = document.getElementById(`code-sec-${i}`);
+                if (el) el.classList.remove('code-highlight');
+            }
+            const activeEl = document.getElementById(`code-sec-${secId}`);
+            if (activeEl) activeEl.classList.add('code-highlight');
+
+            const info = codeExplanations[secId];
+            if (info) {
+                document.getElementById('code-expl-title').innerText = info.title;
+                document.getElementById('code-expl-body').innerText = info.body;
+            }
+        }
+
+        function copyCode() {
+            const codeText = `#include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+
+// 高精度加法 C++98 相容函數
+std::string addBigInt(const std::string& a, const std::string& b) {
+    std::vector<int> A, B;
+
+    // 1. 倒序存入 Vector
+    for (int i = (int)a.length() - 1; i >= 0; --i) {
+        A.push_back(a[i] - '0');
+    }
+    for (int i = (int)b.length() - 1; i >= 0; --i) {
+        B.push_back(b[i] - '0');
+    }
+
+    std::vector<int> C;
+    int carry = 0;
+    size_t max_len = A.size() > B.size() ? A.size() : B.size();
+
+    // 2. 逐位相加
+    for (size_t i = 0; i < max_len; ++i) {
+        int sum = carry;
+        if (i < A.size()) sum += A[i];
+        if (i < B.size()) sum += B[i];
+
+        C.push_back(sum % 10);
+        carry = sum / 10;
+    }
+
+    // 3. 處理最高位進位
+    if (carry > 0) {
+        C.push_back(carry);
+    }
+
+    // 4. 清除前導零
+    while (C.size() > 1 && C.back() == 0) {
+        C.pop_back();
+    }
+
+    // 5. 倒序轉回 std::string
+    std::string result = "";
+    for (int i = (int)C.size() - 1; i >= 0; --i) {
+        result.push_back((char)(C[i] + '0'));
+    }
+    return result;
+}
+
+int main() {
+    std::string num1 = "9876543210987654321";
+    std::string num2 = "1234567890123456789";
+    std::cout << num1 << " + " << num2 << " = " << addBigInt(num1, num2) << std::endl;
+    return 0;
+}`;
+
+            const textArea = document.createElement("textarea");
+            textArea.value = codeText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast("C++98 完整程式碼已成功複製到剪貼簿！");
+            } catch (err) {
+                showToast("複製失敗，請手動複製程式碼。");
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement("div");
+            toast.className = "fixed bottom-6 right-6 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-2xl z-50 text-sm flex items-center gap-2 animate-bounce";
+            toast.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${msg}`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Quiz System Render Logic
+        function renderQuiz() {
+            const container = document.getElementById('quiz-container');
+            let html = '';
+
+            quizData.forEach((q, qIdx) => {
+                const userAns = quizUserAnswers[q.id];
+                const isAnswered = userAns !== undefined;
+
+                html += `
+                    <div class="glass-panel p-6 rounded-2xl border ${isAnswered ? (userAns === q.answer ? 'border-emerald-500/40 bg-emerald-950/10' : 'border-rose-500/40 bg-rose-950/10') : 'border-slate-800'} space-y-4">
+                        <h3 class="text-base font-bold text-white leading-relaxed">${q.question}</h3>
+                        
+                        <div class="space-y-2">
+                `;
+
+                q.options.forEach((opt, optIdx) => {
+                    let btnStyle = "bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700";
+                    if (isAnswered) {
+                        if (optIdx === q.answer) {
+                            btnStyle = "bg-emerald-600/20 border-emerald-500 text-emerald-300 font-bold";
+                        } else if (optIdx === userAns) {
+                            btnStyle = "bg-rose-600/20 border-rose-500 text-rose-300";
+                        } else {
+                            btnStyle = "bg-slate-900/40 border-slate-900 text-slate-600 opacity-60";
+                        }
+                    }
+
+                    html += `
+                        <button onclick="selectQuizOption(${q.id}, ${optIdx})" ${isAnswered ? 'disabled' : ''} class="w-full text-left p-3.5 rounded-xl border text-sm transition flex items-center justify-between ${btnStyle}">
+                            <span>${opt}</span>
+                            ${isAnswered && optIdx === q.answer ? '<i class="fa-solid fa-check text-emerald-400"></i>' : ''}
+                            ${isAnswered && optIdx === userAns && userAns !== q.answer ? '<i class="fa-solid fa-xmark text-rose-400"></i>' : ''}
+                        </button>
+                    `;
+                });
+
+                html += `</div>`;
+
+                if (isAnswered) {
+                    html += `
+                        <div class="p-3.5 rounded-xl text-xs leading-relaxed ${userAns === q.answer ? 'bg-emerald-950/40 border border-emerald-500/20 text-emerald-300' : 'bg-rose-950/40 border border-rose-500/20 text-rose-300'}">
+                            <span class="font-bold">解析：</span> ${q.explanation}
+                        </div>
+                    `;
+                }
+
+                html += `</div>`;
+            });
+
+            container.innerHTML = html;
+            updateQuizScore();
+        }
+
+        function selectQuizOption(qId, optIdx) {
+            quizUserAnswers[qId] = optIdx;
+            renderQuiz();
+        }
+
+        function updateQuizScore() {
+            let correct = 0;
+            quizData.forEach(q => {
+                if (quizUserAnswers[q.id] === q.answer) {
+                    correct++;
+                }
+            });
+            document.getElementById('quiz-score').innerText = `${correct} / ${quizData.length}`;
+        }
+
+        function resetQuiz() {
+            quizUserAnswers = {};
+            renderQuiz();
+        }
+    </script>
+</body>
+</html>
