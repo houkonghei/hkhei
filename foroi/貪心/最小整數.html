@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>最小新整數 (Remove K Digits) — 貪心演算法互動教學工作台 (C++98)</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'Inter', 'sans-serif'],
+            mono: ['Fira Code', 'monospace'],
+          },
+          colors: {
+            app: {
+              dark: '#0b0f19',
+              card: '#131b2e',
+              border: '#232f48',
+              purple: '#8b5cf6',
+              cyan: '#06b6d4',
+              emerald: '#10b981',
+              amber: '#f59e0b',
+              rose: '#f43f5e'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0b0f19;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #232f48;
+      border-radius: 3px;
+    }
+    
+    .code-line-highlight {
+      background-color: rgba(139, 92, 246, 0.25) !important;
+      border-left: 4px solid #8b5cf6;
+    }
+
+    .digit-card {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .digit-delete-anim {
+      animation: popAndFade 0.4s ease-out forwards;
+    }
+
+    @keyframes popAndFade {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.25) translateY(-10px); opacity: 0.8; background-color: #f43f5e; }
+      100% { transform: scale(0.5) translateY(20px); opacity: 0; }
+    }
+
+    .pulse-glow {
+      animation: pulseGlow 1.5s infinite alternate;
+    }
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 5px rgba(244, 63, 94, 0.4); }
+      100% { box-shadow: 0 0 20px rgba(244, 63, 94, 0.9); }
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans bg-app-dark text-slate-100 overflow-x-hidden selection:bg-app-purple selection:text-white">
+
+  <!-- Application Header -->
+  <header class="bg-app-card/90 backdrop-blur border-b border-app-border sticky top-0 z-40 px-4 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      
+      <div class="flex items-center space-x-3">
+        <div class="p-2.5 bg-gradient-to-br from-app-purple to-app-rose rounded-xl text-white shadow-lg">
+          <i data-lucide="scissors" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-white flex items-center gap-2">
+            <span>最小新整數 (Remove K Digits)</span>
+            <span class="text-xs font-mono font-medium bg-rose-500/20 border border-rose-500/40 text-rose-300 px-2 py-0.5 rounded-full">
+              C++98 貪心算法互動教學
+            </span>
+          </h1>
+          <p class="text-xs text-slate-400">直觀體驗高位逆序峰值的「高位優先消除法」，理解貪心策略的局部最優推導</p>
+        </div>
+      </div>
+
+      <!-- Quick Preset Toolbar -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-xs text-slate-400 font-medium">快速數據集：</span>
+        <button onclick="loadPreset('sample1_case1')" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-rose-300 rounded-lg border border-rose-500/30 transition flex items-center gap-1 font-mono">
+          <i data-lucide="file-text" class="w-3.5 h-3.5"></i> 样例 1-1 (9128456, K=2)
+        </button>
+        <button onclick="loadPreset('sample1_case2')" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-purple-300 rounded-lg border border-purple-500/30 transition flex items-center gap-1 font-mono">
+          <i data-lucide="file-text" class="w-3.5 h-3.5"></i> 样例 1-2 (1444, K=3)
+        </button>
+        <button onclick="loadPreset('descending')" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg border border-slate-700 transition font-mono">
+          📉 全逆序 (7654321, K=3)
+        </button>
+        <button onclick="loadPreset('ascending')" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded-lg border border-slate-700 transition font-mono">
+          📈 全順序 (1234567, K=2)
+        </button>
+        <button onclick="openCustomModal()" class="px-2.5 py-1 text-xs bg-app-purple hover:bg-purple-600 text-white rounded-lg transition flex items-center gap-1 shadow-md">
+          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> 自訂 N 與 K
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Interactive Workbench Layout -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 space-y-4">
+
+    <!-- Top Row: Dynamic Digit Strips Visualizer & Step Controller -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      
+      <!-- Left Column (8 cols): Interactive Digit Strips & Scanning Track -->
+      <div class="lg:col-span-8 bg-app-card border border-app-border rounded-2xl p-4 flex flex-col justify-between shadow-xl">
+        
+        <!-- Header & Status Legend -->
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-app-border/80 pb-3 mb-3">
+          <div class="flex items-center gap-3">
+            <h2 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="binary" class="w-4 h-4 text-app-rose"></i>
+              數值卡片動態掃描與高位消除軌道
+            </h2>
+            <span class="text-[11px] text-slate-400 font-mono" id="current-input-tag">N = 9128456, K = 2</span>
+          </div>
+
+          <!-- Color Legend -->
+          <div class="flex items-center gap-3 text-xs font-mono">
+            <span class="flex items-center gap-1 text-slate-300">
+              <span class="w-2.5 h-2.5 rounded bg-slate-700 inline-block"></span> 未處理
+            </span>
+            <span class="flex items-center gap-1 text-rose-400">
+              <span class="w-2.5 h-2.5 rounded bg-rose-500 inline-block"></span> 逆序峰值(被刪)
+            </span>
+            <span class="flex items-center gap-1 text-emerald-400">
+              <span class="w-2.5 h-2.5 rounded bg-emerald-500 inline-block"></span> 最終保留
+            </span>
+          </div>
+        </div>
+
+        <!-- Visual Digit Cards Display Container -->
+        <div class="w-full bg-slate-950/80 rounded-xl border border-slate-800/80 p-6 relative min-h-[220px] flex flex-col items-center justify-center gap-4">
+          
+          <!-- Digit Positional Place Values (Millions, Thousands, etc.) -->
+          <div id="digit-place-headers" class="flex items-center justify-center gap-2 md:gap-3 flex-wrap">
+            <!-- Dynamically populated place badges -->
+          </div>
+
+          <!-- Primary Interactive Digit Cards Container -->
+          <div id="digit-cards-container" class="flex items-center justify-center gap-2 md:gap-3 flex-wrap my-2">
+            <!-- Dynamically populated digit cards -->
+          </div>
+
+          <!-- Scanning Pointer Indicator / Explanation Banner -->
+          <div id="scan-pointer-bar" class="w-full bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 text-center text-xs font-mono text-slate-300 flex items-center justify-center gap-2">
+            <i data-lucide="search" class="w-4 h-4 text-app-cyan"></i>
+            <span id="scan-pointer-text">準備開始：點擊「下一步」或「自動播放」觀察高位逆序消除過程</span>
+          </div>
+
+        </div>
+
+        <!-- Timeline Scrubber & Animation Controls -->
+        <div class="mt-4 bg-slate-950/90 border border-slate-800 rounded-xl p-3 space-y-2">
+          <div class="flex items-center justify-between text-xs font-mono">
+            <span class="text-slate-400 flex items-center gap-1">
+              <i data-lucide="sliders" class="w-3.5 h-3.5 text-app-purple"></i> 刪除進度控制 (K 次刪除軸)
+            </span>
+            <span id="scrubber-label" class="text-app-rose font-bold">第 0 / 2 次刪除</span>
+          </div>
+          
+          <div class="flex items-center gap-3">
+            <input type="range" id="time-slider" min="0" max="2" value="0" step="1" oninput="onSliderChange(this.value)" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-app-rose">
+          </div>
+
+          <!-- Action Buttons Bar -->
+          <div class="flex items-center justify-between pt-2">
+            <div class="flex items-center gap-1.5">
+              <button id="btn-prev" onclick="stepPrev()" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition disabled:opacity-30" title="上一步 (←)">
+                <i data-lucide="skip-back" class="w-4 h-4"></i>
+              </button>
+              <button id="btn-play" onclick="togglePlay()" class="px-4 py-2 bg-app-rose hover:bg-rose-600 text-white font-medium rounded-lg shadow-lg shadow-rose-500/20 transition flex items-center gap-2 text-xs">
+                <i id="play-icon" data-lucide="play" class="w-4 h-4"></i>
+                <span id="play-text">自動播放</span>
+              </button>
+              <button id="btn-next" onclick="stepNext()" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition disabled:opacity-30" title="下一步 (→)">
+                <i data-lucide="skip-forward" class="w-4 h-4"></i>
+              </button>
+              <button onclick="resetSim()" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded-lg transition" title="重置回到初始狀態">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+            <!-- Playback Speed Selector -->
+            <div class="flex items-center gap-2 text-xs font-mono text-slate-400">
+              <span>播放速度:</span>
+              <select id="speed-select" onchange="changeSpeed(this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-slate-200 focus:outline-none">
+                <option value="2000">0.5x (慢速)</option>
+                <option value="1200" selected>1.0x (標準)</option>
+                <option value="600">2.0x (快速)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column (4 cols): Step Decision Inspector & Greedy Logic Card -->
+      <div class="lg:col-span-4 space-y-4 flex flex-col justify-between">
+        
+        <!-- Remaining K Status Box -->
+        <div class="bg-app-card border border-app-border rounded-2xl p-4 shadow-xl space-y-3">
+          <h3 class="text-xs font-bold text-slate-300 flex items-center justify-between">
+            <span class="flex items-center gap-1.5 text-white">
+              <i data-lucide="target" class="w-4 h-4 text-app-rose"></i>
+              當前狀態監視器
+            </span>
+            <span id="step-badge" class="font-mono text-[10px] bg-slate-800 px-2 py-0.5 rounded text-app-cyan">Initial</span>
+          </h3>
+
+          <!-- Remaining K Counter -->
+          <div class="bg-slate-950 border border-rose-500/30 rounded-xl p-3 flex items-center justify-between">
+            <div>
+              <div class="text-xs font-bold text-rose-400">剩餘可刪除次數 (K)</div>
+              <div class="text-2xl font-mono font-black text-white" id="val-k">2 <span class="text-xs text-slate-500 font-normal">位</span></div>
+            </div>
+            <div class="p-3 bg-rose-500/10 rounded-xl border border-rose-500/20 text-rose-400">
+              <i data-lucide="trash-2" class="w-6 h-6"></i>
+            </div>
+          </div>
+
+          <!-- Current Formed Value Box -->
+          <div class="bg-slate-950 border border-emerald-500/30 rounded-xl p-3 flex items-center justify-between">
+            <div>
+              <div class="text-xs font-bold text-emerald-400">當前生成的整數值</div>
+              <div class="text-xl font-mono font-black text-white" id="val-current-str">9128456</div>
+            </div>
+            <div class="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
+              <i data-lucide="sparkles" class="w-6 h-6"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step Logic Breakdown Card -->
+        <div class="bg-app-card border border-app-border rounded-2xl p-4 shadow-xl flex-1 flex flex-col justify-between space-y-3">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-app-purple flex items-center gap-1.5">
+                <i data-lucide="brain-circuit" class="w-4 h-4"></i> 貪心算法決策推導
+              </span>
+              <span id="action-tag" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                START
+              </span>
+            </div>
+
+            <p id="step-title" class="text-sm font-bold text-white mb-1">初始整數</p>
+            <p id="step-desc" class="text-xs text-slate-300 leading-relaxed mb-3">
+              點擊「下一步」開始掃描。算法會從左至右（高位到低位）尋找第一個滿足 <code class="font-mono text-rose-300">S[i] > S[i+1]</code> 的逆序數位。
+            </p>
+
+            <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl font-mono text-[11px] space-y-1.5">
+              <div class="text-slate-400 text-[10px] font-bold">高位優先判斷條件：</div>
+              <div id="logic-rule-1" class="text-rose-400 flex items-center gap-1">
+                <i data-lucide="check" class="w-3.5 h-3.5"></i> 若 S[i] > S[i+1] ：刪除高位 S[i] (高位變小)
+              </div>
+              <div id="logic-rule-2" class="text-slate-500 flex items-center gap-1">
+                <i data-lucide="minus" class="w-3.5 h-3.5"></i> 若無逆序 (全單調遞增)：刪除最後一位
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Reduction Value Indicator -->
+          <div class="bg-slate-900/90 border border-slate-800 p-2.5 rounded-xl flex items-center justify-between">
+            <span class="text-xs text-slate-400">相較原數累積下降幅度:</span>
+            <span id="total-reduction" class="text-sm font-mono font-bold text-emerald-400">-0</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Bottom Row: Synchronized C++98 Code Inspector & Algorithm Insights -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      
+      <!-- Left Column (7 cols): C++98 Code Walkthrough with Real-time Synchronized Line Highlighting -->
+      <div class="lg:col-span-7 bg-app-card border border-app-border rounded-2xl p-4 shadow-xl">
+        <div class="flex items-center justify-between mb-3 border-b border-app-border/80 pb-2">
+          <div class="flex items-center gap-2">
+            <i data-lucide="code-2" class="w-4 h-4 text-amber-400"></i>
+            <h3 class="text-sm font-bold text-white">C++98 嚴謹標準代碼同步追蹤</h3>
+          </div>
+          <button onclick="copyCppCode()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg border border-slate-700 transition flex items-center gap-1 font-mono">
+            <i data-lucide="copy" class="w-3 h-3"></i> 複製 C++98 代碼
+          </button>
+        </div>
+
+        <div class="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden font-mono text-xs">
+          <div id="code-box" class="p-2 space-y-0.5 max-h-[300px] overflow-y-auto custom-scrollbar">
+            <!-- Code lines populated via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column (5 cols): Teaching Insights & Common Misconceptions Sandbox -->
+      <div class="lg:col-span-5 bg-app-card border border-app-border rounded-2xl p-4 shadow-xl flex flex-col justify-between space-y-3">
+        <div>
+          <div class="flex items-center justify-between mb-3 border-b border-app-border/80 pb-2">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="lightbulb" class="w-4 h-4 text-amber-400"></i>
+              學生常見誤區與貪心證明解析
+            </h3>
+            <span class="text-[10px] font-mono text-slate-400">教學要點</span>
+          </div>
+
+          <div class="space-y-2.5 text-xs text-slate-300">
+            <!-- Misconception 1 -->
+            <div class="bg-slate-950 border border-slate-800 p-2.5 rounded-xl space-y-1">
+              <div class="font-bold text-rose-400 flex items-center gap-1">
+                <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> 誤區 1：盲目刪除最大的數字？
+              </div>
+              <p class="text-[11px] text-slate-400 leading-relaxed">
+                例如對 <code class="font-mono text-amber-300">172</code> 刪除 1 位：最大數字是 <code class="font-mono">7</code>，刪除 7 得 <code class="font-mono text-emerald-400">12</code>；但若對 <code class="font-mono text-amber-300">412</code>，最大數是 <code class="font-mono">4</code>，刪除 4 得 <code class="font-mono text-emerald-400">12</code>，若刪除最大數 <code class="font-mono">4</code> 正好成立，但對 <code class="font-mono text-amber-300">3219</code> 刪 1 位，最大是 9，刪 9 得 <code class="font-mono">321</code>；但刪除第一個逆序 <code class="font-mono">3</code> 得 <code class="font-mono text-emerald-400">219</code> 更小！<b>高位影響力遠大於數值大小！</b>
+              </p>
+            </div>
+
+            <!-- Misconception 2 -->
+            <div class="bg-slate-950 border border-slate-800 p-2.5 rounded-xl space-y-1">
+              <div class="font-bold text-emerald-400 flex items-center gap-1">
+                <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> 正確貪心原理：位值權重大於數位數值
+              </div>
+              <p class="text-[11px] text-slate-400 leading-relaxed">
+                高位數（如百萬位）上的數字哪怕只減少 1（例如 9 變成 1），對整體數值降低的幅度遠勝於低位數（如個位）減少 9。因此，<b>必須從左至右找到第一個降低高位數值的機會 (S[i] > S[i+1])</b>。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-purple-950/30 border border-purple-500/30 p-3 rounded-xl text-xs text-purple-200 leading-relaxed">
+          <span class="font-bold text-purple-300">💡 C++98 實作技巧：</span>
+          使用 <code class="font-mono text-app-cyan">std::string::erase(i, 1)</code> 可以方便地刪除第 <code class="font-mono">i</code> 個字元；當所有數位遞增（無逆序）時，直接刪除最後一位。
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Custom Input Modal -->
+  <div id="custom-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-app-card border border-app-border rounded-2xl w-full max-w-md p-6 shadow-2xl flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-app-border pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="edit-3" class="w-5 h-5 text-app-cyan"></i> 自訂數字 N 與刪除位數 K
+        </h3>
+        <button onclick="closeCustomModal()" class="text-slate-400 hover:text-white transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-400 leading-relaxed">
+        請輸入正整數 <code class="text-app-cyan font-mono">N</code> (不含0數位) 與要刪除的位數 <code class="text-rose-400 font-mono">K</code> (0 < K < 位數 M)。
+      </p>
+
+      <div class="space-y-3 font-mono text-xs">
+        <div>
+          <label class="block text-slate-300 mb-1">正整數 N:</label>
+          <input type="text" id="modal-input-n" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-100 focus:outline-none focus:border-app-purple" placeholder="例: 9128456">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">刪除位數 K:</label>
+          <input type="number" id="modal-input-k" min="1" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-100 focus:outline-none focus:border-app-purple" placeholder="例: 2">
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-app-border">
+        <button onclick="closeCustomModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition">
+          取消
+        </button>
+        <button onclick="applyCustomData()" class="px-4 py-2 bg-app-rose hover:bg-rose-600 text-white rounded-xl text-xs font-medium shadow-md transition">
+          載入數據並重新推算
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-app-purple text-white text-xs px-4 py-3 rounded-xl shadow-2xl transition-all transform translate-y-12 opacity-0 z-50 flex items-center gap-2">
+    <i data-lucide="check-circle" class="w-4 h-4"></i>
+    <span id="toast-msg">提示訊息</span>
+  </div>
+
+  <script>
+    /* Full Standard C++98 Code Array for 'Remove K Digits' */
+    var FULL_CPP98_CODE = [
+      '#include <iostream>',
+      '#include <string>',
+      'using namespace std;',
+      '',
+      '// C++98 嚴謹標準解答程序',
+      'void solve() {',
+      '    string s;',
+      '    int k;',
+      '    if (!(cin >> s >> k)) return;',
+      '',
+      '    // 貪心策略：重複 K 次，尋找第一對高位逆序 (s[i] > s[i+1]) 並刪除 s[i]',
+      '    while (k > 0) {',
+      '        bool found = false;',
+      '        int len = (int)s.length();',
+      '        for (int i = 0; i < len - 1; ++i) {',
+      '            if (s[i] > s[i + 1]) {',
+      '                s.erase(i, 1); // 刪除第一個逆序的高位數位',
+      '                found = true;',
+      '                break;',
+      '            }',
+      '        }',
+      '        // 若當前數字全為單調遞增，則刪除最後一位',
+      '        if (!found) {',
+      '            s.erase(s.length() - 1, 1);',
+      '        }',
+      '        k--;',
+      '    }',
+      '',
+      '    cout << s << "\\n";',
+      '}',
+      '',
+      'int main() {',
+      '    ios::sync_with_stdio(false);',
+      '    cin.tie(NULL);',
+      '    int t;',
+      '    if (cin >> t) {',
+      '        while (t--) {',
+      '            solve();',
+      '        }',
+      '    }',
+      '    return 0;',
+      '}'
+    ];
+
+    /* Place Value Labels in Traditional Chinese */
+    var PLACE_NAMES = ['個位', '十位', '百位', '千位', '萬位', '十萬位', '百萬位', '千萬位', '億位'];
+
+    /* Preset Datasets */
+    var PRESETS = {
+      sample1_case1: { n: "9128456", k: 2, label: "样例 1-1" },
+      sample1_case2: { n: "1444", k: 3, label: "样例 1-2" },
+      descending: { n: "7654321", k: 3, label: "全逆序" },
+      ascending: { n: "1234567", k: 2, label: "全順序" }
+    };
+
+    var currentN = "9128456";
+    var currentK = 2;
+    var steps = [];
+    var currentStepIdx = 0;
+    var playInterval = null;
+    var playSpeed = 1200;
+
+    /* Window Initialization */
+    window.addEventListener('DOMContentLoaded', function() {
+      renderCppCodeBox();
+      initSimulation(currentN, currentK);
+      setupKeyboardNav();
+      lucide.createIcons();
+    });
+
+    function setupKeyboardNav() {
+      document.addEventListener('keydown', function(e) {
+        if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+        if (e.key === 'ArrowRight' || e.key === 'Space') {
+          stepNext();
+        } else if (e.key === 'ArrowLeft') {
+          stepPrev();
+        }
+      });
+    }
+
+    function initSimulation(nStr, kVal) {
+      stopPlay();
+      currentN = nStr.toString().trim();
+      currentK = parseInt(kVal, 10);
+
+      steps = generateSimulationSteps(currentN, currentK);
+      currentStepIdx = 0;
+
+      var slider = document.getElementById('time-slider');
+      if (slider) {
+        slider.max = currentK;
+        slider.value = 0;
+      }
+
+      var inputTag = document.getElementById('current-input-tag');
+      if (inputTag) inputTag.innerText = 'N = ' + currentN + ', K = ' + currentK;
+
+      updateStepUI();
+    }
+
+    /* Algorithm Logic Step Generator */
+    function generateSimulationSteps(startN, kTarget) {
+      var snapshots = [];
+      var currStr = startN;
+
+      // Step 0 Snapshot
+      snapshots.push({
+        step: 0,
+        str: currStr,
+        kRemaining: kTarget,
+        deletedIdx: -1,
+        comparedIdx: -1,
+        comparedNextIdx: -1,
+        action: 'INIT',
+        title: '初始整數狀態',
+        desc: '載入整數 N = ' + startN + '，共有 ' + startN.length + ' 位數。目標刪除 K = ' + kTarget + ' 位。',
+        codeLine: 12,
+        isPeak: false
+      });
+
+      var kRemaining = kTarget;
+
+      for (var s = 1; s <= kTarget; s++) {
+        var len = currStr.length;
+        var foundIdx = -1;
+
+        // Scan for first peak S[i] > S[i+1]
+        for (var i = 0; i < len - 1; i++) {
+          if (currStr.charAt(i) > currStr.charAt(i + 1)) {
+            foundIdx = i;
+            break;
+          }
+        }
+
+        var deletedChar = '';
+        var actionType = '';
+        var titleText = '';
+        var descText = '';
+        var codeLineNum = 17;
+        var isPeakDelete = false;
+
+        if (foundIdx !== -1) {
+          // Found peak
+          deletedChar = currStr.charAt(foundIdx);
+          var nextChar = currStr.charAt(foundIdx + 1);
+          actionType = 'PEAK_DELETE';
+          titleText = '第 ' + s + ' 次刪除：高位逆序對 S[' + foundIdx + ']=' + deletedChar + ' > S[' + (foundIdx + 1) + ']=' + nextChar;
+          descText = '從左至右掃描發現第一個逆序對！刪除高位的字元 \'' + deletedChar + '\'，後續的字元 \'' + nextChar + '\' 往前補位，大幅降低整體數值。';
+          codeLineNum = 17;
+          isPeakDelete = true;
+
+          // Delete character at foundIdx
+          currStr = currStr.substring(0, foundIdx) + currStr.substring(foundIdx + 1);
+        } else {
+          // No peak, digits are non-decreasing
+          foundIdx = len - 1;
+          deletedChar = currStr.charAt(foundIdx);
+          actionType = 'END_DELETE';
+          titleText = '第 ' + s + ' 次刪除：當前數字單調遞增，刪除末尾字元 \'' + deletedChar + '\'';
+          descText = '當前所有數位已從左至右單調遞增，無逆序對。刪除最後一位（權重最低但為最大數 \'' + deletedChar + '\'）以保證新數最小。';
+          codeLineNum = 23;
+          isPeakDelete = false;
+
+          currStr = currStr.substring(0, foundIdx);
+        }
+
+        kRemaining--;
+
+        snapshots.push({
+          step: s,
+          str: currStr,
+          kRemaining: kRemaining,
+          deletedIdx: foundIdx,
+          deletedChar: deletedChar,
+          action: actionType,
+          title: titleText,
+          desc: descText,
+          codeLine: codeLineNum,
+          isPeak: isPeakDelete
+        });
+      }
+
+      return snapshots;
+    }
+
+    /* Render UI According to Current Step */
+    function updateStepUI() {
+      if (!steps || steps.length === 0) return;
+      var step = steps[currentStepIdx];
+
+      // Slider
+      var slider = document.getElementById('time-slider');
+      if (slider) slider.value = currentStepIdx;
+
+      // Labels
+      var scrubberLabel = document.getElementById('scrubber-label');
+      if (scrubberLabel) scrubberLabel.innerText = '第 ' + step.step + ' / ' + currentK + ' 次刪除';
+
+      var stepBadge = document.getElementById('step-badge');
+      if (stepBadge) stepBadge.innerText = 'Step ' + step.step;
+
+      // Values
+      var valK = document.getElementById('val-k');
+      if (valK) valK.innerHTML = step.kRemaining + ' <span class="text-xs text-slate-500 font-normal">位</span>';
+
+      var valStr = document.getElementById('val-current-str');
+      if (valStr) valStr.innerText = step.str;
+
+      // Step Descriptions
+      var stepTitle = document.getElementById('step-title');
+      if (stepTitle) stepTitle.innerText = step.title;
+
+      var stepDesc = document.getElementById('step-desc');
+      if (stepDesc) stepDesc.innerText = step.desc;
+
+      // Action Tag
+      var actionTag = document.getElementById('action-tag');
+      if (actionTag) {
+        actionTag.innerText = step.action;
+        if (step.action === 'PEAK_DELETE') actionTag.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
+        else if (step.action === 'END_DELETE') actionTag.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+        else actionTag.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30';
+      }
+
+      // Total Reduction Value
+      var initialVal = parseInt(currentN, 10);
+      var currentVal = parseInt(step.str, 10);
+      var reduction = initialVal - currentVal;
+      var totalRedEl = document.getElementById('total-reduction');
+      if (totalRedEl) totalRedEl.innerText = '-' + reduction.toLocaleString();
+
+      // Pointer bar text
+      var pointerText = document.getElementById('scan-pointer-text');
+      if (pointerText) {
+        if (step.step === 0) {
+          pointerText.innerHTML = '掃描起點：請點擊「下一步」開始進行第 1 次高位逆序消除';
+        } else if (step.isPeak) {
+          pointerText.innerHTML = '已捕捉高位逆序：位址 index <span class="text-rose-400 font-bold">' + step.deletedIdx + '</span> 的數位 \'<span class="text-rose-400 font-bold">' + step.deletedChar + '</span>\' 已成功被移除！';
+        } else {
+          pointerText.innerHTML = '無高位逆序對：直接移除末尾數位 \'<span class="text-amber-400 font-bold">' + step.deletedChar + '</span>\'';
+        }
+      }
+
+      // Render Visual Cards
+      renderDigitCards(step);
+
+      // Highlight Code Line
+      highlightCodeLine(step.codeLine);
+
+      // Buttons disabled status
+      var btnPrev = document.getElementById('btn-prev');
+      if (btnPrev) btnPrev.disabled = (currentStepIdx === 0);
+
+      var btnNext = document.getElementById('btn-next');
+      if (btnNext) btnNext.disabled = (currentStepIdx === steps.length - 1);
+    }
+
+    /* Render Animated Digit Cards Block */
+    function renderDigitCards(step) {
+      var container = document.getElementById('digit-cards-container');
+      var headers = document.getElementById('digit-place-headers');
+      if (!container || !headers) return;
+
+      container.innerHTML = '';
+      headers.innerHTML = '';
+
+      // Determine initial string for reference of deleted characters history
+      var strToRender = step.str;
+      var len = strToRender.length;
+
+      for (var i = 0; i < len; i++) {
+        var ch = strToRender.charAt(i);
+        var placeIndex = len - 1 - i;
+        var placeName = PLACE_NAMES[placeIndex] || ('10^' + placeIndex);
+
+        // Place Name Badge
+        var headerBadge = document.createElement('div');
+        headerBadge.className = 'w-10 sm:w-12 text-center text-[10px] font-mono text-slate-500 font-medium select-none';
+        headerBadge.innerText = placeName;
+        headers.appendChild(headerBadge);
+
+        // Digit Card
+        var card = document.createElement('div');
+        card.className = 'w-10 h-14 sm:w-12 sm:h-16 rounded-xl border flex flex-col items-center justify-center font-mono font-bold text-lg sm:text-2xl shadow-lg digit-card relative select-none';
+
+        if (step.step > 0 && i === step.deletedIdx && currentStepIdx > 0) {
+          // Highlight recently manipulated position
+          card.className += ' bg-rose-500/20 border-rose-500 text-rose-300 pulse-glow';
+        } else {
+          card.className += ' bg-slate-900 border-slate-700 text-slate-100 hover:border-slate-500';
+        }
+
+        // Card Index Tag
+        var idxTag = document.createElement('span');
+        idxTag.className = 'absolute top-1 left-1.5 text-[9px] font-normal text-slate-500';
+        idxTag.innerText = '[' + i + ']';
+
+        var charSpan = document.createElement('span');
+        charSpan.innerText = ch;
+
+        card.appendChild(idxTag);
+        card.appendChild(charSpan);
+        container.appendChild(card);
+      }
+    }
+
+    function onSliderChange(val) {
+      currentStepIdx = parseInt(val, 10);
+      updateStepUI();
+    }
+
+    function stepNext() {
+      if (currentStepIdx < steps.length - 1) {
+        currentStepIdx++;
+        updateStepUI();
+      } else {
+        stopPlay();
+      }
+    }
+
+    function stepPrev() {
+      if (currentStepIdx > 0) {
+        currentStepIdx--;
+        updateStepUI();
+      }
+    }
+
+    function togglePlay() {
+      if (playInterval) stopPlay();
+      else startPlay();
+    }
+
+    function startPlay() {
+      if (currentStepIdx >= steps.length - 1) currentStepIdx = 0;
+      playInterval = setInterval(function() {
+        if (currentStepIdx < steps.length - 1) stepNext();
+        else stopPlay();
+      }, playSpeed);
+
+      var playText = document.getElementById('play-text');
+      if (playText) playText.innerText = "暫停";
+      var playIcon = document.getElementById('play-icon');
+      if (playIcon) playIcon.setAttribute('data-lucide', 'pause');
+      lucide.createIcons();
+    }
+
+    function stopPlay() {
+      if (playInterval) {
+        clearInterval(playInterval);
+        playInterval = null;
+      }
+      var playText = document.getElementById('play-text');
+      if (playText) playText.innerText = "自動播放";
+      var playIcon = document.getElementById('play-icon');
+      if (playIcon) playIcon.setAttribute('data-lucide', 'play');
+      lucide.createIcons();
+    }
+
+    function changeSpeed(val) {
+      playSpeed = parseInt(val, 10);
+      if (playInterval) {
+        stopPlay();
+        startPlay();
+      }
+    }
+
+    function resetSim() {
+      stopPlay();
+      currentStepIdx = 0;
+      updateStepUI();
+      showToast("已重置回到初始狀態");
+    }
+
+    /* Render C++98 Code Box */
+    function renderCppCodeBox() {
+      var container = document.getElementById('code-box');
+      if (!container) return;
+      container.innerHTML = FULL_CPP98_CODE.map(function(line, idx) {
+        var lineNum = idx + 1;
+        return '<div id="code-line-' + lineNum + '" class="flex items-center px-2 py-0.5 rounded transition-all">' +
+               '<span class="w-8 text-right pr-3 text-slate-600 select-none text-[11px] font-mono">' + lineNum + '</span>' +
+               '<span class="text-slate-300 font-mono whitespace-pre">' + escapeHtml(line) + '</span>' +
+               '</div>';
+      }).join('');
+    }
+
+    function highlightCodeLine(lineNum) {
+      for (var i = 1; i <= FULL_CPP98_CODE.length; i++) {
+        var el = document.getElementById('code-line-' + i);
+        if (el) {
+          if (i === lineNum) {
+            el.classList.add('code-line-highlight');
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          } else {
+            el.classList.remove('code-line-highlight');
+          }
+        }
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    /* Preset and Modal Handlers */
+    function loadPreset(key) {
+      if (PRESETS[key]) {
+        var p = PRESETS[key];
+        initSimulation(p.n, p.k);
+        showToast('已載入預設數據：' + p.label + ' (N=' + p.n + ', K=' + p.k + ')');
+      }
+    }
+
+    function openCustomModal() {
+      stopPlay();
+      document.getElementById('modal-input-n').value = currentN;
+      document.getElementById('modal-input-k').value = currentK;
+      document.getElementById('custom-modal').classList.remove('hidden');
+    }
+
+    function closeCustomModal() {
+      document.getElementById('custom-modal').classList.add('hidden');
+    }
+
+    function applyCustomData() {
+      var inputN = document.getElementById('modal-input-n').value.trim();
+      var inputK = parseInt(document.getElementById('modal-input-k').value, 10);
+
+      if (!inputN || isNaN(inputN) || parseInt(inputN, 10) <= 0) {
+        showToast("請輸入有效的正整數 N (不含0)");
+        return;
+      }
+
+      if (isNaN(inputK) || inputK <= 0 || inputK >= inputN.length) {
+        showToast("請輸入有效的刪除位數 K (必須 0 < K < 位數 " + inputN.length + ")");
+        return;
+      }
+
+      closeCustomModal();
+      initSimulation(inputN, inputK);
+      showToast('已成功載入自訂數據 N=' + inputN + ', K=' + inputK);
+    }
+
+    function copyCppCode() {
+      var codeText = FULL_CPP98_CODE.join('\n');
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = codeText;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        var successful = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (successful) {
+          showToast("C++98 完整程式碼已成功複製到剪貼簿！");
+        } else {
+          showToast("複製失敗，請手動選取程式碼進行複製");
+        }
+      } catch (err) {
+        showToast("複製失敗，請手動選取程式碼進行複製");
+      }
+    }
+
+    function showToast(msg) {
+      var toast = document.getElementById('toast');
+      document.getElementById('toast-msg').innerText = msg;
+      toast.classList.remove('translate-y-12', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(function() {
+        toast.classList.add('translate-y-12', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+      }, 2500);
+    }
+  </script>
+</body>
+</html>
