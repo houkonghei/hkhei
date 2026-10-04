@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>高精度除法互動課件</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+        background: linear-gradient(135deg, #6089ee 0%, #8054b8 100%);
+        min-height: 100vh;
+        padding: 20px;
+        color: #333;
+    }
+    .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        overflow: hidden;
+    }
+    .header {
+        background: linear-gradient(135deg, #36c7b9 0%, #2298d8 100%);
+        color: white;
+        padding: 30px 40px;
+    }
+    .header h1 { font-size: 28px; margin-bottom: 8px; }
+    .header p { opacity: 0.9; font-size: 15px; }
+
+    .tabs {
+        display: flex;
+        background: #f5f7fa;
+        border-bottom: 2px solid #e4e7ed;
+    }
+    .tab {
+        padding: 16px 30px;
+        cursor: pointer;
+        font-weight: 500;
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s;
+        color: #606266;
+    }
+    .tab:hover { color: #409eff; background: #ecf5ff; }
+    .tab.active {
+        color: #409eff;
+        border-bottom-color: #409eff;
+        background: white;
+    }
+
+    .tab-content { display: none; padding: 30px 40px; }
+    .tab-content.active { display: block; }
+
+    .section-title {
+        font-size: 20px;
+        color: #303133;
+        margin-bottom: 16px;
+        padding-left: 12px;
+        border-left: 4px solid #36c7b9;
+    }
+
+    .principle-box {
+        background: #f0f9ff;
+        border: 1px solid #b3d8ff;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        line-height: 1.8;
+    }
+    .principle-box h3 { color: #409eff; margin-bottom: 10px; }
+    .formula {
+        background: #fff;
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin: 10px 0;
+        font-family: "Courier New", monospace;
+        font-size: 18px;
+        text-align: center;
+        border: 1px dashed #409eff;
+        letter-spacing: 5px;
+    }
+
+    .input-group {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .input-group label { font-weight: 500; color: #303133; }
+    .input-group input {
+        padding: 10px 14px;
+        border: 2px solid #dcdfe6;
+        border-radius: 8px;
+        font-size: 18px;
+        font-family: "Courier New", monospace;
+        width: 180px;
+        transition: border-color 0.3s;
+        text-align: right;
+    }
+    .input-group input:focus {
+        outline: none;
+        border-color: #409eff;
+    }
+    .btn {
+        padding: 10px 24px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    .btn-primary {
+        background: #409eff;
+        color: white;
+    }
+    .btn-primary:hover { background: #66b1ff; }
+    .btn-success {
+        background: #67c23a;
+        color: white;
+    }
+    .btn-success:hover { background: #85ce61; }
+    .btn-warning {
+        background: #e6a23c;
+        color: white;
+    }
+    .btn-warning:hover { background: #ebb563; }
+    .btn:disabled {
+        background: #c0c4cc;
+        cursor: not-allowed;
+    }
+
+    .visualization-area {
+        background: #fafafa;
+        border: 1px solid #ebeef5;
+        border-radius: 10px;
+        padding: 30px 24px;
+        min-height: 450px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+    }
+
+    /* 長除法直式 */
+    .long-division {
+        font-family: "Courier New", monospace;
+        font-size: 24px;
+        position: relative;
+        line-height: 1.4;
+        background: white;
+        padding: 20px 30px;
+        border-radius: 10px;
+        border: 2px solid #e4e7ed;
+        min-width: 300px;
+    }
+    
+    /* 位數標籤列 */
+    .digit-labels-row {
+        display: flex;
+        justify-content: flex-end;
+        font-size: 12px;
+        color: #909399;
+        margin-bottom: 4px;
+    }
+    .digit-label-cell {
+        width: 30px;
+        text-align: center;
+        margin: 0 1px;
+    }
+
+    /* 商的那一行 */
+    .quotient-row {
+        display: flex;
+        justify-content: flex-end;
+        color: #e6a23c;
+        font-weight: bold;
+        margin-bottom: 2px;
+        min-height: 34px;
+    }
+    .q-digit {
+        width: 30px;
+        text-align: center;
+        margin: 0 1px;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: all 0.4s ease;
+    }
+    .q-digit.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .q-digit.highlight {
+        background: #fff3cd;
+        border-radius: 4px;
+        box-shadow: 0 0 0 3px #ffc107;
+    }
+
+    /* 除號和被除數那行 */
+    .divisor-dividend-row {
+        display: flex;
+        align-items: flex-end;
+        justify-content: flex-end;
+        position: relative;
+    }
+    .divisor {
+        color: #67c23a;
+        font-weight: bold;
+        margin-right: 8px;
+    }
+    .division-symbol {
+        position: relative;
+        width: 4px;
+        border-right: 2px solid #333;
+        border-top: 2px solid #333;
+        height: 34px;
+        margin-right: 8px;
+    }
+    .dividend {
+        color: #409eff;
+        font-weight: bold;
+        display: flex;
+    }
+    .d-digit {
+        width: 30px;
+        text-align: center;
+        margin: 0 1px;
+    }
+    .d-digit.highlight {
+        background: #fff3cd;
+        border-radius: 4px;
+        box-shadow: 0 0 0 3px #ffc107;
+    }
+    .d-digit.pulled {
+        color: #909399;
+        text-decoration: underline;
+        text-decoration-color: #bbb;
+    }
+
+    /* 中間計算行 */
+    .calc-row {
+        display: flex;
+        justify-content: flex-end;
+        color: #f56c6c;
+        min-height: 34px;
+        opacity: 0;
+        transform: translateY(-8px);
+        transition: all 0.4s ease;
+    }
+    .calc-row.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .calc-digit {
+        width: 30px;
+        text-align: center;
+        margin: 0 1px;
+    }
+    .calc-row.subtract-line {
+        border-bottom: 2px solid #909399;
+        padding-bottom: 2px;
+        margin-bottom: 2px;
+    }
+
+    /* 餘數行 */
+    .remainder-row {
+        display: flex;
+        justify-content: flex-end;
+        color: #c23a3a;
+        font-weight: bold;
+        min-height: 34px;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+    .remainder-row.show {
+        opacity: 1;
+    }
+    .rem-digit {
+        width: 30px;
+        text-align: center;
+        margin: 0 1px;
+    }
+    .rem-digit.highlight {
+        background: #ffe6e6;
+        border-radius: 4px;
+    }
+
+    .step-card {
+        background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+        border-left: 5px solid #e6a23c;
+        padding: 16px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .step-card h4 {
+        color: #e6a23c;
+        margin-bottom: 8px;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .step-number {
+        background: #e6a23c;
+        color: white;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+    }
+    .step-card p {
+        color: #606266;
+        line-height: 1.7;
+        font-size: 15px;
+    }
+    .controls-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+        align-items: center;
+    }
+    .speed-control {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-left: auto;
+    }
+    .speed-control input[type="range"] { width: 120px; }
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #ebeef5;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 16px;
+    }
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #36c7b9, #409eff);
+        width: 0%;
+        transition: width 0.5s;
+    }
+    .tip-box {
+        background: #f0f9eb;
+        border: 1px solid #c2e7b0;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-top: 15px;
+        font-size: 14px;
+        color: #67c23a;
+    }
+    .tip-box::before {
+        content: "💡 小提醒：";
+        font-weight: bold;
+    }
+
+    .code-container {
+        background: #1e1e1e;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+    .code-header {
+        background: #2d2d30;
+        padding: 10px 20px;
+        color: #ccc;
+        font-size: 13px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .code-block {
+        padding: 20px;
+        overflow-x: auto;
+        color: #d4d4d4;
+        font-family: "Consolas", "Courier New", monospace;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    .code-block .keyword { color: #569cd6; }
+    .code-block .type { color: #569cd6; }
+    .code-block .string { color: #ce9178; }
+    .code-block .comment { color: #6a9955; }
+    .code-block .function { color: #dcdcaa; }
+    .code-block .number { color: #b5cea8; }
+
+    .code-explanation {
+        background: #f0f7ff;
+        border-left: 4px solid #36c7b9;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        line-height: 1.7;
+    }
+    .code-explanation h4 { color: #36c7b9; margin-bottom: 8px; }
+
+    @media (max-width: 768px) {
+        .tab { padding: 12px 16px; font-size: 13px; }
+        .tab-content { padding: 20px; }
+        .input-group input { width: 100%; }
+        .long-division { font-size: 18px; padding: 15px; }
+        .q-digit, .d-digit, .calc-digit, .rem-digit { width: 24px; }
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>高精度除法互動課件</h1>
+        <p>大整數長除法原理 · 過程可視化 · C++98 實現（商與餘數）</p>
+    </div>
+    <div class="tabs">
+        <div class="tab active" data-tab="principle">原理講解</div>
+        <div class="tab" data-tab="visual">互動演示</div>
+        <div class="tab" data-tab="code">C++98 代碼</div>
+    </div>
+
+    <!-- 原理講解 -->
+    <div class="tab-content active" id="principle">
+        <h2 class="section-title">為什麼需要高精度除法？</h2>
+        <div class="principle-box">
+            <p>普通的 int、long long 能夠存放的位數有限。</p>
+            <p>如果我們要做非常長的大數字相除，電腦原生變數存不下，就必須<strong>模擬人手算長除法</strong>。</p>
+            <p>高精除法會算出<strong>商以及餘數</strong>：被除數 ÷ 除數 = 商 … 餘數</p>
+        </div>
+
+        <h2 class="section-title">回憶小學長除法怎麼算</h2>
+        <div class="principle-box">
+            <h3>手算長除法的四步驟（重點！跟乘法方向相反）</h3>
+            <div class="formula">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#e6a23c">2 4</span><br>
+&nbsp;&nbsp;------<br>
+<span style="color:#67c23a">12</span> ) <span style="color:#409eff">2 8 8</span><br>
+&nbsp;&nbsp;&nbsp;<span style="color:#f56c6c">2 4</span><br>
+&nbsp;&nbsp;------<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#c23a3a">4 8</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#f56c6c">4 8</span><br>
+&nbsp;&nbsp;------<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#c23a3a">0</span>
+            </div>
+            <ol style="margin: 10px 0 10px 25px;">
+                <li>從<strong>最高位（左邊）</strong>開始，先拿一小段數字和除數比較</li>
+                <li><strong>試商</strong>：猜這一位可以上幾（0~9），商 × 除數不能比目前這一段還大</li>
+                <li><strong>相乘</strong>：把商 × 除數的結果寫在下面，對齊位數</li>
+                <li><strong>相減</strong>：得到剩餘的餘數</li>
+                <li><strong>拉下一位</strong>：把右邊下一位數字接在餘數後面，繼續重複</li>
+            </ol>
+            <div class="tip-box">
+                高精乘法：從右（個位）往左算；高精除法：從左（最高位）往右算！這是最容易搞混的地方。
+            </div>
+        </div>
+
+        <div class="principle-box">
+            <h3>程式模擬的重點觀念</h3>
+            <ul style="margin: 10px 0 10px 25px;">
+                <li>高精除法<strong>不要倒過來存數字！</strong>要保持高位在前（跟我們書寫順序一樣），方便從左邊開始拿數字。</li>
+                <li>維持一個「目前的餘數」：舊的餘數 ×10，再接下一個新數字，得到當前這一小段。</li>
+                <li>試商：不斷嘗試可以上幾。</li>
+                <li>最後要把商前面多餘的 0（前導零）去掉。</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 互動演示 -->
+    <div class="tab-content" id="visual">
+        <h2 class="section-title">輸入被除數與除數來試試（除數不可為0）</h2>
+        <div class="input-group">
+            <label>被除數：</label>
+            <input type="text" id="numA" value="288" maxlength="12">
+            <label>除數：</label>
+            <input type="text" id="numB" value="12" maxlength="12">
+            <button class="btn btn-primary" onclick="startVisualization()">開始演示</button>
+            <button class="btn btn-warning" onclick="resetVisualization()">重新開始</button>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="controls-row">
+            <button class="btn btn-success" onclick="stepForward()" id="stepBtn" disabled>下一步 →</button>
+            <button class="btn btn-primary" onclick="toggleAutoPlay()" id="autoBtn" disabled>自動播放</button>
+            <div class="speed-control">
+                <span style="font-size: 13px; color: #606266;">速度：</span>
+                <input type="range" id="speedRange" min="300" max="2500" value="1100" step="100">
+            </div>
+        </div>
+
+        <div class="step-card">
+            <h4><span class="step-number" id="stepNum">0</span><span id="stepTitle">歡迎使用高精除法演示</span></h4>
+            <p id="stepDesc">請輸入被除數與除數，點擊「開始演示」，接著按「下一步」，觀察長除法每一個步驟。</p>
+        </div>
+
+        <div class="visualization-area">
+            <div class="long-division" id="longDivision">
+                <!-- 動態生成 -->
+            </div>
+        </div>
+        <div class="tip-box" id="tipBox">
+            重點提醒：除法是從最左邊（最高位）開始計算，和乘法剛好相反！
+        </div>
+    </div>
+
+    <!-- C++98程式碼 -->
+    <div class="tab-content" id="code">
+        <h2 class="section-title">完整 C++98 高精度除法（回傳商與餘數）</h2>
+        <div class="code-container">
+            <div class="code-header">
+                <span>big_divide.cpp (C++98)</span>
+                <button class="btn btn-primary" style="padding: 4px 12px; font-size: 12px;" onclick="copyCode()">複製代碼</button>
+            </div>
+            <div class="code-block" id="codeBlock">
+<span class="comment">// 高精度大整數除法：被除數 ÷ 除數，得到商、餘數</span>
+<span class="comment">// 注意！這裡數字【高位在前】存放（與高精乘法相反）</span>
+
+<span class="keyword">#include</span> <span class="string">&lt;iostream&gt;</span>
+<span class="keyword">#include</span> <span class="string">&lt;vector&gt;</span>
+<span class="keyword">#include</span> <span class="string">&lt;string&gt;</span>
+<span class="keyword">#include</span> <span class="string">&lt;algorithm&gt;</span>
+
+<span class="keyword">using namespace</span> std;
+
+<span class="comment">// 比較兩個大數（高位在前） a >= b ? return true</span>
+<span class="type">bool</span> isGreaterOrEqual(<span class="keyword">const</span> <span class="type">vector</span>&lt;<span class="type">int</span>&gt;&amp; a, <span class="keyword">const</span> <span class="type">vector</span>&lt;<span class="type">int</span>&gt;&amp; b){
+    <span class="keyword">if</span>(a.size() != b.size()) <span class="keyword">return</span> a.size() &gt; b.size();
+    <span class="keyword">for</span>(<span class="type">int</span> i=0;i&lt;a.size();i++){
+        <span class="keyword">if</span>(a[i]!=b[i]) <span class="keyword">return</span> a[i] &gt; b[i];
+    }
+    <span class="keyword">return</span> <span class="keyword">true</span>;
+}
+
+<span class="comment">// 大數減法 a‑b （保證a>=b，高位在前）</span>
+<span class="type">vector</span>&lt;<span class="type">int</span>&gt; bigSub(<span class="keyword">const</span> <span class="type">vector</span>&lt;<span class="type">int</span>&gt;&amp; a,<span class="keyword">const</span> <span class="type">vector</span>&lt;<span class="type">int</span>&gt;&amp; b){
+    <span class="type">vector</span>&lt;<span class="type">int</span>&gt; res;
+    <span class="type">int</span> borrow = 0;
+    <span class="type">int</span> i = a.size()-1;
+    <span class="type">int</span> j = b.size()-1;
+    <span class="keyword">while</span>(i>=0){
+        <span class="type">int</span> va = a[i] - borrow;
+        <span class="type">int</span> vb = (j>=0)? b[j]:0;
+        borrow = 0;
+        <span class="keyword">if</span>(va &lt; vb){ va +=10; borrow=1; }
+        res.push_back(va - vb);
+        i--; j--;
+    }
+    reverse(res.begin(),res.end());
+    <span class="keyword">while</span>(res.size()>1 &amp;&amp; res[0]==0) res.erase(res.begin());
+    <span class="keyword">return</span> res;
+}
+
+<span class="comment">// 高精度除法，傳入字串；商存在quot，餘數存在rem</span>
+<span class="keyword">void</span> bigDivide(string sa, string sb, <span class="type">vector</span>&lt;<span class="type">int</span>&gt;&amp; quot, <span class="type">vector</span>&lt;<span class="type">int</span>&gt;&amp; rem){
+    quot.clear(); rem.clear();
+    <span class="type">vector</span>&lt;<span class="type">int</span>&gt; divisor;
+    <span class="keyword">for</span>(<span class="type">int</span> i=0;i&lt;sb.size();i++) divisor.push_back(sb[i]-<span class="string">'0'</span>);
+
+    <span class="comment">// rem 就是手算時每一步的剩餘數（餘數）</span>
+    <span class="keyword">for</span>(<span class="type">int</span> idx=0; idx&lt;sa.size(); idx++){
+        <span class="comment">//拉下新的一位數到餘數後面</span>
+        rem.push_back(sa[idx]-<span class="string">'0'</span>);
+        <span class="keyword">while</span>(rem.size()>1 &amp;&amp; rem[0]==0) rem.erase(rem.begin());
+
+        <span class="comment">//試商：嘗試可以上幾</span>
+        <span class="type">int</span> q = 0;
+        <span class="keyword">while</span>( isGreaterOrEqual(rem, divisor) ){
+            rem = bigSub(rem, divisor);
+            q++;
+        }
+        quot.push_back(q);
+    }
+    <span class="comment">//刪除商的前導零</span>
+    <span class="keyword">while</span>(quot.size()>1 &amp;&amp; quot[0]==0) quot.erase(quot.begin());
+}
+
+<span class="comment">//輸出高位在前的vector</span>
+<span class="type">void</span> printVec(<span class="keyword">const</span> <span class="type">vector</span>&lt;<span class="type">int</span>&gt;&amp; v){
+    <span class="keyword">for</span>(<span class="type">int</span> i=0;i&lt;v.size();i++) cout &lt;&lt; v[i];
+}
+
+<span class="type">int</span> <span class="function">main</span>(){
+    string a,b;
+    cin &gt;&gt; a &gt;&gt; b;
+    <span class="keyword">if</span>(b == <span class="string">"0"</span>){
+        cout &lt;&lt; <span class="string">"Divide by zero error!"</span> &lt;&lt; endl;
+        <span class="keyword">return</span> -1;
+    }
+    vector&lt;<span class="type">int</span>&gt; quotient, remainder;
+    bigDivide(a,b,quotient,remainder);
+
+    cout &lt;&lt; <span class="string">"商："</span>; printVec(quotient); cout &lt;&lt; endl;
+    cout &lt;&lt; <span class="string">"餘數："</span>; printVec(remainder); cout &lt;&lt; endl;
+    <span class="keyword">return</span> <span class="number">0</span>;
+}
+            </div>
+        </div>
+
+        <h2 class="section-title">程式碼詳解（入門版）</h2>
+        <div class="code-explanation">
+            <h4>1. 儲存方向：高位在前！為什麼跟乘法相反？</h4>
+            <p>長除法一開始要先拿最左邊（最高位）一小段出來比較。如果把數字倒過來存，拿前面一小段就很麻煩。所以高精除法直接照原來書寫順序存放數字。<strong>這是學生最容易混淆的重點，上課一定要強調和乘法的差異。</strong></p>
+        </div>
+        <div class="code-explanation">
+            <h4>2. 模擬手算「拉下一位」</h4>
+            <p>變數 rem 就代表手算時每一步暫時的餘數。每一次迴圈就把被除數的下一位「接」到 rem 的後面，就像我們手算時把數字往下拉下來。</p>
+        </div>
+        <div class="code-explanation">
+            <h4>3. 試商怎麼做？（這段比較難）</h4>
+            <p>這份示範程式採用比較直觀的寫法：只要目前的 rem 還大於等於除數，就持續減掉除數，每減一次商就 +1。<br>（實務上會用乘法預測商加速；但教學用就用重複減法，邏輯跟手算試商一致，學生比較好懂）</p>
+        </div>
+        <div class="code-explanation">
+            <h4>4. 最後處理前導零</h4>
+            <p>一開始幾位不夠除的時候，程式會先算出一堆0；這些開頭的0不是真正商的一部分，必須刪掉，不然輸出會出現 0024 這種錯誤。</p>
+        </div>
+    </div>
+</div>
+
+<script>
+// 頁籤切換
+const tabs = document.querySelectorAll('.tab');
+const tabContents = document.querySelectorAll('.tab-content');
+tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+    });
+});
+
+let steps = [];
+let currentStep = 0;
+let autoPlayInterval = null;
+let isPlaying = false;
+let currentA = "288";
+let currentB = "12";
+const digitNames = ["個位", "十位", "百位", "千位", "萬位", "十萬位", "百萬位", "千萬位", "億位"];
+
+// 生成所有步驟
+function generateSteps(sa, sb) {
+    steps = [];
+    const a = sa.split('');
+    const b = sb;
+    const bn = BigInt(b);
+    
+    let remStr = "";
+    let quotient = "";
+    const totalLen = a.length;
+    const calcRows = []; // 記錄所有中間計算行
+    
+    // 步驟0：開始
+    steps.push({
+        type: 'start',
+        title: '開始長除法計算：' + sa + ' ÷ ' + sb,
+        desc: '我們要模擬紙上的長除法。記住：除法是<strong>從左邊最高位開始算，不是從個位！</strong>',
+        tip: '被除數：' + sa + '，除數：' + sb,
+        quotient: "",
+        highlightDividend: [],
+        calcRows: [],
+        remainder: ""
+    });
+
+    // 步驟1：介紹格式
+    steps.push({
+        type: 'intro',
+        title: '認識長除法格式',
+        desc: '左邊是除數（綠色），右邊是被除數（藍色），上面寫商（橙色）。我們從左邊開始，一位一位算出來。',
+        tip: '商的每一位，都要對齊被除數對應的位置喔！',
+        quotient: "",
+        highlightDividend: [],
+        calcRows: [],
+        remainder: ""
+    });
+
+    for (let i = 0; i < a.length; i++) {
+        // 拉下一位
+        remStr += a[i];
+        remStr = remStr.replace(/^0+/, '') || "0";
+        
+        steps.push({
+            type: 'pull',
+            title: '第一步：拉下第 ' + (i+1) + ' 位數字「' + a[i] + '」',
+            desc: '把被除數的第 ' + (i+1) + ' 位數字「' + a[i] + '」拉下來，接在暫時餘數後面。現在這小段數字是：' + remStr,
+            tip: '就像手算時，把上面的數字往下拉一樣',
+            quotient: quotient,
+            highlightDividend: [i],
+            pulledDividend: i,
+            calcRows: [...calcRows],
+            remainder: remStr,
+            remPos: i
+        });
+
+        // 試商
+        let q = 0;
+        let rem = BigInt(remStr);
+        while (rem >= bn) {
+            rem -= bn;
+            q++;
+        }
+        quotient += q;
+
+        if (q > 0) {
+            // 計算乘積：q * 除數
+            const product = (BigInt(q) * bn).toString();
+            
+            // 寫上商
+            steps.push({
+                type: 'quotient',
+                title: '第二步：試商！這一位寫 ' + q,
+                desc: '小段數字 ' + remStr + ' 裡面，可以容納 ' + q + ' 個 ' + sb + '。所以商的這一位就寫上 ' + q + '。',
+                tip: '商 ' + q + ' 要對齊被除數的第 ' + (i+1) + ' 位喔！',
+                quotient: quotient,
+                highlightQ: i,
+                highlightDividend: [i],
+                calcRows: [...calcRows],
+                remainder: remStr,
+                remPos: i
+            });
+
+            // 寫出乘積
+            calcRows.push({
+                text: product,
+                offset: i - product.length + 1,
+                type: 'product'
+            });
+            
+            steps.push({
+                type: 'product',
+                title: '第三步：相乘 ' + q + ' × ' + sb + ' = ' + product,
+                desc: '把商 × 除數的結果 ' + product + ' 寫在下面，位數要對齊。',
+                tip: '這一步是用來等等做減法的',
+                quotient: quotient,
+                highlightQ: i,
+                calcRows: [...calcRows],
+                highlightLastRow: true,
+                remainder: remStr,
+                remPos: i
+            });
+
+            // 畫減號線
+            calcRows.push({ type: 'line', offset: i - product.length + 1, len: product.length });
+            
+            steps.push({
+                type: 'line',
+                title: '畫一條線，準備相減',
+                desc: '在乘積下面畫一條橫線，就像減法直式一樣。',
+                tip: '等等減出來的結果要寫在線下面',
+                quotient: quotient,
+                calcRows: [...calcRows],
+                remainder: rem.toString(),
+                remPos: i
+            });
+
+            // 相減得到餘數
+            remStr = rem.toString();
+            calcRows.push({
+                text: remStr,
+                offset: i - remStr.length + 1,
+                type: 'remainder'
+            });
+
+            steps.push({
+                type: 'subtract',
+                title: '第四步：相減得到餘數 ' + remStr,
+                desc: remStr + ' 減掉 ' + product + ' 等於 ' + remStr + '。這就是目前的餘數。',
+                tip: '餘數一定要比除數小喔！',
+                quotient: quotient,
+                calcRows: [...calcRows],
+                highlightLastRow: true,
+                remainder: remStr,
+                remPos: i
+            });
+
+        } else {
+            // 商為0的情況
+            steps.push({
+                type: 'quotient_zero',
+                title: '這一位商是 0',
+                desc: '小段數字 ' + remStr + ' 比除數 ' + sb + ' 還小，不夠除，所以商寫 0。',
+                tip: '不夠除就上0，千萬不要直接跳過這一位！',
+                quotient: quotient,
+                highlightQ: i,
+                highlightDividend: [i],
+                calcRows: [...calcRows],
+                remainder: remStr,
+                remPos: i
+            });
+        }
+    }
+
+    // 最終結果
+    const finalQuotient = quotient.replace(/^0+/, '') || "0";
+    const finalRemainder = remStr;
+    
+    steps.push({
+        type: 'final',
+        title: '計算完成！',
+        desc: sa + ' ÷ ' + sb + ' = ' + finalQuotient + ' … ' + finalRemainder +
+              '<br>商：' + finalQuotient + '，餘數：' + finalRemainder,
+        tip: '驗算看看：除數 × 商 + 餘數 = 被除數，就對了！',
+        quotient: finalQuotient,
+        calcRows: [...calcRows],
+        remainder: finalRemainder,
+        isFinal: true
+    });
+
+    steps.push({
+        type: 'summary',
+        title: '總結：高精除法五步驟',
+        desc: '① 拉下一位數字 → ② 試商（0~9） → ③ 商×除數寫下面 → ④ 相減得餘數 → ⑤ 重複直到全部做完',
+        tip: '關鍵：乘法低位在前；除法高位在前！不要記反了！',
+        quotient: finalQuotient,
+        calcRows: [...calcRows],
+        remainder: finalRemainder,
+        isFinal: true
+    });
+}
+
+// 渲染長除法
+function renderDivision(step) {
+    const container = document.getElementById('longDivision');
+    const sa = currentA;
+    const sb = currentB;
+    const totalLen = sa.length;
+    const quotient = step.quotient || "";
+    
+    let html = '';
+    
+    // 位數標籤
+    html += '<div class="digit-labels-row">';
+    for (let i = totalLen - 1; i >= 0; i--) {
+        html += '<div class="digit-label-cell">' + (digitNames[i] || (i+1)) + '</div>';
+    }
+    html += '</div>';
+
+    // 商的那一行
+    html += '<div class="quotient-row">';
+    for (let i = 0; i < totalLen; i++) {
+        const hasDigit = i < quotient.length;
+        const highlight = step.highlightQ === i;
+        html += '<div class="q-digit' + (hasDigit ? ' show' : '') + (highlight ? ' highlight' : '') + '">';
+        html += hasDigit ? quotient[i] : '';
+        html += '</div>';
+    }
+    html += '</div>';
+
+    // 除數 + 除號 + 被除數
+    html += '<div class="divisor-dividend-row">';
+    html += '<div class="divisor">' + sb + '</div>';
+    html += '<div class="division-symbol"></div>';
+    html += '<div class="dividend">';
+    for (let i = 0; i < sa.length; i++) {
+        const highlight = step.highlightDividend && step.highlightDividend.includes(i);
+        const pulled = step.pulledDividend !== undefined && i <= step.pulledDividend;
+        html += '<div class="d-digit' + (highlight ? ' highlight' : '') + (pulled ? ' pulled' : '') + '">' + sa[i] + '</div>';
+    }
+    html += '</div></div>';
+
+    // 中間計算行
+    if (step.calcRows) {
+        step.calcRows.forEach((row, idx) => {
+            const isLast = idx === step.calcRows.length - 1;
+            const highlight = step.highlightLastRow && isLast;
+            
+            if (row.type === 'line') {
+                html += '<div class="calc-row subtract-line show">';
+                for (let k = 0; k < row.offset; k++) {
+                    html += '<div class="calc-digit"></div>';
+                }
+                for (let k = 0; k < row.len; k++) {
+                    html += '<div class="calc-digit"></div>';
+                }
+                html += '</div>';
+            } else {
+                const text = row.text;
+                const isRem = row.type === 'remainder';
+                html += '<div class="calc-row show ' + (isRem ? 'remainder-row' : '') + '">';
+                for (let k = 0; k < row.offset; k++) {
+                    html += '<div class="calc-digit"></div>';
+                }
+                for (let k = 0; k < text.length; k++) {
+                    html += '<div class="calc-digit' + (highlight ? ' highlight' : '') + '">' + text[k] + '</div>';
+                }
+                html += '</div>';
+            }
+        });
+    }
+
+    container.innerHTML = html;
+}
+
+// 更新步驟顯示
+function updateStepDisplay() {
+    const step = steps[currentStep];
+    
+    document.getElementById('stepNum').textContent = currentStep;
+    document.getElementById('stepTitle').textContent = step.title;
+    document.getElementById('stepDesc').innerHTML = step.desc;
+    document.getElementById('tipBox').textContent = step.tip;
+    
+    renderDivision(step);
+}
+
+function updateProgress() {
+    const pct = steps.length > 1 ? (currentStep / (steps.length - 1)) * 100 : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+}
+
+function startVisualization() {
+    const sa = document.getElementById('numA').value.trim();
+    const sb = document.getElementById('numB').value.trim();
+    
+    if (!/^\d+$/.test(sa) || !/^\d+$/.test(sb)) {
+        alert('請輸入有效的非負整數！');
+        return;
+    }
+    if (sb === "0") {
+        alert('除數不可以是0！');
+        return;
+    }
+    if (sa.length > 12 || sb.length > 12) {
+        alert('演示請輸入12位以內的數字！');
+        return;
+    }
+    
+    currentA = sa;
+    currentB = sb;
+    generateSteps(sa, sb);
+    currentStep = 0;
+    isPlaying = false;
+    clearInterval(autoPlayInterval);
+    
+    document.getElementById('stepBtn').disabled = false;
+    document.getElementById('autoBtn').disabled = false;
+    document.getElementById('autoBtn').textContent = '自動播放';
+    
+    updateStepDisplay();
+    updateProgress();
+}
+
+function stepForward() {
+    if (currentStep >= steps.length - 1) {
+        if (isPlaying) toggleAutoPlay();
+        return;
+    }
+    currentStep++;
+    updateStepDisplay();
+    updateProgress();
+}
+
+function toggleAutoPlay() {
+    const btn = document.getElementById('autoBtn');
+    const speedVal = parseInt(document.getElementById('speedRange').value);
+    
+    if (isPlaying) {
+        clearInterval(autoPlayInterval);
+        btn.textContent = '自動播放';
+        isPlaying = false;
+    } else {
+        if (currentStep >= steps.length - 1) resetVisualization();
+        btn.textContent = '暫停';
+        isPlaying = true;
+        autoPlayInterval = setInterval(() => {
+            stepForward();
+            if (currentStep >= steps.length - 1) {
+                clearInterval(autoPlayInterval);
+                btn.textContent = '自動播放';
+                isPlaying = false;
+            }
+        }, 2800 - speedVal);
+    }
+}
+
+function resetVisualization() {
+    currentStep = 0;
+    isPlaying = false;
+    clearInterval(autoPlayInterval);
+    document.getElementById('autoBtn').textContent = '自動播放';
+    
+    const sa = document.getElementById('numA').value.trim();
+    const sb = document.getElementById('numB').value.trim();
+    
+    if (/^\d+$/.test(sa) && /^\d+$/.test(sb) && sb !== "0") {
+        currentA = sa;
+        currentB = sb;
+        generateSteps(sa, sb);
+        updateStepDisplay();
+        updateProgress();
+        document.getElementById('stepBtn').disabled = false;
+        document.getElementById('autoBtn').disabled = false;
+    }
+}
+
+function copyCode() {
+    const text = `// 高精度大整數除法：被除數 ÷ 除數，得到商、餘數
+// 注意！這裡數字【高位在前】存放（與高精乘法相反）
+
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+
+using namespace std;
+
+// 比較兩個大數（高位在前） a >= b ? return true
+bool isGreaterOrEqual(const vector<int>& a, const vector<int>& b){
+    if(a.size() != b.size()) return a.size() > b.size();
+    for(int i=0;i<a.size();i++){
+        if(a[i]!=b[i]) return a[i] > b[i];
+    }
+    return true;
+}
+
+// 大數減法 a‑b （保證a>=b，高位在前）
+vector<int> bigSub(const vector<int>& a,const vector<int>& b){
+    vector<int> res;
+    int borrow = 0;
+    int i = a.size()-1;
+    int j = b.size()-1;
+    while(i>=0){
+        int va = a[i] - borrow;
+        int vb = (j>=0)? b[j]:0;
+        borrow = 0;
+        if(va < vb){ va +=10; borrow=1; }
+        res.push_back(va - vb);
+        i--; j--;
+    }
+    reverse(res.begin(),res.end());
+    while(res.size()>1 && res[0]==0) res.erase(res.begin());
+    return res;
+}
+
+// 高精度除法，傳入字串；商存在quot，餘數存在rem
+void bigDivide(string sa, string sb, vector<int>& quot, vector<int>& rem){
+    quot.clear(); rem.clear();
+    vector<int> divisor;
+    for(int i=0;i<sb.size();i++) divisor.push_back(sb[i]-'0');
+
+    // rem 就是手算時每一步的剩餘數（餘數）
+    for(int idx=0; idx<sa.size(); idx++){
+        //拉下新的一位數到餘數後面
+        rem.push_back(sa[idx]-'0');
+        while(rem.size()>1 && rem[0]==0) rem.erase(rem.begin());
+
+        //試商：嘗試可以上幾
+        int q = 0;
+        while( isGreaterOrEqual(rem, divisor) ){
+            rem = bigSub(rem, divisor);
+            q++;
+        }
+        quot.push_back(q);
+    }
+    //刪除商的前導零
+    while(quot.size()>1 && quot[0]==0) quot.erase(quot.begin());
+}
+
+//輸出高位在前的vector
+void printVec(const vector<int>& v){
+    for(int i=0;i<v.size();i++) cout << v[i];
+}
+
+int main(){
+    string a,b;
+    cin >> a >> b;
+    if(b == "0"){
+        cout << "Divide by zero error!" << endl;
+        return -1;
+    }
+    vector<int> quotient, remainder;
+    bigDivide(a,b,quotient,remainder);
+
+    cout << "商："; printVec(quotient); cout << endl;
+    cout << "餘數："; printVec(remainder); cout << endl;
+    return 0;
+}`;
+    navigator.clipboard.writeText(text).then(() => {
+        alert('程式碼已經複製！');
+    }).catch(() => {
+        alert('複製失敗，請手動選取');
+    });
+}
+
+window.onload = function() {
+    generateSteps("288", "12");
+    updateStepDisplay();
+    document.getElementById('stepBtn').disabled = false;
+    document.getElementById('autoBtn').disabled = false;
+}
+</script>
+</body>
+</html>
+<!-- (註：內容由 AI 生成) -->
