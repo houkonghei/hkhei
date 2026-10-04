@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>高精度乘法互動課件</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+        color: #333;
+    }
+    .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        overflow: hidden;
+    }
+    .header {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        padding: 30px 40px;
+    }
+    .header h1 { font-size: 28px; margin-bottom: 8px; }
+    .header p { opacity: 0.9; font-size: 15px; }
+    
+    .tabs {
+        display: flex;
+        background: #f5f7fa;
+        border-bottom: 2px solid #e4e7ed;
+    }
+    .tab {
+        padding: 16px 30px;
+        cursor: pointer;
+        font-weight: 500;
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s;
+        color: #606266;
+    }
+    .tab:hover { color: #409eff; background: #ecf5ff; }
+    .tab.active {
+        color: #409eff;
+        border-bottom-color: #409eff;
+        background: white;
+    }
+    
+    .tab-content { display: none; padding: 30px 40px; }
+    .tab-content.active { display: block; }
+    
+    .section-title {
+        font-size: 20px;
+        color: #303133;
+        margin-bottom: 16px;
+        padding-left: 12px;
+        border-left: 4px solid #409eff;
+    }
+    
+    /* 原理講解 */
+    .principle-box {
+        background: #f0f9ff;
+        border: 1px solid #b3d8ff;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        line-height: 1.8;
+    }
+    .principle-box h3 { color: #409eff; margin-bottom: 10px; }
+    .formula {
+        background: #fff;
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin: 10px 0;
+        font-family: "Courier New", monospace;
+        font-size: 18px;
+        text-align: center;
+        border: 1px dashed #409eff;
+        letter-spacing: 5px;
+    }
+    
+    /* 互動演示 */
+    .input-group {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .input-group label { font-weight: 500; color: #303133; }
+    .input-group input {
+        padding: 10px 14px;
+        border: 2px solid #dcdfe6;
+        border-radius: 8px;
+        font-size: 18px;
+        font-family: "Courier New", monospace;
+        width: 180px;
+        transition: border-color 0.3s;
+        text-align: right;
+    }
+    .input-group input:focus {
+        outline: none;
+        border-color: #409eff;
+    }
+    .btn {
+        padding: 10px 24px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    .btn-primary {
+        background: #409eff;
+        color: white;
+    }
+    .btn-primary:hover { background: #66b1ff; }
+    .btn-success {
+        background: #67c23a;
+        color: white;
+    }
+    .btn-success:hover { background: #85ce61; }
+    .btn-warning {
+        background: #e6a23c;
+        color: white;
+    }
+    .btn-warning:hover { background: #ebb563; }
+    .btn:disabled {
+        background: #c0c4cc;
+        cursor: not-allowed;
+    }
+    
+    .visualization-area {
+        background: #fafafa;
+        border: 1px solid #ebeef5;
+        border-radius: 10px;
+        padding: 24px;
+        min-height: 400px;
+        margin-bottom: 20px;
+    }
+    
+    /* 豎式乘法區域 - 重新設計 */
+    .multiply-box {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        font-family: "Courier New", monospace;
+        font-size: 24px;
+        margin: 0 auto 30px;
+        position: relative;
+        width: fit-content;
+        padding: 20px;
+        background: white;
+        border-radius: 10px;
+        border: 2px solid #e4e7ed;
+    }
+    
+    /* 位數標籤：個位、十位、百位... */
+    .digit-labels {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 5px;
+        font-size: 12px;
+        color: #909399;
+        letter-spacing: 0;
+    }
+    .digit-label {
+        width: 32px;
+        text-align: center;
+        margin: 0 2px;
+    }
+    
+    .num-line {
+        padding: 4px 8px;
+        letter-spacing: 12px;
+        position: relative;
+    }
+    .num-line.multiplicand { color: #409eff; font-weight: bold; }
+    .num-line.multiplier { 
+        color: #67c23a; 
+        font-weight: bold;
+        border-bottom: 3px solid #303133;
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+    }
+    
+    .partial-line {
+        padding: 4px 8px;
+        letter-spacing: 12px;
+        color: #e6a23c;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: all 0.5s ease;
+        position: relative;
+    }
+    .partial-line.show { opacity: 1; transform: translateY(0); }
+    
+    /* 對齊引導線 */
+    .guide-line {
+        position: absolute;
+        width: 2px;
+        background: repeating-linear-gradient(to bottom, #ff6b6b, #ff6b6b 4px, transparent 4px, transparent 8px);
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+    }
+    .guide-line.show { opacity: 0.7; }
+    
+    .result-line {
+        padding: 8px 8px 4px;
+        letter-spacing: 12px;
+        color: #f56c6c;
+        font-weight: bold;
+        font-size: 26px;
+        border-top: 3px solid #303133;
+        margin-top: 8px;
+        opacity: 0;
+        transition: opacity 0.8s;
+    }
+    .result-line.show { opacity: 1; }
+    
+    /* 當前正在相乘的兩位數高亮 */
+    .digit-highlight {
+        background: #fff3cd;
+        border-radius: 4px;
+        padding: 2px 0;
+        box-shadow: 0 0 0 3px #ffc107;
+    }
+    
+    /* 步驟說明卡片 */
+    .step-card {
+        background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+        border-left: 5px solid #e6a23c;
+        padding: 16px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .step-card h4 {
+        color: #e6a23c;
+        margin-bottom: 8px;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .step-number {
+        background: #e6a23c;
+        color: white;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+    }
+    .step-card p {
+        color: #606266;
+        line-height: 1.7;
+        font-size: 15px;
+    }
+    
+    /* 進位說明小框 */
+    .carry-note {
+        display: inline-block;
+        background: #fef0f0;
+        color: #f56c6c;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 13px;
+        margin-left: 10px;
+        border: 1px solid #fbc4c4;
+    }
+    
+    .controls-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+        align-items: center;
+    }
+    
+    .speed-control {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-left: auto;
+    }
+    .speed-control input[type="range"] { width: 120px; }
+    
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #ebeef5;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 16px;
+    }
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #409eff, #67c23a);
+        width: 0%;
+        transition: width 0.5s;
+    }
+    
+    /* 小提示 */
+    .tip-box {
+        background: #f0f9eb;
+        border: 1px solid #c2e7b0;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-top: 15px;
+        font-size: 14px;
+        color: #67c23a;
+    }
+    .tip-box::before {
+        content: "💡 小提醒：";
+        font-weight: bold;
+    }
+    
+    /* C++程式碼 */
+    .code-container {
+        background: #1e1e1e;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+    .code-header {
+        background: #2d2d30;
+        padding: 10px 20px;
+        color: #ccc;
+        font-size: 13px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .code-block {
+        padding: 20px;
+        overflow-x: auto;
+        color: #d4d4d4;
+        font-family: "Consolas", "Courier New", monospace;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    .code-block .keyword { color: #569cd6; }
+    .code-block .type { color: #569cd6; }
+    .code-block .string { color: #ce9178; }
+    .code-block .comment { color: #6a9955; }
+    .code-block .function { color: #dcdcaa; }
+    .code-block .number { color: #b5cea8; }
+    
+    .code-explanation {
+        background: #f0f7ff;
+        border-left: 4px solid #409eff;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        line-height: 1.7;
+    }
+    .code-explanation h4 { color: #409eff; margin-bottom: 8px; }
+    
+    @media (max-width: 768px) {
+        .tab { padding: 12px 16px; font-size: 13px; }
+        .tab-content { padding: 20px; }
+        .input-group input { width: 100%; }
+        .multiply-box { font-size: 18px; }
+        .num-line, .partial-line, .result-line { letter-spacing: 8px; }
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>高精度乘法互動課件</h1>
+        <p>大整數乘法原理 · 過程可視化 · C++98 實現</p>
+    </div>
+    
+    <div class="tabs">
+        <div class="tab active" data-tab="principle">原理講解</div>
+        <div class="tab" data-tab="visual">互動演示</div>
+        <div class="tab" data-tab="code">C++98 代碼</div>
+    </div>
+    
+    <!-- 原理講解 -->
+    <div class="tab-content active" id="principle">
+        <h2 class="section-title">為什麼需要高精度乘法？</h2>
+        <div class="principle-box">
+            <p>電腦變數能裝的數字大小是有限的：</p>
+            <ul style="margin: 10px 0 10px 30px;">
+                <li><strong>int 整數</strong>：最多大約 10 位數</li>
+                <li><strong>long long 長整數</strong>：最多大約 19 位數</li>
+            </ul>
+            <p>如果要計算幾十位、幾百位的超大數字相乘（例如天文數字、密碼學運算），變數裝不下，就必須用<strong>「陣列」模擬手算乘法</strong>的方法，這就是<strong>高精度乘法</strong>。</p>
+        </div>
+        
+        <h2 class="section-title">回想小學怎麼算乘法？</h2>
+        <div class="principle-box">
+            <h3>豎式乘法</h3>
+            <div class="formula">
+                &nbsp;&nbsp;&nbsp;<span style="color:#409eff">1 2 3</span><br>
+                ×&nbsp;&nbsp;&nbsp;<span style="color:#67c23a">4 5</span><br>
+                -------<br>
+                &nbsp;&nbsp;<span style="color:#e6a23c">6 1 5</span> &nbsp;← 用個位 5 去乘 123<br>
+                <span style="color:#e6a23c">4 9 2</span>&nbsp;&nbsp; ← 用十位 4 去乘 123（要往左錯一位）<br>
+                -------<br>
+                <span style="color:#f56c6c;font-weight:bold">5 5 3 5</span> &nbsp;← 加起來就是答案
+            </div>
+            <div class="tip-box">
+                用乘數的「每一位」分別去乘被乘數，然後按照位置錯開相加，最後處理進位。
+            </div>
+        </div>
+        
+        <div class="principle-box">
+            <h3>用程式重現這個過程</h3>
+            <p><strong>第一步：把數字倒過來存</strong></p>
+            <p>把 "123" 變成 [3, 2, 1]，也就是「個位」放在最前面。這樣從左到右就是個位、十位、百位...計算進位時比較方便。</p>
+            
+            <p style="margin-top: 15px;"><strong>第二步：相乘對位</strong></p>
+            <p>被乘數的第 i 位 × 乘數的第 j 位，答案要放在第 i+j 位。</p>
+            <div class="formula" style="font-size: 16px;">
+                第 i 位 × 第 j 位 → 放到第 i+j 位
+            </div>
+            
+            <p style="margin-top: 15px;"><strong>第三步：處理進位</strong></p>
+            <p>每一位如果滿 10，就往左邊進位。</p>
+        </div>
+    </div>
+    
+    <!-- 互動演示 -->
+    <div class="tab-content" id="visual">
+        <h2 class="section-title">輸入兩個數字來試試看</h2>
+        <div class="input-group">
+            <label>被乘數：</label>
+            <input type="text" id="numA" value="123" maxlength="15">
+            <label>乘數：</label>
+            <input type="text" id="numB" value="45" maxlength="15">
+            <button class="btn btn-primary" onclick="startVisualization()">開始演示</button>
+            <button class="btn btn-warning" onclick="resetVisualization()">重新開始</button>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <div class="controls-row">
+            <button class="btn btn-success" onclick="stepForward()" id="stepBtn" disabled>下一步 →</button>
+            <button class="btn btn-primary" onclick="toggleAutoPlay()" id="autoBtn" disabled>自動播放</button>
+            <div class="speed-control">
+                <span style="font-size: 13px; color: #606266;">速度：</span>
+                <input type="range" id="speedRange" min="300" max="2500" value="1000" step="100">
+            </div>
+        </div>
+        
+        <div class="step-card">
+            <h4><span class="step-number" id="stepNum">0</span><span id="stepTitle">歡迎使用</span></h4>
+            <p id="stepDesc">請輸入兩個數字，然後點擊「開始演示」，再按「下一步」一步步觀看乘法過程。</p>
+        </div>
+        
+        <div class="visualization-area">
+            <div class="multiply-box" id="multiplyBox">
+                <!-- 位數標籤 -->
+                <div class="digit-labels" id="digitLabels"></div>
+                <!-- 被乘數 -->
+                <div class="num-line multiplicand" id="lineA">123</div>
+                <!-- 乘數 -->
+                <div class="num-line multiplier" id="lineB">×&nbsp;&nbsp;45</div>
+                <!-- 部分積會動態插入這裡 -->
+                <!-- 結果 -->
+                <div class="result-line" id="lineResult"></div>
+            </div>
+            
+            <div class="tip-box" id="tipBox">
+                觀察時請注意：乘數的每一位乘完之後，為什麼要往左邊錯一位？
+            </div>
+        </div>
+    </div>
+    
+    <!-- C++98 代碼 -->
+    <div class="tab-content" id="code">
+        <h2 class="section-title">完整 C++98 實現代碼</h2>
+        
+        <div class="code-container">
+            <div class="code-header">
+                <span>big_multiply.cpp (C++98 標準)</span>
+                <button class="btn btn-primary" style="padding: 4px 12px; font-size: 12px;" onclick="copyCode()">複製代碼</button>
+            </div>
+            <div class="code-block" id="codeBlock">
+<span class="comment">// 高精度乘法 - C++98 標準實現</span>
+<span class="comment">// 使用 vector<int> 存儲大整數，低位在前</span>
+
+<span class="keyword">#include</span> <span class="string">&lt;iostream&gt;</span>
+<span class="keyword">#include</span> <span class="string">&lt;vector&gt;</span>
+<span class="keyword">#include</span> <span class="string">&lt;string&gt;</span>
+<span class="keyword">#include</span> <span class="string">&lt;algorithm&gt;</span>
+
+<span class="keyword">using namespace</span> std;
+
+<span class="comment">// 字符串轉換為整數數組 (低位在前)</span>
+<span class="type">vector</span>&lt;<span class="type">int</span>&gt; strToNum(<span class="keyword">const</span> <span class="type">string</span>&amp; s) {
+    <span class="type">vector</span>&lt;<span class="type">int</span>&gt; num;
+    <span class="keyword">for</span> (<span class="type">int</span> i = s.size() - <span class="number">1</span>; i >= <span class="number">0</span>; --i) {
+        num.push_back(s[i] - <span class="string">'0'</span>);
+    }
+    <span class="keyword">return</span> num;
+}
+
+<span class="comment">// 高精度乘法核心函數</span>
+<span class="type">vector</span>&lt;<span class="type">int</span>&gt; multiply(<span class="keyword">const</span> <span class="type">vector</span>&lt;<span class="type">int</span>&gt;&amp; a,
+                        <span class="keyword">const</span> <span class="type">vector</span>&lt;<span class="type">int</span>&gt;&amp; b) {
+    <span class="type">int</span> n = a.size();
+    <span class="type">int</span> m = b.size();
+    <span class="type">vector</span>&lt;<span class="type">int</span>&gt; result(n + m, <span class="number">0</span>);
+    
+    <span class="comment">// 核心：逐位相乘並累加</span>
+    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; n; ++i) {
+        <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt; m; ++j) {
+            result[i + j] += a[i] * b[j];
+        }
+    }
+    
+    <span class="comment">// 處理進位</span>
+    <span class="keyword">for</span> (<span class="type">int</span> k = <span class="number">0</span>; k &lt; n + m; ++k) {
+        <span class="keyword">if</span> (result[k] >= <span class="number">10</span>) {
+            result[k + <span class="number">1</span>] += result[k] / <span class="number">10</span>;
+            result[k] %= <span class="number">10</span>;
+        }
+    }
+    
+    <span class="comment">// 去除前導零</span>
+    <span class="keyword">while</span> (result.size() &gt; <span class="number">1</span> &amp;&amp; result.back() == <span class="number">0</span>) {
+        result.pop_back();
+    }
+    
+    <span class="keyword">return</span> result;
+}
+
+<span class="comment">// 輸出結果</span>
+<span class="type">void</span> printNum(<span class="keyword">const</span> <span class="type">vector</span>&lt;<span class="type">int</span>&gt;&amp; num) {
+    <span class="keyword">for</span> (<span class="type">int</span> i = num.size() - <span class="number">1</span>; i >= <span class="number">0</span>; --i) {
+        cout &lt;&lt; num[i];
+    }
+    cout &lt;&lt; endl;
+}
+
+<span class="type">int</span> <span class="function">main</span>() {
+    string sa, sb;
+    cin &gt;&gt; sa &gt;&gt; sb;
+    
+    vector&lt;<span class="type">int</span>&gt; a = strToNum(sa);
+    vector&lt;<span class="type">int</span>&gt; b = strToNum(sb);
+    
+    vector&lt;<span class="type">int</span>&gt; ans = multiply(a, b);
+    
+    printNum(ans);
+    <span class="keyword">return</span> <span class="number">0</span>;
+}
+            </div>
+        </div>
+        
+        <h2 class="section-title">代碼詳解（給入門者）</h2>
+        
+        <div class="code-explanation">
+            <h4>1. 為什麼要把數字倒過來存？</h4>
+            <p>就像你算豎式時從右邊（個位）開始算一樣。倒過來存之後，陣列的第 0 格就是個位，第 1 格就是十位... 從左到右算過去就好，比較方便。</p>
+        </div>
+        
+        <div class="code-explanation">
+            <h4>2. 最關鍵的一行：result[i+j] += a[i] * b[j]</h4>
+            <p>被乘數的第 i 位 × 乘數的第 j 位，答案要放在第 i+j 位。為什麼？因為個位×十位=十位（0+1=1），十位×百位=千位（1+2=3），位數就是相加的關係！</p>
+        </div>
+        
+        <div class="code-explanation">
+            <h4>3. 為什麼先全部乘完再處理進位？</h4>
+            <p>因為每一格可以暫時存放大於 10 的數字（int 可以裝很大）。先把所有乘積加起來，最後一次處理進位，程式比較簡單，速度也比較快。</p>
+        </div>
+        
+        <div class="code-explanation">
+            <h4>4. C++98 是什麼意思？</h4>
+            <p>這是比較早期的 C++ 標準。這份程式碼刻意不用新語法，確保在比較舊的編譯器（比如學校的教學環境）也能正常執行。</p>
+        </div>
+    </div>
+</div>
+
+<script>
+// 頁籤切換
+const tabs = document.querySelectorAll('.tab');
+const tabContents = document.querySelectorAll('.tab-content');
+tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+    });
+});
+
+// 全局變量
+let steps = [];
+let currentStep = 0;
+let autoPlayInterval = null;
+let isPlaying = false;
+let currentA = "123";
+let currentB = "45";
+
+// 中文數位名稱
+const digitNames = ["個位", "十位", "百位", "千位", "萬位", "十萬位", "百萬位", "千萬位", "億位", "十億位", "百億位", "千億位", "兆位"];
+
+// 開始演示
+function startVisualization() {
+    const sa = document.getElementById('numA').value.trim();
+    const sb = document.getElementById('numB').value.trim();
+    
+    if (!/^\d+$/.test(sa) || !/^\d+$/.test(sb)) {
+        alert('請輸入有效的正整數！');
+        return;
+    }
+    if (sa.length > 15 || sb.length > 15) {
+        alert('為了演示效果清楚，請輸入15位以內的數字');
+        return;
+    }
+    
+    currentA = sa;
+    currentB = sb;
+    
+    generateSteps(sa, sb);
+    currentStep = 0;
+    isPlaying = false;
+    clearInterval(autoPlayInterval);
+    document.getElementById('stepBtn').disabled = false;
+    document.getElementById('autoBtn').disabled = false;
+    document.getElementById('autoBtn').textContent = '自動播放';
+    
+    // 初始顯示
+    renderInitial(sa, sb);
+    updateStepDisplay();
+    updateProgress();
+}
+
+// 生成所有步驟 - 更細緻、更口語化
+function generateSteps(sa, sb) {
+    steps = [];
+    const a = sa.split('').map(Number);
+    const b = sb.split('').map(Number);
+    const n = a.length;
+    const m = b.length;
+    
+    // 步驟0：初始狀態
+    steps.push({
+        type: 'start',
+        title: '開始計算 ' + sa + ' × ' + sb,
+        desc: '我們要計算 ' + sa + ' 乘以 ' + sb + '。回想一下豎式乘法：先寫上被乘數和乘數，畫一條線，然後用乘數的每一位分別去乘。',
+        tip: '注意乘數是由右往左一位一位算的喔！'
+    });
+    
+    // 步驟1：介紹位數
+    steps.push({
+        type: 'intro',
+        title: '認識每一位的位置',
+        desc: '從右邊數來：第1位是個位，第2位是十位，第3位是百位... 以此類推。乘的時候要對齊正確的位置。',
+        tip: '個位對個位，十位對十位，位子不能對錯！'
+    });
+    
+    // 逐位相乘 - 乘數從右到左（個位開始）
+    for (let j = m - 1; j >= 0; j--) {
+        const bDigit = b[j];
+        const bPos = m - 1 - j; // 第幾位（0=個位）
+        const bPosName = digitNames[bPos] || ("第" + (bPos+1) + "位");
+        
+        // 每一位開始前的說明
+        steps.push({
+            type: 'partial_start',
+            title: '第一步：用乘數的' + bPosName + '「' + bDigit + '」去乘',
+            desc: '現在我們用乘數的' + bPosName + '數字 ' + bDigit + '，從右到左依次乘以被乘數的每一位。',
+            highlightB: j,
+            tip: bPosName + '乘出來的結果，個位要對齊' + bPosName + '喔！'
+        });
+        
+        // 計算這一行的部分積
+        let partial = 0;
+        let carry = 0;
+        let partialDigits = [];
+        
+        for (let i = n - 1; i >= 0; i--) {
+            const product = a[i] * bDigit + carry;
+            partialDigits.unshift(product % 10);
+            carry = Math.floor(product / 10);
+            
+            steps.push({
+                type: 'digit_multiply',
+                title: a[i] + ' × ' + bDigit + ' = ?',
+                desc: '被乘數的第 ' + (n - i) + ' 位數字 ' + a[i] + '，乘以 ' + bDigit + '，等於 ' + (a[i] * bDigit) + 
+                      (carry > 0 ? '，加上前一位的進位 ' + (carry - Math.floor((a[i] * bDigit) / 10)) + '' : '') + 
+                      '。本位寫 ' + (product % 10) + 
+                      (Math.floor(product / 10) > 0 ? '，進位 ' + Math.floor(product / 10) : '沒有進位') + '。',
+                highlightA: i,
+                highlightB: j,
+                carry: Math.floor(product / 10),
+                currentDigit: product % 10,
+                tip: '滿十就要進位喔！'
+            });
+        }
+        
+        // 處理最後的進位
+        if (carry > 0) {
+            partialDigits.unshift(carry);
+            steps.push({
+                type: 'final_carry',
+                title: '最後還有進位 ' + carry,
+                desc: '全部乘完之後，還剩下進位 ' + carry + '，直接寫在最左邊。',
+                carry: carry,
+                tip: '不要忘記最後的進位！很多人會漏掉這一步。'
+            });
+        }
+        
+        const partialStr = partialDigits.join('');
+        
+        // 顯示這一行部分積
+        steps.push({
+            type: 'partial_done',
+            title: '這一行算完了！',
+            desc: '用 ' + bDigit + ' 乘完的結果是 ' + partialStr + '。因為是用' + bPosName + '乘的，所以要對齊' + bPosName + '（往左錯 ' + bPos + ' 位）。',
+            partialStr: partialStr,
+            offset: bPos,
+            bPosName: bPosName,
+            tip: '為什麼要錯位？因為十位的 4 其實是 40，所以 123×40 = 4920，最後那個 0 就是錯位的原因！'
+        });
+    }
+    
+    // 相加步驟
+    steps.push({
+        type: 'add_start',
+        title: '第二步：把所有部分積加起來',
+        desc: '每一行都算好了，現在把它們全部加起來，就是最終答案。相同位置的數字相加，滿十進位。',
+        tip: '對齊位子很重要！個位加個位，十位加十位...'
+    });
+    
+    // 計算最終結果
+    const result = BigInt(sa) * BigInt(sb);
+    const resultStr = result.toString();
+    
+    steps.push({
+        type: 'result',
+        title: '計算完成！',
+        desc: sa + ' × ' + sb + ' = ' + resultStr + '。總共有 ' + resultStr.length + ' 位數。',
+        resultStr: resultStr,
+        tip: '用電腦變數裝不下的大數字，就可以用這種方法算出來！'
+    });
+    
+    steps.push({
+        type: 'summary',
+        title: '總結：高精度乘法三步驟',
+        desc: '1. 用乘數的每一位分別去乘被乘數<br>2. 按照位數錯位排列<br>3. 全部加起來，處理進位',
+        tip: '程式也是照這個邏輯寫的喔！'
+    });
+}
+
+// 渲染初始狀態
+function renderInitial(sa, sb) {
+    const box = document.getElementById('multiplyBox');
+    
+    // 清空舊內容（保留結構）
+    const labels = document.getElementById('digitLabels');
+    const lineA = document.getElementById('lineA');
+    const lineB = document.getElementById('lineB');
+    const lineResult = document.getElementById('lineResult');
+    
+    // 移除舊的部分積
+    const oldPartials = document.querySelectorAll('.partial-line');
+    oldPartials.forEach(el => el.remove());
+    
+    // 計算最大寬度
+    const maxLen = Math.max(sa.length, sb.length, sa.length + sb.length);
+    
+    // 生成位數標籤
+    labels.innerHTML = '';
+    for (let i = maxLen - 1; i >= 0; i--) {
+        const label = document.createElement('div');
+        label.className = 'digit-label';
+        label.textContent = digitNames[i] || (i+1);
+        labels.appendChild(label);
+    }
+    
+    // 設置被乘數和乘數
+    lineA.innerHTML = '&nbsp;'.repeat(maxLen - sa.length) + sa.split('').join('&nbsp;');
+    lineB.innerHTML = '×' + '&nbsp;'.repeat(maxLen - sb.length - 1) + sb.split('').join('&nbsp;');
+    
+    lineResult.textContent = '';
+    lineResult.classList.remove('show');
+    
+    document.getElementById('tipBox').textContent = '觀察時請注意：乘數的每一位乘完之後，為什麼要往左邊錯一位？';
+}
+
+// 更新步驟顯示
+function updateStepDisplay() {
+    const step = steps[currentStep];
+    
+    document.getElementById('stepNum').textContent = currentStep;
+    document.getElementById('stepTitle').textContent = step.title;
+    document.getElementById('stepDesc').innerHTML = step.desc;
+    
+    if (step.tip) {
+        document.getElementById('tipBox').textContent = step.tip;
+    }
+    
+    // 處理各種類型的視覺更新
+    updateHighlight(step);
+    
+    if (step.type === 'partial_done') {
+        showPartialLine(step.partialStr, step.offset);
+    }
+    
+    if (step.type === 'result') {
+        showFinalResult(step.resultStr);
+    }
+}
+
+// 更新數字高亮
+function updateHighlight(step) {
+    const lineA = document.getElementById('lineA');
+    const lineB = document.getElementById('lineB');
+    const sa = currentA;
+    const sb = currentB;
+    const maxLen = Math.max(sa.length, sb.length, sa.length + sb.length);
+    
+    // 重置被乘數
+    let aHtml = '';
+    const aPad = maxLen - sa.length;
+    for (let i = 0; i < aPad; i++) aHtml += '&nbsp;';
+    for (let i = 0; i < sa.length; i++) {
+        if (step.highlightA === i) {
+            aHtml += '<span class="digit-highlight">' + sa[i] + '</span>&nbsp;';
+        } else {
+            aHtml += sa[i] + '&nbsp;';
+        }
+    }
+    lineA.innerHTML = aHtml;
+    
+    // 重置乘數
+    let bHtml = '×';
+    const bPad = maxLen - sb.length - 1;
+    for (let i = 0; i < bPad; i++) bHtml += '&nbsp;';
+    for (let i = 0; i < sb.length; i++) {
+        if (step.highlightB === i) {
+            bHtml += '<span class="digit-highlight">' + sb[i] + '</span>&nbsp;';
+        } else {
+            bHtml += sb[i] + '&nbsp;';
+        }
+    }
+    lineB.innerHTML = bHtml;
+}
+
+// 顯示一行部分積
+function showPartialLine(str, offset) {
+    const box = document.getElementById('multiplyBox');
+    const lineResult = document.getElementById('lineResult');
+    
+    const line = document.createElement('div');
+    line.className = 'partial-line';
+    
+    const maxLen = currentA.length + currentB.length;
+    const padding = maxLen - str.length - offset;
+    
+    let html = '';
+    for (let i = 0; i < padding; i++) html += '&nbsp;';
+    html += str.split('').join('&nbsp;');
+    
+    line.innerHTML = html;
+    
+    box.insertBefore(line, lineResult);
+    
+    // 延遲顯示動畫
+    setTimeout(() => {
+        line.classList.add('show');
+    }, 50);
+}
+
+// 顯示最終結果
+function showFinalResult(str) {
+    const lineResult = document.getElementById('lineResult');
+    const maxLen = currentA.length + currentB.length;
+    
+    let html = '';
+    const padding = maxLen - str.length;
+    for (let i = 0; i < padding; i++) html += '&nbsp;';
+    html += str.split('').join('&nbsp;');
+    
+    lineResult.innerHTML = html;
+    lineResult.classList.add('show');
+}
+
+// 下一步
+function stepForward() {
+    if (currentStep >= steps.length - 1) {
+        currentStep = steps.length - 1;
+        if (isPlaying) toggleAutoPlay();
+        return;
+    }
+    
+    currentStep++;
+    updateStepDisplay();
+    updateProgress();
+}
+
+// 更新進度條
+function updateProgress() {
+    const pct = steps.length > 1 ? (currentStep / (steps.length - 1)) * 100 : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+}
+
+// 自動播放
+function toggleAutoPlay() {
+    const btn = document.getElementById('autoBtn');
+    const speed = parseInt(document.getElementById('speedRange').value);
+    
+    if (isPlaying) {
+        clearInterval(autoPlayInterval);
+        btn.textContent = '自動播放';
+        isPlaying = false;
+    } else {
+        if (currentStep >= steps.length - 1) {
+            resetVisualization();
+        }
+        btn.textContent = '暫停';
+        isPlaying = true;
+        autoPlayInterval = setInterval(() => {
+            stepForward();
+            if (currentStep >= steps.length - 1) {
+                clearInterval(autoPlayInterval);
+                btn.textContent = '自動播放';
+                isPlaying = false;
+            }
+        }, 2800 - speed);
+    }
+}
+
+// 重置
+function resetVisualization() {
+    currentStep = 0;
+    isPlaying = false;
+    clearInterval(autoPlayInterval);
+    document.getElementById('autoBtn').textContent = '自動播放';
+    
+    const sa = document.getElementById('numA').value.trim();
+    const sb = document.getElementById('numB').value.trim();
+    
+    if (sa && sb && /^\d+$/.test(sa) && /^\d+$/.test(sb)) {
+        currentA = sa;
+        currentB = sb;
+        generateSteps(sa, sb);
+        renderInitial(sa, sb);
+        updateStepDisplay();
+        updateProgress();
+        document.getElementById('stepBtn').disabled = false;
+        document.getElementById('autoBtn').disabled = false;
+    }
+}
+
+// 複製代碼
+function copyCode() {
+    const codeText = `// 高精度乘法 - C++98 標準實現
+// 使用 vector<int> 存儲大整數，低位在前
+
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+
+using namespace std;
+
+// 字符串轉換為整數數組 (低位在前)
+vector<int> strToNum(const string& s) {
+    vector<int> num;
+    for (int i = s.size() - 1; i >= 0; --i) {
+        num.push_back(s[i] - '0');
+    }
+    return num;
+}
+
+// 高精度乘法核心函數
+vector<int> multiply(const vector<int>& a, const vector<int>& b) {
+    int n = a.size();
+    int m = b.size();
+    vector<int> result(n + m, 0);
+    
+    // 核心：逐位相乘並累加
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < m; ++j) {
+            result[i + j] += a[i] * b[j];
+        }
+    }
+    
+    // 處理進位
+    for (int k = 0; k < n + m; ++k) {
+        if (result[k] >= 10) {
+            result[k + 1] += result[k] / 10;
+            result[k] %= 10;
+        }
+    }
+    
+    // 去除前導零
+    while (result.size() > 1 && result.back() == 0) {
+        result.pop_back();
+    }
+    
+    return result;
+}
+
+// 輸出結果
+void printNum(const vector<int>& num) {
+    for (int i = num.size() - 1; i >= 0; --i) {
+        cout << num[i];
+    }
+    cout << endl;
+}
+
+int main() {
+    string sa, sb;
+    cin >> sa >> sb;
+    
+    vector<int> a = strToNum(sa);
+    vector<int> b = strToNum(sb);
+    
+    vector<int> ans = multiply(a, b);
+    
+    printNum(ans);
+    return 0;
+}`;
+    
+    navigator.clipboard.writeText(codeText).then(() => {
+        alert('代碼已複製到剪貼簿！');
+    }).catch(() => {
+        alert('複製失敗，請手動選取複製');
+    });
+}
+
+// 頁面加載時自動初始化
+window.onload = function() {
+    generateSteps('123', '45');
+    renderInitial('123', '45');
+    updateStepDisplay();
+    document.getElementById('stepBtn').disabled = false;
+    document.getElementById('autoBtn').disabled = false;
+};
+</script>
+</body>
+</html>
+<!-- (註：內容由 AI 生成) -->
