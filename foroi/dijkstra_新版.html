@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dijkstra 演算法互動式視覺化課件</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    },
+                    colors: {
+                        slate: {
+                            850: '#131e32',
+                            900: '#0f172a',
+                            950: '#080d1a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f1f5f9;
+            user-select: none;
+        }
+        canvas {
+            touch-action: none;
+        }
+        .code-line {
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        .code-active {
+            background-color: rgba(59, 130, 246, 0.25) !important;
+            border-left: 4px solid #3b82f6 !important;
+        }
+        .glow-node {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+        }
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col font-sans">
+
+    <!-- 頂部導覽列 -->
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex justify-between items-center z-10">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 bg-blue-600/20 text-blue-400 rounded-lg border border-blue-500/30">
+                <i class="fa-solid fa-route text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg text-slate-100 flex items-center gap-2">
+                    Dijkstra 最短路徑演算法
+                    <span class="text-xs bg-blue-500/10 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full font-mono">互動教學課件</span>
+                </h1>
+                <p class="text-xs text-slate-400">直觀理解：貪婪選擇 (Greedy) 與 邊的鬆弛 (Edge Relaxation)</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <!-- 預設地圖切換 -->
+            <div class="flex bg-slate-800 p-1 rounded-lg border border-slate-700/60 text-xs font-medium">
+                <button id="btnPreset1" onclick="loadPreset('classic')" class="px-3 py-1.5 rounded-md transition hover:text-white text-slate-300 bg-slate-700">經典 6 節點</button>
+                <button id="btnPreset2" onclick="loadPreset('complex')" class="px-3 py-1.5 rounded-md transition hover:text-white text-slate-400">多路徑網格</button>
+                <button id="btnPreset3" onclick="loadPreset('shortcut')" class="px-3 py-1.5 rounded-md transition hover:text-white text-slate-400">陷阱與捷徑</button>
+            </div>
+
+            <!-- 起點/終點選擇 -->
+            <div class="flex items-center space-x-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700/60 text-xs">
+                <span class="text-emerald-400 font-semibold"><i class="fa-solid fa-play text-xs mr-1"></i>起點:</span>
+                <select id="startNodeSelect" onchange="changeStartEndNodes()" class="bg-slate-900 text-slate-100 px-2 py-0.5 rounded border border-slate-700 outline-none"></select>
+                <span class="text-rose-400 font-semibold ml-2"><i class="fa-solid fa-flag-checkered text-xs mr-1"></i>終點:</span>
+                <select id="endNodeSelect" onchange="changeStartEndNodes()" class="bg-slate-900 text-slate-100 px-2 py-0.5 rounded border border-slate-700 outline-none"></select>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要工作區域 -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- 左側：圖形畫布與控制區 -->
+        <div class="flex-1 flex flex-col bg-slate-950 relative">
+            
+            <!-- 工具提示欄 -->
+            <div class="absolute top-4 left-4 z-10 flex gap-2">
+                <div class="bg-slate-900/90 backdrop-blur border border-slate-800 px-3 py-1.5 rounded-md text-xs text-slate-300 shadow-lg flex items-center gap-2">
+                    <i class="fa-solid fa-hand-pointer text-blue-400"></i>
+                    <span>提示: 可拖拽節點改變形狀 | 雙擊畫布新增節點</span>
+                </div>
+            </div>
+
+            <!-- 圖形圖例提示 (Legend) -->
+            <div class="absolute top-4 right-4 z-10 bg-slate-900/90 backdrop-blur border border-slate-800 p-2.5 rounded-md text-xs shadow-lg space-y-1.5">
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span><span class="text-slate-300">起始點 (Start)</span></div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span><span class="text-slate-300">終點 (Target)</span></div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span><span class="text-slate-300">當前處理節點 (Current)</span></div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-cyan-400 inline-block"></span><span class="text-slate-300">鄰居/探測中 (Examining)</span></div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-indigo-500 inline-block"></span><span class="text-slate-300">已定案/已訪問 (Visited)</span></div>
+                <div class="flex items-center gap-2"><span class="w-3.5 h-1 bg-emerald-400 inline-block"></span><span class="text-slate-300">最短路徑樹 (Shortest Path)</span></div>
+            </div>
+
+            <!-- Interactive Canvas -->
+            <div class="flex-1 relative">
+                <canvas id="graphCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+            </div>
+
+            <!-- 播放與步驟控制列 (Bottom Player Bar) -->
+            <div class="bg-slate-900 border-t border-slate-800 p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                
+                <!-- 播放控制器 -->
+                <div class="flex items-center space-x-2">
+                    <button onclick="resetAlgorithm()" class="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700" title="重置">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+                    <button onclick="stepBackward()" class="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700" title="上一步">
+                        <i class="fa-solid fa-backward-step"></i>
+                    </button>
+                    <button id="playBtn" onclick="togglePlay()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition shadow-lg shadow-blue-600/30 flex items-center gap-2">
+                        <i id="playIcon" class="fa-solid fa-play"></i>
+                        <span id="playText">自動播放</span>
+                    </button>
+                    <button onclick="stepForward()" class="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700" title="下一步">
+                        <i class="fa-solid fa-forward-step"></i>
+                    </button>
+                </div>
+
+                <!-- 播放進度與速度條 -->
+                <div class="flex items-center space-x-6 w-full md:w-auto flex-1 max-w-md">
+                    <div class="flex-1">
+                        <div class="flex justify-between text-xs text-slate-400 mb-1 font-mono">
+                            <span>演算法步驟</span>
+                            <span><span id="currentStepText" class="text-blue-400 font-bold">0</span> / <span id="totalStepsText">0</span></span>
+                        </div>
+                        <input id="stepProgress" type="range" min="0" max="0" value="0" oninput="jumpToStep(this.value)" class="w-full accent-blue-500 cursor-pointer bg-slate-800 h-2 rounded-lg">
+                    </div>
+
+                    <div class="w-28">
+                        <div class="flex justify-between text-xs text-slate-400 mb-1 font-mono">
+                            <span>速度</span>
+                            <span id="speedValText" class="text-blue-400">1.0x</span>
+                        </div>
+                        <input id="speedRange" type="range" min="0.2" max="3" step="0.2" value="1" oninput="updateSpeed(this.value)" class="w-full accent-blue-500 cursor-pointer bg-slate-800 h-2 rounded-lg">
+                    </div>
+                </div>
+
+                <!-- 編輯圖形模式按鈕 -->
+                <div class="flex items-center space-x-2 border-l border-slate-800 pl-4">
+                    <button id="addNodeBtn" onclick="toggleAddNodeMode()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-plus text-blue-400"></i> 新增節點
+                    </button>
+                    <button onclick="clearCustomGraph()" class="px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-xs font-medium border border-rose-500/20 flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-trash-can"></i> 清空圖形
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側：演算法狀態與說明面板 -->
+        <div class="w-96 bg-slate-900 border-l border-slate-800 flex flex-col h-full overflow-hidden">
+            
+            <!-- 分頁切換器 -->
+            <div class="flex border-b border-slate-800 bg-slate-950/50">
+                <button id="tabStateBtn" onclick="switchTab('state')" class="flex-1 py-3 text-xs font-bold text-blue-400 border-b-2 border-blue-500 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-chart-diagram"></i> 數據變化狀態
+                </button>
+                <button id="tabCodeBtn" onclick="switchTab('code')" class="flex-1 py-3 text-xs font-bold text-slate-400 hover:text-slate-200 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-code"></i> Python 程式碼
+                </button>
+            </div>
+
+            <!-- 分頁 1: 數據狀態面板 -->
+            <div id="tabState" class="flex-1 flex flex-col p-4 space-y-4 overflow-y-auto">
+                
+                <!-- 1. 當前步驟原理解說卡片 -->
+                <div class="bg-blue-950/40 border border-blue-500/30 rounded-xl p-3.5 relative overflow-hidden shadow-sm">
+                    <div class="text-xs uppercase tracking-wider text-blue-400 font-bold mb-1 flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-info"></i> 當前動作解說
+                    </div>
+                    <div id="explanationText" class="text-sm text-slate-200 leading-relaxed font-sans">
+                        點擊「自動播放」或「下一步」開始體驗 Dijkstra 最短路徑演算法推導過程。
+                    </div>
+                </div>
+
+                <!-- 2. 優先隊列 (Priority Queue / Min-Heap) 視覺化 -->
+                <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3.5">
+                    <div class="text-xs font-bold text-slate-300 mb-2 flex justify-between items-center">
+                        <span class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-[#00d2ff] fa-layer-group text-amber-400"></i>
+                            優先隊列 (Priority Queue)
+                        </span>
+                        <span class="text-[10px] text-slate-500 font-mono">Min-Heap 候選名單</span>
+                    </div>
+                    <div id="pqContainer" class="flex flex-wrap gap-1.5 min-h-[38px] p-2 bg-slate-900 rounded-lg border border-slate-800/80 items-center">
+                        <span class="text-xs text-slate-500 italic">隊列為空</span>
+                    </div>
+                </div>
+
+                <!-- 3. 距離與前驅節點記錄表 (Distances & Predecessors Table) -->
+                <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3.5 flex-1 flex flex-col">
+                    <div class="text-xs font-bold text-slate-300 mb-2 flex justify-between items-center">
+                        <span class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-table-list text-emerald-400"></i>
+                            節點狀態記錄表 (Distance Table)
+                        </span>
+                    </div>
+                    <div class="flex-1 overflow-y-auto rounded-lg border border-slate-800">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-800/90 text-slate-300 font-mono sticky top-0">
+                                <tr>
+                                    <th class="p-2 border-b border-slate-700">節點</th>
+                                    <th class="p-2 border-b border-slate-700">最短距離 d[v]</th>
+                                    <th class="p-2 border-b border-slate-700">前驅節點 p[v]</th>
+                                    <th class="p-2 border-b border-slate-700 text-center">訪問狀態</th>
+                                </tr>
+                            </thead>
+                            <tbody id="distanceTableBody" class="font-mono divide-y divide-slate-800/60">
+                                <!-- 動態填充表格 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 4. 演算法關鍵核心觀念提醒卡片 -->
+                <div class="bg-slate-800/40 border border-slate-700/50 p-3 rounded-lg text-xs space-y-1 text-slate-400">
+                    <div class="text-slate-200 font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-lightbulb text-amber-400"></i> Dijkstra 核心機制
+                    </div>
+                    <p><strong class="text-cyan-300">貪婪選擇：</strong> 每次從 Priority Queue 取出當前暫定距離最短的未訪問節點。</p>
+                    <p><strong class="text-emerald-300">邊的鬆弛 (Relaxation)：</strong> 若 <code class="bg-slate-900 px-1 py-0.5 rounded text-amber-300">d[u] + w(u,v) < d[v]</code>，則更新 <code class="bg-slate-900 px-1 py-0.5 rounded text-amber-300">d[v]</code>。</p>
+                </div>
+
+            </div>
+
+            <!-- 分頁 2: Python 程式碼高亮比對 -->
+            <div id="tabCode" class="flex-1 hidden flex-col p-4 overflow-y-auto font-mono text-xs bg-slate-950">
+                <div class="text-slate-400 mb-2 font-sans text-xs">下方的 Python 程式碼會隨演算法執行即時高亮同步：</div>
+                
+                <div class="bg-slate-900 border border-slate-800 rounded-lg p-3 text-slate-300 leading-relaxed overflow-x-auto">
+<pre><code><span id="line1" class="code-line block px-2 py-0.5 rounded">import heapq</span>
+<span id="line2" class="code-line block px-2 py-0.5 rounded">def dijkstra(graph, start):</span>
+<span id="line3" class="code-line block px-2 py-0.5 rounded">    # 1. 初始化距離表與優先隊列</span>
+<span id="line4" class="code-line block px-2 py-0.5 rounded">    distances = {node: float('inf') for node in graph}</span>
+<span id="line5" class="code-line block px-2 py-0.5 rounded">    distances[start] = 0</span>
+<span id="line6" class="code-line block px-2 py-0.5 rounded">    pq = [(0, start)]</span>
+<span id="line7" class="code-line block px-2 py-0.5 rounded">    visited = set()</span>
+<span id="line8" class="code-line block px-2 py-0.5 rounded">    parent = {}</span>
+<span id="line9" class="code-line block px-2 py-0.5 rounded"></span>
+<span id="line10" class="code-line block px-2 py-0.5 rounded">    while pq:</span>
+<span id="line11" class="code-line block px-2 py-0.5 rounded">        # 2. 貪婪選擇：彈出當前距離最小的節點</span>
+<span id="line12" class="code-line block px-2 py-0.5 rounded">        cur_d, u = heapq.heappop(pq)</span>
+<span id="line13" class="code-line block px-2 py-0.5 rounded">        if u in visited: continue</span>
+<span id="line14" class="code-line block px-2 py-0.5 rounded">        visited.add(u)</span>
+<span id="line15" class="code-line block px-2 py-0.5 rounded"></span>
+<span id="line16" class="code-line block px-2 py-0.5 rounded">        # 3. 遍歷相鄰節點並進行「鬆弛 (Relaxation)」</span>
+<span id="line17" class="code-line block px-2 py-0.5 rounded">        for v, weight in graph[u].items():</span>
+<span id="line18" class="code-line block px-2 py-0.5 rounded">            if v not in visited:</span>
+<span id="line19" class="code-line block px-2 py-0.5 rounded">                new_dist = cur_d + weight</span>
+<span id="line20" class="code-line block px-2 py-0.5 rounded">                if new_dist < distances[v]:</span>
+<span id="line21" class="code-line block px-2 py-0.5 rounded">                    distances[v] = new_dist</span>
+<span id="line22" class="code-line block px-2 py-0.5 rounded">                    parent[v] = u</span>
+<span id="line23" class="code-line block px-2 py-0.5 rounded">                    heapq.heappush(pq, (new_dist, v))</span>
+<span id="line24" class="code-line block px-2 py-0.5 rounded"></span>
+<span id="line25" class="code-line block px-2 py-0.5 rounded">    return distances, parent</span></code></pre>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- 核心資料結構與地圖預設 (Graph Presets) ---
+        let nodes = [];
+        let edges = [];
+        let startNodeId = 'A';
+        let endNodeId = 'F';
+
+        const PRESETS = {
+            classic: {
+                start: 'A', end: 'F',
+                nodes: [
+                    { id: 'A', x: 120, y: 220 },
+                    { id: 'B', x: 280, y: 100 },
+                    { id: 'C', x: 280, y: 340 },
+                    { id: 'D', x: 480, y: 100 },
+                    { id: 'E', x: 480, y: 340 },
+                    { id: 'F', x: 640, y: 220 }
+                ],
+                edges: [
+                    { from: 'A', to: 'B', weight: 4 },
+                    { from: 'A', to: 'C', weight: 2 },
+                    { from: 'B', to: 'C', weight: 1 },
+                    { from: 'B', to: 'D', weight: 5 },
+                    { from: 'C', to: 'D', weight: 8 },
+                    { from: 'C', to: 'E', weight: 10 },
+                    { from: 'D', to: 'E', weight: 2 },
+                    { from: 'D', to: 'F', weight: 6 },
+                    { from: 'E', to: 'F', weight: 3 }
+                ]
+            },
+            complex: {
+                start: 'A', end: 'G',
+                nodes: [
+                    { id: 'A', x: 100, y: 220 },
+                    { id: 'B', x: 250, y: 120 },
+                    { id: 'C', x: 250, y: 320 },
+                    { id: 'D', x: 420, y: 120 },
+                    { id: 'E', x: 420, y: 320 },
+                    { id: 'F', x: 580, y: 220 },
+                    { id: 'G', x: 720, y: 220 }
+                ],
+                edges: [
+                    { from: 'A', to: 'B', weight: 2 },
+                    { from: 'A', to: 'C', weight: 5 },
+                    { from: 'B', to: 'C', weight: 2 },
+                    { from: 'B', to: 'D', weight: 4 },
+                    { from: 'C', to: 'E', weight: 1 },
+                    { from: 'D', to: 'E', weight: 3 },
+                    { from: 'D', to: 'F', weight: 2 },
+                    { from: 'E', to: 'F', weight: 7 },
+                    { from: 'F', to: 'G', weight: 1 },
+                    { from: 'E', to: 'G', weight: 8 }
+                ]
+            },
+            shortcut: {
+                start: 'A', end: 'D',
+                nodes: [
+                    { id: 'A', x: 120, y: 220 },
+                    { id: 'B', x: 300, y: 100 },
+                    { id: 'C', x: 300, y: 340 },
+                    { id: 'D', x: 550, y: 220 }
+                ],
+                edges: [
+                    { from: 'A', to: 'D', weight: 12 }, // 直連但代價大
+                    { from: 'A', to: 'B', weight: 3 },
+                    { from: 'B', to: 'C', weight: 2 },
+                    { from: 'C', to: 'D', weight: 4 }  // 迂迴但總代價 3+2+4 = 9
+                ]
+            }
+        };
+
+        // --- Canvas 繪圖變數與互動 ---
+        const canvas = document.getElementById('graphCanvas');
+        const ctx = canvas.getContext('2d');
+        let draggedNode = null;
+        let isAddNodeMode = false;
+        let edgeSourceNode = null;
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            drawGraph();
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- 演算法步驟生成器 (Dijkstra Execution Recording) ---
+        let steps = [];
+        let currentStepIdx = 0;
+        let isPlaying = false;
+        let playInterval = null;
+        let playSpeed = 1.0;
+
+        function generateDijkstraSteps() {
+            steps = [];
+            const graph = {};
+            nodes.forEach(n => graph[n.id] = {});
+            edges.forEach(e => {
+                graph[e.from][e.to] = e.weight;
+                graph[e.to][e.from] = e.weight; // 無向圖
+            });
+
+            const distances = {};
+            const parent = {};
+            const visited = new Set();
+            const pq = []; // Array of { node, dist }
+
+            nodes.forEach(n => {
+                distances[n.id] = Infinity;
+                parent[n.id] = null;
+            });
+
+            distances[startNodeId] = 0;
+            pq.push({ node: startNodeId, dist: 0 });
+
+            // Step 0: 初始化
+            steps.push({
+                type: 'INIT',
+                distances: { ...distances },
+                parent: { ...parent },
+                visited: new Set(visited),
+                pq: [...pq],
+                currentNode: null,
+                examiningEdge: null,
+                lineNum: 4,
+                explanation: `初始化完成！起點 <b class="text-emerald-400">${startNodeId}</b> 距離設為 <b>0</b>，其他所有節點距離設為 <b>∞ (無限大)</b>。`
+            });
+
+            while (pq.length > 0) {
+                // Min-heap 排序：按距離從小到大
+                pq.sort((a, b) => a.dist - b.dist);
+                
+                // 貪婪選擇小距離
+                const current = pq.shift();
+                const u = current.node;
+
+                if (visited.has(u)) continue;
+
+                steps.push({
+                    type: 'PICK_MIN',
+                    distances: { ...distances },
+                    parent: { ...parent },
+                    visited: new Set(visited),
+                    pq: [...pq],
+                    currentNode: u,
+                    examiningEdge: null,
+                    lineNum: 12,
+                    explanation: `<b>貪婪選擇：</b>從 Priority Queue 中取出當前暫定距離最小的未訪問節點 <b class="text-amber-400">${u}</b> (距離 d = ${distances[u]})。`
+                });
+
+                visited.add(u);
+
+                steps.push({
+                    type: 'VISIT_NODE',
+                    distances: { ...distances },
+                    parent: { ...parent },
+                    visited: new Set(visited),
+                    pq: [...pq],
+                    currentNode: u,
+                    examiningEdge: null,
+                    lineNum: 14,
+                    explanation: `將節點 <b class="text-amber-400">${u}</b> 標記為<b class="text-indigo-400">已訪問 (Visited)</b>。該節點的最短距離已定案！`
+                });
+
+                // 如果達到目標終點，可提前完成展示
+                if (u === endNodeId) {
+                    steps.push({
+                        type: 'REACHED_TARGET',
+                        distances: { ...distances },
+                        parent: { ...parent },
+                        visited: new Set(visited),
+                        pq: [...pq],
+                        currentNode: u,
+                        examiningEdge: null,
+                        lineNum: 13,
+                        explanation: `<i class="fa-solid fa-trophy text-amber-400 mr-1"></i> 已抵達終點節點 <b class="text-rose-400">${endNodeId}</b>！找到從 ${startNodeId} 到 ${endNodeId} 的全局最短路徑。`
+                    });
+                }
+
+                // 探測鄰居
+                for (const v in graph[u]) {
+                    const weight = graph[u][v];
+                    if (!visited.has(v)) {
+
+                        steps.push({
+                            type: 'INSPECT_NEIGHBOR',
+                            distances: { ...distances },
+                            parent: { ...parent },
+                            visited: new Set(visited),
+                            pq: [...pq],
+                            currentNode: u,
+                            examiningEdge: { from: u, to: v, weight },
+                            lineNum: 17,
+                            explanation: `檢查 <b class="text-amber-400">${u}</b> 的鄰居 <b class="text-cyan-400">${v}</b> (邊權重 w = ${weight})。`
+                        });
+
+                        const newDist = distances[u] + weight;
+                        if (newDist < distances[v]) {
+                            const oldDist = distances[v];
+                            distances[v] = newDist;
+                            parent[v] = u;
+
+                            // 更新/放入 PQ
+                            pq.push({ node: v, dist: newDist });
+
+                            steps.push({
+                                type: 'RELAX_SUCCESS',
+                                distances: { ...distances },
+                                parent: { ...parent },
+                                visited: new Set(visited),
+                                pq: [...pq],
+                                currentNode: u,
+                                examiningEdge: { from: u, to: v, weight },
+                                updatedNode: v,
+                                lineNum: 21,
+                                explanation: `<b class="text-emerald-400">鬆弛成功 (Relaxation)！</b> 發現更短路徑：d[${u}] (${distances[u]}) + w (${weight}) = <b>${newDist}</b> &lt; 舊距離 (${oldDist === Infinity ? '∞' : oldDist})。更新 d[${v}] = ${newDist}，並記錄前驅點 p[${v}] = ${u}。`
+                            });
+                        } else {
+                            steps.push({
+                                type: 'RELAX_FAIL',
+                                distances: { ...distances },
+                                parent: { ...parent },
+                                visited: new Set(visited),
+                                pq: [...pq],
+                                currentNode: u,
+                                examiningEdge: { from: u, to: v, weight },
+                                lineNum: 20,
+                                explanation: `<b>無需鬆弛：</b>經由 ${u} 到達 ${v} 的距離 (${distances[u]} + ${weight} = ${newDist}) 沒有小於現有距離 d[${v}] (${distances[v]})。保持原樣。`
+                            });
+                        }
+                    }
+                }
+            }
+
+            steps.push({
+                type: 'FINISHED',
+                distances: { ...distances },
+                parent: { ...parent },
+                visited: new Set(visited),
+                pq: [],
+                currentNode: null,
+                examiningEdge: null,
+                lineNum: 25,
+                explanation: `<i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> <b>演算法執行完畢！</b> 已計算出起點 <b class="text-emerald-400">${startNodeId}</b> 到圖中所有可達節點的最短路徑。`
+            });
+
+            // 更新 UI 限制
+            document.getElementById('stepProgress').max = steps.length - 1;
+            document.getElementById('totalStepsText').innerText = steps.length - 1;
+        }
+
+        // --- 繪圖渲染核心 (Canvas Rendering Engine) ---
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const state = steps[currentStepIdx] || {
+                distances: {}, parent: {}, visited: new Set(), pq: [], currentNode: null, examiningEdge: null
+            };
+
+            // 1. 繪製邊 (Edges)
+            edges.forEach(edge => {
+                const n1 = nodes.find(n => n.id === edge.from);
+                const n2 = nodes.find(n => n.id === edge.to);
+                if (!n1 || !n2) return;
+
+                let isShortestPathTreeEdge = false;
+                if (state.parent[edge.to] === edge.from || state.parent[edge.from] === edge.to) {
+                    // 只在已訪問或是被處理過的樹節點高亮
+                    if (state.visited.has(edge.from) || state.visited.has(edge.to) || state.distances[edge.to] !== Infinity) {
+                        isShortestPathTreeEdge = true;
+                    }
+                }
+
+                const isExamining = state.examiningEdge &&
+                    ((state.examiningEdge.from === edge.from && state.examiningEdge.to === edge.to) ||
+                     (state.examiningEdge.from === edge.to && state.examiningEdge.to === edge.from));
+
+                ctx.beginPath();
+                ctx.moveTo(n1.x, n1.y);
+                ctx.lineTo(n2.x, n2.y);
+
+                if (isExamining) {
+                    ctx.strokeStyle = '#22d3ee'; // cyan
+                    ctx.lineWidth = 4;
+                    ctx.setLineDash([8, 6]);
+                } else if (isShortestPathTreeEdge) {
+                    ctx.strokeStyle = '#10b981'; // emerald
+                    ctx.lineWidth = 4;
+                    ctx.setLineDash([]);
+                } else {
+                    ctx.strokeStyle = '#334155'; // slate-700
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([]);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 邊的權重文字標籤
+                const midX = (n1.x + n2.x) / 2;
+                const midY = (n1.y + n2.y) / 2;
+                ctx.beginPath();
+                ctx.arc(midX, midY, 12, 0, Math.PI * 2);
+                ctx.fillStyle = isExamining ? '#0891b2' : '#1e293b';
+                ctx.fill();
+                ctx.strokeStyle = isExamining ? '#22d3ee' : '#475569';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.fillStyle = isExamining ? '#ffffff' : '#94a3b8';
+                ctx.font = '600 11px Fira Code';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(edge.weight, midX, midY);
+            });
+
+            // 2. 繪製節點 (Nodes)
+            nodes.forEach(node => {
+                const isStart = node.id === startNodeId;
+                const isEnd = node.id === endNodeId;
+                const isCurrent = state.currentNode === node.id;
+                const isVisited = state.visited.has(node.id);
+                const isExaminingNeighbor = state.examiningEdge && state.examiningEdge.to === node.id;
+
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, 22, 0, Math.PI * 2);
+
+                // 配色邏輯
+                if (isCurrent) {
+                    ctx.fillStyle = '#fbbf24'; // amber-400
+                } else if (isStart) {
+                    ctx.fillStyle = '#10b981'; // emerald-500
+                } else if (isEnd) {
+                    ctx.fillStyle = '#f43f5e'; // rose-500
+                } else if (isExaminingNeighbor) {
+                    ctx.fillStyle = '#22d3ee'; // cyan-400
+                } else if (isVisited) {
+                    ctx.fillStyle = '#6366f1'; // indigo-500
+                } else {
+                    ctx.fillStyle = '#1e293b'; // slate-800
+                }
+                ctx.fill();
+
+                // 外框線條
+                ctx.lineWidth = isCurrent || isExaminingNeighbor ? 4 : 2;
+                ctx.strokeStyle = isCurrent ? '#fef08a' : (isVisited ? '#a5b4fc' : '#475569');
+                ctx.stroke();
+
+                // 節點名稱文字
+                ctx.fillStyle = (isCurrent || isStart || isEnd || isExaminingNeighbor || isVisited) ? '#ffffff' : '#f1f5f9';
+                ctx.font = 'bold 14px Inter';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(node.id, node.x, node.y);
+
+                // 距離標籤 (Distance Badge above Node)
+                const distVal = state.distances[node.id];
+                const distText = distVal === Infinity ? 'd=∞' : `d=${distVal}`;
+                
+                ctx.beginPath();
+                ctx.roundRect(node.x - 22, node.y - 42, 44, 18, 4);
+                ctx.fillStyle = isCurrent ? '#d97706' : (distVal !== Infinity ? '#0f766e' : '#0f172a');
+                ctx.fill();
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.fillStyle = '#5eead4';
+                ctx.font = '600 10px Fira Code';
+                ctx.fillText(distText, node.x, node.y - 32);
+            });
+        }
+
+        // --- 視圖與資料表同步更新 ---
+        function updateUIState() {
+            if (steps.length === 0) return;
+            const state = steps[currentStepIdx];
+
+            // 1. 更新進度與說明
+            document.getElementById('stepProgress').value = currentStepIdx;
+            document.getElementById('currentStepText').innerText = currentStepIdx;
+            document.getElementById('explanationText').innerHTML = state.explanation;
+
+            // 2. 更新 Priority Queue (Min-Heap) 標籤清單
+            const pqContainer = document.getElementById('pqContainer');
+            if (!state.pq || state.pq.length === 0) {
+                pqContainer.innerHTML = `<span class="text-xs text-slate-500 italic">隊列為空 (Empty Queue)</span>`;
+            } else {
+                // 按距離排序視覺化
+                const sortedPQ = [...state.pq].sort((a,b) => a.dist - b.dist);
+                pqContainer.innerHTML = sortedPQ.map((item, idx) => `
+                    <div class="px-2.5 py-1 ${idx === 0 ? 'bg-amber-500/20 border-amber-500/50 text-amber-300' : 'bg-slate-800 border-slate-700 text-slate-300'} border rounded-md text-xs font-mono flex items-center gap-1.5 shadow-sm">
+                        <span class="font-bold">${item.node}</span>
+                        <span class="text-[10px] opacity-75">(d=${item.dist})</span>
+                    </div>
+                `).join('');
+            }
+
+            // 3. 更新表格 (Distance Table)
+            const tbody = document.getElementById('distanceTableBody');
+            tbody.innerHTML = nodes.map(n => {
+                const dist = state.distances[n.id];
+                const prev = state.parent[n.id] || '-';
+                const isVisited = state.visited.has(n.id);
+                const isCur = state.currentNode === n.id;
+
+                let rowBg = 'hover:bg-slate-800/40';
+                if (isCur) rowBg = 'bg-amber-500/10 text-amber-200';
+                else if (isVisited) rowBg = 'bg-indigo-950/20 text-slate-300';
+
+                return `
+                    <tr class="${rowBg} transition">
+                        <td class="p-2 font-bold">${n.id} ${n.id === startNodeId ? '<span class="text-[10px] text-emerald-400">(起點)</span>' : ''}</td>
+                        <td class="p-2 ${dist !== Infinity ? 'text-cyan-400 font-bold' : 'text-slate-500'}">${dist === Infinity ? '∞' : dist}</td>
+                        <td class="p-2 text-slate-400">${prev}</td>
+                        <td class="p-2 text-center">
+                            ${isVisited 
+                                ? '<span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] border border-indigo-500/30">已確定</span>' 
+                                : '<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-500 text-[10px]">未存取</span>'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // 4. 更新 Python 程式碼高亮
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('code-active'));
+            if (state.lineNum) {
+                const lineEl = document.getElementById(`line${state.lineNum}`);
+                if (lineEl) lineEl.classList.add('code-active');
+            }
+
+            // 5. 重繪 Canvas
+            drawGraph();
+        }
+
+        // --- 播放器控制邏輯 (Player Controls) ---
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            const btnText = document.getElementById('playText');
+            const btnIcon = document.getElementById('playIcon');
+
+            if (isPlaying) {
+                btnText.innerText = '暫停';
+                btnIcon.className = 'fa-solid fa-pause';
+                if (currentStepIdx >= steps.length - 1) currentStepIdx = 0;
+                playInterval = setInterval(() => {
+                    if (currentStepIdx < steps.length - 1) {
+                        currentStepIdx++;
+                        updateUIState();
+                    } else {
+                        togglePlay();
+                    }
+                }, 1200 / playSpeed);
+            } else {
+                btnText.innerText = '自動播放';
+                btnIcon.className = 'fa-solid fa-play';
+                clearInterval(playInterval);
+            }
+        }
+
+        function stepForward() {
+            if (isPlaying) togglePlay();
+            if (currentStepIdx < steps.length - 1) {
+                currentStepIdx++;
+                updateUIState();
+            }
+        }
+
+        function stepBackward() {
+            if (isPlaying) togglePlay();
+            if (currentStepIdx > 0) {
+                currentStepIdx--;
+                updateUIState();
+            }
+        }
+
+        function jumpToStep(val) {
+            if (isPlaying) togglePlay();
+            currentStepIdx = parseInt(val);
+            updateUIState();
+        }
+
+        function resetAlgorithm() {
+            if (isPlaying) togglePlay();
+            currentStepIdx = 0;
+            updateUIState();
+        }
+
+        function updateSpeed(val) {
+            playSpeed = parseFloat(val);
+            document.getElementById('speedValText').innerText = playSpeed.toFixed(1) + 'x';
+            if (isPlaying) {
+                togglePlay();
+                togglePlay();
+            }
+        }
+
+        // --- 地圖載入與畫布互動 (Presets & Dragging) ---
+        function loadPreset(key) {
+            const preset = PRESETS[key];
+            nodes = JSON.parse(JSON.stringify(preset.nodes));
+            edges = JSON.parse(JSON.stringify(preset.edges));
+            startNodeId = preset.start;
+            endNodeId = preset.end;
+
+            // 切換按鈕樣式
+            document.querySelectorAll('#btnPreset1, #btnPreset2, #btnPreset3').forEach(btn => {
+                btn.className = "px-3 py-1.5 rounded-md transition hover:text-white text-slate-400";
+            });
+            event.target.className = "px-3 py-1.5 rounded-md transition hover:text-white text-slate-300 bg-slate-700";
+
+            populateNodeSelectors();
+            rebuildAlgorithm();
+        }
+
+        function populateNodeSelectors() {
+            const startSel = document.getElementById('startNodeSelect');
+            const endSel = document.getElementById('endNodeSelect');
+            startSel.innerHTML = nodes.map(n => `<option value="${n.id}">${n.id}</option>`).join('');
+            endSel.innerHTML = nodes.map(n => `<option value="${n.id}">${n.id}</option>`).join('');
+            startSel.value = startNodeId;
+            endSel.value = endNodeId;
+        }
+
+        function changeStartEndNodes() {
+            startNodeId = document.getElementById('startNodeSelect').value;
+            endNodeId = document.getElementById('endNodeSelect').value;
+            rebuildAlgorithm();
+        }
+
+        function rebuildAlgorithm() {
+            generateDijkstraSteps();
+            currentStepIdx = 0;
+            updateUIState();
+        }
+
+        // 畫布滑鼠拖拽與新點建立
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // 檢查是否點擊了現有節點
+            const targetNode = nodes.find(n => Math.hypot(n.x - x, n.y - y) < 25);
+
+            if (isAddNodeMode) {
+                if (!targetNode) {
+                    const newId = String.fromCharCode(65 + nodes.length); // A, B, C...
+                    nodes.push({ id: newId, x, y });
+                    // 自動連接最近的點
+                    if (nodes.length > 1) {
+                        const prevNode = nodes[nodes.length - 2];
+                        const dist = Math.round(Math.hypot(prevNode.x - x, prevNode.y - y) / 30);
+                        edges.push({ from: prevNode.id, to: newId, weight: Math.max(1, dist) });
+                    }
+                    populateNodeSelectors();
+                    rebuildAlgorithm();
+                }
+            } else {
+                if (targetNode) {
+                    draggedNode = targetNode;
+                }
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (draggedNode) {
+                const rect = canvas.getBoundingClientRect();
+                draggedNode.x = e.clientX - rect.left;
+                draggedNode.y = e.clientY - rect.top;
+                drawGraph();
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (draggedNode) {
+                draggedNode = null;
+            }
+        });
+
+        function toggleAddNodeMode() {
+            isAddNodeMode = !isAddNodeMode;
+            const btn = document.getElementById('addNodeBtn');
+            if (isAddNodeMode) {
+                btn.className = "px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-blue-500/30";
+            } else {
+                btn.className = "px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition";
+            }
+        }
+
+        function clearCustomGraph() {
+            nodes = [
+                { id: 'A', x: 150, y: 220 },
+                { id: 'B', x: 450, y: 220 }
+            ];
+            edges = [{ from: 'A', to: 'B', weight: 5 }];
+            startNodeId = 'A';
+            endNodeId = 'B';
+            populateNodeSelectors();
+            rebuildAlgorithm();
+        }
+
+        function switchTab(tab) {
+            const stateTab = document.getElementById('tabState');
+            const codeTab = document.getElementById('tabCode');
+            const stateBtn = document.getElementById('tabStateBtn');
+            const codeBtn = document.getElementById('tabCodeBtn');
+
+            if (tab === 'state') {
+                stateTab.classList.remove('hidden');
+                codeTab.classList.add('hidden');
+                stateBtn.className = "flex-1 py-3 text-xs font-bold text-blue-400 border-b-2 border-blue-500 flex items-center justify-center gap-2";
+                codeBtn.className = "flex-1 py-3 text-xs font-bold text-slate-400 hover:text-slate-200 flex items-center justify-center gap-2";
+            } else {
+                stateTab.classList.add('hidden');
+                codeTab.classList.remove('hidden');
+                codeBtn.className = "flex-1 py-3 text-xs font-bold text-blue-400 border-b-2 border-blue-500 flex items-center justify-center gap-2";
+                stateBtn.className = "flex-1 py-3 text-xs font-bold text-slate-400 hover:text-slate-200 flex items-center justify-center gap-2";
+            }
+        }
+
+        // --- 初始化頁面 ---
+        window.onload = () => {
+            loadPreset('classic');
+            setTimeout(resizeCanvas, 100);
+        };
+    </script>
+</body>
+</html>
