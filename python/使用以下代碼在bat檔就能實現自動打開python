@@ -1,0 +1,9 @@
+@echo off
+:: 切換到目前批次檔所在的資料夾，防止路徑出錯
+cd /d "%~dp0"
+
+:: 執行 Python 程式
+python game.py
+
+:: 內建暫停（可選）：如果程式出錯，視窗不會秒退，方便你看錯誤訊息
+if %errorlevel% neq 0 pause
