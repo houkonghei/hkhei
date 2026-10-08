@@ -1,0 +1,52 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+ string s1("4567");
+   string s2("123");  
+   int s1num[100];
+   int s2num[100];
+   int result[200];
+
+
+int main()
+{ 
+   int k = 0;
+   for (int i = s1.size() - 1; i >= 0; i--) {
+    s1num[k++]= s1[i] - '0';    }
+   k = 0;
+   for (int i = s2.size() - 1; i >= 0; i--) {
+    s2num[k++] = s2[i] - '0';    } 
+    
+   /*        
+   for (int i=0;i<=s1.size()-1;i++)
+      cout<<s1num[i]<<" ";
+   */
+   int mul=0;
+   for (int i=0;i<s1.size();i++)
+       for (int j=0;j<s2.size();j++)
+        {  mul=s1num[i]*s2num[j];
+           result[i+j]=result[i+j]+mul;
+		}
+    
+   int carry = 0; 
+   int max_len = s1.size() + s2.size();    
+   int temp=0;
+   
+   for (int i = 0; i < max_len; i++) {
+       temp = result[i] + carry;
+       result[i] = temp % 10;
+       carry = temp / 10;    
+   }
+ 
+ 
+   int high = max_len - 1;
+   while (high > 0 && result[high] == 0) {
+       high--;
+   }
+    
+   for (int i = high; i >= 0; i--) {
+       cout << result[i];
+   }
+   cout << endl; 
+
+}

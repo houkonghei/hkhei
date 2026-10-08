@@ -1,0 +1,63 @@
+#include <bits/stdc++.h> 
+using namespace std; 
+
+string s1("567"); //567-1234=-667 1234-567=667 add "-" 
+string s2("1234"); 
+string t; 
+bool isnegative=false; 
+int nums1[100]; 
+int nums2[100]; 
+int numresult[101]; 
+
+int main() //567-1234 
+{   if (s1.size()==s2.size())  
+    {   if (s1<s2) 
+      { 
+          t=s1; s1=s2; s2=t; isnegative=true;
+      }  }
+      
+    if (s1.size()<s2.size())  
+    {   t=s1; s1=s2; s2=t; isnegative=true;     }  
+    
+    
+    
+    int len1 = s1.size(); 
+    int len2 = s2.size(); 
+    int c=0; 
+    for (int i = len1 - 1; i >= 0; i--) { 
+        nums1[c++] = s1[i] - '0'; 
+    } 
+    c = 0; 
+    for (int i = len2 - 1; i >= 0; i--) { 
+        nums2[c++] = s2[i] - '0'; 
+    } 
+    
+    // 4321 
+    // 765   
+    for (int i=0;i<len1;i++) 
+    { 
+        if (nums1[i]<nums2[i]) {
+            nums1[i+1]--; 
+            nums1[i] = nums1[i] +10; 
+        } 
+        numresult[i]=nums1[i]-nums2[i];
+    } 
+    
+    if (isnegative) { 
+        cout<<"-";
+    } 
+    
+    
+    reverse(numresult,numresult+len1); 
+    
+    int sword=0;
+    while (sword<len1 && numresult[sword]==0  )
+      {sword++;}
+    if (sword>=len1) { cout<<0;   return 0;}
+	
+    
+    for (int i=sword;i<len1;i++) 
+    { 
+        cout<<numresult[i]; 
+    } 
+}

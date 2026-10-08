@@ -1,0 +1,48 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+char s1[] = "823456";
+char s2[] = "800456";
+int nums1[100];
+int nums2[100];
+int numresult[101];
+int carry = 0;
+
+int main() {
+    int len1 = strlen(s1);
+    int len2 = strlen(s2);
+    
+    // 1. 倒序存入陣列
+    int c = 0;
+    for (int i = len1 - 1; i >= 0; i--) {
+        nums1[c++] = s1[i] - '0';
+    }
+    c = 0;
+    for (int i = len2 - 1; i >= 0; i--) {
+        nums2[c++] = s2[i] - '0';
+    }
+
+    // 2. 以較長的長度為準進行加法運算
+    int maxx = max(len1, len2);
+    int res_len = 0;
+    
+    for (int i = 0; i < maxx; i++) {
+        int sum = nums1[i] + nums2[i] + carry;
+        numresult[res_len++] = sum % 10;
+        carry = sum / 10;
+    }
+    
+    // 3. 處理最後的最高位進位
+    if (carry > 0) {
+        numresult[res_len++] = carry;
+    }
+
+    // 4. 反轉回正序並輸出
+    reverse(numresult, numresult + res_len);
+    for (int i = 0; i < res_len; i++) {
+        cout << numresult[i];
+    }
+    cout << endl;
+
+    return 0;
+}

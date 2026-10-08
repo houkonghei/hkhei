@@ -1,0 +1,54 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+int addHighPrecision(char* num1, char* num2, int res[]) {
+	//char num1[]   =  char* num1 
+    int len1 =strlen(num1);
+    int len2 =strlen(num2);
+        
+    int a[1000]={0};
+    int b[1000]={0};
+
+    
+    for (int i = 0; i < len1; ++i) {
+        a[i] = num1[len1 - 1 - i] - '0';
+    }
+    for (int i = 0; i < len2; ++i) {
+        b[i] = num2[len2 - 1 - i] - '0';
+    }
+    
+  
+    int max_len = (len1 > len2) ? len1 : len2;
+    int carry = 0; 
+    
+    for (int i = 0; i < max_len; ++i) {
+        int sum = a[i] + b[i] + carry;
+        res[i] = sum % 10;  
+        carry = sum / 10;  
+    }
+    
+ 
+    int res_len = max_len;
+    if (carry > 0) {
+        res[res_len] = carry;
+        res_len++;
+    }
+    
+    return res_len;
+}
+
+int main() {  
+    char str1[1000];
+    char str2[1000];
+    int result[1000]={0};        
+    cin>>str1>>str2;
+      
+    int result_length = addHighPrecision(str1, str2, result);
+       
+    for (int i = result_length - 1; i >= 0; i--) {
+        cout << result[i];
+    }
+    cout << endl;
+    
+    return 0;
+}

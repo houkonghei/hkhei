@@ -1,0 +1,35 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+char  s[100];   
+int  num[100];     
+int  result[100];     
+int  b;             
+long long rem;     
+
+int main() {
+    scanf("%s %d", s, &b);
+    if (b == 0) {                      
+        printf("Error\n");
+        return 0;
+    }
+    int lens = strlen(s);
+    for (int i = 0; i < lens; i++)
+        num[i] = s[lens - 1 - i] - '0';  
+
+    rem = 0;
+    for (int i = lens - 1; i >= 0; i--) {  
+	    rem = rem * 10 + num[i];
+        result[i] = (int)(rem / b);
+        rem = rem % b;
+    }
+
+    int lenq = lens;
+    while (lenq > 1 && result[lenq - 1] == 0)  
+	    lenq--;
+
+    for (int i = lenq - 1; i >= 0; i--)
+        printf("%d", result[i]);
+    printf(" ...... %lld\n", rem);
+    return 0;
+}
