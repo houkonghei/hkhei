@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自然數拆分問題 - C++98 算法與數組/遞歸視覺化課件</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            900: '#0c4a6e',
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .code-highlight {
+            background-color: rgba(14, 165, 233, 0.25);
+            border-left: 4px solid #0ea5e9;
+        }
+        .code-highlight-backtrack {
+            background-color: rgba(245, 158, 11, 0.2);
+            border-left: 4px solid #f59e0b;
+        }
+        .code-highlight-found {
+            background-color: rgba(16, 185, 129, 0.25);
+            border-left: 4px solid #10b981;
+        }
+        .tree-node {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .tree-node:hover circle {
+            r: 18;
+            stroke-width: 3;
+        }
+        .tree-edge {
+            transition: stroke 0.3s, stroke-width 0.3s;
+        }
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-sky-500 selection:text-white">
+
+    <!-- Header Bar -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-sky-500/10 text-sky-400 rounded-lg border border-sky-500/20 font-bold font-mono text-xl">
+                    C++98
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                        自然數拆分問題 <span class="text-xs px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800">DFS + 數組回溯</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">經典算法遞歸樹與全局數組狀態變化視覺化互動課件</p>
+                </div>
+            </div>
+
+            <!-- N Selector Controls -->
+            <div class="flex items-center gap-3 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700/60">
+                <span class="text-xs text-slate-300 font-medium px-2">選擇輸入自然數 n:</span>
+                <div class="flex gap-1" id="n-buttons">
+                    <button onclick="setN(3)" class="n-btn text-xs font-mono px-3 py-1 rounded-lg bg-slate-700 text-slate-200 hover:bg-sky-600 hover:text-white transition">n=3</button>
+                    <button onclick="setN(4)" class="n-btn text-xs font-mono px-3 py-1 rounded-lg bg-sky-600 text-white font-bold transition">n=4</button>
+                    <button onclick="setN(5)" class="n-btn text-xs font-mono px-3 py-1 rounded-lg bg-slate-700 text-slate-200 hover:bg-sky-600 hover:text-white transition">n=5</button>
+                    <button onclick="setN(6)" class="n-btn text-xs font-mono px-3 py-1 rounded-lg bg-slate-700 text-slate-200 hover:bg-sky-600 hover:text-white transition">n=6</button>
+                    <button onclick="setN(7)" class="n-btn text-xs font-mono px-3 py-1 rounded-lg bg-slate-700 text-slate-200 hover:bg-sky-600 hover:text-white transition">n=7</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 py-4 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 w-full">
+
+        <!-- Left Column: Code View & Call Stack (5 Cols) -->
+        <section class="lg:col-span-5 flex flex-col gap-4">
+            
+            <!-- C++ Code Panel -->
+            <div class="bg-slate-900 rounded-xl border border-slate-800 flex flex-col overflow-hidden shadow-lg">
+                <div class="px-4 py-2.5 bg-slate-950/60 border-b border-slate-800 flex justify-between items-center text-xs">
+                    <span class="font-mono text-sky-400 font-semibold flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                        partition.cpp (C++98 標準實作)
+                    </span>
+                    <span class="text-slate-500 font-mono" id="current-line-indicator">Line 25</span>
+                </div>
+
+                <div class="p-2 overflow-x-auto text-xs font-mono leading-relaxed bg-slate-950 text-slate-300 max-h-[380px] overflow-y-auto" id="code-container">
+                    <!-- Code Lines populated by JS -->
+                </div>
+            </div>
+
+            <!-- Call Stack Panel -->
+            <div class="bg-slate-900 rounded-xl border border-slate-800 flex flex-col p-4 shadow-lg flex-1 min-h-[220px]">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                        遞歸調用棧 (Call Stack)
+                    </h3>
+                    <span class="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded" id="stack-depth-badge">深度: 1</span>
+                </div>
+
+                <div class="flex-1 flex flex-col-reverse justify-start gap-1.5 overflow-y-auto p-2 bg-slate-950/50 rounded-lg border border-slate-800/80" id="call-stack-container">
+                    <!-- Stack frames pushed/popped here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Column: Controls, Memory, Tree, Explanation (7 Cols) -->
+        <section class="lg:col-span-7 flex flex-col gap-4">
+
+            <!-- Playback Control Bar -->
+            <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-lg flex flex-col gap-3">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <!-- Buttons -->
+                    <div class="flex items-center gap-2">
+                        <button id="btn-prev" onclick="stepPrev()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40 transition" title="上一步 (←)">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+
+                        <button id="btn-play" onclick="togglePlay()" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold flex items-center gap-2 text-xs shadow-md transition">
+                            <svg id="play-icon" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6V4z"></path></svg>
+                            <span id="play-text">自動播放</span>
+                        </button>
+
+                        <button id="btn-next" onclick="stepNext()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40 transition" title="下一步 (→)">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+
+                        <button onclick="jumpToNextSolution()" class="px-3 py-2 rounded-lg bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600/30 text-xs font-medium transition">
+                            跳至下一個解 ✨
+                        </button>
+
+                        <button onclick="resetSimulation()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition" title="重置">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        </button>
+                    </div>
+
+                    <!-- Speed Slider -->
+                    <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+                        <span class="text-[11px] text-slate-400 font-mono">速度:</span>
+                        <input id="speed-slider" type="range" min="100" max="1500" value="600" step="100" class="w-20 accent-sky-500 cursor-pointer" onchange="updateSpeed(this.value)">
+                        <span id="speed-label" class="text-[11px] text-sky-400 font-mono w-10 text-right">1.0x</span>
+                    </div>
+                </div>
+
+                <!-- Step Progress Slider -->
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-mono text-slate-400" id="step-counter">0 / 0</span>
+                    <input id="progress-bar" type="range" min="0" max="0" value="0" class="flex-1 accent-sky-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer" oninput="seekStep(parseInt(this.value))">
+                </div>
+            </div>
+
+            <!-- Global Array RAM Visualization -->
+            <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-lg">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        全局數組 RAM 內存映射: <code class="text-sky-400 font-mono text-xs">int a[100];</code>
+                    </h3>
+                    <span class="text-[10px] text-slate-400 font-mono">a[0] 用於定義邊界 (1)</span>
+                </div>
+
+                <div class="grid grid-cols-8 sm:grid-cols-10 gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800" id="array-visualizer">
+                    <!-- Dynamic Array RAM Cells -->
+                </div>
+            </div>
+
+            <!-- Step Voiceover / Teaching Banner -->
+            <div class="bg-slate-900/90 rounded-xl border border-slate-800 p-3.5 shadow-md flex items-start gap-3">
+                <div id="status-icon-box" class="p-2 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span id="event-type-tag" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800">
+                            初始化
+                        </span>
+                        <span id="step-title" class="text-xs font-bold text-slate-200">準備開展深搜算法</span>
+                    </div>
+                    <p id="step-explanation" class="text-xs text-slate-300 mt-1 leading-relaxed">
+                        點擊「下一步」或「自動播放」開始觀察算法執行過程。
+                    </p>
+                </div>
+            </div>
+
+            <!-- DFS Recursion Tree Visualization -->
+            <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-lg flex flex-col h-[320px]">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                        動態 DFS 遞歸樹 (Recursion Tree)
+                    </h3>
+                    <div class="flex items-center gap-3 text-[10px]">
+                        <span class="flex items-center gap-1 text-slate-400"><span class="w-2 h-2 rounded-full bg-sky-500"></span>當前節點</span>
+                        <span class="flex items-center gap-1 text-slate-400"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>成功拆分</span>
+                        <span class="flex items-center gap-1 text-slate-400"><span class="w-2 h-2 rounded-full bg-slate-600"></span>已回溯/已完成</span>
+                    </div>
+                </div>
+
+                <div class="flex-1 bg-slate-950 rounded-xl border border-slate-800/80 overflow-hidden relative" id="tree-container">
+                    <svg id="tree-svg" class="w-full h-full">
+                        <!-- Dynamic SVG Tree Content -->
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Output Terminal -->
+            <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-lg">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        標準輸出 (cout Terminal)
+                    </h3>
+                    <span class="text-[10px] font-mono text-slate-400" id="output-count">已找到 0 種拆分</span>
+                </div>
+
+                <div class="p-3 bg-slate-950 font-mono text-xs text-emerald-400 rounded-xl border border-slate-800 min-h-[60px] max-h-[100px] overflow-y-auto flex flex-wrap gap-2" id="output-terminal">
+                    <!-- Standard output printed here -->
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Educational Concept & Quiz Section -->
+    <footer class="max-w-7xl mx-auto px-4 py-6 w-full">
+        <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl">
+            <h2 class="text-base font-bold text-slate-100 flex items-center gap-2 mb-4">
+                <span class="p-1.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">💡</span>
+                關鍵算法概念與 C++98 思考題
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs leading-relaxed text-slate-300">
+                <!-- Concept 1 -->
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <h3 class="font-bold text-sky-400 mb-2 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+                        1. 為什麼設置 a[0] = 1？
+                    </h3>
+                    <p class="text-slate-400">
+                        為了避免組合重複（例如 <code class="text-slate-200">1+2</code> 與 <code class="text-slate-200">2+1</code> 算作同一種拆分），我們要求拆出的數字序列必須保持<b>單調不減</b>。循環始於 <code class="text-sky-400">a[t-1]</code>，設置 <code class="text-sky-400">a[0] = 1</code> 確保了第一層拆分從 1 開始向上列舉。
+                    </p>
+                </div>
+
+                <!-- Concept 2 -->
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <h3 class="font-bold text-amber-400 mb-2 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                        2. 回溯（Backtracking）的作用
+                    </h3>
+                    <p class="text-slate-400">
+                        當某條搜尋分支結束（不論是找到解還是條件不符），程式必須恢復變數狀態。執行 <code class="text-amber-400">s += i</code> 將扣除的剩餘和加回，確保上一層調用繼續嘗試下一個可能數字 <code class="text-slate-200">i + 1</code>。
+                    </p>
+                </div>
+
+                <!-- Concept 3 -->
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <h3 class="font-bold text-emerald-400 mb-2 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        3. 剪枝條件 if (i < n)
+                    </h3>
+                    <p class="text-slate-400">
+                        題目要求拆分成<b>「小於 n 的自然數之和」</b>。這意味著不能直接選擇原數 <code class="text-slate-200">n</code> 本身。判斷 <code class="text-emerald-400">i < n</code> 能及時過濾掉非法解，提升深搜效率。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Interactive Quiz Component -->
+            <div class="mt-6 pt-6 border-t border-slate-800">
+                <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">小測驗：理解測試</h3>
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div>
+                        <p class="text-xs font-medium text-slate-200">
+                            問：若輸入 n = 4，拆分結果中是否包含數字 4 本身？
+                        </p>
+                        <p class="text-[11px] text-slate-400 mt-1" id="quiz-feedback">
+                            請選擇下方答案：
+                        </p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="checkQuiz(true)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 transition">
+                            包含 (有 4)
+                        </button>
+                        <button onclick="checkQuiz(false)" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-medium text-white shadow transition">
+                            不包含 (嚴格小於 4)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // C++ Code Source Lines (1-indexed mapping)
+        const CPP_CODE = [
+            { line: 1, text: '#include <iostream>' },
+            { line: 2, text: 'using namespace std;' },
+            { line: 3, text: '' },
+            { line: 4, text: 'int n;' },
+            { line: 5, text: 'int a[100]; // 保存拆分的數字數組' },
+            { line: 6, text: '' },
+            { line: 7, text: 'void dfs(int s, int t) {' },
+            { line: 8, text: '    for (int i = a[t - 1]; i <= s; i++) {' },
+            { line: 9, text: '        if (i < n) { // 拆分數必須小於原數 n' },
+            { line: 10, text: '            a[t] = i;     // 填入當前數組位置' },
+            { line: 11, text: '            s -= i;       // 扣除已拆分數值' },
+            { line: 12, text: '            if (s == 0) { // 剩餘為 0，找到完整拆分' },
+            { line: 13, text: '                for (int j = 1; j < t; j++) cout << a[j] << "+";' },
+            { line: 14, text: '                cout << a[t] << endl;' },
+            { line: 15, text: '            } else {' },
+            { line: 16, text: '                dfs(s, t + 1); // 遞歸填寫下一個位置' },
+            { line: 17, text: '            }' },
+            { line: 18, text: '            s += i;       // 回溯：恢復剩餘數值' },
+            { line: 19, text: '            a[t] = 0;     // 回溯：重置數組元素' },
+            { line: 20, text: '        }' },
+            { line: 21, text: '    }' },
+            { line: 22, text: '}' },
+            { line: 23, text: '' },
+            { line: 24, text: 'int main() {' },
+            { line: 25, text: '    cin >> n;' },
+            { line: 26, text: '    a[0] = 1; // 設置初始下界起點' },
+            { line: 27, text: '    dfs(n, 1);' },
+            { line: 28, text: '    return 0;' },
+            { line: 29, text: '}' }
+        ];
+
+        // State variables
+        let currentN = 4;
+        let simulationSteps = [];
+        let currentStepIndex = 0;
+        let isPlaying = false;
+        let playTimer = null;
+        let stepSpeed = 600;
+
+        // Simulation Step Generator
+        function generateSteps(nVal) {
+            const steps = [];
+            const a = new Array(15).fill(0);
+            const output = [];
+            const treeNodes = [];
+            const treeEdges = [];
+            let nodeCounter = 0;
+
+            function recordStep(line, title, desc, stack, activeIdx, eventType, currentNodeId) {
+                steps.push({
+                    line,
+                    title,
+                    desc,
+                    stack: stack.map(f => ({ ...f })),
+                    array: [...a],
+                    output: [...output],
+                    activeIdx,
+                    eventType, // 'call', 'loop', 'write', 'found', 'backtrack', 'prune', 'return'
+                    currentNodeId,
+                    treeNodes: JSON.parse(JSON.stringify(treeNodes)),
+                    treeEdges: JSON.parse(JSON.stringify(treeEdges))
+                });
+            }
+
+            // Root Setup
+            a[0] = 1;
+            const rootNode = { id: 0, label: `dfs(${nVal},1)`, s: nVal, t: 1, depth: 0, x: 0, y: 0, state: 'active' };
+            treeNodes.push(rootNode);
+
+            function dfsSim(s, t, parentNodeId, stack) {
+                recordStep(
+                    7,
+                    `進入遞歸函數 dfs(${s}, ${t})`,
+                    `開啟新一層遞歸調用。當前剩餘需要拆分的數值 s = ${s}，填寫數組下標 t = ${t}。`,
+                    stack,
+                    t,
+                    'call',
+                    parentNodeId
+                );
+
+                const minVal = a[t - 1];
+                recordStep(
+                    8,
+                    `初始化循環 i = a[${t-1}] = ${minVal}`,
+                    `為保持拆分單調遞增（防重複組合），從前一個元素 a[${t-1}] = ${minVal} 開始嘗試，最大嘗試至 s = ${s}。`,
+                    stack,
+                    t,
+                    'loop',
+                    parentNodeId
+                );
+
+                for (let i = minVal; i <= s; i++) {
+                    stack[stack.length - 1].i = i;
+
+                    recordStep(
+                        9,
+                        `檢查拆分剪枝條件 (i < n)`,
+                        `檢查當前數字 i = ${i} 是否嚴格小於原數 n = ${nVal}。`,
+                        stack,
+                        t,
+                        'check',
+                        parentNodeId
+                    );
+
+                    if (i < nVal) {
+                        // Write array
+                        a[t] = i;
+                        recordStep(
+                            10,
+                            `數組賦值 a[${t}] = ${i}`,
+                            `將數字 ${i} 寫入全局數組位置 a[${t}]。`,
+                            stack,
+                            t,
+                            'write',
+                            parentNodeId
+                        );
+
+                        // Subtract s
+                        s -= i;
+                        stack[stack.length - 1].s = s;
+                        recordStep(
+                            11,
+                            `扣除剩餘和 s -= ${i}`,
+                            `剩餘和更新為 s = ${s}。`,
+                            stack,
+                            t,
+                            'write',
+                            parentNodeId
+                        );
+
+                        // Check solution
+                        recordStep(
+                            12,
+                            `檢查剩餘和 s 是否為 0`,
+                            `判斷 s == 0。當前 s = ${s}。`,
+                            stack,
+                            t,
+                            'check',
+                            parentNodeId
+                        );
+
+                        if (s === 0) {
+                            const solution = a.slice(1, t + 1).join('+');
+                            output.push(solution);
+                            
+                            // Mark node status in tree
+                            const currNode = treeNodes.find(n => n.id === parentNodeId);
+                            if (currNode) currNode.state = 'found';
+
+                            recordStep(
+                                13,
+                                `找到成功拆分解！`,
+                                `剩餘和為 0！輸出組合：${solution}`,
+                                stack,
+                                t,
+                                'found',
+                                parentNodeId
+                            );
+                        } else {
+                            // Create child node in tree
+                            nodeCounter++;
+                            const childId = nodeCounter;
+                            const childNode = {
+                                id: childId,
+                                label: `dfs(${s},${t+1})`,
+                                s,
+                                t: t + 1,
+                                val: i,
+                                parentId: parentNodeId,
+                                state: 'active'
+                            };
+                            treeNodes.push(childNode);
+                            treeEdges.push({ from: parentNodeId, to: childId, label: `${i}` });
+
+                            const nextStack = [...stack, { name: `dfs(s=${s}, t=${t+1})`, s, t: t + 1, i: 0 }];
+                            
+                            recordStep(
+                                16,
+                                `深入遞歸下一層 dfs(${s}, ${t+1})`,
+                                `剩餘和為 ${s} > 0，繼續調用 dfs(${s}, ${t+1}) 填寫下一個位置。`,
+                                stack,
+                                t,
+                                'call',
+                                childId
+                            );
+
+                            dfsSim(s, t + 1, childId, nextStack);
+                        }
+
+                        // Backtrack s
+                        s += i;
+                        stack[stack.length - 1].s = s;
+                        recordStep(
+                            18,
+                            `回溯復原 s += ${i}`,
+                            `【回溯】恢復剩餘和 s = s + ${i} = ${s}。`,
+                            stack,
+                            t,
+                            'backtrack',
+                            parentNodeId
+                        );
+
+                        // Backtrack array
+                        a[t] = 0;
+                        recordStep(
+                            19,
+                            `回溯重置數組 a[${t}] = 0`,
+                            `【回溯】將數組位置 a[${t}] 重置為 0，準備嘗試下一個數字 i = ${i + 1}。`,
+                            stack,
+                            t,
+                            'backtrack',
+                            parentNodeId
+                        );
+
+                    } else {
+                        recordStep(
+                            9,
+                            `剪枝觸發：i (${i}) >= n (${nVal})`,
+                            `數字 ${i} 不符合「小於 ${nVal}」的要求，跳過該分支（剪枝）。`,
+                            stack,
+                            t,
+                            'prune',
+                            parentNodeId
+                        );
+                    }
+                }
+
+                // Node completed
+                const currNode = treeNodes.find(n => n.id === parentNodeId);
+                if (currNode && currNode.state !== 'found') currNode.state = 'done';
+
+                recordStep(
+                    22,
+                    `退出遞歸 dfs(s=${s}, t=${t})`,
+                    `當前層的所有可能數字已嘗試完畢，出棧返回上一層。`,
+                    stack,
+                    t,
+                    'return',
+                    parentNodeId
+                );
+            }
+
+            // Main routine
+            recordStep(25, '讀入輸入 n', `程序開始執行，讀入自然數 n = ${nVal}。`, [{ name: 'main()', s: nVal, t: 0 }], 0, 'call', 0);
+            recordStep(26, '設置邊界起點 a[0] = 1', `設置 a[0] = 1，作為單調遞增下界比較起點。`, [{ name: 'main()', s: nVal, t: 0 }], 0, 'write', 0);
+            recordStep(27, '發起主遞歸 dfs(n, 1)', `調用頂層函數 dfs(s = ${nVal}, t = 1)。`, [{ name: 'main()', s: nVal, t: 0 }], 1, 'call', 0);
+
+            const initialStack = [
+                { name: 'main()', s: nVal, t: 0 },
+                { name: `dfs(s=${nVal}, t=1)`, s: nVal, t: 1, i: 0 }
+            ];
+
+            dfsSim(nVal, 1, 0, initialStack);
+
+            recordStep(28, '算法執行完成', `所有拆分路徑搜尋完成，共找到 ${output.length} 種符合條件的拆分式！`, [{ name: 'main()', s: nVal, t: 0 }], 0, 'return', 0);
+
+            return steps;
+        }
+
+        // Render Code Lines
+        function renderCodeTable() {
+            const container = document.getElementById('code-container');
+            container.innerHTML = CPP_CODE.map(c => `
+                <div id="code-line-${c.line}" class="flex items-center px-2 py-0.5 rounded transition-all duration-150">
+                    <span class="w-8 text-slate-600 select-none text-right pr-3 shrink-0 font-mono text-[11px]">${c.line}</span>
+                    <pre class="font-mono text-[11px] leading-relaxed">${escapeHtml(c.text)}</pre>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // Render Memory RAM Grid
+        function renderArrayVisualizer(step) {
+            const container = document.getElementById('array-visualizer');
+            const arr = step.array;
+            const activeIdx = step.activeIdx;
+
+            let html = '';
+            for (let i = 0; i < 8; i++) {
+                const val = arr[i];
+                const isActive = (i === activeIdx);
+                const isBoundary = (i === 0);
+
+                let bgClass = 'bg-slate-900 border-slate-800 text-slate-400';
+                if (isActive) {
+                    if (step.eventType === 'backtrack') {
+                        bgClass = 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold shadow-lg shadow-amber-500/10 scale-105';
+                    } else if (step.eventType === 'found') {
+                        bgClass = 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold shadow-lg shadow-emerald-500/10 scale-105';
+                    } else {
+                        bgClass = 'bg-sky-500/20 border-sky-500 text-sky-300 font-bold shadow-lg shadow-sky-500/10 scale-105';
+                    }
+                } else if (val > 0) {
+                    bgClass = 'bg-slate-800 border-sky-600/50 text-sky-300 font-semibold';
+                } else if (isBoundary) {
+                    bgClass = 'bg-slate-900 border-amber-500/40 text-amber-400 font-mono';
+                }
+
+                html += `
+                    <div class="flex flex-col items-center">
+                        <span class="text-[10px] font-mono text-slate-500 mb-1">a[${i}]</span>
+                        <div class="w-full h-10 rounded-lg border flex items-center justify-center font-mono text-xs transition-all duration-200 ${bgClass}">
+                            ${val}
+                        </div>
+                        ${isActive ? `<span class="text-[9px] text-sky-400 font-mono mt-1 animate-bounce">▲ t</span>` : '<span class="h-4"></span>'}
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        // Render Call Stack
+        function renderCallStack(step) {
+            const container = document.getElementById('call-stack-container');
+            document.getElementById('stack-depth-badge').textContent = `深度: ${step.stack.length}`;
+
+            container.innerHTML = step.stack.map((frame, idx) => {
+                const isTop = (idx === step.stack.length - 1);
+                return `
+                    <div class="p-2 rounded-lg border font-mono text-xs transition-all duration-200 ${isTop ? 'bg-sky-950/80 border-sky-500/60 text-sky-200 shadow-md' : 'bg-slate-900 border-slate-800 text-slate-400'}">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold flex items-center gap-1.5">
+                                ${isTop ? '<span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping"></span>' : ''}
+                                ${frame.name}
+                            </span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">棧層 ${idx}</span>
+                        </div>
+                        ${frame.s !== undefined ? `
+                            <div class="mt-1 pt-1 border-t border-slate-800/60 flex gap-3 text-[10px] text-slate-300">
+                                <span>剩餘 s: <strong class="text-sky-400">${frame.s}</strong></span>
+                                <span>下標 t: <strong class="text-amber-400">${frame.t}</strong></span>
+                                ${frame.i ? `<span>當前 i: <strong class="text-emerald-400">${frame.i}</strong></span>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render Interactive SVG Tree
+        function renderTree(step) {
+            const svg = document.getElementById('tree-svg');
+            const nodes = step.treeNodes;
+            const edges = step.treeEdges;
+
+            if (!nodes || nodes.length === 0) {
+                svg.innerHTML = '';
+                return;
+            }
+
+            // Calculate tree layout coordinates dynamically
+            const levels = {};
+            nodes.forEach(n => {
+                const depth = n.t || 0;
+                if (!levels[depth]) levels[depth] = [];
+                levels[depth].push(n);
+            });
+
+            const width = svg.clientWidth || 500;
+            const height = svg.clientHeight || 280;
+            const maxDepth = Math.max(...Object.keys(levels).map(Number));
+
+            Object.keys(levels).forEach(d => {
+                const levelNodes = levels[d];
+                const count = levelNodes.length;
+                const y = 40 + (d * (height - 80) / Math.max(maxDepth, 1));
+                
+                levelNodes.forEach((node, idx) => {
+                    node.x = (width / (count + 1)) * (idx + 1);
+                    node.y = y;
+                });
+            });
+
+            // Draw Edges
+            let edgesSvg = edges.map(e => {
+                const fromNode = nodes.find(n => n.id === e.from);
+                const toNode = nodes.find(n => n.id === e.to);
+                if (!fromNode || !toNode) return '';
+
+                const isActivePath = (toNode.id === step.currentNodeId || fromNode.id === step.currentNodeId);
+
+                return `
+                    <line x1="${fromNode.x}" y1="${fromNode.y}" x2="${toNode.x}" y2="${toNode.y}" 
+                          stroke="${isActivePath ? '#0ea5e9' : '#334155'}" 
+                          stroke-width="${isActivePath ? '2.5' : '1.5'}" 
+                          class="tree-edge" />
+                    <text x="${(fromNode.x + toNode.x) / 2}" y="${(fromNode.y + toNode.y) / 2 - 4}" 
+                          fill="#94a3b8" font-size="9" font-family="monospace" text-anchor="middle">
+                          ${e.label}
+                    </text>
+                `;
+            }).join('');
+
+            // Draw Nodes
+            let nodesSvg = nodes.map(node => {
+                const isCurrent = (node.id === step.currentNodeId);
+                let fillColor = '#1e293b';
+                let strokeColor = '#475569';
+
+                if (isCurrent) {
+                    fillColor = '#0284c7';
+                    strokeColor = '#38bdf8';
+                } else if (node.state === 'found') {
+                    fillColor = '#059669';
+                    strokeColor = '#34d399';
+                } else if (node.state === 'done') {
+                    fillColor = '#334155';
+                    strokeColor = '#64748b';
+                }
+
+                return `
+                    <g class="tree-node" onclick="jumpToNode(${node.id})">
+                        <circle cx="${node.x}" cy="${node.y}" r="${isCurrent ? '15' : '12'}" 
+                                fill="${fillColor}" stroke="${strokeColor}" stroke-width="${isCurrent ? '3' : '2'}" />
+                        <text x="${node.x}" y="${node.y + 3}" 
+                              fill="#ffffff" font-size="9" font-family="monospace" font-weight="bold" text-anchor="middle">
+                            ${node.s !== undefined ? node.s : ''}
+                        </text>
+                    </g>
+                `;
+            }).join('');
+
+            svg.innerHTML = edgesSvg + nodesSvg;
+        }
+
+        // Render Terminal Stdout
+        function renderTerminal(step) {
+            const container = document.getElementById('output-terminal');
+            document.getElementById('output-count').textContent = `已找到 ${step.output.length} 種拆分`;
+
+            if (step.output.length === 0) {
+                container.innerHTML = `<span class="text-slate-600 italic">等待輸出解...</span>`;
+                return;
+            }
+
+            container.innerHTML = step.output.map((s, idx) => `
+                <span class="px-2 py-1 rounded bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 font-mono text-xs shadow-sm flex items-center gap-1">
+                    <span class="text-[10px] text-emerald-600 font-bold">#${idx + 1}</span> ${s}
+                </span>
+            `).join('');
+        }
+
+        // Main Update UI Function
+        function updateUI() {
+            if (simulationSteps.length === 0) return;
+
+            const step = simulationSteps[currentStepIndex];
+
+            // 1. Highlight Code Line
+            document.querySelectorAll('#code-container > div').forEach(el => {
+                el.className = 'flex items-center px-2 py-0.5 rounded transition-all duration-150';
+            });
+            const activeLineEl = document.getElementById(`code-line-${step.line}`);
+            if (activeLineEl) {
+                let highlightClass = 'code-highlight';
+                if (step.eventType === 'backtrack') highlightClass = 'code-highlight-backtrack';
+                if (step.eventType === 'found') highlightClass = 'code-highlight-found';
+
+                activeLineEl.className = `flex items-center px-2 py-0.5 rounded transition-all duration-150 ${highlightClass}`;
+                activeLineEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            document.getElementById('current-line-indicator').textContent = `Line ${step.line}`;
+
+            // 2. Memory RAM Grid
+            renderArrayVisualizer(step);
+
+            // 3. Call Stack
+            renderCallStack(step);
+
+            // 4. Voiceover / Explanation
+            document.getElementById('step-title').textContent = step.title;
+            document.getElementById('step-explanation').textContent = step.desc;
+            
+            const tagEl = document.getElementById('event-type-tag');
+            const iconBox = document.getElementById('status-icon-box');
+
+            if (step.eventType === 'found') {
+                tagEl.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800';
+                tagEl.textContent = '找到拆分解';
+                iconBox.className = 'p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0';
+            } else if (step.eventType === 'backtrack') {
+                tagEl.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800';
+                tagEl.textContent = '狀態回溯';
+                iconBox.className = 'p-2 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0';
+            } else if (step.eventType === 'prune') {
+                tagEl.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800';
+                tagEl.textContent = '剪枝跳過';
+                iconBox.className = 'p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0';
+            } else {
+                tagEl.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800';
+                tagEl.textContent = '深搜推進';
+                iconBox.className = 'p-2 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 shrink-0';
+            }
+
+            // 5. SVG Tree
+            renderTree(step);
+
+            // 6. Output Console
+            renderTerminal(step);
+
+            // 7. Progress Controls
+            document.getElementById('step-counter').textContent = `${currentStepIndex + 1} / ${simulationSteps.length}`;
+            const progressBar = document.getElementById('progress-bar');
+            progressBar.max = simulationSteps.length - 1;
+            progressBar.value = currentStepIndex;
+
+            document.getElementById('btn-prev').disabled = (currentStepIndex === 0);
+            document.getElementById('btn-next').disabled = (currentStepIndex === simulationSteps.length - 1);
+        }
+
+        // Controls Logic
+        function setN(n) {
+            currentN = n;
+            document.querySelectorAll('.n-btn').forEach(btn => {
+                if (btn.textContent.trim() === `n=${n}`) {
+                    btn.className = 'n-btn text-xs font-mono px-3 py-1 rounded-lg bg-sky-600 text-white font-bold transition';
+                } else {
+                    btn.className = 'n-btn text-xs font-mono px-3 py-1 rounded-lg bg-slate-700 text-slate-200 hover:bg-sky-600 hover:text-white transition';
+                }
+            });
+            resetSimulation();
+        }
+
+        function resetSimulation() {
+            pause();
+            simulationSteps = generateSteps(currentN);
+            currentStepIndex = 0;
+            updateUI();
+        }
+
+        function stepNext() {
+            if (currentStepIndex < simulationSteps.length - 1) {
+                currentStepIndex++;
+                updateUI();
+            } else {
+                pause();
+            }
+        }
+
+        function stepPrev() {
+            if (currentStepIndex > 0) {
+                currentStepIndex--;
+                updateUI();
+            }
+        }
+
+        function seekStep(index) {
+            if (index >= 0 && index < simulationSteps.length) {
+                currentStepIndex = index;
+                updateUI();
+            }
+        }
+
+        function togglePlay() {
+            if (isPlaying) {
+                pause();
+            } else {
+                play();
+            }
+        }
+
+        function play() {
+            if (currentStepIndex >= simulationSteps.length - 1) {
+                currentStepIndex = 0;
+            }
+            isPlaying = true;
+            document.getElementById('play-text').textContent = '暫停';
+            document.getElementById('play-icon').innerHTML = `<path d="M5 4h3v12H5V4zm6 0h3v12h-3V4z"></path>`;
+            playTimer = setInterval(() => {
+                stepNext();
+            }, stepSpeed);
+        }
+
+        function pause() {
+            isPlaying = false;
+            document.getElementById('play-text').textContent = '自動播放';
+            document.getElementById('play-icon').innerHTML = `<path d="M4 4l12 6-12 6V4z"></path>`;
+            if (playTimer) clearInterval(playTimer);
+        }
+
+        function updateSpeed(val) {
+            stepSpeed = 1600 - parseInt(val);
+            document.getElementById('speed-label').textContent = `${(val / 600).toFixed(1)}x`;
+            if (isPlaying) {
+                pause();
+                play();
+            }
+        }
+
+        function jumpToNextSolution() {
+            for (let i = currentStepIndex + 1; i < simulationSteps.length; i++) {
+                if (simulationSteps[i].eventType === 'found') {
+                    currentStepIndex = i;
+                    updateUI();
+                    return;
+                }
+            }
+            // Loop around if not found ahead
+            for (let i = 0; i < currentStepIndex; i++) {
+                if (simulationSteps[i].eventType === 'found') {
+                    currentStepIndex = i;
+                    updateUI();
+                    return;
+                }
+            }
+        }
+
+        function jumpToNode(nodeId) {
+            for (let i = 0; i < simulationSteps.length; i++) {
+                if (simulationSteps[i].currentNodeId === nodeId) {
+                    currentStepIndex = i;
+                    updateUI();
+                    return;
+                }
+            }
+        }
+
+        function checkQuiz(userAnswer) {
+            const feedbackEl = document.getElementById('quiz-feedback');
+            if (userAnswer === false) {
+                feedbackEl.className = 'text-[11px] font-bold text-emerald-400 mt-1';
+                feedbackEl.textContent = '🎉 正確！題目要求拆分成「小於 n 的自然數」，剪枝條件 if (i < n) 排除掉了 n 本身！';
+            } else {
+                feedbackEl.className = 'text-[11px] font-bold text-rose-400 mt-1';
+                feedbackEl.textContent = '❌ 不正確。請注意 C++ 代碼第 9 行：if (i < n)，說明拆分數必須嚴格小於 n。';
+            }
+        }
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') stepNext();
+            if (e.key === 'ArrowLeft') stepPrev();
+            if (e.key === ' ') {
+                e.preventDefault();
+                togglePlay();
+            }
+        });
+
+        // Initialize App on Window Load
+        window.onload = function() {
+            renderCodeTable();
+            resetSimulation();
+        };
+    </script>
+</body>
+</html>
